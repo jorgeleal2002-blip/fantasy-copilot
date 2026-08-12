@@ -33,8 +33,6 @@ export function TeamTab({ app, m }: { app: App; m: Model }) {
 
 function Summary({ app, m }: { app: App; m: Model }) {
   const me = m.leagueRows.find(x => x.isMe);
-  const bestNow = Math.max(...m.leagueRows.map(x => x.now), 1);
-  const bestFut = Math.max(...m.leagueRows.map(x => x.future), 1);
   const shift = me?.shift ?? 0;
 
   // Naming the seasons matters: the numbers below are a three-year blend, and
@@ -51,6 +49,35 @@ function Summary({ app, m }: { app: App; m: Model }) {
     if (!m.leagueHasRosters || !m.myPlayers.length || !me) return { value: '—', sub: 'draft not started' };
     const p = POS.slice().sort((a, b) => m.posRankOf(me.id, b) - m.posRankOf(me.id, a))[0];
     return { value: p + ' ' + ord(m.posRankOf(me.id, p)), sub: 'of ' + m.teamCount + ' teams' };
+  })();
+
+  // Raw sums are shown at scale; the Fit columns are already 0..100.
+  const heroRanks = [
+    { label: 'strength today', rank: me?.rankNow || 0, value: num((me?.now || 0) * 100), color: ACCENT },
+    { label: 'quality today', rank: me?.rankFit || 0, value: 'Fit ' + Math.round(me?.fit || 0), color: MID },
+    ...(m.isDynasty ? [
+      { label: 'future value', rank: me?.rankFut || 0, value: num((me?.future || 0) * 100), color: GOOD },
+      { label: 'quality in 2 yrs', rank: me?.rankFitFut || 0, value: 'Fit ' + Math.round(me?.fitFut || 0), color: '#bfe0cd' },
+    ] : []),
+  ];
+
+  // The interesting sentence is not the movement, it is the disagreement:
+  // hoarding lifts future value without lifting the starters it will field.
+  const heroNote = (() => {
+    if (!me) return '';
+    const gap = me.rankFut - me.rankFitFut;
+    const move = shift > 0 ? `You climb ${shift} place${shift === 1 ? '' : 's'} looking forward.`
+      : shift < 0 ? `You drop ${-shift} place${shift === -1 ? '' : 's'} looking forward.`
+        : 'Same place today and in the future.';
+    if (gap <= -3) {
+      return move + ' But that is accumulation: you sit ' + ord(me.rankFut) + ' in future value and only ' +
+        ord(me.rankFitFut) + ' in quality two years out. Depth and picks count there; your starters do not yet.';
+    }
+    if (gap >= 3) {
+      return move + ' Your starters age better than your pile of assets suggests — ' +
+        ord(me.rankFitFut) + ' in quality against ' + ord(me.rankFut) + ' in raw future value.';
+    }
+    return move;
   })();
 
   const stats = [
@@ -77,43 +104,34 @@ function Summary({ app, m }: { app: App; m: Model }) {
         </div>
       ) : null}
 
+      {/* Four places, not one. "Future value" is a raw sum — the whole roster
+          aged two years plus pick capital — so it rewards hoarding: a deep
+          bench and a pile of picks can put you first while your starters are
+          mid-table. The quality columns beside it measure only the optimal
+          starters, which is the honest read. Shown together, the gap between
+          them is itself the information. */}
       <div style={heroCard}>
         <div style={heroGlow} />
         <div style={{ position: 'relative' }}>
           <div style={kicker}>Your place in the league</div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, marginTop: 9 }}>
-            <div>
-              <div style={{ fontSize: 29, fontWeight: 500, letterSpacing: '-0.04em', lineHeight: 1 }}>
-                {m.leagueHasRosters ? ord(me?.rankNow || 0) : '—'}
-              </div>
-              <div style={{ fontSize: 10.5, color: dim(0.5), marginTop: 4 }}>strength today</div>
-              <div style={{ height: 6, width: 88, borderRadius: 4, background: 'rgba(233,233,237,.1)', marginTop: 6, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', marginTop: 10 }}>
+            {heroRanks.map(h => (
+              <div key={h.label}>
                 <div style={{
-                  height: '100%', borderRadius: 4, width: Math.round((me?.now || 0) / bestNow * 100) + '%',
-                  background: `linear-gradient(90deg,#6f63bd,${ACCENT})`,
-                }} />
-              </div>
-            </div>
-            {m.isDynasty ? (
-              <div>
-                <div style={{ fontSize: 29, fontWeight: 500, letterSpacing: '-0.04em', lineHeight: 1, color: GOOD }}>
-                  {m.leagueHasRosters ? ord(me?.rankFut || 0) : '—'}
+                  fontSize: 26, fontWeight: 500, letterSpacing: '-0.035em', lineHeight: 1,
+                  fontVariantNumeric: 'tabular-nums',
+                  color: m.leagueHasRosters && me ? h.color : dim(0.3),
+                }}>
+                  {m.leagueHasRosters && me ? ord(h.rank) : '—'}
                 </div>
-                <div style={{ fontSize: 10.5, color: dim(0.5), marginTop: 4 }}>future value</div>
-                <div style={{ height: 6, width: 88, borderRadius: 4, background: 'rgba(233,233,237,.1)', marginTop: 6, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 4, width: Math.round((me?.future || 0) / bestFut * 100) + '%',
-                    background: `linear-gradient(90deg,#3f4a86,${GOOD})`,
-                  }} />
-                </div>
+                <div style={{ fontSize: 10.5, color: dim(0.5), marginTop: 3 }}>{h.label}</div>
+                <div style={{ fontSize: 10.5, color: dim(0.35), marginTop: 1 }}>{h.value}</div>
               </div>
-            ) : null}
+            ))}
           </div>
-          {m.isDynasty ? (
-            <div style={{ fontSize: 12, color: shift > 0 ? GOOD : shift < 0 ? BAD : dim(0.5), marginTop: 9 }}>
-              {shift > 0 ? `You climb ${shift} place${shift === 1 ? '' : 's'} looking forward`
-                : shift < 0 ? `You drop ${-shift} place${shift === -1 ? '' : 's'} looking forward`
-                  : 'Same place today and in the future'}
+          {m.isDynasty && m.leagueHasRosters ? (
+            <div style={{ fontSize: 11.5, lineHeight: 1.45, color: dim(0.5), marginTop: 11, textWrap: 'pretty' }}>
+              {heroNote}
             </div>
           ) : null}
         </div>

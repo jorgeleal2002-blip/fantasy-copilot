@@ -122,6 +122,9 @@ export interface LeagueRow {
   worst: Pos | null;
   rankNow: number;
   rankFut: number;
+  /** place by the average Fit of the optimal starters, today and two years out */
+  rankFit: number;
+  rankFitFut: number;
   /** places gained (+) or lost (−) moving from today to the future view */
   shift: number;
 }

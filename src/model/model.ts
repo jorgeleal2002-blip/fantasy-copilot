@@ -499,7 +499,7 @@ export function buildModel(input: ModelInput): Model {
       fit: lineupFit(list, 0),
       fitFut: isDynasty ? lineupFit(list, 2) : 0,
       avgAge: prof.avgAge || 0, window: prof.window || 'medio', worst: prof.worst || null,
-      rankNow: 0, rankFut: 0, shift: 0,
+      rankNow: 0, rankFut: 0, rankFit: 0, rankFitFut: 0, shift: 0,
     };
   });
 
@@ -542,9 +542,13 @@ export function buildModel(input: ModelInput): Model {
   allFits.sort((a, b) => b.fit - a.fit);
   const orderNow = leagueRows.slice().sort((a, b) => b.now - a.now);
   const orderFut = leagueRows.slice().sort((a, b) => b.future - a.future);
+  const orderFit = leagueRows.slice().sort((a, b) => b.fit - a.fit);
+  const orderFitFut = leagueRows.slice().sort((a, b) => b.fitFut - a.fitFut);
   leagueRows.forEach(x => {
     x.rankNow = orderNow.indexOf(x) + 1;
     x.rankFut = orderFut.indexOf(x) + 1;
+    x.rankFit = orderFit.indexOf(x) + 1;
+    x.rankFitFut = orderFitFut.indexOf(x) + 1;
     x.shift = x.rankNow - x.rankFut;
   });
 
