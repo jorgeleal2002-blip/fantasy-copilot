@@ -48,7 +48,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <header
         style={{
-          padding: 'calc(var(--safe-top) + 16px) 18px 12px',
+          padding: 'calc(var(--safe-top) + 11px) 15px 9px',
           display: 'flex', alignItems: 'center', gap: 11,
           background: 'linear-gradient(to bottom,rgba(38,42,96,.35),transparent)',
         }}
@@ -92,7 +92,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
         </button>
       </header>
 
-      <main style={{ flex: 1, overflow: 'auto', padding: '0 18px 18px', WebkitOverflowScrolling: 'touch' }}>
+      <main style={{ flex: 1, overflow: 'auto', padding: '0 15px 14px', WebkitOverflowScrolling: 'touch' }}>
         {app.tab === 'team' && <TeamTab app={app} m={model} />}
         {app.tab === 'trades' && <TradesTab app={app} m={model} />}
         {app.tab === 'draft' && <DraftTab app={app} m={model} />}
@@ -102,7 +102,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
 
       <nav
         style={{
-          display: 'flex', padding: '8px 12px calc(var(--safe-bottom) + 4px)', gap: 4,
+          display: 'flex', padding: '5px 10px calc(var(--safe-bottom) + 3px)', gap: 4,
           background: 'linear-gradient(to top,var(--color-bg) 60%,rgba(22,24,38,.4))',
           borderTop: '1px solid var(--color-divider)',
         }}

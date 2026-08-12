@@ -24,7 +24,7 @@ export function seg(active: boolean, size: SegSize = 'md'): CSSProperties {
   return {
     flex: 1,
     textAlign: 'center',
-    padding: size === 'sm' ? '7px 3px' : '8px 4px',
+    padding: size === 'sm' ? '5px 3px' : '6px 4px',
     borderRadius: size === 'sm' ? 8 : 9,
     fontSize: size === 'sm' ? 11 : 11.5,
     lineHeight: 1.3,
@@ -43,7 +43,7 @@ export function tabStyle(on: boolean): CSSProperties {
     flexDirection: 'column',
     alignItems: 'center',
     gap: 3,
-    padding: '8px 0 6px',
+    padding: '6px 0 4px',
     borderRadius: 12,
     cursor: 'pointer',
     color: on ? ACCENT : dim(0.4),
@@ -66,13 +66,13 @@ export function posBadge(photo: string | null): CSSProperties {
 export const surface: CSSProperties = {
   background: 'var(--color-surface)',
   borderRadius: 12,
-  padding: '14px 13px',
+  padding: '11px 12px',
 };
 
 /** The one saturated ground the system allows, used for the two hero cards. */
 export const heroCard: CSSProperties = {
   borderRadius: 14,
-  padding: 16,
+  padding: 13,
   background: 'linear-gradient(150deg,#262a60 0%,#232532 62%)',
   position: 'relative',
   overflow: 'hidden',

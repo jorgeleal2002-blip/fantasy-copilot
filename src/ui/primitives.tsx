@@ -132,7 +132,7 @@ export function Overlay({
 /** The screen-level scroller: every tab's content sits in one of these. */
 export function Screen({ children, animation = 'fadeUp .3s ease both' }: { children: ReactNode; animation?: string }) {
   return (
-    <div style={{ animation, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ animation, display: 'flex', flexDirection: 'column', gap: 9 }}>
       {children}
     </div>
   );

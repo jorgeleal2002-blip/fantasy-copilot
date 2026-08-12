@@ -79,13 +79,13 @@ function Summary({ app, m }: { app: App; m: Model }) {
         <div style={heroGlow} />
         <div style={{ position: 'relative' }}>
           <div style={kicker}>Your place in the league</div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 22, marginTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, marginTop: 9 }}>
             <div>
-              <div style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.04em', lineHeight: 1 }}>
+              <div style={{ fontSize: 29, fontWeight: 500, letterSpacing: '-0.04em', lineHeight: 1 }}>
                 {m.leagueHasRosters ? ord(me?.rankNow || 0) : '—'}
               </div>
               <div style={{ fontSize: 10.5, color: dim(0.5), marginTop: 4 }}>strength today</div>
-              <div style={{ height: 6, width: 88, borderRadius: 4, background: 'rgba(233,233,237,.1)', marginTop: 7, overflow: 'hidden' }}>
+              <div style={{ height: 6, width: 88, borderRadius: 4, background: 'rgba(233,233,237,.1)', marginTop: 6, overflow: 'hidden' }}>
                 <div style={{
                   height: '100%', borderRadius: 4, width: Math.round((me?.now || 0) / bestNow * 100) + '%',
                   background: `linear-gradient(90deg,#6f63bd,${ACCENT})`,
@@ -94,11 +94,11 @@ function Summary({ app, m }: { app: App; m: Model }) {
             </div>
             {m.isDynasty ? (
               <div>
-                <div style={{ fontSize: 34, fontWeight: 500, letterSpacing: '-0.04em', lineHeight: 1, color: GOOD }}>
+                <div style={{ fontSize: 29, fontWeight: 500, letterSpacing: '-0.04em', lineHeight: 1, color: GOOD }}>
                   {m.leagueHasRosters ? ord(me?.rankFut || 0) : '—'}
                 </div>
                 <div style={{ fontSize: 10.5, color: dim(0.5), marginTop: 4 }}>future value</div>
-                <div style={{ height: 6, width: 88, borderRadius: 4, background: 'rgba(233,233,237,.1)', marginTop: 7, overflow: 'hidden' }}>
+                <div style={{ height: 6, width: 88, borderRadius: 4, background: 'rgba(233,233,237,.1)', marginTop: 6, overflow: 'hidden' }}>
                   <div style={{
                     height: '100%', borderRadius: 4, width: Math.round((me?.future || 0) / bestFut * 100) + '%',
                     background: `linear-gradient(90deg,#3f4a86,${GOOD})`,
@@ -108,7 +108,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
             ) : null}
           </div>
           {m.isDynasty ? (
-            <div style={{ fontSize: 12, color: shift > 0 ? GOOD : shift < 0 ? BAD : dim(0.5), marginTop: 12 }}>
+            <div style={{ fontSize: 12, color: shift > 0 ? GOOD : shift < 0 ? BAD : dim(0.5), marginTop: 9 }}>
               {shift > 0 ? `You climb ${shift} place${shift === 1 ? '' : 's'} looking forward`
                 : shift < 0 ? `You drop ${-shift} place${shift === -1 ? '' : 's'} looking forward`
                   : 'Same place today and in the future'}
@@ -119,8 +119,8 @@ function Summary({ app, m }: { app: App; m: Model }) {
 
       <Card>
         <div style={{ ...cardTitle, marginBottom: 2 }}>Rank by position</div>
-        <div style={{ ...capsule, marginBottom: 12 }}>tap to filter your roster</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+        <div style={{ ...capsule, marginBottom: 9 }}>tap to filter your roster</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           {POS.map(p => {
             const rows = m.leagueRows.slice().sort((a, b) => (b.posStrength[p] || 0) - (a.posStrength[p] || 0));
             const best = m.leagueHasRosters ? rows[0] : null;
@@ -150,11 +150,11 @@ function Summary({ app, m }: { app: App; m: Model }) {
         </div>
       </Card>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {stats.map(s => (
           <div key={s.label} style={{ background: 'var(--color-surface)', borderRadius: 12, padding: 13 }}>
             <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.42) }}>{s.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 500, letterSpacing: '-0.03em', marginTop: 6, color: s.color }}>{s.value}</div>
+            <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: '-0.03em', marginTop: 4, color: s.color }}>{s.value}</div>
             <div style={{ fontSize: 11, color: dim(0.42), marginTop: 3 }}>{s.sub}</div>
           </div>
         ))}
@@ -217,7 +217,7 @@ function Lineup({ app, m }: { app: App; m: Model }) {
       <Card>
         <div style={{ ...cardTitle, marginBottom: 2 }}>Your explosive players</div>
         <div style={{ ...cardNote, marginBottom: 12 }}>Highest ceiling on the roster according to the upside model</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           {m.explosive.map(p => (
             <div
               key={p.id}
@@ -423,7 +423,7 @@ function Assets({ app, m }: { app: App; m: Model }) {
         <div style={{ ...cardNote, marginBottom: 12 }}>
           The quality of your starters against the same slots on every other roster
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           {POS.map(p => {
             const rank = m.posRank[p];
             const strong = rank <= Math.ceil(m.teamCount / 3);
