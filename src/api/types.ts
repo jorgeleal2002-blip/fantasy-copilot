@@ -17,6 +17,8 @@ export interface SleeperPlayer {
   injury_status?: string | null;
   active?: boolean;
   status?: string;
+  /** 1 = starter on their NFL depth chart; higher means somebody is ahead of them */
+  depth_chart_order?: number | null;
 }
 
 export type PlayerCatalog = Record<string, SleeperPlayer>;
@@ -88,8 +90,13 @@ export interface SleeperStatLine {
   gp?: number;
   off_snp?: number;
   tm_off_snp?: number;
+  rec?: number;
   rec_tgt?: number;
+  rec_yd?: number;
   rush_att?: number;
+  rush_yd?: number;
+  pass_att?: number;
+  pass_yd?: number;
   rush_rz_att?: number;
   rec_rz_tgt?: number;
   rush_td?: number;

@@ -1,6 +1,6 @@
 import type { SleeperPlayer } from '../api/types';
 import type { MetricKey, Weights } from './constants';
-import { ageCurve, clamp, rankScore } from './math';
+import { ageCurve, ageCurveRedraft, clamp, rankScore } from './math';
 import type { Usage } from './usage';
 
 export type Metrics = Record<MetricKey, number>;
@@ -44,30 +44,85 @@ export function scorePlayer(
   const rs = rankScore(adp);
   const exp = p.years_exp || 0;
   const age = p.age || 26;
+  const talent = ctx.dv != null ? clamp(ctx.dv / (ctx.dvMax || 1), 0, 1) : rs;
 
   const m: Metrics = {
     need: needScore[p.position || ''] || 0,
-    talent: ctx.dv != null ? clamp(ctx.dv / (ctx.dvMax || 1), 0, 1) : rs,
+    talent,
     value: ctx.idx ? clamp(0.5 + (ctx.idx - (ctx.pick || 0)) / (ctx.idx + (ctx.pick || 0)) * 0.5, 0, 1) : 0.5,
     floor: clamp(rs * 0.7 + (exp >= 3 ? 0.3 : exp >= 1 ? 0.18 : 0.05), 0, 1),
     boom: clamp(rs * 0.45 + (age <= 24 ? 0.42 : age <= 26 ? 0.26 : 0.08) + (exp <= 2 ? 0.12 : 0), 0, 1),
-    age: ctx.redraft ? 0.8 : ageCurve(p.position, p.age),
+    combo: 0,
+    age: ctx.redraft
+      ? ageCurveRedraft(p.position, p.age, talent)
+      : ageCurve(p.position, p.age, talent),
     stack: ctx.stack != null ? ctx.stack : 0.5,
     rz: 0.35,
   };
 
+  // Number.isFinite rather than != null: a missing value can arrive as NaN, and
+  // NaN != null is true — one of them would poison this player's Fit app-wide.
+  const fin = Number.isFinite;
   const u = ctx.use;
   if (u) {
-    if (u.snap != null) m.floor = clamp(m.floor * 0.3 + clamp(u.snap, 0, 1) * 0.7, 0, 1);
-    if (u.tgt != null) m.boom = clamp(m.boom * 0.45 + clamp(u.tgt * 4, 0, 1) * 0.55, 0, 1);
-    // Red zone: share of the offence's chances inside the 20, plus touchdowns
-    // actually scored per game.
-    if (u.rzShare != null || u.tdPerGame != null) {
-      const rzPart = u.rzShare != null ? clamp(u.rzShare * 4.5, 0, 1) : null;
-      const tdPart = u.tdPerGame != null ? clamp(u.tdPerGame / 1.1, 0, 1) : null;
-      m.rz = rzPart != null && tdPart != null ? rzPart * 0.6 + tdPart * 0.4 : (rzPart ?? tdPart ?? m.rz);
+    // Floor = the certainty they will produce: being on the field (snaps) and
+    // the ball reaching them (volume). Volume lives here, not in explosiveness —
+    // many touches do not make you explosive, they make you dependable.
+    if (fin(u.snap) || fin(u.volPct)) {
+      const sn = fin(u.snap) ? clamp(u.snap as number, 0, 1) : null;
+      const vo = fin(u.volPct) ? (u.volPct as number) : null;
+      const real = sn != null && vo != null ? sn * 0.62 + vo * 0.38 : (sn ?? vo);
+      if (real != null) m.floor = clamp(m.floor * 0.3 + real * 0.7, 0, 1);
+    }
+    // Explosiveness = how much each touch returns: yards per touch and long
+    // touchdowns. Volume moved to the floor; short scores stay in red zone.
+    if (fin(u.effPct) || fin(u.ltrPct)) {
+      const ef = fin(u.effPct) ? (u.effPct as number) : null;
+      const lt = fin(u.ltrPct) ? (u.ltrPct as number) : null;
+      const real = ef != null && lt != null ? ef * 0.70 + lt * 0.30 : (ef ?? lt);
+      if (real != null) m.boom = clamp(m.boom * 0.35 + real * 0.65, 0, 1);
+    } else if (fin(u.tgt) && (u.tgt as number) > 0) {
+      m.boom = clamp(m.boom * 0.45 + clamp((u.tgt as number) * 4, 0, 1) * 0.55, 0, 1);
+    }
+    // Red zone: share of the chances near the goal line plus EXPECTED
+    // touchdowns per game. Scored ones carry the luck with them and luck does
+    // not repeat; expected ones come from opportunities, which do persist.
+    if (fin(u.rzShare) || fin(u.xtdPerGame) || fin(u.tdPerGame)) {
+      const rzPart = fin(u.rzShare) ? clamp((u.rzShare as number) * 4.5, 0, 1) : null;
+      const perGame = fin(u.xtdPerGame) ? u.xtdPerGame : u.tdPerGame;
+      const tdPart = fin(perGame) ? clamp((perGame as number) / 1.1, 0, 1) : null;
+      const blend = rzPart != null && tdPart != null ? rzPart * 0.6 + tdPart * 0.4 : (rzPart ?? tdPart);
+      if (fin(blend)) m.rz = blend as number;
     }
   }
+
+  // Availability and role, straight out of Sleeper's own catalog — no new data
+  // to fetch. These go against the FLOOR, which is where they live: an injured
+  // player, or one sitting second on his depth chart, has not lost talent. He
+  // has lost the certainty that he will produce.
+  const inj = String(p.injury_status || '').toLowerCase();
+  const status = String(p.status || '').toLowerCase();
+  const injPen = status.includes('injured reserve') || status.includes('pup') ? 0.45
+    : status.includes('inactive') || status.includes('practice') ? 0.30
+      : inj.includes('out') ? 0.35
+        : inj.includes('doubt') ? 0.22
+          : inj.includes('quest') ? 0.10
+            : inj ? 0.06 : 0;
+  // The depth chart warns of competition weeks before any statistic does: a
+  // team promoting someone over him shows up here first.
+  const dco = Number(p.depth_chart_order);
+  const depthPen = Number.isFinite(dco) && dco > 1 ? Math.min((dco - 1) * 0.12, 0.30) : 0;
+  if (injPen || depthPen) m.floor = clamp(m.floor * (1 - Math.min(injPen + depthPen, 0.75)), 0, 1);
+
+  // Consistency WITH a ceiling: the geometric mean of floor and boom. Averaging
+  // lets the lopsided through (0.9 and 0.1 average the same as 0.5 and 0.5);
+  // multiplying demands both — the one who gives you the minimum one Sunday and
+  // 20 the next falls out here.
+  m.combo = Math.sqrt(clamp(m.floor, 0, 1) * clamp(m.boom, 0, 1));
+  // Last net: any metric that is not finite returns to its neutral before summing.
+  (Object.keys(m) as MetricKey[]).forEach(k => {
+    if (!fin(m[k])) m[k] = k === 'rz' ? 0.35 : 0.5;
+  });
 
   const fit = Math.round((Object.keys(w) as MetricKey[]).reduce((a, k) => a + w[k] * m[k], 0) * 100);
   return { m, fit, adp };
@@ -85,6 +140,29 @@ export function ownedWeights(w: Weights): Weights {
   });
   out.need = 0;
   return out;
+}
+
+/**
+ * In redraft you draft to win weeks now, not to be right in two years. The
+ * dynasty weights are transformed while keeping the character of the chosen
+ * strategy: what gets paid this Sunday goes up (need, reaching, floor), what
+ * only pays with time goes down (age, speculative upside).
+ */
+export function redraftWeights(w: Weights): Weights {
+  const r: Weights = {
+    talent: w.talent * 1.12,
+    need: w.need * 1.25,     // the hole is paid this week, not in two years
+    value: w.value * 1.55,   // reaching hurts: the spent pick does not come back
+    floor: w.floor * 1.30,
+    boom: w.boom * 0.80,
+    combo: w.combo,
+    age: w.age * 0.30,       // only this season's risk
+    stack: w.stack,
+    rz: w.rz * 1.10,
+  };
+  const total = (Object.keys(r) as MetricKey[]).reduce((a, k) => a + r[k], 0);
+  (Object.keys(r) as MetricKey[]).forEach(k => { r[k] = r[k] / total; });
+  return r;
 }
 
 /** Short chips explaining why the top recommendation is the top recommendation. */

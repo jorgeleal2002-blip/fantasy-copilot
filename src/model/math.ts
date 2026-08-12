@@ -1,17 +1,48 @@
 import type { Pos, SleeperPlayer } from '../api/types';
-import { DECAY, PEAK } from './constants';
+import { DECAY, PRIME, RISE } from './constants';
 
 export const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
 
 /**
- * Value multiplier for a player's age at their position: climbs to the
- * positional peak, then decays at that position's own rate.
+ * Value multiplier for a player's age. The prime is a window: climbing toward
+ * it, flat inside it, falling away after it, each at that position's own rate.
+ *
+ * `elite` (0..1) is the player's quality relative to the board. A star does not
+ * age like a backup — talent buys back some of what the body loses — so they
+ * hold the window 1.5 years longer and decay 45% slower. With no value passed,
+ * nobody gets the discount by default.
  */
-export function ageCurve(pos: string | undefined, age: number | null | undefined): number {
+export function ageCurve(
+  pos: string | undefined,
+  age: number | null | undefined,
+  elite?: number,
+): number {
   if (!age) return 0.72;
-  const peak = PEAK[pos as Pos] ?? 26;
-  if (age <= peak) return clamp(0.82 + (age - (peak - 6)) * 0.03, 0.5, 1);
-  return clamp(1 - (age - peak) * (DECAY[pos as Pos] ?? 0.09), 0.1, 1);
+  const e = Number.isFinite(elite) ? clamp(elite as number, 0, 1) : 0;
+  const [start, end0] = PRIME[pos as Pos] ?? [24, 28];
+  const end = end0 + 1.5 * e;
+  const decay = (DECAY[pos as Pos] ?? 0.09) * (1 - 0.45 * e);
+  if (age < start) return clamp(1 - (start - age) * (RISE[pos as Pos] ?? 0.06), 0.35, 1);
+  if (age <= end) return 1;
+  return clamp(1 - (age - end) * decay, 0.1, 1);
+}
+
+/**
+ * In redraft, age does not predict the future — it predicts this season's risk.
+ * Being young is not an asset (you will never collect that development) and
+ * being old is a liability, but a smaller one: it prices a year of wear, not a
+ * three-year decline. No climb, and the fall at 45% of dynasty's.
+ */
+export function ageCurveRedraft(
+  pos: string | undefined,
+  age: number | null | undefined,
+  elite?: number,
+): number {
+  if (!age) return 0.8;
+  const [, end0] = PRIME[pos as Pos] ?? [24, 28];
+  const end = end0 + 1.5 * (Number.isFinite(elite) ? clamp(elite as number, 0, 1) : 0);
+  if (age <= end) return 1;
+  return clamp(1 - (age - end) * (DECAY[pos as Pos] ?? 0.09) * 0.45, 0.45, 1);
 }
 
 /** Board position → a 0..1 score. Log-shaped: the top of a board is steep. */

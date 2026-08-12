@@ -4,10 +4,10 @@ import {
   loadLeague, matchMe, userLeagues, playerPhoto,
 } from '../api/sleeper';
 import type { LeagueBundle, SleeperLeague } from '../api/types';
-import { DRAFT_POLL_MS, STORAGE_PHOTOS, STORAGE_SESSION, StratKey } from '../model/constants';
+import { DRAFT_POLL_MS, STORAGE_PHOTOS, STORAGE_SESSION, StratKey, USAGE_V } from '../model/constants';
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
-import { buildUsage, type UsageMap } from '../model/usage';
+import { blendSeasons, seasonUsage, type UsageMap } from '../model/usage';
 import { nextDetailStack, topDetail } from './detail-stack';
 
 export type Stage = 'connect' | 'leagues' | 'app';
@@ -26,7 +26,8 @@ export const BOOT_STEPS = [
 /** Feeds are shared across league views within a session, keyed by what they
  *  actually depend on — the market is format-specific, usage is per season. */
 const marketCache = new Map<string, Market>();
-const usageCache = new Map<number, UsageMap>();
+const usageCache = new Map<string, UsageMap>();
+const seasonCache = new Map<string, string>();
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -64,6 +65,7 @@ export function useApp() {
   // ── side feeds
   const [usage, setUsage] = useState<UsageMap>({});
   const [usageState, setUsageState] = useState<FeedState>('idle');
+  const [usageSeasons, setUsageSeasons] = useState('');
   const [market, setMarket] = useState<Market | null>(null);
   const [marketState, setMarketState] = useState<FeedState>('idle');
 
@@ -75,7 +77,7 @@ export function useApp() {
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterSort, setRosterSort] = useState<'value' | 'age' | 'snap'>('value');
   const [boardMode, setBoardMode] = useState<'rookies' | 'fa'>('rookies');
-  const [rankMode, setRankMode] = useState<'now' | 'future'>('now');
+  const [rankMode, setRankMode] = useState<'now' | 'future' | 'fit' | 'fitFut'>('now');
   const [pickSel, setPickSel] = useState(0);
   const [strat, setStrat] = useState<StratKey>('balanced');
   /* Sheets stack: opening a player from a rival's team has to come back to
@@ -87,6 +89,11 @@ export function useApp() {
   const setDetail = useCallback((id: string | null) => {
     setDetailStack(stack => nextDetailStack(stack, id));
   }, []);
+
+  const [query, setQuery] = useState('');
+  const [topPos, setTopPos] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
+  const [topLens, setTopLens] = useState<'neutral' | 'me' | 'fut'>('neutral');
+  const [topOpen, setTopOpen] = useState(false);
   const [passed, setPassed] = useState<string[]>([]);
 
   // ── ephemera
@@ -128,19 +135,37 @@ export function useApp() {
   }, []);
 
   const fetchUsage = useCallback(async (bundle: LeagueBundle) => {
-    // Weekly usage only exists for a finished season, so we read the last one.
-    const year = (Number(bundle.league.season) || new Date().getFullYear()) - 1;
-    if (usageCache.has(year)) {
-      setUsage(usageCache.get(year)!);
+    // Three seasons, not one: a single year is a small sample, and one injury
+    // or a new coordinator moves every number in it. Usage only exists for a
+    // finished season, so we count back from the league's own year.
+    const latest = (Number(bundle.league.season) || new Date().getFullYear()) - 1;
+    const years = [latest, latest - 1, latest - 2];
+    const key = USAGE_V + ':' + latest;
+    if (usageCache.has(key)) {
+      setUsage(usageCache.get(key)!);
+      setUsageSeasons(seasonCache.get(key) || '');
       setUsageState('ok');
       return;
     }
     setUsageState('loading');
     try {
-      const stats = await getSeasonStats(year);
-      const u = buildUsage(stats, bundle.players);
-      usageCache.set(year, u);
+      const loaded: { year: number; usage: UsageMap }[] = [];
+      for (const year of years) {
+        try {
+          const stats = await getSeasonStats(year);
+          if (stats && typeof stats === 'object') {
+            loaded.push({ year, usage: seasonUsage(stats, bundle.players) });
+          }
+        } catch {
+          /* one season being down does not take the others with it */
+        }
+      }
+      const u = blendSeasons(loaded, bundle.players);
+      const label = loaded.map(l => l.year).join(' · ');
+      usageCache.set(key, u);
+      seasonCache.set(key, label);
       setUsage(u);
+      setUsageSeasons(label);
       setUsageState('ok');
     } catch {
       setUsageState('fail');
@@ -357,15 +382,16 @@ export function useApp() {
   return {
     stage, username, leagues, authBusy, authError, error,
     data, step, model, syncing, syncedAt,
-    usageState, marketState,
+    usageState, usageSeasons, marketState,
     tab, teamView, draftView, filter, rosterFilter, rosterSort, boardMode, rankMode,
-    pickSel, strat, detail, passed, toast, photos,
+    pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 
     setUsername: (v: string) => { setUsername(v); setAuthError(''); },
     connectUser, pickLeague, switchLeague, logout, refreshAll, refreshPicks, retry,
     setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
     setTeamView, setDraftView, setFilter, setRosterFilter, setRosterSort,
     setBoardMode, setRankMode, setPickSel, setStrat, setDetail,
+    setQuery, setTopPos, setTopLens, setTopOpen,
     passOffer: (key: string) => setPassed(p => p.concat(key)),
     resetOffers: () => setPassed([]),
     showToast, hideToast, photoFor, setPhoto, clearPhoto,

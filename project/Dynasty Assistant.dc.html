@@ -27,7 +27,8 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
 <div style="min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:44px 32px 60px;background:radial-gradient(1200px 600px at 50% -10%,#1c1e30 0%,#0f101a 70%)">
   <div style="display:flex;flex-direction:column;gap:14px;width:402px">
     <div style="display:flex;align-items:baseline;gap:10px">
-      <span style="font-size:13px;font-weight:600;color:#e9e9ed;letter-spacing:-0.01em">Fantasy Copilot</span>
+      <img src="mark-simple.svg" alt="" style="width:24px;height:24px;flex:none;align-self:center">
+      <span style="font-size:13px;font-weight:600;color:#e9e9ed;letter-spacing:-0.01em">Doctors Fantasy</span>
       <span style="font-size:11px;color:rgba(233,233,237,.45)">datos en vivo de tu liga Sleeper</span>
     </div>
     <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
@@ -37,8 +38,8 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
         <!-- LOGIN -->
         <sc-if value="{{ atConnect }}" hint-placeholder-val="{{ false }}">
           <div style="flex:1;display:flex;flex-direction:column;padding:78px 24px 26px;animation:fadeUp .4s ease both">
-            <div style="width:36px;height:36px;border-radius:11px;border:1px solid var(--color-accent);display:flex;align-items:center;justify-content:center;color:var(--color-accent);font-size:16px;animation:pulseGlow 3s ease-in-out infinite">◈</div>
-            <h1 style="font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.025em;margin:26px 0 8px">Fantasy Copilot</h1>
+            <img src="badge-primary.svg" alt="Doctors Fantasy" style="width:72px;height:72px;border-radius:50%;animation:pulseGlow 3s ease-in-out infinite">
+            <h1 style="font-size:30px;line-height:1.1;font-weight:500;letter-spacing:-0.025em;margin:26px 0 8px">Doctors Fantasy</h1>
             <p style="font-size:13.5px;line-height:1.5;color:rgba(233,233,237,.5);margin:0 0 28px;max-width:30ch">Conecta tu cuenta de Sleeper. Solo lectura.</p>
             <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.4);margin-bottom:8px">Usuario de Sleeper</div>
             <div style="display:flex;align-items:center;gap:10px;background:var(--color-surface);border:1px solid var(--color-divider);border-radius:11px;padding:13px 14px">
@@ -61,7 +62,7 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
               <sc-for list="{{ leagueOptions }}" as="lo" hint-placeholder-count="3">
                 <div onClick="{{ lo.pick }}" style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;background:var(--color-surface);border:1px solid var(--color-divider);cursor:pointer" style-hover="border-color:#9184d9">
                   <sc-if value="{{ lo.hasLogo }}" hint-placeholder-val="{{ false }}">
-                    <img src="{{ lo.logo }}" alt="" style="width:36px;height:36px;border-radius:9px;flex:none;object-fit:cover">
+                    <div style="{{ lo.logoStyle }}"></div>
                   </sc-if>
                   <div style="min-width:0;flex:1">
                     <div style="font-size:14.5px;font-weight:500;letter-spacing:-0.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ lo.name }}</div>
@@ -112,7 +113,7 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
               </div>
               <div onClick="{{ goSettings }}" style="width:34px;height:34px;flex:none;border-radius:50%;overflow:hidden;background:var(--color-surface);border:1px solid var(--color-divider);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--color-accent);cursor:pointer">
                 <sc-if value="{{ hasMyAvatar }}" hint-placeholder-val="{{ false }}">
-                  <img src="{{ myAvatar }}" alt="" style="width:100%;height:100%;object-fit:cover">
+                  <div style="{{ myAvatarStyle }}"></div>
                 </sc-if>
                 <sc-if value="{{ noMyAvatar }}" hint-placeholder-val="{{ true }}">{{ initials }}</sc-if>
               </div>
@@ -170,6 +171,29 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
                       </sc-for>
                     </div>
                     <div style="font-size:10.5px;letter-spacing:.02em;color:rgba(233,233,237,.38);padding:0 2px">{{ pickPlanNote }}</div>
+                    <div style="display:flex;align-items:center;gap:9px;background:var(--color-surface);border:1px solid var(--color-divider);border-radius:10px;padding:9px 11px">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(233,233,237,.4)" stroke-width="1.8" style="flex:none">
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <path d="M20 20l-3.5-3.5"></path>
+                      </svg>
+                      <input value="{{ searchQ }}" onChange="{{ setSearch }}" placeholder="Buscar cualquier jugador de la NFL" style="flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--color-text);font:400 13px 'Inter',system-ui">
+                      <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+                        <div onClick="{{ clearSearch }}" style="flex:none;color:rgba(233,233,237,.45);font-size:15px;cursor:pointer;padding:0 2px">×</div>
+                      </sc-if>
+                    </div>
+                    <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+                      <div style="background:var(--color-surface);border-radius:12px;overflow:hidden">
+                        <sc-for list="{{ searchResults }}" as="sr" hint-placeholder-count="4">
+                          <div onClick="{{ sr.tap }}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--color-divider);cursor:pointer" style-hover="background:rgba(145,132,217,.07)">
+                            <div style="flex:1;min-width:0">
+                              <div style="font-size:13px;font-weight:500;letter-spacing:-0.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sr.name }}</div>
+                              <div style="font-size:10.5px;color:rgba(233,233,237,.42);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sr.meta }}</div>
+                            </div>
+                            <span style="{{ sr.fitStyle }}">{{ sr.fit }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
                     <div style="display:flex;gap:6px">
                       <sc-for list="{{ boardModes }}" as="bm" hint-placeholder-count="2">
                         <div onClick="{{ bm.pick }}" style="{{ bm.style }}">{{ bm.label }}</div>
@@ -238,19 +262,17 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
                     <div style="position:absolute;inset:0;background:radial-gradient(220px 120px at 88% 0%,rgba(145,132,217,.3),transparent 70%)"></div>
                     <div style="position:relative">
                       <div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#b3a9e6">Tu lugar en la liga</div>
-                      <div style="display:flex;align-items:flex-end;gap:22px;margin-top:12px">
-                        <div>
-                          <div style="font-size:34px;font-weight:500;letter-spacing:-0.04em;line-height:1">{{ heroRankNow }}º</div>
-                          <div style="font-size:10.5px;color:rgba(233,233,237,.5);margin-top:4px">fuerza hoy</div>
-                          <div style="height:6px;width:88px;border-radius:4px;background:rgba(233,233,237,.1);margin-top:7px;overflow:hidden"><div style="{{ heroNowBar }}"></div></div>
-                        </div>
-                        <sc-if value="{{ showFuture }}" hint-placeholder-val="{{ true }}">
-                        <div>
-                          <div style="font-size:34px;font-weight:500;letter-spacing:-0.04em;line-height:1;color:#8ec9a8">{{ heroRankFut }}º</div>
-                          <div style="font-size:10.5px;color:rgba(233,233,237,.5);margin-top:4px">valor a futuro</div>
-                          <div style="height:6px;width:88px;border-radius:4px;background:rgba(233,233,237,.1);margin-top:7px;overflow:hidden"><div style="{{ heroFutBar }}"></div></div>
-                        </div>
-                        </sc-if>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+                        <sc-for list="{{ heroRanks }}" as="hr" hint-placeholder-count="4">
+                          <div style="background:rgba(15,16,28,.42);border:1px solid rgba(233,233,237,.07);border-radius:11px;padding:10px 11px">
+                            <div style="font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:rgba(233,233,237,.42);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ hr.label }}</div>
+                            <div style="display:flex;align-items:baseline;gap:6px;margin-top:5px">
+                              <div style="{{ hr.rankStyle }}">{{ hr.rank }}</div>
+                              <div style="font-size:10px;color:rgba(233,233,237,.35)">de {{ hr.of }}</div>
+                            </div>
+                            <div style="font-size:10.5px;color:rgba(233,233,237,.45);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ hr.value }}</div>
+                          </div>
+                        </sc-for>
                       </div>
                       <sc-if value="{{ showFuture }}" hint-placeholder-val="{{ true }}">
                         <div style="font-size:12px;color:{{ heroShiftColor }};margin-top:12px">{{ heroShift }}</div>
@@ -532,7 +554,7 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
               <!-- LIGA -->
               <sc-if value="{{ tabLeague }}" hint-placeholder-val="{{ false }}">
                 <div style="animation:fadeUp .3s ease both;display:flex;flex-direction:column;gap:12px">
-                  <div style="display:flex;gap:6px">
+                  <div style="display:flex;flex-wrap:wrap;gap:6px">
                     <sc-for list="{{ rankModes }}" as="rm" hint-placeholder-count="2">
                       <div onClick="{{ rm.pick }}" style="{{ rm.style }}">{{ rm.label }}</div>
                     </sc-for>
@@ -544,23 +566,54 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
                       <div onClick="{{ rk.tap }}" style="{{ rk.rowStyle }}">
                         <span style="width:16px;flex:none;color:rgba(233,233,237,.4);font-size:12px">{{ rk.rank }}</span>
                         <sc-if value="{{ rk.hasAvatar }}" hint-placeholder-val="{{ false }}">
-                          <img src="{{ rk.avatar }}" alt="" style="width:28px;height:28px;border-radius:8px;flex:none;object-fit:cover;border:1px solid var(--color-divider)">
+                          <div style="{{ rk.avatarStyle }}"></div>
                         </sc-if>
                         <div style="flex:1;min-width:0">
                           <div style="display:flex;align-items:baseline;gap:7px">
                             <span style="font-size:13px;font-weight:{{ rk.weight }};letter-spacing:-0.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ rk.name }}</span>
                             <span style="font-size:10px;color:{{ rk.windowColor }};flex:none">{{ rk.window }}</span>
                           </div>
-                          <div style="font-size:10.5px;color:rgba(233,233,237,.4);margin-top:2px">{{ rk.sub }}</div>
+                          <div style="font-size:10.5px;color:rgba(233,233,237,.4);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ rk.sub }}</div>
                         </div>
                         <div style="text-align:right;flex:none">
-                          <div style="font-size:12.5px;color:rgba(233,233,237,.7)">{{ rk.value }}</div>
-                          <div style="font-size:10px;color:{{ rk.shiftColor }};margin-top:2px">{{ rk.shift }}</div>
+                          <div style="font-size:13px;color:rgba(233,233,237,.75);font-variant-numeric:tabular-nums">{{ rk.value }}</div>
+                          <div style="font-size:10px;margin-top:2px;color:{{ rk.flagColor }};white-space:nowrap">{{ rk.flag }}</div>
                         </div>
                         <div onClick="{{ rk.tap }}" style="flex:none;padding:6px 4px 6px 8px;color:var(--color-accent);font-size:15px;cursor:pointer">›</div>
                       </div>
                     </sc-for>
                   </div>
+
+                  <div onClick="{{ toggleTop }}" style="display:flex;align-items:center;gap:10px;background:var(--color-surface);border-radius:12px;padding:12px 13px;cursor:pointer" style-hover="background:rgba(145,132,217,.07)">
+                    <div style="flex:1;min-width:0;font-size:13px;font-weight:500;letter-spacing:-0.01em">Mejores Fit de la liga</div>
+                    <div style="flex:none;font-size:11px;color:rgba(233,233,237,.35);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px">{{ topPeek }}</div>
+                    <span style="flex:none;color:var(--color-accent);font-size:14px">{{ topCaret }}</span>
+                  </div>
+                  <sc-if value="{{ topOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:6px">
+                    <sc-for list="{{ topLenses }}" as="tl" hint-placeholder-count="2">
+                      <div onClick="{{ tl.pick }}" style="{{ tl.style }}">{{ tl.label }}</div>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px">
+                    <sc-for list="{{ topPosFilters }}" as="tf" hint-placeholder-count="5">
+                      <div onClick="{{ tf.pick }}" style="{{ tf.style }}">{{ tf.label }}</div>
+                    </sc-for>
+                  </div>
+                  <div style="background:var(--color-surface);border-radius:12px;overflow:hidden">
+                    <sc-for list="{{ topFits }}" as="tp" hint-placeholder-count="8">
+                      <div onClick="{{ tp.tap }}" style="{{ tp.rowStyle }}">
+                        <span style="width:16px;flex:none;color:rgba(233,233,237,.35);font-size:11.5px;font-variant-numeric:tabular-nums">{{ tp.n }}</span>
+                        <div style="flex:1;min-width:0">
+                          <div style="font-size:13px;font-weight:500;letter-spacing:-0.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tp.name }}</div>
+                          <div style="font-size:10.5px;color:rgba(233,233,237,.42);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tp.meta }}</div>
+                        </div>
+                        <span style="{{ tp.fitStyle }}">{{ tp.fit }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="font-size:11px;line-height:1.45;color:rgba(233,233,237,.35);margin-top:-4px;text-wrap:pretty">{{ topLensNote }} Los tuyos van resaltados.</div>
+                  </sc-if>
 
                   <div style="background:var(--color-surface);border-radius:12px;padding:14px 13px">
                     <div style="font-size:13px;font-weight:500;margin-bottom:10px">Formato</div>
@@ -596,7 +649,7 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
                   <div style="display:flex;align-items:center;gap:13px;background:var(--color-surface);border-radius:13px;padding:14px">
                     <div style="width:46px;height:46px;flex:none;border-radius:50%;overflow:hidden;border:1px solid var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--color-accent)">
                       <sc-if value="{{ hasMyAvatar }}" hint-placeholder-val="{{ false }}">
-                        <img src="{{ myAvatar }}" alt="" style="width:100%;height:100%;object-fit:cover">
+                        <div style="{{ myAvatarStyle }}"></div>
                       </sc-if>
                       <sc-if value="{{ noMyAvatar }}" hint-placeholder-val="{{ true }}">{{ initials }}</sc-if>
                     </div>
@@ -619,11 +672,20 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
                       </sc-for>
                     </div>
                     <div style="font-size:12px;line-height:1.5;color:rgba(233,233,237,.5);margin-top:10px;text-wrap:pretty">{{ strategyCopy }}</div>
+                    <div style="font-size:10.5px;color:rgba(233,233,237,.35);margin-top:12px">{{ stratEffectNote }}</div>
+                    <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">
+                      <sc-for list="{{ stratEffect }}" as="se" hint-placeholder-count="3">
+                        <div style="display:flex;align-items:baseline;gap:8px;font-size:12px">
+                          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ se.name }}</span>
+                          <span style="flex:none;color:{{ se.color }};font-variant-numeric:tabular-nums">{{ se.move }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
                   </div>
 
                   <div style="background:var(--color-surface);border-radius:12px;padding:14px 13px">
                     <div style="font-size:13px;font-weight:500;margin-bottom:4px">Pesos del Fit Score</div>
-                    <div style="font-size:11.5px;color:rgba(233,233,237,.45);margin-bottom:12px">Fit = Σ wᵢ × métricaᵢ</div>
+                    <div style="font-size:11.5px;line-height:1.45;color:rgba(233,233,237,.45);margin-bottom:12px;text-wrap:pretty">{{ weightsNote }}</div>
                     <div style="display:flex;flex-direction:column;gap:10px">
                       <sc-for list="{{ weights }}" as="w" hint-placeholder-count="5">
                         <div>
@@ -709,7 +771,7 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
             <div style="flex:1;overflow:auto;padding:6px 18px 24px">
               <div style="display:flex;align-items:center;gap:12px">
                 <sc-if value="{{ tmHasAvatar }}" hint-placeholder-val="{{ false }}">
-                  <img src="{{ tmAvatar }}" alt="" style="width:46px;height:46px;border-radius:11px;flex:none;object-fit:cover;border:1px solid var(--color-divider)">
+                  <div style="{{ tmAvatarStyle }}"></div>
                 </sc-if>
                 <div style="font-size:25px;font-weight:500;letter-spacing:-0.025em">{{ tmName }}</div>
               </div>
@@ -787,6 +849,7 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
                 <div style="text-align:right;flex:none">
                   <div style="font-size:24px;font-weight:500;letter-spacing:-0.03em;color:{{ dFitColor }}">{{ dFit }}</div>
                   <div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:rgba(233,233,237,.45)">fit score</div>
+                  <div style="font-size:9.5px;color:rgba(233,233,237,.32);margin-top:3px;white-space:nowrap">{{ dFitLens }}</div>
                 </div>
               </div>
 
@@ -828,7 +891,8 @@ a{color:#9184d9}a:hover{color:#b3a9e6}
 
         <sc-if value="{{ showToast }}" hint-placeholder-val="{{ false }}">
           <div onClick="{{ hideToast }}" style="position:absolute;left:18px;right:18px;bottom:96px;z-index:20;background:#2f3245;border:1px solid var(--color-divider);border-radius:12px;padding:13px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-lg);cursor:pointer;animation:fadeUp .25s ease both">
-            <span style="color:var(--color-accent);font-size:14px">◈</span>
+            <img src="mark-simple.svg" alt="" style="width:24px;height:24px;flex:none">
+
             <span style="font-size:13px;line-height:1.4">{{ toastText }}</span>
           </div>
         </sc-if>
@@ -844,26 +908,55 @@ const LEAGUE_ID = '1385973534941011968';
 const USERNAME = 'lil2002';
 const ACCENT = '#9184d9', GOOD = '#8ec9a8', BAD = '#d9a08e', MID = '#c9c0f0';
 const POS = ['QB', 'RB', 'WR', 'TE'];
-const PEAK = { QB: 27, RB: 24, WR: 26, TE: 27 };
-const DECAY = { QB: 0.05, RB: 0.13, WR: 0.08, TE: 0.07 };
+// El prime no es un punto, es una ventana: dentro de ella el jugador está a tope y no
+// mejora ni empeora. Antes sube hacia ella, después cae desde ella. Los rangos y las
+// tasas son distintos por posición: un RB llega listo y se acaba pronto; un QB tarda
+// en llegar y aguanta una década; un TE es el que más tarda en romper.
+// Sube al cambiar la forma del mapa de uso: invalida cachés de builds anteriores, que
+// si no sobreviven a un hot reload y publican números de una temporada con etiqueta de tres.
+const USAGE_V = 3;
+const PRIME = { QB: [26, 33], RB: [23, 26], WR: [24, 28], TE: [25, 29] };
+const RISE  = { QB: 0.07, RB: 0.05, WR: 0.06, TE: 0.09 };   // por año ANTES del prime
+const DECAY = { QB: 0.05, RB: 0.15, WR: 0.08, TE: 0.07 };   // por año DESPUÉS del prime
+const PEAK = { QB: 26, RB: 23, WR: 24, TE: 25 };             // inicio del prime
 
 const STRATS = {
-  balanced: { label: 'Balance', w: { talent: .34, need: .16, value: .10, floor: .10, boom: .08, age: .05, stack: .06, rz: .11 },
-    copy: 'La calidad manda; la necesidad desempata, y la zona roja pesa porque ahí es donde se anotan los TD.' },
-  floor: { label: 'Piso seguro', w: { talent: .29, need: .15, value: .08, floor: .21, boom: .04, age: .08, stack: .05, rz: .10 },
+  balanced: { label: 'Balance', w: { talent: .30, need: .14, value: .08, floor: .06, boom: .06, combo: .18, age: .05, stack: .05, rz: .08 },
+    copy: 'Balance de verdad: exige piso Y techo en el mismo jugador, no uno u otro. La media geométrica castiga al desbalanceado — fuera el que te da 4 puntos un domingo y 22 el siguiente.' },
+  floor: { label: 'Piso seguro', w: { talent: .26, need: .15, value: .08, floor: .26, boom: .03, combo: 0, age: .07, stack: .05, rz: .10 },
     copy: 'Priorizo rol establecido, volumen y presencia en zona roja. Menos varianza, menos techo.' },
-  upside: { label: 'Explosivos', w: { talent: .27, need: .13, value: .08, floor: .04, boom: .24, age: .08, stack: .06, rz: .10 },
+  upside: { label: 'Explosivos', w: { talent: .25, need: .12, value: .07, floor: .03, boom: .30, combo: 0, age: .09, stack: .06, rz: .08 },
     copy: 'Persigo techo: juventud, saltos probables, stacks con tu QB y quien pisa la zona roja.' },
 };
-const METRIC_LABEL = { talent: 'Calidad del jugador', need: 'Necesidad posicional', value: 'Valor vs disponibilidad', floor: 'Piso (snap %)', boom: 'Explosividad (cuota de balón)', age: 'Curva de edad', stack: 'Correlación de equipo NFL', rz: 'Zona roja y TD' };
+const METRIC_LABEL = { talent: 'Calidad del jugador', need: 'Necesidad posicional', value: 'Valor vs disponibilidad', floor: 'Piso (snaps y volumen)', boom: 'Explosividad (yardas por balón tocado)', combo: 'Piso Y techo (media geométrica)', age: 'Curva de edad', stack: 'Correlación de equipo NFL', rz: 'Zona roja y TD' };
 
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const normName = n => (n || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z ]/g, '').replace(/ (jr|sr|ii|iii|iv)$/, '').trim();
-function ageCurve(pos, age) {
+// `elite` (0..1) es la calidad relativa del jugador dentro del board. La estrella no
+// envejece como el suplente: aguanta más tiempo en su prime y cae más lento cuando sale
+// —le sobra talento para compensar lo que pierde de físico—. Sin el dato, 0: nadie recibe
+// el descuento por default.
+// En redraft la edad no predice el futuro, predice el riesgo de ESTA temporada. Ser joven
+// no es un activo —no vas a cobrar ese desarrollo— y estar viejo sí es un pasivo, pero
+// menor: pesa el desgaste del año, no la caída de tres. Sin rampa de subida y con la caída
+// al 45% de la de dynasty.
+function ageCurveRedraft(pos, age, elite) {
+  if (!age) return .8;
+  const [, fin0] = PRIME[pos] || [24, 28];
+  const fin = fin0 + 1.5 * (Number.isFinite(elite) ? clamp(elite, 0, 1) : 0);
+  if (age <= fin) return 1;
+  return clamp(1 - (age - fin) * (DECAY[pos] || .09) * .45, .45, 1);
+}
+
+function ageCurve(pos, age, elite) {
   if (!age) return .72;
-  const peak = PEAK[pos] || 26;
-  if (age <= peak) return clamp(.82 + (age - (peak - 6)) * .03, .5, 1);
-  return clamp(1 - (age - peak) * (DECAY[pos] || .09), .1, 1);
+  const e = Number.isFinite(elite) ? clamp(elite, 0, 1) : 0;
+  const [ini, fin0] = PRIME[pos] || [24, 28];
+  const fin = fin0 + 1.5 * e;                          // la estrella estira su ventana
+  const dec = (DECAY[pos] || .09) * (1 - .45 * e);     // y cae casi la mitad de lento
+  if (age < ini) return clamp(1 - (ini - age) * (RISE[pos] || .06), .35, 1);   // todavía subiendo
+  if (age <= fin) return 1;                                                     // en su prime
+  return clamp(1 - (age - fin) * dec, .1, 1);                                   // ya cayendo
 }
 const photoOf = id => /^\d+$/.test(String(id)) ? 'https://sleepercdn.com/content/nfl/players/thumb/' + id + '.jpg' : null;
 const rankScore = r => clamp(1 - Math.log10(Math.max(r || 900, 1)) / 3.1, .02, 1);
@@ -1034,17 +1127,8 @@ class Component extends DCLogic {
     }
   };
 
-  // ── Uso real de la temporada pasada, desde la misma API de Sleeper (mismos player_id: cero
-  //    emparejamiento por nombre). snap % = off_snp / tm_off_snp; target share = targets del
-  //    jugador sobre los de toda su ofensiva; PPG con el scoring half-PPR.
-  loadUsage = async () => {
-    if (Component._usage) return this.setState({ usage: Component._usage, usageState: 'ok' });
-    this.setState({ usageState: 'loading' });
-    const players = Component._players || {};
-    const YEAR = 2025;
-    try {
-      const stats = await this.get('/stats/nfl/regular/' + YEAR);
-      if (!stats || typeof stats !== 'object') throw new Error('stats');
+  // ── Métricas de UNA temporada. Todo por player_id, sin emparejar por nombre.
+  seasonUsage(stats, players) {
       const teamTgt = {}, teamRush = {}, teamRz = {}, teamTd = {};
       Object.keys(stats).forEach(id => {
         const pl = players[id], st = stats[id] || {};
@@ -1054,22 +1138,87 @@ class Component extends DCLogic {
         teamRz[pl.team] = (teamRz[pl.team] || 0) + (st.rush_rz_att || 0) + (st.rec_rz_tgt || 0);
         teamTd[pl.team] = (teamTd[pl.team] || 0) + (st.rush_td || 0) + (st.rec_td || 0);
       });
+      // ── TD esperados: mínimos cuadrados por posición sobre las oportunidades reales.
+      // td ≈ b1·(toques en zona roja) + b2·(toques fuera). Los coeficientes salen del
+      // mismo feed, así que no hay constante inventada ni fuente que empatar por nombre.
+      // ¿El feed trae recepciones? Si no, todo receptor se mide por objetivos — peor
+      // métrica, pero consistente dentro del percentil, que es lo único que importa aquí.
+      const hasRec = Object.keys(stats).some(id => Number.isFinite(stats[id] && stats[id].rec) && stats[id].rec > 0);
+
+      const tdRates = {};
+      ['RB', 'WR', 'TE'].forEach(pos => {
+        let Sxx = 0, Syy = 0, Sxy = 0, Sxt = 0, Syt = 0, n = 0;
+        Object.keys(stats).forEach(id => {
+          const pl = players[id], st = stats[id] || {};
+          if (!pl || pl.position !== pos || !(st.gp > 0)) return;
+          const rz = (st.rush_rz_att || 0) + (st.rec_rz_tgt || 0);
+          const nz = Math.max((st.rush_att || 0) + (st.rec_tgt || 0) - rz, 0);
+          if (rz + nz <= 0) return;
+          const td = (st.rush_td || 0) + (st.rec_td || 0);
+          Sxx += rz * rz; Syy += nz * nz; Sxy += rz * nz; Sxt += rz * td; Syt += nz * td; n++;
+        });
+        const det = Sxx * Syy - Sxy * Sxy;
+        if (n < 12 || Math.abs(det) < 1e-6) return;
+        const b1 = (Syy * Sxt - Sxy * Syt) / det, b2 = (Sxx * Syt - Sxy * Sxt) / det;
+        // tasas negativas o absurdas = muestra mala; mejor no publicar el número.
+        if (!(b1 > 0 && b1 < 1) || !(b2 >= 0 && b2 < 1)) return;
+        tdRates[pos] = { rz: b1, nz: b2 };
+      });
+
       const usage = {};
       Object.keys(stats).forEach(id => {
         const pl = players[id], st = stats[id] || {};
         if (!pl || !pl.team) return;
         const gp = st.gp || 0;
-        const snap = st.tm_off_snp ? st.off_snp / st.tm_off_snp : null;
+        const snap = st.tm_off_snp ? (st.off_snp || 0) / st.tm_off_snp : null;
+        const isQB = pl.position === 'QB';
         const isRun = pl.position === 'RB';
-        const share = isRun
+        // Un QB no compite por targets, pero SÍ tiene volumen: intentos de pase más
+        // acarreos por juego. Dejarlo sin ninguna medida le daba piso máximo a todo QB
+        // titular (todos hacen ~100% de snaps) y premiaba al eficiente de poco volumen.
+        // El percentil es dentro de la posición, así que la unidad no tiene que empatar.
+        const share = isQB ? null : isRun
           ? (teamRush[pl.team] ? (st.rush_att || 0) / teamRush[pl.team] : null)
           : (teamTgt[pl.team] ? (st.rec_tgt || 0) / teamTgt[pl.team] : null);
+        const vol = isQB
+          ? (gp ? ((st.pass_att || 0) + (st.rush_att || 0)) / gp : null)
+          : share;
         if (snap == null && share == null && !gp) return;
         const rzOwn = (st.rush_rz_att || 0) + (st.rec_rz_tgt || 0);
         const tdOwn = (st.rush_td || 0) + (st.rec_td || 0) + (st.pass_td || 0);
+        const rate = tdRates[pl.position];
+        const nzOwn = Math.max((st.rush_att || 0) + (st.rec_tgt || 0) - rzOwn, 0);
+        const xtd = rate && gp ? rate.rz * rzOwn + rate.nz * nzOwn : null;
+        const scoredTd = (st.rush_td || 0) + (st.rec_td || 0);
+        // Yardas por toque: la mide el receptor que gana terreno, no el que recibe muchos.
+        // Eficiencia = yardas por BALÓN EN LAS MANOS, no por oportunidad. Dividir entre
+        // objetivos castigaría la tasa de atrapadas, que es la marca del receptor profundo
+        // y disputado: premiaría al de rutas cortas, justo al revés de "explosivo". Se
+        // divide entre lo que efectivamente tocó — recepciones, acarreos, intentos.
+        const catches = hasRec ? (st.rec || 0) : (st.rec_tgt || 0);
+        const opp = isQB ? (st.pass_att || 0) + (st.rush_att || 0)
+          : isRun ? (st.rush_att || 0) + catches : catches;
+        const yards = isQB ? (st.pass_yd || 0) + (st.rush_yd || 0)
+          : isRun ? (st.rush_yd || 0) + (st.rec_yd || 0) : (st.rec_yd || 0);
+        // Mínimos altos a propósito: con el umbral bajo, el especialista de pocas jugadas
+        // con promedio inflado ocupaba la cima y empujaba a los verdaderos WR1 al medio.
+        const minOpp = isQB ? 200 : isRun ? 80 : (hasRec ? 40 : 60);
+        const eff = opp >= minOpp ? yards / opp : null;
+        // TD de distancia: los que anotó POR ENCIMA de lo que sus oportunidades en zona
+        // roja predicen. Ésos no vienen de la yarda 1 — vienen de romperse una jugada.
+        // Zona roja ya cobra los de cerca, así que aquí no se cuentan dos veces.
+        const longTd = rate ? Math.max(scoredTd - rate.rz * rzOwn, 0) : null;
+        const ltr = longTd != null && nzOwn >= (isRun ? 60 : 30) ? longTd / nzOwn : null;
         usage[id] = {
-          snap, tgt: share, gp,
-          shareLabel: isRun ? 'Carga terrestre' : 'Target share',
+          eff, effLabel: 'Yardas por balón tocado',
+          ltr, longTd,
+          xtd, xtdPerGame: xtd != null && gp ? xtd / gp : null,
+          tdLuck: xtd != null ? scoredTd - xtd : null,
+          snap, tgt: share, vol, gp,
+          shareLabel: isQB ? 'Intentos por juego' : isRun ? 'Carga terrestre' : 'Target share',
+          shareText: isQB
+            ? (Number.isFinite(vol) ? vol.toFixed(1) : null)
+            : (Number.isFinite(share) ? (share * 100).toFixed(1) + '%' : null),
           ppg: gp ? (st.pts_half_ppr || 0) / gp : null,
           rz: rzOwn,
           rzShare: teamRz[pl.team] ? rzOwn / teamRz[pl.team] : null,
@@ -1080,9 +1229,81 @@ class Component extends DCLogic {
           rank: st.pos_rank_half_ppr || null,
         };
       });
+    return usage;
+  }
+
+  // ── Tres temporadas, no una. Una sola es muestra chica: una lesión, un coordinador
+  //    nuevo o seis semanas raras mueven cualquier número. Se mezclan 50/30/20 hacia lo
+  //    reciente, y el peso de una temporada que el jugador no jugó se reparte entre las
+  //    que sí — al lesionado no se le cuenta un año en blanco como año malo.
+  loadUsage = async () => {
+    if (Component._usage && Component._usageV === USAGE_V) {
+      return this.setState({ usage: Component._usage, usageState: 'ok', usageSeasons: Component._usageSeasons });
+    }
+    this.setState({ usageState: 'loading' });
+    const players = Component._players || {};
+    const YEARS = [[2025, .5], [2024, .3], [2023, .2]];
+    try {
+      const maps = [];
+      for (const [yr, w] of YEARS) {
+        try {
+          const st = await this.get('/stats/nfl/regular/' + yr);
+          if (st && typeof st === 'object') maps.push({ yr, w, i: maps.length, u: this.seasonUsage(st, players) });
+        } catch (err) { /* una temporada caída no tumba a las demás */ }
+      }
+      if (!maps.length) throw new Error('stats');
+
+      // 2025 manda en lo que depende del rol de HOY (cuotas de balón y de zona roja):
+      // esas se calculan contra los totales de su ofensiva actual y no viajan al pasado.
+      // Lo que sí se promedia son las tasas propias del jugador, que es donde la muestra
+      // chica dolía.
+      const usage = maps[0].u;
+      const BLEND = ['snap', 'eff', 'ltr', 'xtdPerGame', 'ppg', 'tdPerGame', 'rzPerGame'];   // vol no: depende del rol de hoy
+      Object.keys(usage).forEach(id => {
+        const src = maps.filter(m => m.u[id] && m.u[id].gp >= 4);
+        usage[id].seasons = src.length;
+        usage[id].seasonList = src.map(m => m.yr).join(', ');
+        usage[id].gpTotal = src.reduce((a, m) => a + (m.u[id].gp || 0), 0);
+        if (src.length < 2) return;
+        // El promedio asume que el jugador es el mismo de hace tres años, y pasado el pico
+        // no lo es: su 2023 lo apuntala falsamente. Así que cuanto más lejos del pico de su
+        // posición, más se desvanecen las temporadas viejas. En el pico, fade = 1 y los
+        // pesos son los nominales; a cuatro años de él, 2025 vale ya el 83%.
+        const pl = players[id];
+        const fin = (PRIME[pl && pl.position] || [24, 28])[1];
+        const past = Math.max(0, (pl && pl.age ? pl.age : 25) - fin);
+        const fade = Math.max(1 - past * .18, .15);
+        usage[id].fade = fade;
+        BLEND.forEach(k => {
+          let sw = 0, sv = 0;
+          src.forEach(m => {
+            const v = m.u[id][k];
+            const w = m.w * Math.pow(fade, m.i);
+            if (Number.isFinite(v)) { sv += v * w; sw += w; }
+          });
+          if (sw > 0) usage[id][k] = sv / sw;   // pesos renormalizados sobre lo disponible
+        });
+      });
+
+      // ── Percentiles DESPUÉS de mezclar: comparar contra la distribución de tres años
+      // en vez de la de uno. El percentil evita cualquier constante que sature.
+      ['QB', 'RB', 'WR', 'TE'].forEach(pos => {
+        const ok = Object.keys(usage).filter(id => {
+          const pl = players[id];
+          return pl && pl.position === pos && (usage[id].gpTotal || usage[id].gp || 0) >= 8;
+        });
+        [['eff', 'effPct'], ['vol', 'volPct'], ['ltr', 'ltrPct']].forEach(([src, dst]) => {
+          const vals = ok.filter(id => Number.isFinite(usage[id][src]))
+            .sort((a, b) => usage[a][src] - usage[b][src]);
+          if (vals.length < 8) return;
+          vals.forEach((id, i) => { usage[id][dst] = i / (vals.length - 1); });
+        });
+      });
+
       if (!Object.keys(usage).length) throw new Error('vacío');
-      Component._usage = usage;
-      this.setState({ usage, usageState: 'ok' });
+      const seasons = maps.map(m => m.yr).join(' · ');
+      Component._usage = usage; Component._usageV = USAGE_V; Component._usageSeasons = seasons;
+      this.setState({ usage, usageState: 'ok', usageSeasons: seasons });
     } catch (e) {
       this.setState({ usageState: 'fail' });
     }
@@ -1184,32 +1405,99 @@ class Component extends DCLogic {
   score(p, needScore, ctx, w) {
     const adp = p.search_rank;
     const rs = rankScore(adp);
+    const talent = ctx && ctx.dv != null ? clamp(ctx.dv / (ctx.dvMax || 1), 0, 1) : rs;
     const m = {
       need: needScore[p.position] || 0,
-      talent: ctx && ctx.dv != null ? clamp(ctx.dv / (ctx.dvMax || 1), 0, 1) : rs,
+      talent,
       value: ctx && ctx.idx ? clamp(.5 + (ctx.idx - ctx.pick) / (ctx.idx + ctx.pick) * .5, 0, 1) : .5,
       floor: clamp(rs * .7 + ((p.years_exp || 0) >= 3 ? .3 : (p.years_exp || 0) >= 1 ? .18 : .05), 0, 1),
       boom: clamp(rs * .45 + ((p.age || 26) <= 24 ? .42 : (p.age || 26) <= 26 ? .26 : .08) + ((p.years_exp || 0) <= 2 ? .12 : 0), 0, 1),
-      age: ctx && ctx.redraft ? .8 : ageCurve(p.position, p.age),
+      age: ctx && ctx.redraft ? ageCurveRedraft(p.position, p.age, talent) : ageCurve(p.position, p.age, talent),
       stack: ctx && ctx.stack != null ? ctx.stack : .5,
       rz: .35,
     };
     // Uso real de nflverse: reemplaza parcialmente los proxies de piso y explosividad.
+    // Number.isFinite y no != null: un dato faltante puede llegar como NaN, y NaN != null
+    // es cierto — bastaría uno para envenenar el Fit de ese jugador en toda la app.
+    const fin = Number.isFinite;
     const u = ctx && ctx.use;
     if (u) {
-      if (u.snap != null) m.floor = clamp(m.floor * .3 + clamp(u.snap, 0, 1) * .7, 0, 1);
-      if (u.tgt != null) m.boom = clamp(m.boom * .45 + clamp(u.tgt * 4, 0, 1) * .55, 0, 1);
-      // Zona roja: cuota de oportunidades cerca de la diagonal + TD por juego realmente anotados.
-      if (u.rzShare != null || u.tdPerGame != null) {
-        const rzPart = u.rzShare != null ? clamp(u.rzShare * 4.5, 0, 1) : null;
-        const tdPart = u.tdPerGame != null ? clamp(u.tdPerGame / 1.1, 0, 1) : null;
-        m.rz = rzPart != null && tdPart != null ? rzPart * .6 + tdPart * .4 : (rzPart != null ? rzPart : tdPart);
+      // Piso = certeza de que va a producir: estar en el campo (snaps) y que le llegue
+      // el balón (volumen). El volumen vive aquí, no en explosividad: muchos toques no
+      // te hacen explosivo, te hacen confiable.
+      if (fin(u.snap) || fin(u.volPct)) {
+        const sn = fin(u.snap) ? clamp(u.snap, 0, 1) : null, vo = fin(u.volPct) ? u.volPct : null;
+        const real = sn != null && vo != null ? sn * .62 + vo * .38 : (sn != null ? sn : vo);
+        m.floor = clamp(m.floor * .3 + real * .7, 0, 1);
+      }
+      // Explosividad = qué tanto rinde CADA toque: yardas por toque y TD de distancia.
+      // El volumen se fue al piso; los TD de cerca se quedan en zona roja.
+      if (fin(u.effPct) || fin(u.ltrPct)) {
+        const ef = fin(u.effPct) ? u.effPct : null, lt = fin(u.ltrPct) ? u.ltrPct : null;
+        const real = ef != null && lt != null ? ef * .70 + lt * .30 : (ef != null ? ef : lt);
+        m.boom = clamp(m.boom * .35 + real * .65, 0, 1);
+      } else if (fin(u.tgt) && u.tgt > 0) {
+        m.boom = clamp(m.boom * .45 + clamp(u.tgt * 4, 0, 1) * .55, 0, 1);
+      }
+
+      // Zona roja: cuota de oportunidades cerca de la diagonal + TD ESPERADOS por juego.
+      // Los anotados traen la suerte pegada y la suerte no se repite; los esperados
+      // salen de las oportunidades, que sí persisten de una temporada a otra.
+      if (fin(u.rzShare) || fin(u.xtdPerGame) || fin(u.tdPerGame)) {
+        const rzPart = fin(u.rzShare) ? clamp(u.rzShare * 4.5, 0, 1) : null;
+        const perGame = fin(u.xtdPerGame) ? u.xtdPerGame : u.tdPerGame;
+        const tdPart = fin(perGame) ? clamp(perGame / 1.1, 0, 1) : null;
+        const blend = rzPart != null && tdPart != null ? rzPart * .6 + tdPart * .4 : (rzPart != null ? rzPart : tdPart);
+        if (fin(blend)) m.rz = blend;
       }
     }
+    // ── Disponibilidad y rol, del propio catálogo de Sleeper. Ningún dato nuevo que pedir:
+    // `injury_status`, `status` y `depth_chart_order` ya venían en cada jugador y nadie los
+    // leía. Van contra el PISO, que es donde viven: un jugador lesionado o segundo en su
+    // depth chart no pierde talento — pierde la certeza de que va a producir.
+    const inj = String(p.injury_status || '').toLowerCase();
+    const st8 = String(p.status || '').toLowerCase();
+    const injPen = st8.indexOf('injured reserve') >= 0 || st8.indexOf('pup') >= 0 ? .45
+      : st8.indexOf('inactive') >= 0 || st8.indexOf('practice') >= 0 ? .30
+      : inj.indexOf('out') >= 0 ? .35
+      : inj.indexOf('doubt') >= 0 ? .22
+      : inj.indexOf('quest') >= 0 ? .10
+      : inj ? .06 : 0;
+    const dco = Number(p.depth_chart_order);
+    // El depth chart avisa de la competencia semanas antes que cualquier estadística:
+    // que su equipo metiera a alguien por delante se ve aquí primero.
+    const depthPen = Number.isFinite(dco) && dco > 1 ? Math.min((dco - 1) * .12, .30) : 0;
+    if (injPen || depthPen) m.floor = clamp(m.floor * (1 - Math.min(injPen + depthPen, .75)), 0, 1);
+
+    // Consistencia CON techo: media geométrica de piso y explosividad. Promediar deja
+    // pasar al desbalanceado (0.9 y 0.1 promedian igual que 0.5 y 0.5); multiplicar exige
+    // las dos cosas — el que te da el mínimo un domingo y 20 el otro se cae aquí.
+    m.combo = Math.sqrt(clamp(m.floor, 0, 1) * clamp(m.boom, 0, 1));
+    // Última red: cualquier métrica que no sea finita vuelve a su neutro antes de sumar.
+    Object.keys(m).forEach(k => { if (!fin(m[k])) m[k] = k === 'rz' ? .35 : .5; });
     return { m, fit: Math.round(Object.keys(w).reduce((a, k) => a + w[k] * m[k], 0) * 100), adp };
   }
 
+  // El modelo completo cuesta ~1000 puntuaciones: los tres Fit de cada jugador de la liga,
+  // la alineación óptima y el Fit a futuro de los diez equipos, el board y el motor de
+  // cambios. Antes corría en CADA render — cada tecla del buscador, cada panel que abres.
+  // Sólo estas siete piezas del estado lo cambian; contra ellas se memoiza.
   model() {
+    const s = this.state;
+    const key = [
+      s.data ? s.data.league && s.data.league.league_id : 0,
+      s.data ? (s.data.picks || []).length : -1,
+      s.data ? (s.data.rosters || []).length : -1,
+      s.usage ? Object.keys(s.usage).length : 0,
+      s.usageState, s.market ? 1 : 0, s.strat, s.boardMode, s.pickSel,
+    ].join('|');
+    if (this._mKey === key && this._mVal) return this._mVal;
+    const val = this.computeModel();
+    this._mKey = key; this._mVal = val;
+    return val;
+  }
+
+  computeModel() {
     const s = this.state, d = s.data;
     const players = d.players;
     const usage = s.usage || {};
@@ -1319,6 +1607,54 @@ class Component extends DCLogic {
       const v = mval(pl);
       return v != null ? v : dynastyVal(pl, mult) * 100;
     };
+
+    // ── Calidad medida dos veces. El mercado es el mejor juicio disponible, pero es el
+    // juicio de OTROS: donde sólo copias al mercado no puedes ganarle. La producción real
+    // es la segunda opinión. Donde coinciden no hay nada que hacer; donde discrepan, ahí
+    // está la ventaja. OJO: esto sólo entra al Fit — los cambios se siguen valuando a
+    // mercado puro, porque un rival no acepta una oferta con TU opinión adentro.
+    const prodMap = {};
+    (() => {
+      const byPos = {};
+      for (const pid in players) {
+        const pl = players[pid];
+        if (!pl || POS.indexOf(pl.position) < 0) continue;
+        const u = uFor(pid), v = mval(pl);
+        if (v == null || !u || !Number.isFinite(u.ppg) || !(u.gp >= 4)) continue;
+        (byPos[pl.position] = byPos[pl.position] || []).push({ v, ppg: u.ppg });
+      }
+      POS.forEach(p => {
+        const arr = byPos[p];
+        if (!arr || arr.length < 10) return;
+        prodMap[p] = {
+          vals: arr.map(x => x.v).sort((a, b) => a - b),
+          ppgs: arr.map(x => x.ppg).sort((a, b) => a - b),
+        };
+      });
+    })();
+    const pctOf = (arr, x) => {
+      let i = 0;
+      while (i < arr.length && arr[i] < x) i++;
+      return arr.length > 1 ? i / (arr.length - 1) : 0;
+    };
+    // Mapeo por cuantiles: el percentil de PPG dentro de su posición se traduce al valor
+    // de mercado que ocupa ESE MISMO percentil. Producción y mercado quedan en la misma
+    // unidad sin inventar un factor de conversión entre puntos y valor.
+    const prodVal = (pl, pid) => {
+      const m = prodMap[pl.position], u = uFor(pid);
+      if (!m || !u || !Number.isFinite(u.ppg) || !(u.gp >= 4)) return null;
+      const pct = pctOf(m.ppgs, u.ppg);
+      return m.vals[Math.min(Math.round(pct * (m.vals.length - 1)), m.vals.length - 1)];
+    };
+    const talentQ = (pl, pid) => {
+      const v = quality(pl), p = prodVal(pl, pid);
+      return p == null ? v : v * .6 + p * .4;
+    };
+    const qDiverge = (pl, pid) => {
+      const m = pl && prodMap[pl.position], u = uFor(pid), v = pl ? mval(pl) : null;
+      if (!m || v == null || !u || !Number.isFinite(u.ppg) || !(u.gp >= 4)) return null;
+      return { mkt: pctOf(m.vals, v), prod: pctOf(m.ppgs, u.ppg) };
+    };
     const slots = {};
     POS.forEach(p => {
       const share = p === 'QB' ? (rp.includes('SUPER_FLEX') ? 1 : 0) : p === 'TE' ? flex * .2 : flex * .4;
@@ -1363,10 +1699,30 @@ class Component extends DCLogic {
     }
     pool.sort((a, b) => a.raw.search_rank - b.raw.search_rank);
 
-    const w = STRATS[s.strat].w;
+    // En redraft se draftea para ganar semanas ya, no para tener razón en dos años. Los
+    // pesos de dynasty se transforman conservando el carácter de la estrategia elegida:
+    // sube lo que se cobra este domingo (necesidad, no alcanzar, piso), baja lo que sólo
+    // paga con el tiempo (edad, explosividad especulativa).
+    const redraftW = w0 => {
+      const r = {
+        talent: w0.talent * 1.12,
+        need: w0.need * 1.25,      // el hueco se paga esta semana, no en dos años
+        value: w0.value * 1.55,    // alcanzar duele: la pick gastada no vuelve
+        floor: w0.floor * 1.30,
+        boom: w0.boom * .80,
+        combo: w0.combo,
+        age: w0.age * .30,         // sólo el riesgo del año en curso
+        stack: w0.stack,
+        rz: w0.rz * 1.10,
+      };
+      const tot = Object.keys(r).reduce((a, k) => a + r[k], 0);
+      Object.keys(r).forEach(k => { r[k] = r[k] / tot; });
+      return r;
+    };
+    const w = isDynasty ? STRATS[s.strat].w : redraftW(STRATS[s.strat].w);
     // ── Correlación de equipo NFL: stack con tu QB suma; compartir balón con tu propio jugador resta.
-    const stackFor = (pl, exclude) => {
-      const mates = myPlayers.filter(x => x.team === pl.team && x.id !== exclude);
+    const stackIn = (roster, pl, exclude) => {
+      const mates = roster.filter(x => x.team === pl.team && x.id !== exclude);
       let v = .5;
       const isCatcher = pl.position === 'WR' || pl.position === 'TE';
       if (isCatcher && mates.some(x => x.pos === 'QB')) v += .25;
@@ -1377,6 +1733,7 @@ class Component extends DCLogic {
       if (mates.length >= 3) v -= .12;
       return clamp(v, 0, 1);
     };
+    const stackFor = (pl, exclude) => stackIn(myPlayers, pl, exclude);
 
     const byTeam = {};
     myPlayers.forEach(p => { (byTeam[p.team] = byTeam[p.team] || []).push(p); });
@@ -1393,11 +1750,11 @@ class Component extends DCLogic {
       if (list.length >= 4) concentration.push({ team: t, text: list.length + ' jugadores tuyos en ' + t, why: 'Misma semana de descanso y mismo riesgo de partido malo' });
     });
 
-    const dvAll = pool.slice(0, 60).map(x => quality(x.raw)).concat(myPlayers.map(p => quality(p.raw)));
+    const dvAll = pool.slice(0, 60).map(x => talentQ(x.raw, x.id)).concat(myPlayers.map(p => talentQ(p.raw, p.id)));
     const dvMax = Math.max.apply(null, dvAll.concat([.01]));
     const scored = pool.slice(0, 160).map((x, i) => {
       const p = x.raw;
-      const sc = this.score(p, needScore, { idx: i + 1, pick: pickForValue, dv: quality(p), dvMax, stack: stackFor(p), use: uFor(x.id), redraft: !isDynasty }, w);
+      const sc = this.score(p, needScore, { idx: i + 1, pick: pickForValue, dv: talentQ(p, x.id), dvMax, stack: stackFor(p), use: uFor(x.id), redraft: !isDynasty }, w);
       return {
         id: x.id, name: p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim(),
         pos: p.position, team: p.team, age: p.age, exp: p.years_exp, adp: sc.adp, m: sc.m, fit: sc.fit, raw: p, use: uFor(x.id),
@@ -1408,7 +1765,7 @@ class Component extends DCLogic {
     const rest = 1 - w.need, wOwn = {};
     Object.keys(w).forEach(k => { if (k !== 'need') wOwn[k] = w[k] / rest; });
     myPlayers.forEach(p => {
-      const sc = this.score(p.raw, {}, { dv: quality(p.raw), dvMax, stack: stackFor(p.raw, p.id), use: uFor(p.id), redraft: !isDynasty }, wOwn);
+      const sc = this.score(p.raw, {}, { dv: talentQ(p.raw, p.id), dvMax, stack: stackFor(p.raw, p.id), use: uFor(p.id), redraft: !isDynasty }, wOwn);
       p.use = uFor(p.id);
       p.m = sc.m; p.fit = sc.fit; p.owned = true; p.wEff = wOwn; p.q = quality(p.raw);
     });
@@ -1504,6 +1861,37 @@ class Component extends DCLogic {
       }, 0);
     };
 
+    // Fit Score de un equipo: promedio del Fit de sus titulares óptimos, con los pesos
+    // sin el término de necesidad (nadie llena su propio hueco) y el stack medido
+    // dentro de SU roster, no del mío.
+    // years = 0 mide hoy; years = 2 envejece a cada jugador dos temporadas y vuelve a
+    // elegir titulares con la calidad proyectada — el que hoy titula puede no titular después.
+    const lineupFit = (list, years) => {
+      const yr = years || 0;
+      const proj = p => {
+        if (!yr) return { p, raw: p.raw, q: p.q };
+        const el = clamp(p.q / (dvMax || 1), 0, 1);
+        const cur = ageCurve(p.pos, p.age, el) || .5;
+        const raw = Object.assign({}, p.raw, {
+          age: (p.age || 25) + yr,
+          years_exp: (p.raw.years_exp || 0) + yr,
+        });
+        return { p, raw, q: p.q * (ageCurve(p.pos, (p.age || 25) + yr, el) / Math.max(cur, .05)) };
+      };
+      const cands = list.map(proj);
+      const seen = {};
+      const starters = lineupSlots.slice().sort((a, b) => ELIG[a].length - ELIG[b].length).map(slot => {
+        const c = cands.filter(x => !seen[x.p.id] && ELIG[slot].indexOf(x.p.pos) >= 0).sort((a, b) => b.q - a.q)[0];
+        if (c) seen[c.p.id] = 1;
+        return c;
+      }).filter(Boolean);
+      if (!starters.length) return 0;
+      const sum = starters.reduce((a, x) => a + this.score(x.raw, {}, {
+        dv: talentQ(x.raw, x.p.id), dvMax, stack: stackIn(list, x.raw, x.p.id), use: uFor(x.p.id), redraft: !isDynasty,
+      }, wOwn).fit, 0);
+      return sum / starters.length;
+    };
+
     const myBase = lineupSum(myPlayers);
 
     // ── Lectura del rival: ¿contiende o reconstruye? ¿qué posición le falta?
@@ -1532,8 +1920,9 @@ class Component extends DCLogic {
       const list = mapRoster(r.players);
       const now = lineupSum(list);
       const decayed = list.reduce((a, p) => {
-        const cur = ageCurve(p.pos, p.age) || .5;
-        return a + p.q * (ageCurve(p.pos, (p.age || 25) + 2) / Math.max(cur, .05));
+        const el = clamp(p.q / (dvMax || 1), 0, 1);
+        const cur = ageCurve(p.pos, p.age, el) || .5;
+        return a + p.q * (ageCurve(p.pos, (p.age || 25) + 2, el) / Math.max(cur, .05));
       }, 0);
       const pickCapital = (picksByOwner[r.roster_id] || []).reduce((a, b) => a + b.q, 0);
       const prof = teamProfile[r.roster_id] || {};
@@ -1544,15 +1933,57 @@ class Component extends DCLogic {
         isMe: r.owner_id === d.me.user_id,
         avatar: (teams.find(t => t.id === r.owner_id) || {}).avatar,
         posStrength: st ? st.s : {},
-        now, future: decayed * .55 + pickCapital, pickCapital,
+        now, future: decayed * .55 + pickCapital, pickCapital, fit: lineupFit(list, 0), fitFut: isDynasty ? lineupFit(list, 2) : 0,
         avgAge: prof.avgAge || 0, window: prof.window || 'medio', worst: prof.worst,
       };
     });
+    // ── Los mejores Fit de la liga entera, sin importar de quién sean.
+    const allFits = [];
+    (d.rosters || []).forEach(r => {
+      const list = mapRoster(r.players);
+      const owner = (teams.find(t => t.id === r.owner_id) || {}).name || 'Equipo';
+      const mine = r.owner_id === d.me.user_id;
+      list.forEach(p => {
+        // Neutral: sin necesidad, y el stack medido dentro del roster de SU dueño.
+        const sc = this.score(p.raw, {}, {
+          dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(list, p.raw, p.id), use: uFor(p.id), redraft: !isDynasty,
+        }, wOwn);
+        // Para ti: con tu necesidad posicional y el stack contra TU roster — cuánto te
+        // serviría a ti tenerlo, que no es lo mismo que qué tan bueno es.
+        const me = this.score(p.raw, needScore, {
+          dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(myPlayers, p.raw, p.id), use: uFor(p.id), redraft: !isDynasty,
+        }, w);
+        // A dos años: se envejece al jugador y su calidad se descuenta por el cociente
+        // de curvas — exactamente cuánto valor conserva su posición a esa edad.
+        const el = clamp(talentQ(p.raw, p.id) / (dvMax || 1), 0, 1);
+        const cur = ageCurve(p.pos, p.age, el) || .5;
+        const keep = ageCurve(p.pos, (p.age || 25) + 2, el) / Math.max(cur, .05);
+        const raw2 = Object.assign({}, p.raw, {
+          age: (p.age || 25) + 2, years_exp: (p.raw.years_exp || 0) + 2,
+        });
+        const f2 = this.score(raw2, {}, {
+          dv: talentQ(p.raw, p.id) * keep, dvMax, stack: stackIn(list, p.raw, p.id),
+          use: uFor(p.id), redraft: !isDynasty,
+        }, wOwn);
+        if (!Number.isFinite(sc.fit)) return;
+        allFits.push({
+          id: p.id, name: p.name, pos: p.pos, team: p.team, age: p.age,
+          fit: sc.fit, fitMe: Number.isFinite(me.fit) ? me.fit : sc.fit,
+          fit2: Number.isFinite(f2.fit) ? f2.fit : sc.fit, owner, mine,
+        });
+      });
+    });
+    allFits.sort((a, b) => b.fit - a.fit);
+
     const orderNow = leagueRows.slice().sort((a, b) => b.now - a.now);
     const orderFut = leagueRows.slice().sort((a, b) => b.future - a.future);
+    const orderFit = leagueRows.slice().sort((a, b) => b.fit - a.fit);
+    const orderFitFut = leagueRows.slice().sort((a, b) => b.fitFut - a.fitFut);
     leagueRows.forEach(x => {
       x.rankNow = orderNow.indexOf(x) + 1;
       x.rankFut = orderFut.indexOf(x) + 1;
+      x.rankFit = orderFit.indexOf(x) + 1;
+      x.rankFitFut = orderFitFut.indexOf(x) + 1;
       x.shift = x.rankNow - x.rankFut;
     });
 
@@ -1679,14 +2110,14 @@ class Component extends DCLogic {
     });
 
     const explosive = myPlayers.slice().sort((a, b) => b.m.boom - a.m.boom).slice(0, 5);
-    const fading = myPlayers.filter(p => (p.age || 25) > (PEAK[p.pos] || 26) + 1).sort((a, b) => b.q - a.q).slice(0, 4);
+    const fading = myPlayers.filter(p => (p.age || 25) > (PRIME[p.pos] || [24, 28])[1]).sort((a, b) => b.q - a.q).slice(0, 4);
     const buried = myPlayers.filter(p => optIds.indexOf(p.id) < 0).sort((a, b) => b.q - a.q).slice(0, 3);
 
     // Cualquier jugador de la liga (incluidos los de otros rosters) puede abrir perfil completo.
     const scoreAny = id => {
       const pl = players[id];
       if (!pl || POS.indexOf(pl.position) < 0) return null;
-      const sc = this.score(pl, needScore, { dv: quality(pl), dvMax, stack: stackFor(pl), use: uFor(id), redraft: !isDynasty }, w);
+      const sc = this.score(pl, needScore, { dv: talentQ(pl, id), dvMax, stack: stackFor(pl), use: uFor(id), redraft: !isDynasty }, w);
       const ownerRow = (d.rosters || []).find(r => (r.players || []).indexOf(id) >= 0);
       const ownerName = ownerRow ? ((teams.find(t => t.id === ownerRow.owner_id) || {}).name || null) : null;
       return {
@@ -1701,7 +2132,7 @@ class Component extends DCLogic {
       meAvatar: avatarUrl((d.me.metadata && d.me.metadata.avatar) || d.me.avatar),
       myPickList, upcoming, selPick, pickForValue, seasonNum,
       isDynasty, optimal, swaps, benchQ, starterQ, totalQ, explosive, fading, buried, curStarters, multInfo, sflx, offers, myBase,
-      stacks, conflicts, concentration, pickAssets, bestDeals, leagueRows, teamInfo, posRankOf, leagueHasRosters, usageState: s.usageState,
+      stacks, conflicts, concentration, pickAssets, bestDeals, leagueRows, allFits, qDiverge, dvMax, wUsed: w, teamInfo, posRankOf, leagueHasRosters, usageState: s.usageState,
       marketCount: mk ? Object.keys(mk.players).length : 0,
       nextOverall, myRound, myPickInRound, myNextOverall, mySlot, picks: d.picks, players, draft: d.draft, me: d.me };
   }
@@ -1743,11 +2174,12 @@ class Component extends DCLogic {
     const assetMeta = a => a.isPick
       ? 'Pick de rookies · ' + a.season + ' · ronda ' + a.round
       : a.pos + ' · ' + (a.age || '?') + ' años · ' + a.team;
-    const dataNote = 'Real de Sleeper: liga, managers, orden de draft, picks, catálogo NFL (posición, edad, equipo, experiencia, ADP interno). Modelado por el algoritmo: Fit Score, piso y upside — las stats semanales (snap %, target share, xFP) llegan cuando arranque la temporada.';
+    const dataNote = 'Real de Sleeper: liga, managers, orden de draft, picks, catálogo NFL (posición, edad, equipo, experiencia, ADP interno). Modelado por el algoritmo: Fit Score, piso y upside — las stats jugada por jugada (profundidad de objetivo, yardas aéreas, EPA) siguen fuera: nflverse las publica pero bloquea la lectura desde el navegador.';
     const boot = ['Liga y formato', 'Managers y orden de draft', 'Estado del draft y picks', 'Catálogo NFL de Sleeper', 'Calculando Fit Score'];
     const shell = {
       atConnect: s.stage === 'connect',
       atLeagues: s.stage === 'leagues',
+      username: s.username || '',
       setUser: e => this.setState({ username: e.target.value, authError: '' }),
       onUserKey: e => { if (e.key === 'Enter') this.connectUser(); },
       connectUser: this.connectUser,
@@ -1757,8 +2189,9 @@ class Component extends DCLogic {
         name: l.name,
         meta: l.total_rosters + ' equipos · ' + ((l.settings && l.settings.type === 2) ? 'Dynasty' : (l.settings && l.settings.type === 1) ? 'Keeper' : 'Redraft') +
           ((l.roster_positions || []).indexOf('SUPER_FLEX') >= 0 ? ' · Superflex' : ''),
-        logo: l.avatar ? 'https://sleepercdn.com/avatars/thumbs/' + l.avatar : null,
         hasLogo: !!l.avatar,
+        logoStyle: 'width:36px;height:36px;border-radius:9px;flex:none;background:url("' +
+          (l.avatar ? 'https://sleepercdn.com/avatars/thumbs/' + l.avatar : '') + '") center/cover no-repeat',
         pick: () => this.pickLeague(l.league_id),
       })),
       logout: this.logout,
@@ -1775,6 +2208,14 @@ class Component extends DCLogic {
 
     const M = this.model();
     const strat = STRATS[s.strat];
+    // Una sola lista para el panel abierto y para el asomo del strip cerrado: si se
+    // calculan por separado, el cerrado miente sobre qué lente está activa.
+    const topLens = s.topLens || 'neutral', topPos = s.topPos || 'ALL';
+    const topVal = x => (topLens === 'me' ? x.fitMe : topLens === 'fut' ? x.fit2 : x.fit);
+    const topList = M.allFits.slice()
+      .sort((a, b) => topVal(b) - topVal(a))
+      .filter(x => topPos === 'ALL' || x.pos === topPos)
+      .slice(0, 15);
     const filtered = s.filter === 'ALL' ? M.scored : M.scored.filter(p => p.pos === s.filter);
     const top = filtered[0] || M.scored[0];
     const isTeamDetail = typeof s.detail === 'string' && s.detail.indexOf('team-') === 0;
@@ -1790,7 +2231,7 @@ class Component extends DCLogic {
       ...shell,
       leagueLogo: M.league.avatar ? 'https://sleepercdn.com/avatars/thumbs/' + M.league.avatar : null,
       hasLogo: !!M.league.avatar,
-      myAvatar: M.meAvatar,
+      myAvatarStyle: 'width:100%;height:100%;background:url("' + (M.meAvatar || '') + '") center/cover no-repeat',
       hasMyAvatar: !!M.meAvatar,
       noMyAvatar: !M.meAvatar,
       initials: (M.me.display_name || 'ME').slice(0, 2).toUpperCase(),
@@ -1854,6 +2295,37 @@ class Component extends DCLogic {
         : s.boardMode === 'fa'
           ? 'Veteranos sin dueño — para waivers.'
           : 'Draft de rookies · ' + M.rounds + ' rondas · ' + M.teamCount + ' equipos.',
+      // Buscador sobre el catálogo completo de Sleeper, no sólo el board: el jugador
+      // que buscas suele ser justo el que NO está en tu lista de 24.
+      searchQ: s.q || '',
+      setSearch: e => this.setState({ q: e.target.value }),
+      clearSearch: () => this.setState({ q: '' }),
+      hasQuery: (s.q || '').trim().length >= 2,
+      searchResults: (() => {
+        const q = (s.q || '').trim().toLowerCase();
+        if (q.length < 2) return [];
+        const out = [];
+        for (const id in M.players) {
+          const pl = M.players[id];
+          if (!pl || POS.indexOf(pl.position) < 0) continue;
+          const nm = (pl.full_name || ((pl.first_name || '') + ' ' + (pl.last_name || '')).trim());
+          if (!nm || nm.toLowerCase().indexOf(q) < 0) continue;
+          out.push({ id, nm, rank: pl.search_rank || 99999 });
+          if (out.length > 400) break;
+        }
+        return out.sort((a, b) => a.rank - b.rank).slice(0, 8).map(x => {
+          const sc = M.scoreAny(x.id) || {};
+          return {
+            name: x.nm,
+            meta: (sc.pos || '') + ' · ' + (sc.team || 'FA') + ' · ' + (sc.age || '?') + ' años' +
+              (sc.owner ? ' · ' + (sc.owned ? 'tuyo' : 'de ' + sc.owner) : ' · libre'),
+            fit: Number.isFinite(sc.fit) ? sc.fit : '—',
+            fitStyle: 'font-size:12px;flex:none;padding:2px 7px;border-radius:6px;background:rgba(145,132,217,.12);color:' +
+              (Number.isFinite(sc.fit) ? this.fitColor(sc.fit) : 'rgba(233,233,237,.5)'),
+            tap: () => this.setState({ detail: x.id }),
+          };
+        });
+      })(),
       posFilters: ['ALL'].concat(POS).map(p => ({
         label: p === 'ALL' ? 'Todos' : p, pick: () => this.setState({ filter: p }), style: this.seg(s.filter === p),
       })),
@@ -1915,21 +2387,38 @@ class Component extends DCLogic {
         };
       }),
       showFuture: M.isDynasty,
-      heroRankNow: M.leagueHasRosters ? ((M.leagueRows.find(x => x.isMe) || {}).rankNow || '—') : '—',
-      heroRankFut: M.leagueHasRosters ? ((M.leagueRows.find(x => x.isMe) || {}).rankFut || '—') : '—',
-      heroNowBar: (() => {
-        const me2 = M.leagueRows.find(x => x.isMe) || { now: 0 };
-        const best = Math.max.apply(null, M.leagueRows.map(x => x.now).concat([1]));
-        return 'height:100%;border-radius:4px;width:' + Math.round(me2.now / best * 100) + '%;background:linear-gradient(90deg,#6f63bd,' + ACCENT + ')';
-      })(),
-      heroFutBar: (() => {
-        const me2 = M.leagueRows.find(x => x.isMe) || { future: 0 };
-        const best = Math.max.apply(null, M.leagueRows.map(x => x.future).concat([1]));
-        return 'height:100%;border-radius:4px;width:' + Math.round(me2.future / best * 100) + '%;background:linear-gradient(90deg,#3f4a86,#8ec9a8)';
+      // Cuatro medidas del mismo equipo: en columnas no caben y no se comparan. En barras
+      // alineadas sí — que es justo para lo que sirven las cuatro juntas.
+      // Cuatro KPI en rejilla. Abajo ya hay una lista de barras (ranking por posición),
+      // así que repetir barras aquí volvía las dos secciones indistinguibles.
+      // Nunca devuelve lista vacía: sin rosters las tarjetas salen en guiones, que es
+      // información —"todavía no hay draft"— y no un hueco.
+      heroRanks: (() => {
+        const me2 = M.leagueRows.find(x => x.isMe);
+        const vivo = M.leagueHasRosters && !!me2;
+        const defs = [
+          ['fuerza hoy', 'now', 'rankNow', ACCENT, 1],
+          ['calidad hoy', 'fit', 'rankFit', MID, 0],
+        ].concat(M.isDynasty ? [
+          ['valor a futuro', 'future', 'rankFut', GOOD, 1],
+          ['calidad en 2 años', 'fitFut', 'rankFitFut', '#bfe0cd', 0],
+        ] : []);
+        return defs.map(([label, val, rank, color, escala]) => ({
+          label,
+          of: M.leagueRows.length || M.teamCount || '—',
+          rank: vivo ? (me2[rank] || '—') + 'º' : '—',
+          value: !vivo ? 'draft por comenzar'
+            : escala ? Math.round((me2[val] || 0) * 100).toLocaleString('en-US')
+            : 'Fit ' + Math.round(me2[val] || 0),
+          rankStyle: 'font-size:26px;font-weight:500;letter-spacing:-0.035em;line-height:1;font-variant-numeric:tabular-nums;color:' + (vivo ? color : 'rgba(233,233,237,.3)'),
+        }));
       })(),
       heroShift: (() => {
-        const me2 = M.leagueRows.find(x => x.isMe) || { shift: 0 };
-        return me2.shift > 0 ? 'Subes ' + me2.shift + ' lugares al mirar a futuro' : me2.shift < 0 ? 'Caes ' + (-me2.shift) + ' lugares al mirar a futuro' : 'Mismo lugar hoy y a futuro';
+        const me2 = M.leagueRows.find(x => x.isMe);
+        if (!M.leagueHasRosters || !me2) return 'Los cuatro lugares aparecen cuando haya rosters.';
+        return me2.shift > 0 ? 'Subes ' + me2.shift + ' lugares al mirar a futuro'
+          : me2.shift < 0 ? 'Caes ' + (-me2.shift) + ' lugares al mirar a futuro'
+          : 'Mismo lugar hoy y a futuro';
       })(),
       heroShiftColor: (() => {
         const me2 = M.leagueRows.find(x => x.isMe) || { shift: 0 };
@@ -2013,8 +2502,11 @@ class Component extends DCLogic {
       resetOffers: () => { this.setState({ passed: [] }); this.toast('Recalculé los ' + M.offers.length + ' cambios.'); },
       hasFading: M.isDynasty && M.fading.length > 0,
       fading: M.fading.map(p => ({
-        name: p.name, meta: p.pos + ' · ' + p.age + ' años · pasó su pico (' + (PEAK[p.pos] || 26) + ')',
-        tag: Math.round((1 - ageCurve(p.pos, (p.age || 25) + 2) / Math.max(ageCurve(p.pos, p.age), .01)) * 100) + '% en 2 años',
+        name: p.name, meta: p.pos + ' · ' + p.age + ' años · fuera del prime (' + (PRIME[p.pos] || [24, 28]).join('-') + ')',
+        tag: (() => {
+          const el = Math.max(0, Math.min(1, p.q / (M.dvMax || 1)));
+          return Math.round((1 - ageCurve(p.pos, (p.age || 25) + 2, el) / Math.max(ageCurve(p.pos, p.age, el), .01)) * 100) + '% en 2 años';
+        })(),
         open: () => this.setState({ detail: p.id }),
       })),
       hasPicks: M.isDynasty && M.pickAssets.length > 0,
@@ -2029,7 +2521,7 @@ class Component extends DCLogic {
       marketBadge: s.marketState === 'ok' ? 'Valores de mercado reales conectados · ' + M.marketCount + ' activos' :
         s.marketState === 'loading' ? 'Cargando valores de mercado…' : 'Valores de mercado no disponibles: uso mi modelo por ADP y edad',
       marketColor: s.marketState === 'ok' ? GOOD : s.marketState === 'fail' ? BAD : MID,
-      usageBadge: s.usageState === 'ok' ? 'Uso real 2025 conectado: snap %, target share y PPG' : s.usageState === 'loading' ? 'Cargando snap % y target share…' : s.usageState === 'fail' ? 'Sin uso real: piso y explosividad usan el modelo' : '',
+      usageBadge: s.usageState === 'ok' ? 'Uso real conectado (' + (s.usageSeasons || '2025') + '): snap %, cuotas de balón, yardas por balón y TD esperados' : s.usageState === 'loading' ? 'Cargando tres temporadas de uso…' : s.usageState === 'fail' ? 'Sin uso real: piso y explosividad usan el modelo' : '',
       usageColor: s.usageState === 'ok' ? GOOD : s.usageState === 'fail' ? BAD : MID,
       hasCorr: M.stacks.length + M.conflicts.length + M.concentration.length > 0,
       corr: M.stacks.map(x => ({ ...x, mark: '+', color: GOOD }))
@@ -2063,21 +2555,75 @@ class Component extends DCLogic {
         open: () => this.setState({ detail: p.id }),
       })),
 
-      rankModes: (M.isDynasty ? [['now', 'Fuerza hoy'], ['future', 'Valor a futuro']] : [['now', 'Fuerza del roster']]).map(([k, label]) => ({
+      topOpen: !!s.topOpen,
+      toggleTop: () => this.setState({ topOpen: !s.topOpen }),
+      topCaret: s.topOpen ? '⌄' : '›',
+      topPeek: topList[0] ? topList[0].name + ' ' + topVal(topList[0]) : 'top 15',
+      topPosFilters: ['ALL'].concat(POS).map(p => ({
+        label: p === 'ALL' ? 'Todos' : p,
+        pick: () => this.setState({ topPos: p }),
+        style: this.seg((s.topPos || 'ALL') === p),
+      })),
+      topLenses: (M.isDynasty
+        ? [['neutral', 'Hoy'], ['me', 'Para ti'], ['fut', 'En 2 años']]
+        : [['neutral', 'Hoy'], ['me', 'Para ti']]).map(([k, label]) => ({
+        label, pick: () => this.setState({ topLens: k }), style: this.seg((s.topLens || 'neutral') === k),
+      })),
+      topLensNote: topLens === 'me'
+        ? 'Con TU necesidad posicional y el stack contra tu roster: cuánto te serviría a ti tenerlo.'
+        : topLens === 'fut'
+        ? 'Cada jugador envejecido dos temporadas: su calidad descontada por la curva de su posición, y las métricas recalculadas a esa edad. Los que suben son los que la liga todavía no cotiza.'
+        : 'Sin necesidad y con el stack dentro del roster de su dueño: qué tan bueno es, punto. Igual para todos.',
+      topFits: topList.map((x, i) => {
+          const v = topVal(x);
+          return {
+          n: i + 1, name: x.name,
+          meta: x.pos + ' · ' + (x.team || 'FA') + ' · ' + (topLens === 'fut' ? (x.age || '?') + '→' + ((x.age || 25) + 2) + ' años' : (x.age || '?') + ' años') + ' · ' + (x.mine ? 'tuyo' : x.owner) +
+            (topLens === 'fut' ? ' · hoy ' + x.fit + (x.fit2 - x.fit > 1 ? ' ↑' : x.fit - x.fit2 > 1 ? ' ↓' : '') : ''),
+          fit: v,
+          fitStyle: 'font-size:12.5px;flex:none;padding:2px 8px;border-radius:6px;font-variant-numeric:tabular-nums;background:rgba(145,132,217,.12);color:' + this.fitColor(v),
+          rowStyle: 'display:flex;align-items:center;gap:10px;padding:10px 13px;border-top:1px solid var(--color-divider);cursor:pointer;background:' + (x.mine ? 'rgba(145,132,217,.09)' : 'transparent'),
+          tap: () => this.setState({ detail: x.id }),
+        }; }),
+      topFitsEmpty: !M.allFits.length,
+      rankModes: (M.isDynasty
+        ? [['now', 'Fuerza hoy'], ['future', 'Valor a futuro'], ['fit', 'Fit hoy'], ['fitFut', 'Fit a futuro']]
+        : [['now', 'Fuerza del roster'], ['fit', 'Fit Score']]).map(([k, label]) => ({
         label, pick: () => this.setState({ rankMode: k }), style: this.seg((s.rankMode || 'now') === k),
       })),
-      rankNote: !M.isDynasty ? 'Liga redraft: sólo cuenta la fuerza de esta temporada.' : (s.rankMode === 'future')
-        ? 'Roster proyectado dos temporadas adelante con la curva de edad, más el capital de picks que posee cada equipo.'
-        : 'Suma de la mejor alineación que cada equipo puede poner hoy, con valores de mercado.',
-      ranking: M.leagueRows.slice().sort((a, b) => (s.rankMode === 'future' ? b.future - a.future : b.now - a.now)).map((t, i) => ({
+      rankNote: 'Ordena por: ' + ({
+        now: 'suma de la mejor alineación de hoy.',
+        future: 'roster envejecido 2 años + capital de picks.',
+        fit: 'Fit promedio de los titulares óptimos — calidad, no volumen.',
+        fitFut: 'el mismo Fit con el roster envejecido 2 años, sin picks.',
+      }[s.rankMode || 'now']) + ' A la derecha, dónde cada equipo se aparta de su fuerza bruta.',
+      ranking: M.leagueRows.slice().sort((a, b) => (
+        s.rankMode === 'future' ? b.future - a.future
+          : s.rankMode === 'fit' ? b.fit - a.fit
+          : s.rankMode === 'fitFut' ? b.fitFut - a.fitFut
+          : b.now - a.now
+      )).map((t, i) => ({
         rank: i + 1, name: t.name,
-        avatar: t.avatar, hasAvatar: !!t.avatar,
-        value: Math.round((s.rankMode === 'future' ? t.future : t.now) * 100).toLocaleString('en-US'),
+        hasAvatar: !!t.avatar,
+        avatarStyle: 'width:28px;height:28px;border-radius:8px;flex:none;border:1px solid var(--color-divider);background:url("' +
+          (t.avatar || '') + '") center/cover no-repeat',
+        value: (s.rankMode === 'fit' || s.rankMode === 'fitFut')
+          ? (t.now <= 0 ? '—' : Math.round(s.rankMode === 'fitFut' ? t.fitFut : t.fit))
+          : Math.round((s.rankMode === 'future' ? t.future : t.now) * 100).toLocaleString('en-US'),
         weight: t.isMe ? 600 : 400,
         window: t.now <= 0 ? 'Sin roster' : t.window === 'contender' ? 'Contiende' : t.window === 'rebuild' ? 'Reconstruye' : 'Medio',
         windowColor: t.now <= 0 ? 'rgba(233,233,237,.35)' : t.window === 'contender' ? GOOD : t.window === 'rebuild' ? BAD : MID,
-        shift: !M.isDynasty ? '' : t.shift > 0 ? '↑' + t.shift + ' a futuro' : t.shift < 0 ? '↓' + (-t.shift) + ' a futuro' : 'estable',
-        shiftColor: t.shift > 0 ? GOOD : t.shift < 0 ? BAD : 'rgba(233,233,237,.35)',
+        // En 10 equipos el orden casi no cambia entre medidas — un salto de lugar no dice
+        // nada. Lo que sí tiene rango es cuántos puntos de Fit pierde el roster al envejecer.
+        flag: (() => {
+          if (t.now <= 0 || !M.isDynasty) return '';
+          const d = Math.round(t.fitFut - t.fit);
+          return Math.abs(d) < 2 ? '' : (d > 0 ? '+' + d : d) + ' a 2 años';
+        })(),
+        flagColor: (() => {
+          const d = M.isDynasty ? Math.round(t.fitFut - t.fit) : 0;
+          return d > 0 ? GOOD : d < 0 ? BAD : 'rgba(233,233,237,.3)';
+        })(),
         sub: t.now <= 0
           ? 'Draft por comenzar'
           : 'edad ' + t.avgAge.toFixed(1) + (t.worst ? ' · flojo en ' + t.worst : '') +
@@ -2109,10 +2655,38 @@ class Component extends DCLogic {
         label: STRATS[k].label, pick: () => this.setState({ strat: k }), style: this.seg(s.strat === k),
       })),
       strategyCopy: strat.copy,
-      weights: Object.keys(strat.w).map(k => ({
-        label: METRIC_LABEL[k], pct: Math.round(strat.w[k] * 100) + '%',
-        fillStyle: 'height:100%;width:' + Math.round(strat.w[k] * 100 / .35 * 100 / 100) + '%;background:' + ACCENT,
+      // Prueba de que la estrategia hace algo: qué se mueve contra Balance, por nombre.
+      // Los pesos son un producto punto sobre métricas ya calculadas — no hay que re-puntuar.
+      stratEffect: (() => {
+        const base = STRATS.balanced.w;
+        const fitW = (m, ww) => Object.keys(ww).reduce((a, k) => a + ww[k] * (m[k] || 0), 0);
+        const pool = M.scored.filter(p => p.m).slice(0, 60);
+        if (s.strat === 'balanced' || pool.length < 6) return [];
+        const baseOrder = pool.slice().sort((a, b) => fitW(b.m, base) - fitW(a.m, base));
+        const rankBase = {};
+        baseOrder.forEach((p, i) => { rankBase[p.id] = i + 1; });
+        return pool.map((p, i) => ({ p, d: rankBase[p.id] - (i + 1) }))
+          .filter(x => Math.abs(x.d) >= 2)
+          .sort((a, b) => Math.abs(b.d) - Math.abs(a.d))
+          .slice(0, 4)
+          .map(x => ({
+            name: x.p.name,
+            move: (x.d > 0 ? '↑' : '↓') + Math.abs(x.d) + ' lugares',
+            color: x.d > 0 ? GOOD : BAD,
+          }));
+      })(),
+      stratEffectNote: s.strat === 'balanced'
+        ? 'Balance es la línea base. Cambia de estrategia y aquí te digo a quién mueve.'
+        : 'Contra Balance, en el board de 60:',
+      // En redraft los pesos mostrados son los efectivos, no los de dynasty: si la app
+      // puntúa con unos y enseña otros, la tabla miente.
+      weights: Object.keys(M.wUsed).map(k => ({
+        label: METRIC_LABEL[k], pct: Math.round(M.wUsed[k] * 100) + '%',
+        fillStyle: 'height:100%;width:' + Math.round(M.wUsed[k] * 100 / .35) + '%;background:' + ACCENT,
       })),
+      weightsNote: M.isDynasty
+        ? 'Fit = Σ wᵢ × métricaᵢ'
+        : 'Fit = Σ wᵢ × métricaᵢ · pesos de redraft: sube lo que se cobra esta semana, baja lo que sólo paga con el tiempo',
       multInfo: M.multInfo.map(x => ({
         pos: x.pos, why: x.why,
         mult: '×' + x.mult.toFixed(2),
@@ -2138,8 +2712,8 @@ class Component extends DCLogic {
         { mark: '≈', color: ACCENT, text: 'Fit Score, piso y upside: modelo propio sobre esas valoraciones más tu necesidad posicional.' },
         { mark: '≈', color: ACCENT, text: 'Contrastado con cómo trabajan los rankings de la industria: mezclan producción actual con potencial y aplican curvas de edad por posición.' },
         s.usageState === 'ok'
-          ? { mark: '✓', color: GOOD, text: 'Snap % (off_snp / tm_off_snp), target share, carga terrestre y PPG half-PPR: stats 2025 de Sleeper, unidas por player_id.' }
-          : { mark: '·', color: BAD, text: 'Uso real 2025 no disponible en esta sesión: piso y explosividad caen al modelo por ADP y edad.' },
+          ? { mark: '✓', color: GOOD, text: 'Snap % (off_snp / tm_off_snp), cuotas de balón, yardas por balón tocado, TD esperados y PPG half-PPR: stats de Sleeper (' + (s.usageSeasons || '2025') + ') unidas por player_id. Las tasas propias del jugador se promedian entre temporadas con más peso a lo reciente; las cuotas se quedan en la más reciente.' }
+          : { mark: '·', color: BAD, text: 'Uso real no disponible en esta sesión: piso y explosividad caen al modelo por ADP y edad.' },
         { mark: '✓', color: GOOD, text: 'Picks de rookies: dueño real desde los cambios de picks de tu liga; valor por ronda, año y fuerza del equipo de origen.' },
         { mark: '·', color: 'rgba(233,233,237,.4)', text: 'Pendiente: capital de draft NFL del rookie, xFP y EPA — están en nflverse (play-by-play y draft picks), falta conectarlos.' },
       ],
@@ -2152,7 +2726,8 @@ class Component extends DCLogic {
         const w = info.row.window;
         return {
           tmName: info.row.name,
-          tmAvatar: info.row.avatar, tmHasAvatar: !!info.row.avatar,
+          tmAvatarStyle: 'width:46px;height:46px;border-radius:11px;flex:none;border:1px solid var(--color-divider);background:url("' + (info.row.avatar || '') + '") center/cover no-repeat',
+          tmHasAvatar: !!info.row.avatar,
           tmSub: !M.leagueHasRosters
             ? (info.row.isMe ? 'Tu equipo' : 'Manager rival') + ' · roster vacío, draft por comenzar'
             : (info.row.isMe ? 'Tu equipo' : 'Manager rival') + ' · ' + info.row.rankNow + '.º' +
@@ -2200,17 +2775,21 @@ class Component extends DCLogic {
       dName: detail ? detail.name : '—',
       dMeta: detail ? (detail.pos + ' · ' + (detail.team || 'FA') + ' · ' + (detail.age || '?') + ' años' +
         (detail.owner ? ' · ' + (detail.owned ? 'tuyo' : 'de ' + detail.owner) : ' · agente libre')) : '',
+      // El mismo jugador puntúa distinto según con qué vara se mida; decirlo evita que
+      // el número de la ficha parezca contradecir al de la lista.
+      dFitLens: detail && detail.owned ? 'neutral · ya es tuyo' : 'para ti · incluye tu necesidad',
       dFit: detail && detail.fit != null ? detail.fit : '—',
       dFitColor: detail && detail.fit != null ? this.fitColor(detail.fit) : 'rgba(233,233,237,.5)',
-      dBreakdown: dm ? Object.keys(detail.owned && detail.wEff ? detail.wEff : strat.w).map(k => ({
+      dBreakdown: dm ? Object.keys(detail.owned && detail.wEff ? detail.wEff : M.wUsed).map(k => ({
         label: METRIC_LABEL[k],
-        detail: Math.round(dm[k] * 100) + ' × ' + Math.round((detail.owned && detail.wEff ? detail.wEff[k] : strat.w[k]) * 100) + '% = ' + Math.round(dm[k] * (detail.owned && detail.wEff ? detail.wEff[k] : strat.w[k]) * 100),
+        detail: Math.round(dm[k] * 100) + ' × ' + Math.round((detail.owned && detail.wEff ? detail.wEff[k] : M.wUsed[k]) * 100) + '% = ' + Math.round(dm[k] * (detail.owned && detail.wEff ? detail.wEff[k] : M.wUsed[k]) * 100),
         fillStyle: 'height:100%;width:' + Math.round(dm[k] * 100) + '%;background:' + (dm[k] > .7 ? GOOD : dm[k] > .45 ? ACCENT : 'rgba(145,132,217,.35)'),
       })) : [],
       dVerdict: !dm ? 'Sin datos suficientes para este jugador.'
-        : detail.owned ? (detail.age > (PEAK[detail.pos] || 26) + 1
-          ? 'Ya es tuyo y pasó su pico (' + detail.age + ' años): es tu mejor candidato a vender mientras la liga aún paga por él.'
-          : dm.age > .9 ? 'Ya es tuyo y está antes de su pico. Retenlo: el modelo lo proyecta al alza.'
+        : detail.owned ? (detail.age > (PRIME[detail.pos] || [24, 28])[1]
+          ? 'Ya es tuyo y salió del prime de su posición (' + (PRIME[detail.pos] || [24, 28]).join('-') + ' años): es tu mejor candidato a vender mientras la liga aún paga por él.'
+          : detail.age < (PRIME[detail.pos] || [24, 28])[0] ? 'Ya es tuyo y todavía no entra a su prime (' + (PRIME[detail.pos] || [24, 28]).join('-') + '): el modelo lo proyecta al alza.'
+          : dm.age > .9 ? 'Ya es tuyo y está dentro de su prime. Retenlo: es su mejor momento y aún no descuenta.'
           : 'Ya es tuyo, en su ventana de máximo valor. Ni comprar ni vender con prisa.')
         : dm.need > .6 && dm.value > .55 ? 'Encaje limpio: llena tu hueco más caro y además cae por debajo de su ADP en esta pick.'
         : dm.need > .6 ? 'Llena tu necesidad más urgente, aunque lo estarías tomando cerca de su precio de mercado.'
@@ -2219,11 +2798,36 @@ class Component extends DCLogic {
       dStats: detail ? (() => {
         const u = detail.use || (s.usage || {})[detail.id];
         return [
-          { label: 'Snap % 2025', value: u && u.snap != null ? Math.round(u.snap * 100) + '%' : 'sin dato' },
-          { label: u && u.shareLabel ? u.shareLabel : 'Target share', value: u && u.tgt != null ? (u.tgt * 100).toFixed(1) + '%' : 'sin dato' },
+          { label: 'Disponibilidad', value: (() => {
+            const r = detail && detail.raw ? detail.raw : null;
+            if (!r) return 'sin dato';
+            const st8 = String(r.status || ''), inj = String(r.injury_status || '');
+            const dco = Number(r.depth_chart_order);
+            const rol = Number.isFinite(dco) ? (dco === 1 ? 'titular en su depth chart' : dco + '.º en su depth chart') : null;
+            const estado = inj ? inj : (st8 && st8.toLowerCase() !== 'active' ? st8 : 'sano');
+            return estado + (rol ? ' · ' + rol : '');
+          })() },
+          { label: 'Temporadas medidas', value: u && u.seasons ? (u.seasons === 1 ? '1 · ' + u.seasonList + ' (muestra chica)' : u.seasons + ' · ' + u.seasonList + (u.fade != null && u.fade < .9 ? ' · pasó su pico: pesa lo reciente' : '')) : 'sin dato' },
+          { label: 'Snap %', value: u && u.snap != null ? Math.round(u.snap * 100) + '%' : 'sin dato' },
+          { label: u && u.shareLabel ? u.shareLabel : 'Target share', value: u && u.shareText ? u.shareText + (Number.isFinite(u.volPct) ? ' · percentil ' + Math.round(u.volPct * 100) : '') : 'sin dato' },
+          { label: 'Mercado vs producción', value: (() => {
+            const g = detail ? M.qDiverge(detail.raw, detail.id) : null;
+            if (!g) return 'sin dato';
+            const d = Math.round((g.mkt - g.prod) * 100);
+            const base = 'mercado ' + Math.round(g.mkt * 100) + ' · producción ' + Math.round(g.prod * 100);
+            return base + (Math.abs(d) < 12 ? ' · de acuerdo' : d > 0 ? ' · el mercado paga de más' : ' · produce más de lo que vale');
+          })() },
+          { label: u && u.effLabel ? u.effLabel : 'Yardas por toque', value: u && Number.isFinite(u.eff)
+            ? u.eff.toFixed(1) + (Number.isFinite(u.effPct) ? ' · percentil ' + Math.round(u.effPct * 100) : '') : 'sin dato' },
+          { label: 'TD de distancia', value: u && Number.isFinite(u.longTd)
+            ? u.longTd.toFixed(1) + ' de ' + Math.round(u.xtd + u.tdLuck) + (Number.isFinite(u.ltrPct) ? ' · percentil ' + Math.round(u.ltrPct * 100) : '') : 'sin dato' },
           { label: 'Cuota zona roja', value: u && u.rzShare != null ? (u.rzShare * 100).toFixed(1) + '%' : 'sin dato' },
           { label: 'TD por juego', value: u && u.tdPerGame != null ? u.tdPerGame.toFixed(2) + (u.tdShare != null ? ' · ' + Math.round(u.tdShare * 100) + '% del equipo' : '') : 'sin dato' },
-          { label: 'PPG 2025', value: u && u.ppg != null ? u.ppg.toFixed(1) + ' pts' : 'sin dato' },
+          { label: 'TD esperados', value: u && u.xtd != null
+            ? u.xtd.toFixed(1) + ' esperados vs ' + Math.round(u.xtd + u.tdLuck) + ' anotados' +
+              (Math.abs(u.tdLuck) < 1.5 ? ' · en línea' : u.tdLuck > 0 ? ' · anotó de más' : ' · anotó de menos')
+            : 'sin dato' },
+          { label: 'PPG', value: u && u.ppg != null ? u.ppg.toFixed(1) + ' pts' : 'sin dato' },
           { label: 'Edad · ADP', value: (detail.age || '?') + ' · #' + (detail.adp || '—') },
         ];
       })() : [],

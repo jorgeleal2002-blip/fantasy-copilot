@@ -1,7 +1,10 @@
-import { ACCENT, GOOD, METRIC_LABEL, PEAK, STRATS, type Weights } from '../model/constants';
+import { ACCENT, GOOD, METRIC_LABEL, PEAK, type Weights } from '../model/constants';
 import type { Metrics } from '../model/score';
+import type { SleeperPlayer } from '../api/types';
 import type { Model } from '../model/types';
+import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
+import { ord } from '../ui/format';
 import { Bar, Card, Overlay } from '../ui/primitives';
 import { dim, fitColor } from '../ui/styles';
 
@@ -21,7 +24,8 @@ interface Sheet {
   weights: Weights;
   owned: boolean;
   ownerLabel: string;
-  use?: { snap: number | null; tgt: number | null; shareLabel: string; ppg: number | null; rzShare: number | null; tdPerGame: number | null; tdShare: number | null };
+  raw: SleeperPlayer;
+  use?: Usage;
 }
 
 function resolve(m: Model, id: string, strat: Weights): Sheet | null {
@@ -29,7 +33,8 @@ function resolve(m: Model, id: string, strat: Weights): Sheet | null {
   if (mine) {
     return {
       id, name: mine.name, pos: mine.pos, team: mine.team, age: mine.age, adp: mine.adp,
-      fit: mine.fit, m: mine.m, weights: mine.wEff, owned: true, ownerLabel: 'yours', use: mine.use,
+      fit: mine.fit, m: mine.m, weights: mine.wEff, owned: true, ownerLabel: 'yours',
+      raw: mine.raw, use: mine.use,
     };
   }
   const board = m.scored.find(p => p.id === id) || m.scoreAny(id);
@@ -38,13 +43,12 @@ function resolve(m: Model, id: string, strat: Weights): Sheet | null {
     id, name: board.name, pos: board.pos, team: board.team || 'FA', age: board.age, adp: board.adp,
     fit: board.fit, m: board.m, weights: strat, owned: !!board.owned,
     ownerLabel: board.owned ? 'yours' : board.owner ? 'on ' + board.owner : 'free agent',
-    use: board.use,
+    raw: board.raw, use: board.use,
   };
 }
 
 export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId: string }) {
-  const p = resolve(m, playerId, STRATS[app.strat].w);
-  const usageYear = m.seasonNum - 1;
+  const p = resolve(m, playerId, m.wUsed);
 
   if (!p) {
     return (
@@ -58,9 +62,58 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const custom = !!app.photos[p.id];
   const u = p.use;
 
+  const fin = Number.isFinite;
+  const diverge = m.qDiverge(p.raw, p.id);
+
   const stats = [
-    { label: `Snap % ${usageYear}`, value: u && u.snap != null ? Math.round(u.snap * 100) + '%' : 'no data' },
-    { label: u?.shareLabel || 'Target share', value: u && u.tgt != null ? (u.tgt * 100).toFixed(1) + '%' : 'no data' },
+    {
+      label: 'Availability',
+      value: (() => {
+        const status = String(p.raw.status || '');
+        const inj = String(p.raw.injury_status || '');
+        const dco = Number(p.raw.depth_chart_order);
+        const role = fin(dco) ? (dco === 1 ? 'starter on his depth chart' : ord(dco) + ' on his depth chart') : null;
+        const state = inj || (status && status.toLowerCase() !== 'active' ? status : 'healthy');
+        return state + (role ? ' · ' + role : '');
+      })(),
+    },
+    {
+      label: 'Seasons measured',
+      value: u && u.seasons
+        ? (u.seasons === 1
+          ? '1 · ' + u.seasonList + ' (small sample)'
+          : u.seasons + ' · ' + u.seasonList + (u.fade != null && u.fade < 0.9 ? ' · past his peak: recency weighted' : ''))
+        : 'no data',
+    },
+    { label: 'Snap %', value: u && u.snap != null ? Math.round(u.snap * 100) + '%' : 'no data' },
+    {
+      label: u?.shareLabel || 'Target share',
+      value: u && u.shareText
+        ? u.shareText + (fin(u.volPct) ? ' · ' + Math.round((u.volPct as number) * 100) + 'th pct' : '')
+        : 'no data',
+    },
+    {
+      label: 'Market vs production',
+      value: (() => {
+        if (!diverge) return 'no data';
+        const d = Math.round((diverge.mkt - diverge.prod) * 100);
+        const base = 'market ' + Math.round(diverge.mkt * 100) + ' · production ' + Math.round(diverge.prod * 100);
+        return base + (Math.abs(d) < 12 ? ' · agreed' : d > 0 ? ' · market overpays' : ' · produces more than he costs');
+      })(),
+    },
+    {
+      label: u?.effLabel || 'Yards per touch',
+      value: u && fin(u.eff)
+        ? (u.eff as number).toFixed(1) + (fin(u.effPct) ? ' · ' + Math.round((u.effPct as number) * 100) + 'th pct' : '')
+        : 'no data',
+    },
+    {
+      label: 'Long TDs',
+      value: u && fin(u.longTd)
+        ? (u.longTd as number).toFixed(1) + ' of ' + Math.round((u.xtd || 0) + (u.tdLuck || 0)) +
+          (fin(u.ltrPct) ? ' · ' + Math.round((u.ltrPct as number) * 100) + 'th pct' : '')
+        : 'no data',
+    },
     { label: 'Red-zone share', value: u && u.rzShare != null ? (u.rzShare * 100).toFixed(1) + '%' : 'no data' },
     {
       label: 'TDs per game',
@@ -68,7 +121,14 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         ? u.tdPerGame.toFixed(2) + (u.tdShare != null ? ` · ${Math.round(u.tdShare * 100)}% of the team` : '')
         : 'no data',
     },
-    { label: `PPG ${usageYear}`, value: u && u.ppg != null ? u.ppg.toFixed(1) + ' pts' : 'no data' },
+    {
+      label: 'Expected TDs',
+      value: u && u.xtd != null
+        ? u.xtd.toFixed(1) + ' expected vs ' + Math.round(u.xtd + (u.tdLuck || 0)) + ' scored' +
+          (Math.abs(u.tdLuck || 0) < 1.5 ? ' · in line' : (u.tdLuck || 0) > 0 ? ' · scored above it' : ' · scored below it')
+        : 'no data',
+    },
+    { label: 'PPG', value: u && u.ppg != null ? u.ppg.toFixed(1) + ' pts' : 'no data' },
     { label: 'Age · ADP', value: (p.age ?? '?') + ' · #' + (p.adp || '—') },
   ];
 

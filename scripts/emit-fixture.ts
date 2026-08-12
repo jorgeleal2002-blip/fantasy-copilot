@@ -26,7 +26,11 @@ const routes: Record<string, unknown> = {
   [`/v1/draft/${DRAFT_ID}`]: makeDraft(),
   [`/v1/draft/${DRAFT_ID}/picks`]: makePicks(),
   '/v1/players/nfl': players,
+  // three seasons, so the expected-TD regression and the blend both have
+  // something real to chew on
   '/v1/stats/nfl/regular/2025': makeStats(players),
+  '/v1/stats/nfl/regular/2024': makeStats(players),
+  '/v1/stats/nfl/regular/2023': makeStats(players),
   '__fantasycalc__': makeFantasyCalc(players),
 };
 

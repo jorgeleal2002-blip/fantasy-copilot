@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-7f0adc69-8c0b-4834-96da-53458aca2340/styles.css">
+<script src="_ds/nocturne-7f0adc69-8c0b-4834-96da-53458aca2340/_ds_bundle.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<script src="./doc-page.js"></script>
+<style>
+doc-page:not(:defined){visibility:hidden}
+body{margin:0;font-family:"Inter",system-ui,sans-serif}
+a{color:#9184d9}a:hover{color:#b3a9e6}
+</style>
+</helmet>
+
+<doc-page margin="0.8in" style="color:#23252f">
+  <div slot="header" style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:8px;border-bottom:1px solid #2f3245;font-size:9pt;color:#7e8296">
+    <span style="display:flex;align-items:center;gap:6pt"><img src="mark-simple.svg" alt="" style="width:13pt;height:13pt;flex:none"><span style="letter-spacing:.12em;text-transform:uppercase">Doctors Fantasy</span></span>
+    <span>Manual de datos y estadísticas</span>
+  </div>
+
+  <div style="background:#161826;color:#e9e9ed;margin:22pt -0.8in 26pt;padding:26pt 0.8in 30pt">
+    <img src="badge-primary.svg" alt="Doctors Fantasy" style="width:54pt;height:54pt;border-radius:50%;display:block;margin-bottom:16pt">
+    <div style="font-size:9pt;letter-spacing:.14em;text-transform:uppercase;color:#9184d9">Documentación técnica</div>
+    <h1 style="font-size:30pt;font-weight:500;letter-spacing:-0.025em;line-height:1.08;margin:12pt 0 10pt">De dónde sale cada número</h1>
+    <p style="font-size:11.5pt;line-height:1.5;color:#a8abbd;margin:0;max-width:46ch">Manual de fuentes, fórmulas y supuestos del asistente de fantasy conectado a Sleeper. Escrito para poder auditar cualquier cifra que la app muestre en pantalla.</p>
+    <div style="display:flex;gap:28pt;margin-top:26pt;padding-top:16pt;border-top:1px solid #2f3245">
+      <div><div style="font-size:8.5pt;letter-spacing:.1em;text-transform:uppercase;color:#7e8296">Liga</div><div style="font-size:11pt;margin-top:4pt">Cuboys · dynasty superflex</div></div>
+      <div><div style="font-size:8.5pt;letter-spacing:.1em;text-transform:uppercase;color:#7e8296">Versión</div><div style="font-size:11pt;margin-top:4pt">Agosto 2026</div></div>
+      <div><div style="font-size:8.5pt;letter-spacing:.1em;text-transform:uppercase;color:#7e8296">Acceso</div><div style="font-size:11pt;margin-top:4pt">Solo lectura</div></div>
+    </div>
+  </div>
+
+  <h2 style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt">1 · Principio de origen</h2>
+  <div style="width:48pt;height:2px;background:#9184d9;margin-bottom:12pt"></div>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 10pt">Todo dato en la app cae en una de tres categorías, y la interfaz nunca las mezcla sin decirlo:</p>
+  <table style="border-collapse:collapse;width:100%;font-size:10pt;margin-bottom:8pt">
+    <thead><tr><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0;width:22%">Categoría</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0;width:34%">Qué es</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0;">Ejemplos</th></tr></thead>
+    <tbody>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;"><strong>Hecho</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Copiado tal cual de una API</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Rosters, dueños de picks, edad, equipo NFL, snaps jugados</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;"><strong>Mercado</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Consenso público de valor</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Valor dynasty de cada jugador y de cada pick</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;"><strong>Modelo</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Calculado aquí, opinable</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Fit Score, alineación óptima, sugerencias de cambio</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:10pt;line-height:1.55;color:#5f6377;margin:0 0 20pt">Nada se inventa: si una fuente no responde, la sección se marca como no disponible en vez de rellenarse con un estimado.</p>
+
+  <h2 style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt">2 · Fuentes</h2>
+  <div style="width:48pt;height:2px;background:#9184d9;margin-bottom:12pt"></div>
+
+  <h3 style="color:#161826;font-size:12pt;font-weight:500;margin:0 0 6pt">Sleeper — la liga</h3>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 8pt">API pública, sin llave ni contraseña. La app solo lee. Se consulta desde tu navegador, así que nada pasa por un servidor intermedio.</p>
+  <table style="border-collapse:collapse;width:100%;font-size:9.5pt;margin-bottom:14pt">
+    <thead><tr><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0;width:44%">Endpoint</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0;">Qué aporta</th></tr></thead>
+    <tbody>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;"><code>/user/{usuario}</code></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Tu identidad y tus ligas</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;"><code>/league/{id}</code></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Formato: dynasty o redraft, superflex, titulares exigidos</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;"><code>/league/{id}/users</code></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Managers, nombres de equipo, avatares</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;"><code>/league/{id}/rosters</code></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Quién tiene a quién</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;"><code>/league/{id}/traded_picks</code></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Dueño real de cada pick tras los cambios</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;"><code>/draft/{id}/picks</code></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Picks ya hechas, en vivo</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;"><code>/players/nfl</code></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Catálogo: posición, edad, equipo, experiencia, estatus, ADP interno</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;"><code>/stats/nfl/regular/2025</code></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Uso real de la temporada pasada</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="color:#161826;font-size:12pt;font-weight:500;margin:0 0 6pt">FantasyCalc — el mercado</h3>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 8pt">Valores de consenso construidos con cambios reales entre managers de miles de ligas. Se piden <em>con los parámetros exactos de tu liga</em>, porque el valor depende del formato: un QB vale mucho más en superflex que en liga estándar.</p>
+  <div style="border:1px solid #2f3245;border-radius:8px;padding:12pt;margin-bottom:8pt;background:#f4f4f7">
+    <div style="font-size:8.5pt;letter-spacing:.1em;text-transform:uppercase;color:#7e8296;margin-bottom:6pt">Parámetros enviados</div>
+    <div style="font-size:10pt;line-height:1.7;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">isDynasty = tipo de liga en Sleeper<br>numQbs = 2 si el formato incluye SUPER_FLEX, si no 1<br>numTeams = equipos reales de la liga<br>ppr = puntos por recepción configurados</div>
+  </div>
+  <p style="font-size:10pt;line-height:1.55;color:#5f6377;margin:0 0 20pt">En una liga redraft se pide el mercado en modo redraft y la curva de edad se apaga: si solo importa esta temporada, un jugador de 30 años no debe castigarse.</p>
+
+  <h2 style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt">3 · Valor de las picks</h2>
+  <div style="width:48pt;height:2px;background:#9184d9;margin-bottom:12pt"></div>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 10pt">Las picks del draft de este año se valoran por <strong>slot exacto</strong>, no por ronda. El mercado publica cada una por separado, y la diferencia es enorme:</p>
+  <div style="display:flex;gap:10pt;margin-bottom:10pt">
+    <div style="flex:1;border:1px solid #2f3245;border-radius:8px;padding:11pt"><div style="font-size:8.5pt;letter-spacing:.1em;text-transform:uppercase;color:#7e8296">Pick 1.01</div><div style="font-size:17pt;font-weight:500;letter-spacing:-0.02em;margin-top:4pt">7,171</div></div>
+    <div style="flex:1;border:1px solid #2f3245;border-radius:8px;padding:11pt"><div style="font-size:8.5pt;letter-spacing:.1em;text-transform:uppercase;color:#7e8296">Pick 1.02</div><div style="font-size:17pt;font-weight:500;letter-spacing:-0.02em;margin-top:4pt">4,744</div></div>
+    <div style="flex:1;border:1px solid #9184d9;border-radius:8px;padding:11pt;background:rgba(145,132,217,.08)"><div style="font-size:8.5pt;letter-spacing:.1em;text-transform:uppercase;color:#7e6ad0">Pick 1.05 · tuya</div><div style="font-size:17pt;font-weight:500;letter-spacing:-0.02em;margin-top:4pt;color:#5b4fae">3,684</div></div>
+  </div>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 8pt">Tu primera ronda vale poco más de la mitad que la 1.01. Tratar ambas como "una 1ª" —el error clásico de las tablas planas— es lo que produce ofertas irreales.</p>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 8pt">Para años futuros, donde aún no hay orden, se usa el valor de ronda que publica el mercado, que ya trae descontada la incertidumbre. El dueño de cada pick sale de <code>traded_picks</code>, así que los cambios de tu liga se respetan: tu 2.02 aparece correctamente como tuya vía Konoha.</p>
+  <p style="font-size:10pt;line-height:1.55;color:#5f6377;margin:0 0 20pt">Si el mercado no publica un slot, se cae a una tabla de respaldo por ronda ajustada por la posición del equipo de origen en la tabla. Es el único estimado del sistema y se usa en último lugar.</p>
+
+  <h2 style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt">4 · Uso real</h2>
+  <div style="width:48pt;height:2px;background:#9184d9;margin-bottom:12pt"></div>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 10pt">Del acumulado de la temporada 2025 se derivan cuatro cosas por jugador:</p>
+  <ul style="color:#23252f;font-size:11pt;line-height:1.65;margin:0 0 10pt;padding-left:16pt">
+    <li style="margin-bottom:5pt"><strong>Porcentaje de snaps</strong> — snaps ofensivos jugados sobre los del equipo. Separa a un titular real de un nombre conocido en la banca.</li>
+    <li style="margin-bottom:5pt"><strong>Rol</strong> — titular, rotación o reserva, por umbrales sobre ese porcentaje.</li>
+    <li style="margin-bottom:5pt"><strong>Volumen</strong> — acarreos y objetivos, la materia prima de los puntos.</li><li><strong>TD esperados</strong> — cuántos touchdowns producen sus oportunidades, contra los que anotó de verdad. La diferencia es suerte, y la suerte no se repite.</li>
+  </ul>
+  <p style="font-size:10pt;line-height:1.55;color:#5f6377;margin:0 0 20pt">Un rookie sin temporada previa no tiene uso; la app lo dice en vez de asumirle cero producción. Las métricas de tu especificación que requieren datos jugada por jugada —target share, air yards, EPA, xFP, yards after catch— no están en esta fuente y quedan fuera hasta que corra la temporada.</p>
+
+  <h2 style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt">5 · Curva de edad</h2>
+  <div style="width:48pt;height:2px;background:#9184d9;margin-bottom:12pt"></div>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 10pt">Cada posición envejece distinto. El modelo asigna un pico y una tasa de caída anual posterior:</p>
+  <table style="border-collapse:collapse;width:100%;font-size:10pt;margin-bottom:8pt">
+    <thead><tr><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0;">Posición</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0;">Pico</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0;">Caída por año después</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0;">Lectura</th></tr></thead>
+    <tbody>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">RB</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">24</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">13%</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Se derrumba rápido; vender temprano casi siempre gana</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">WR</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">26</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">8%</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Meseta larga</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">TE</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">27</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">7%</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Tarda en arrancar y dura</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">QB</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">27</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">5%</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">El activo más estable, sobre todo en superflex</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:10pt;line-height:1.55;color:#5f6377;margin:0 0 20pt">Antes del pico la curva sube suave; después baja lineal con un piso, para no llevar a cero a un veterano productivo. Es un modelo, no un hecho: describe la tendencia de la posición, no el caso particular.</p>
+
+  <h2 style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt">6 · Fit Score</h2>
+  <div style="width:48pt;height:2px;background:#9184d9;margin-bottom:12pt"></div>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 12pt">La cifra central de la app. Responde una pregunta que un ranking general no puede: <em>¿qué tanto le sirve este jugador a <strong>este</strong> roster?</em></p>
+  <div style="background:#161826;color:#e9e9ed;border-radius:8px;padding:16pt;margin-bottom:12pt;text-align:center">
+    <div style="font-size:8.5pt;letter-spacing:.12em;text-transform:uppercase;color:#9184d9;margin-bottom:8pt">Fórmula</div>
+    <div style="font-size:15pt;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">Fit = Σ wᵢ × métricaᵢ</div>
+    <div style="font-size:9.5pt;color:#7e8296;margin-top:8pt">cada métrica normalizada de 0 a 1; los pesos suman 1</div>
+  </div>
+  <table style="border-collapse:collapse;width:100%;font-size:10pt;margin-bottom:12pt"><thead><tr><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0">Métrica</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0">Cómo se calcula</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0">Origen</th></tr></thead><tbody><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top"><strong>Calidad</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Valor de mercado del jugador dividido entre el del mejor disponible</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Mercado</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top"><strong>Necesidad</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Tu lugar en la liga en esa posición, invertido</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Modelo</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top"><strong>Valor</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Su lugar en el board contra el número de pick en el que estás</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Mixto</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top"><strong>Piso</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Porcentaje de snaps de 2025; sin dato, rango de mercado y experiencia</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Uso real</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top"><strong>Explosividad</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Cuota de objetivos de 2025; sin dato, juventud y rango</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Uso real</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top"><strong>Zona roja</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Cuota de oportunidades dentro de la 20 y TD por juego</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Uso real</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top"><strong>Edad</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Curva de la sección 5</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Modelo</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top"><strong>Stack</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Correlación con tus otros jugadores del mismo equipo NFL</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Modelo</td></tr></tbody></table>
+
+  <h3 style="color:#161826;font-size:12pt;font-weight:500;margin:0 0 6pt">Los pesos cambian con tu estrategia</h3>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 8pt">Elegir una estrategia en Ajustes reescribe los pesos y reordena el board de verdad — no es una etiqueta cosmética. La métrica <strong>piso Y techo</strong> es la media geométrica de las otras dos, <code>√(piso × explosividad)</code>, y existe porque promediarlas no sirve: un jugador con 0.9 de piso y 0.1 de techo promedia igual que uno con 0.5 y 0.5, siendo opuestos. Multiplicar exige las dos cosas — si cualquiera está baja, el resultado se hunde. Es lo que separa al titular confiable con techo del que anota 4 puntos un domingo y 22 el siguiente.</p>
+  <table style="border-collapse:collapse;width:100%;font-size:10pt;margin-bottom:12pt"><thead><tr><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0">Peso</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0">Balance</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0">Piso seguro</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0">Explosivos</th></tr></thead><tbody><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Calidad</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.30</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.26</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.25</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Necesidad</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.14</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.15</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.12</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Zona roja</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.08</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.10</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.08</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Valor</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.08</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.08</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.07</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Piso</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.06</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.26</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.03</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Explosividad</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.06</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.03</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.30</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Piso Y techo</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.18</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">—</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">—</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Stack</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.05</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.05</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.06</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top">Edad</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.05</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.07</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">.09</td></tr><tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top"><strong>Suma</strong></td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">1.00</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">1.00</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9pt">1.00</td></tr></tbody></table>
+
+  <h2 style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt">7 · Stack: compañeros de equipo</h2>
+  <div style="width:48pt;height:2px;background:#9184d9;margin-bottom:12pt"></div>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 8pt">Tener dos jugadores del mismo equipo NFL no es neutro, y el efecto cambia de signo según la pareja:</p>
+  <ul style="color:#23252f;font-size:11pt;line-height:1.65;margin:0 0 8pt;padding-left:16pt">
+    <li style="margin-bottom:5pt"><strong>Beneficia</strong> — QB con su receptor: el mismo pase suma dos veces. Sube la varianza a tu favor en las semanas buenas.</li>
+    <li style="margin-bottom:5pt"><strong>Perjudica</strong> — dos receptores del mismo equipo, o dos corredores: se reparten los mismos objetivos y acarreos. Un techo se come al otro.</li>
+    <li><strong>Riesgo oculto</strong> — varios titulares del mismo equipo comparten bye y comparten los días malos de esa ofensiva.</li>
+  </ul>
+  <p style="font-size:10pt;line-height:1.55;color:#5f6377;margin:0 0 20pt">El ajuste es deliberadamente pequeño: mueve el orden entre jugadores parecidos, nunca convierte a un mal jugador en buena pick.</p>
+
+  <h2 style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt">8 · Fuerza y ranking de liga</h2>
+  <div style="width:48pt;height:2px;background:#9184d9;margin-bottom:12pt"></div>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 8pt">La fuerza de un equipo <strong>no</strong> es la suma de su roster: sumar la banca premia a quien acumula jugadores mediocres. Se calcula así:</p>
+  <ol style="color:#23252f;font-size:11pt;line-height:1.65;margin:0 0 8pt;padding-left:16pt">
+    <li style="margin-bottom:5pt">Se resuelve la <strong>mejor alineación posible</strong> de cada equipo — se llenan los slots fijos y luego cada flex con el mejor sobrante.</li>
+    <li style="margin-bottom:5pt"><strong>Fuerza hoy</strong> = valor de mercado de esa alineación titular.</li>
+    <li><strong>Valor a futuro</strong> = el roster completo proyectado dos temporadas con la curva de edad, más el capital de picks.</li>
+  </ol>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 8pt">La distancia entre ambas columnas define la ventana de cada rival: <em>contiende</em>, <em>reconstruye</em> o <em>tierra de nadie</em>. Eso es lo que hace negociables las ofertas — a quien reconstruye le sobran veteranos y le faltan picks.</p>
+  <p style="font-size:10pt;line-height:1.55;color:#5f6377;margin:0 0 20pt">En liga redraft toda la columna de futuro desaparece: sin picks ni curva de edad, solo existe la fuerza de hoy.</p>
+
+  <h2 style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt">9 · Motor de cambios</h2>
+  <div style="width:48pt;height:2px;background:#9184d9;margin-bottom:12pt"></div>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 10pt">Una oferta solo se muestra si sobrevive cuatro filtros. Los dos primeros son los que evitan propuestas ridículas:</p>
+  <table style="border-collapse:collapse;width:100%;font-size:10pt;margin-bottom:10pt">
+    <thead><tr><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0;width:30%">Filtro</th><th style="text-align:left;font-weight:500;font-size:9pt;letter-spacing:.06em;text-transform:uppercase;color:#5f6377;border-bottom:1px solid #d5d6de;padding:7pt 9pt 7pt 0;">Regla</th></tr></thead>
+    <tbody>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">No regalar</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Lo que entregas no puede valer menos del 88% de lo que recibes</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">No sobrepagar</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Ni más del 110% — el tope que impide ofrecer tu 1.05 por un jugador barato</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Te mejora</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Tu alineación titular tiene que subir; los cambios laterales se descartan</td></tr>
+      <tr><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Les mejora</td><td style="color:#23252f;border-bottom:1px solid #e6e7ed;padding:7pt 9pt 7pt 0;vertical-align:top;">Su alineación no puede caer, o el valor recibido debe compensarlo</td></tr>
+    </tbody>
+  </table>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 8pt">El encaje premia estar <strong>cerca de justo</strong>, no ser desbalanceado a tu favor: un robo que ningún manager firmaría puntúa bajo, por definición. Solo se ofrecen jugadores de tu banca y tus picks, nunca tus titulares.</p>
+  <p style="font-size:10pt;line-height:1.55;color:#5f6377;margin:0 0 20pt">El motor recalcula cuando cambian los rosters, las picks o el mercado. Durante el draft eso ocurre solo cada veinte segundos.</p>
+
+  <h2 style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt">10 · Límites conocidos</h2>
+  <div style="width:48pt;height:2px;background:#9184d9;margin-bottom:12pt"></div>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 10pt">Lo que la app todavía <em>no</em> sabe, dicho de frente:</p>
+  <ul style="color:#23252f;font-size:11pt;line-height:1.65;margin:0 0 10pt;padding-left:16pt">
+    <li style="margin-bottom:5pt">No hay métricas jugada por jugada: target share, air yards, EPA, success rate ni xFP. Requieren una fuente de datos avanzados que no está conectada.</li>
+    <li style="margin-bottom:5pt">No hay aprendizaje automático. El sistema no se corrige solo con los resultados semanales; los pesos son los que tú elijas.</li>
+    <li style="margin-bottom:5pt">No hay calendario, clima, local/visitante ni bye en el Fit Score.</li>
+    <li style="margin-bottom:5pt">Lesiones: solo el estatus que publica Sleeper, sin historial ni pronóstico de retorno.</li>
+    <li>El mercado es consenso público, no la opinión de tu liga en particular. Si tus managers sobrevaloran a los QB, tu realidad difiere del modelo.</li>
+  </ul>
+  <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0 0 10pt">Nada de esto se disfraza con estimados: donde falta la fuente, la app lo declara.</p>
+
+  <h2 style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt" style="color:#161826;font-size:16pt;font-weight:500;letter-spacing:-0.02em;margin:0 0 4pt;break-before:page">11 · Anexo: todas las fórmulas</h2><div style="width:48pt;height:2px;background:#9184d9;margin-bottom:12pt"></div><p style="color:#23252f;font-size:10.5pt;line-height:1.55;margin:0 0 8pt">Notación: <code>clamp(x, a, b)</code> recorta x al rango [a, b]. Toda métrica vive entre 0 y 1 antes de pesarse. <code>ADP</code> es el <em>search_rank</em> de Sleeper: 1 es el jugador más buscado.</p><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.1 · Talento y valor base</h3><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">talento(ADP) = clamp( e^(−(ADP − 1) / 70) , 0.008 , 1 )</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Decaimiento exponencial. El ADP crudo comprime demasiado: entre el jugador 5 y el 40 hay un abismo que una escala lineal no refleja.</div></div><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">rango(ADP) = clamp( 1 − log₁₀(ADP) / 3.1 , 0.02 , 1 )</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Escala logarítmica de respaldo, usada cuando no hay valor de mercado para ese jugador.</div></div><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">valorDynasty = talento(ADP) × premio[posición] × curvaEdad(posición, edad)</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Solo se usa como respaldo. Si el mercado publica al jugador, manda el mercado.</div></div><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.2 · Premio posicional, leído de tus reglas</h3><p style="color:#23252f;font-size:10.5pt;line-height:1.55;margin:0 0 8pt">El premio de cada posición se calcula con el reglamento real de tu liga, no con supuestos genéricos:</p><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">QB = (superflex ? 1.32 : 0.78) × (1 + (ptsTD_pase − 4) × 0.05)
+              × (1 + (ptsYarda_pase − 0.04) × 3)
+RB = 0.84 × (1 + pts1erDown_tierra × 0.30)
+WR = 1.06 × (0.94 + ptsRecepción × 0.12 + pts1erDown_aéreo × 0.30)
+TE = 0.88 × (1 + (bonusTE + pts1erDown_aéreo × 0.5) × 0.32)</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Por eso en tu liga superflex un QB pesa 1.32 y en una liga de 1QB pesaría 0.78: la misma posición, dos mercados distintos.</div></div><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.3 · Curva de edad</h3><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">si edad ≤ pico:   curva = clamp( 0.82 + (edad − (pico − 6)) × 0.03 , 0.5 , 1 )
+PRIME = ventana, no punto. Dentro de ella el jugador está a tope:
+ni mejora ni empeora.
+
+élite = calidad del jugador dentro del board, de 0 a 1 (su valor
+        entre el del mejor). La estrella no envejece como el suplente:
+
+  fin_efectivo   = fin  + 1.5 × élite      estira su ventana
+  caída_efectiva = caída × (1 − 0.45 × élite)   y cae más lento
+
+  edad <  inicio:  curva = clamp( 1 − (inicio − edad) × subida , 0.35 , 1 )
+  edad <= fin_ef:  curva = 1
+  edad >  fin_ef:  curva = clamp( 1 − (edad − fin_ef) × caída_ef , 0.1 , 1 )
+
+prime:  RB 23-26 · WR 24-28 · TE 25-29 · QB 26-33
+subida: RB 0.05 · WR 0.06 · TE 0.09 · QB 0.07  por año antes del prime
+caída:  RB 0.15 · WR 0.08 · TE 0.07 · QB 0.05  por año después del prime
+sin edad conocida: 0.72   ·   liga redraft: 0.80 fijo</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Sin dato de calidad, élite = 0: nadie recibe el descuento por default. Un WR élite de 30 años conserva 0.98 de su valor; uno del montón a la misma edad, 0.84 — que es lo que se ve en la realidad, donde al top-3 le sobra talento para compensar lo que pierde de físico y al suplente no. El prime dura distinto en cada posición y eso es la otra media curva: el RB llega listo y se acaba pronto (cuatro años), el QB tarda en llegar y aguanta ocho, el TE es el que más tarda en romper — por eso su tasa de subida es la más alta, un TE de 22 años todavía no es lo que va a ser. El piso de 0.1 evita que un veterano productivo caiga a cero por edad sola.</div></div><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.4 · Fuerza posicional y necesidad</h3><p style="color:#23252f;font-size:10.5pt;line-height:1.55;margin:0 0 8pt">Primero, cuántos jugadores de cada posición cuentan realmente, según los titulares que exige tu formato:</p><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">cupo[pos] = max( 1 , redondear( titulares[pos] + reparto_flex ) )
+
+reparto_flex:  QB → 1 si hay SUPER_FLEX, si no 0
+               RB, WR → flex × 0.4
+               TE → flex × 0.2</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Los flex se reparten según con qué frecuencia los ocupa cada posición en la práctica.</div></div><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">fuerza[pos] = ( suma de los "cupo" mejores valores de esa posición ) / cupo[pos]</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Es un PROMEDIO de titulares, no una suma de roster: acumular banca no infla la cifra. Doce WR mediocres no superan a tres élite.</div></div><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">lugar[pos]      = 1 + cuántos equipos tienen más fuerza que tú
+percentil[pos]  = (equipos − lugar) / (equipos − 1)
+necesidad[pos]  = 1 − percentil[pos]</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Necesidad relativa, no absoluta: si eres 10.º de 10 en RB, necesidad = 1; si eres 1.º, necesidad = 0. Lo que importa es tu lugar contra la liga, no un ideal teórico.</div></div><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.5 · Las ocho métricas del Fit Score</h3><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">calidad      = clamp( valorMercado / valorMercadoMáximo , 0 , 1 )
+
+necesidad    = necesidad[posición]        (11.4)
+
+valor        = clamp( 0.5 + (lugarBoard − númeroDePick) /
+                            (lugarBoard + númeroDePick) × 0.5 , 0 , 1 )
+
+piso         = clamp( rango × 0.7 + bono , 0 , 1 )
+               bono = 0.30 si ≥3 temporadas · 0.18 si ≥1 · 0.05 rookie
+
+explosividad = clamp( rango × 0.45 + bono_edad + bono_novato , 0 , 1 )
+               bono_edad   = 0.42 si ≤24 · 0.26 si ≤26 · 0.08 si más
+               bono_novato = 0.12 si ≤2 temporadas
+
+edad         = curvaEdad(posición, edad)   (11.3)
+
+stack        = 0.5 ajustado por compañeros  (11.6)
+
+zona_roja     = 0.35 por defecto, sustituido por uso real</div></div><p style="color:#23252f;font-size:10.5pt;line-height:1.55;margin:0 0 8pt">Cuando existe uso real de 2025, esos proxies se reemplazan parcialmente por el dato medido:</p><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">percentiles por posición, calculados con este mismo feed
+(mínimo 8 jugadores con 4+ partidos; si no, no se publican):
+
+  eficiencia = yardas ÷ BALONES TOCADOS
+     QB:    (yardas pase + terrestres) ÷ (intentos + acarreos)   mín 200
+     RB:    (yardas terrestres + aéreas) ÷ (acarreos + recepciones)  mín 80
+     WR/TE: yardas aéreas ÷ recepciones                          mín 40
+     (sólo jugadores con 8+ partidos acumulados entran al percentil)
+
+MEZCLA DE TEMPORADAS — 2025, 2024, 2023 con pesos 0.50 / 0.30 / 0.20
+
+  una temporada cuenta sólo si jugó 4+ partidos; el peso de la que
+  no jugó se reparte entre las que sí (el lesionado no carga un año
+  en blanco como año malo)
+
+  desvanecimiento por edad:
+    pasado  = máx(0, edad − pico de su posición)
+    fade    = máx(1 − pasado × 0.18 , 0.15)
+    peso[i] = peso_nominal[i] × fade^i      (i = 0 es 2025)
+
+  luego se renormaliza sobre las temporadas disponibles
+
+SE PROMEDIAN (tasas propias del jugador):
+  snap %, yardas por balón, TD de distancia, TD esperados/juego, PPG
+SE QUEDAN EN 2025 (dependen del rol y la ofensiva de hoy):
+  target share, cuota de zona roja, cuota de TD
+  volumen    = QB:    (intentos de pase + acarreos) ÷ partidos
+               RB:    cuota de acarreos de su ofensiva
+               WR/TE: cuota de objetivos de su ofensiva
+               (el QB no compite por targets, pero sí tiene volumen:
+                dejarlo sin medida le daba piso máximo a todo titular)
+  TDdistancia = máx( TD anotados − b1 × toquesZonaRoja , 0 ) ÷ toquesFuera
+                (b1 es la tasa ajustada en 11.5b: los TD que sus
+                 oportunidades de cerca YA predicen no cuentan aquí)
+
+  pct[x] = lugar en el orden de su posición ÷ (jugadores − 1)
+
+piso         = piso × 0.30
+               + ( clamp(%snaps,0,1) × 0.62 + pctVolumen × 0.38 ) × 0.70
+
+explosividad = explosividad × 0.35
+               + ( pctEficiencia × 0.70 + pctTDdistancia × 0.30 ) × 0.65
+zona_roja     = clamp(cuotaZonaRoja × 4.5, 0, 1) × 0.60
+               + clamp(TDesperadosPorJuego / 1.1, 0, 1) × 0.40</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Tres decisiones que importan. <strong>Tres temporadas, no una:</strong> una sola es muestra chica —una lesión, un coordinador nuevo o seis semanas raras mueven cualquier número—, así que las tasas propias del jugador se promedian sobre 2025-2024-2023. Pero promediar asume que el jugador es el mismo de hace tres años, y pasado el pico de su posición no lo es: su temporada vieja lo apuntala falsamente. Por eso las temporadas viejas se desvanecen con la edad — en el pico los pesos son los nominales; a cuatro años de él, 2025 ya vale el 83% de la mezcla. Las cuotas de balón no se promedian: se calculan contra los totales de su ofensiva actual y no viajan al pasado. <strong>El volumen es piso, no techo:</strong> muchos toques no vuelven explosivo a nadie, lo vuelven confiable — así que la cuota de balón cuenta para el piso, junto a los snaps. <strong>La explosividad mide rendimiento por balón tocado</strong> —yardas ganadas y touchdowns de distancia—, en percentil dentro de su posición. El divisor son recepciones, no objetivos: dividir entre objetivos castigaría la tasa de atrapadas, que es la marca del receptor profundo y disputado, y premiaría al de rutas cortas — exactamente al revés de lo que la palabra "explosivo" significa. Los mínimos son altos a propósito: con un umbral bajo, el especialista de pocas jugadas y promedio inflado ocupa la cima del percentil y empuja al medio a los receptores de verdad. Los TD entran restando primero los que sus oportunidades en zona roja ya predicen, para no cobrarlos dos veces: zona roja paga al que anota desde la yarda uno, explosividad al que se rompe una jugada de sesenta. el percentil evita la constante arbitraria que antes saturaba (multiplicar la cuota de objetivos por 4 mandaba a 1.00 a todo receptor élite, así que ninguno se distinguía de otro). Yardas por toque es un proxy: aDOT y tasa de jugadas de 20+ yardas serían mejores, pero viven en datos jugada por jugada que no se pueden leer desde el navegador. Nótese <em>esperados</em>, no anotados, en la zona roja: la fórmula de abajo explica por qué.</div></div><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.5b · TD esperados</h3><p style="color:#23252f;font-size:10.5pt;line-height:1.55;margin:0 0 8pt">Los TD anotados traen la suerte pegada y no persisten de una temporada a la siguiente; las oportunidades sí. Por eso el modelo estima cuántos TD <em>debió</em> producir cada jugador. Las dos tasas se ajustan por mínimos cuadrados sobre el mismo feed de Sleeper, por posición — no hay constante inventada ni fuente externa que empatar por nombre:</p><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">rz = acarreos + objetivos DENTRO de la zona roja
+nz = acarreos + objetivos FUERA de ella
+
+modelo:   TD ≈ b1 × rz + b2 × nz     (por posición: RB, WR, TE)
+
+  Sxx = Σ rz²       Syy = Σ nz²       Sxy = Σ rz×nz
+  Sxt = Σ rz×TD     Syt = Σ nz×TD     det = Sxx×Syy − Sxy²
+
+  b1 = (Syy×Sxt − Sxy×Syt) / det
+  b2 = (Sxx×Syt − Sxy×Sxt) / det
+
+TD_esperados = b1 × rz + b2 × nz
+suerte       = TD_anotados − TD_esperados
+
+se descarta el ajuste si:  menos de 12 jugadores con partidos
+                           |det| ≈ 0
+                           b1 fuera de (0,1)  ó  b2 fuera de [0,1)</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Mínimos cuadrados por el origen sobre dos variables: la solución cerrada de arriba es exactamente el sistema normal de 2×2 resuelto a mano. Si el ajuste se descarta, la métrica de zona roja cae a los TD anotados como antes — el número no se publica a medias. Una suerte positiva grande marca candidato a vender; negativa, candidato a comprar.</div></div><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.6 · Stack de equipo NFL</h3><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">stack = 0.5
+  + 0.25  receptor tuyo que comparte equipo con un QB tuyo
+  + 0.25  QB tuyo que comparte equipo con un receptor tuyo
+  − 0.22  RB que comparte equipo con otro RB tuyo
+  − 0.12  WR que comparte equipo con otro WR tuyo
+  − 0.12  TE que comparte equipo con otro TE tuyo
+  − 0.12  ya tienes 3 o más jugadores de ese equipo
+= clamp(resultado, 0, 1)</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Sumar cuando los puntos se duplican (el mismo pase cuenta dos veces), restar cuando se canibalizan o cuando concentras bye y riesgo.</div></div><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.7 · El Fit Score</h3><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">Fit = redondear( Σ  peso[i] × métrica[i] × 100 )</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Los pesos son los de la tabla de la sección 6 y suman exactamente 1, así que el Fit siempre cae entre 0 y 100. Para jugadores que ya son tuyos, el peso de "necesidad" se retira y se redistribuye entre las demás métricas: no tiene sentido preguntarte si necesitas a quien ya tienes.</div></div><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">Grado:  A+ ≥ 80 · A ≥ 72 · B+ ≥ 65 · B ≥ 57 · C+ ≥ 50 · C ≥ 42 · D menor</div></div><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.8 · Alineación óptima</h3><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">Se recorren los slots del formato ordenados de MENOS a MÁS elegibles
+(primero QB, RB, WR, TE; al final los flex y el superflex).
+Cada slot toma al mejor jugador disponible que aún no fue usado.
+
+fuerza_hoy = suma del valor de mercado de esa alineación</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Llenar primero lo rígido y dejar el flex al final evita gastar a un jugador élite en un slot que otro podía cubrir.</div></div><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.9 · Ranking de liga y ventana</h3><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">futuro = 0.55 × Σ  valor × curvaEdad(edad + 2) / curvaEdad(edad)
+         + capital de picks</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Cada jugador se reproyecta dos temporadas adelante: el cociente de curvas es exactamente cuánto valor conserva. El factor 0.55 descuenta el roster completo frente a las picks, que ya vienen valuadas a precio de mercado.</div></div><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">fit_equipo(años):
+  1. envejecer a cada jugador
+     q' = q × curvaEdad(pos, edad+años) / curvaEdad(pos, edad)
+  2. rearmar la alineación óptima usando q'
+     (el que titula hoy puede no titular en dos años)
+  3. promedio del Fit de esos titulares, con los pesos SIN "necesidad"
+     y el stack medido dentro de SU roster, no del tuyo
+
+Fit hoy      = fit_equipo(0)
+Fit a futuro = fit_equipo(2)      ← no suma capital de picks</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Fuerza suma valor de mercado y por tanto premia volumen; el Fit promedia y por tanto mide calidad por titular. Un roster corto pero fino sube en Fit y baja en fuerza. En una liga de diez el orden casi no cambia entre las dos medidas — la diferencia está en el número, no en la lista.</div></div><p style="color:#23252f;font-size:10.5pt;line-height:1.55;margin:0 0 8pt">La ventana de cada equipo sale de comparar sus dos columnas: quien es fuerte hoy y débil mañana <strong>contiende</strong>; quien es débil hoy y fuerte mañana <strong>reconstruye</strong>; el resto queda en <strong>tierra de nadie</strong>. Es la variable que hace negociable una oferta.</p><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.10 · Motor de cambios</h3><p style="color:#23252f;font-size:10.5pt;line-height:1.55;margin:0 0 8pt">Sea <code>ventaja = (valor que recibes − valor que entregas) / el mayor de los dos</code>. Positiva significa que compras barato; negativa, que sobrepagas. Una oferta debe pasar todas las puertas:</p><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">1.  Tu alineación mejora:      ganancia > 0.3
+2.  No sobrepagas de más:      ventaja ≥ −clamp(0.03 + ganancia × 0.012, 0, 0.20)
+3.  Ellos lo aceptarían:       ventaja ≤ clamp(0.03 + ganancia_de_ellos × 0.02, 0, 0.16)
+4.  Si su once empeora:        necesitan premio de valor para contestar
+5.  Nadie vende su hueco:      no se pide la posición que a ellos les falta
+6.  Tus titulares no salen:    solo banca y picks</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">Las puertas 2 y 3 son simétricas: la primera te protege a ti, la segunda protege al rival. Sobrepagar se tolera solo en la medida en que el salto en tu alineación lo justifique.</div></div><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">encaje = clamp( 50 + gananciaRelativa × 34
+                   + ventaja × 70
+                   + min(máx(ganancia_de_ellos, 0), 6) × 1.2
+                   + 6 si le llenas su hueco , 40 , 93 )</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">gananciaRelativa = ganancia ÷ valor promedio de un slot titular tuyo. El encaje premia estar cerca de justo y ser útil a ambos, no ser desbalanceado a tu favor: un robo que nadie firmaría puntúa bajo por construcción.</div></div><p style="color:#23252f;font-size:10.5pt;line-height:1.55;margin:0 0 8pt">La variante con picks —les mandas un jugador y te llevas capital futuro— corre con sus propias puertas: solo contra equipos que no reconstruyen, sin tocar tu alineación titular, con su once mejorando más de 0.3, y con tu ventaja por debajo de <code>clamp(0.03 + ganancia_de_ellos × 0.035, 0, 0.18)</code>.</p><h3 style="color:#161826;font-size:11.5pt;font-weight:500;margin:16pt 0 5pt">11.11 · Picks</h3><div style="border-left:2px solid #9184d9;background:#f4f4f7;border-radius:0 6px 6px 0;padding:9pt 12pt;margin:0 0 9pt;break-inside:avoid"><div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5pt;line-height:1.65;color:#161826;white-space:pre-wrap">picks de este draft:  valor de mercado del SLOT exacto ("2026 Pick 1.05")
+picks de años futuros: valor de mercado de la ronda, ya descontado
+sin publicar:          tabla de respaldo por ronda, ajustada por
+                       la posición del equipo de origen</div><div style="font-size:9pt;line-height:1.5;color:#5f6377;margin-top:6pt">El dueño de cada pick se lee de traded_picks, así que los cambios de tu liga se respetan.</div></div><div style="border:1px solid #d5d6de;border-radius:8px;padding:12pt;margin-top:18pt;break-inside:avoid"><div style="font-size:8.5pt;letter-spacing:.1em;text-transform:uppercase;color:#7e8296;margin-bottom:6pt">Constantes con criterio, no con evidencia</div><p style="color:#23252f;font-size:10pt;line-height:1.55;margin:0">Los números sueltos de este anexo —el 70 del decaimiento, el 0.55 del futuro, los umbrales del encaje— son juicio calibrado a ojo contra rosters reales, no parámetros ajustados estadísticamente. Cambian el orden entre candidatos parecidos; no convierten a un mal jugador en buena pick. Están escritos aquí precisamente para que puedas discutirlos.</p></div><div style="border-left:2px solid #9184d9;padding:2pt 0 2pt 14pt;margin-top:22pt">
+    <p style="color:#23252f;font-size:11pt;line-height:1.6;margin:0;color:#3c3f52">La regla que gobierna el sistema: un número o viene de una fuente citable, o viene de una fórmula escrita en este manual. No hay una tercera opción.</p>
+  </div>
+</doc-page>
+</x-dc>
+</body>
+</html>

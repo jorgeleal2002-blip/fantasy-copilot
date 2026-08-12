@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Number seven moustache badge">
+  <defs>
+    <clipPath id="head">
+      <ellipse cx="256" cy="296" rx="118" ry="140"></ellipse>
+    </clipPath>
+    
+    <path id="tache-half" d="M256 318&#xA;             C284 315, 306 307, 326 295&#xA;             C340 286, 358 284, 360 296&#xA;             C362 309, 353 322, 338 331&#xA;             C318 342, 290 350, 256 351 Z"></path>
+  </defs>
+
+  
+  <circle cx="256" cy="256" r="248" fill="#00205B"></circle>
+  <circle cx="256" cy="256" r="236" fill="#FFFFFF"></circle>
+  <circle cx="256" cy="256" r="228" fill="#C8102E"></circle>
+
+  
+  <circle cx="368" cy="210" r="19" fill="#E4E4EA"></circle>
+  <path d="M362 216 C392 230, 404 260, 398 286 C388 270, 372 248, 352 234 Z" fill="#E4E4EA"></path>
+
+  <g clip-path="url(#head)">
+    <ellipse cx="256" cy="296" rx="118" ry="140" fill="#C98A55"></ellipse>
+    
+    <path d="M256 276 C264 292, 271 310, 271 320 C271 326, 241 326, 241 320 C241 310, 248 292, 256 276 Z" fill="#B67846"></path>
+    
+    <path d="M230 368 Q256 375 282 368" stroke="#8B5A32" stroke-width="7" stroke-linecap="round" fill="none"></path>
+    
+    <ellipse cx="256" cy="392" rx="34" ry="12" fill="#BF8049" opacity="0.55"></ellipse>
+    
+    <path d="M130 140 H382 V228 Q256 254 130 228 Z" fill="#FFFFFF"></path>
+  </g>
+
+  
+  <path d="M198 260 L240 254 L240 266 L198 270 Z" fill="#4A2C17"></path>
+  <path d="M314 260 L272 254 L272 266 L314 270 Z" fill="#4A2C17"></path>
+  <ellipse cx="220" cy="284" rx="13" ry="10" fill="#2B2B33"></ellipse>
+  <ellipse cx="292" cy="284" rx="13" ry="10" fill="#2B2B33"></ellipse>
+
+  
+  <g fill="#FFFFFF">
+    <use href="#tache-half"></use>
+    <use href="#tache-half" transform="translate(512,0) scale(-1,1)"></use>
+  </g>
+
+  
+  <path d="M232 170 H280 V182 L257 228 H236 L259 182 H232 Z" fill="#00205B"></path>
+</svg>

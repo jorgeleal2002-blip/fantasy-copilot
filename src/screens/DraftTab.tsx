@@ -126,6 +126,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                   ` · you hold ${m.myPickList.length} picks in this draft`
                 : 'Draft complete'}
             </div>
+            <PlayerSearch app={app} m={m} />
             <div style={{ display: 'flex', gap: 6 }}>
               {m.isDynasty ? (
                 <Segmented
@@ -182,6 +183,111 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
         <PickMoves app={app} m={m} />
       )}
     </Screen>
+  );
+}
+
+/**
+ * Search across Sleeper's whole catalog rather than the board: the player you
+ * are looking up is usually exactly the one who is NOT in your list of 24.
+ * Hits are scored on demand, so nothing is computed until you type.
+ */
+function PlayerSearch({ app, m }: { app: App; m: Model }) {
+  const q = app.query.trim().toLowerCase();
+  const hasQuery = q.length >= 2;
+
+  const results = hasQuery ? (() => {
+    const out = [];
+    for (const e of m.searchIndex) {
+      if (e.lower.indexOf(q) < 0) continue;
+      out.push(e);
+      if (out.length > 400) break;
+    }
+    return out.sort((a, b) => a.rank - b.rank).slice(0, 8).map(x => {
+      const sc = m.scoreAny(x.id);
+      return {
+        id: x.id,
+        name: x.name,
+        meta: sc
+          ? `${sc.pos} · ${sc.team || 'FA'} · ${sc.age ?? '?'} yrs · ` +
+            (sc.owner ? (sc.owned ? 'yours' : 'on ' + sc.owner) : 'free agent')
+          : '',
+        fit: sc && Number.isFinite(sc.fit) ? sc.fit : null,
+      };
+    });
+  })() : [];
+
+  return (
+    <>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 9,
+        background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
+        borderRadius: 10, padding: '9px 11px',
+      }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(233,233,237,.4)" strokeWidth="1.8" style={{ flex: 'none' }}>
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3.5-3.5" />
+        </svg>
+        <input
+          value={app.query}
+          onChange={e => app.setQuery(e.target.value)}
+          placeholder="Search any NFL player"
+          aria-label="Search any NFL player"
+          autoCapitalize="none"
+          autoCorrect="off"
+          style={{
+            flex: 1, minWidth: 0, background: 'transparent', border: 0, outline: 'none',
+            color: 'var(--color-text)', font: "400 13px 'Inter', system-ui",
+          }}
+        />
+        {app.query ? (
+          <button
+            type="button"
+            aria-label="Clear search"
+            onClick={() => app.setQuery('')}
+            style={{
+              flex: 'none', color: dim(0.45), fontSize: 15, cursor: 'pointer',
+              padding: '0 2px', background: 'transparent', border: 0,
+            }}
+          >
+            ×
+          </button>
+        ) : null}
+      </div>
+
+      {hasQuery ? (
+        <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
+          {results.length === 0 ? (
+            <div style={{ padding: '14px 12px', fontSize: 12.5, color: dim(0.5) }}>
+              Nobody by that name in the catalog.
+            </div>
+          ) : results.map((r, i) => (
+            <div
+              key={r.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => app.setDetail(r.id)}
+              onKeyDown={e => { if (e.key === 'Enter') app.setDetail(r.id); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)', cursor: 'pointer',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{r.name}</div>
+                <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2, ...ellipsis }}>{r.meta}</div>
+              </div>
+              <span style={{
+                fontSize: 12, flex: 'none', padding: '2px 7px', borderRadius: 6,
+                background: 'rgba(145,132,217,.12)',
+                color: r.fit != null ? fitColor(r.fit) : dim(0.5),
+              }}>
+                {r.fit ?? '—'}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </>
   );
 }
 

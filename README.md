@@ -35,13 +35,18 @@ market, paying fair, or overpaying for a lineup jump — and why it works for
 them.
 
 **Draft** — the rookie board ranked by Fit Score for the specific pick you
-select, the reasoning behind the top recommendation, and pick-movement offers
+select, a search across Sleeper's whole catalog for anyone not on it, the
+reasoning behind the top recommendation, and pick-movement offers
 (trade up to consolidate, trade down to collect swings). While a draft is
 live it re-reads picks every 20 seconds and recomputes everything.
 
-**League** — all ten teams ranked by strength today or projected value, each
-with its window, weighted age, weakest position and pick capital. Tap a team
-for their positional strengths, best assets and how to trade with them.
+**League** — all ten teams under four orderings: strength today, future value,
+Fit today and Fit two years out (a team's Fit being the average of its optimal
+starters). Each row carries its window, weighted age, weakest position and pick
+capital, and flags how many Fit points the roster sheds as it ages. Below it, the
+best players in the league through three lenses — how good he is, how much he
+would help *you*, and who he becomes in two years. Tap a team for their
+positional strengths, best assets and how to trade with them.
 
 **You** — the strategy selector (Balanced / Safe floor / Upside) genuinely
 rewrites the Fit Score weights and reorders the board, plus the positional
@@ -52,24 +57,44 @@ curve, no sell window, no future-value column.
 
 ## The Fit Score
 
-`Fit = Σ wᵢ × metricᵢ`, over eight metrics, each independently normalised to
+`Fit = Σ wᵢ × metricᵢ`, over nine metrics, each independently normalised to
 0..1 so the breakdown in a player sheet reads as *metric × weight =
 contribution*:
 
 | Metric | Where it comes from |
 | --- | --- |
-| Player quality | market value, or ADP × positional premium × age curve as a fallback |
+| Player quality | market value blended 60/40 with real production, quantile-mapped into the same unit |
 | Positional need | your starters at that position, ranked against every other roster |
 | Value vs. availability | board position against the pick you are actually making |
-| Floor | 70% real snap share when last season's usage loaded, else an experience proxy |
-| Explosiveness | 55% real target/rush share, else an age-and-rank proxy |
-| Age curve | per-position peak and decay — RB falls off fastest, QB slowest |
-| NFL team correlation | stacking your QB adds; sharing a backfield subtracts |
-| Red zone and TDs | share of the offence's chances inside the 20, and touchdowns per game |
+| Floor | snaps (62%) and volume (38%), then discounted for injury and depth-chart demotion |
+| Explosiveness | yards per touch (70%) and long-touchdown rate (30%) — both as within-position percentiles |
+| Floor AND ceiling | the geometric mean of the two, so the lopsided player cannot average his way through |
+| Age curve | a prime *window* per position; a star holds it 1.5 years longer and decays 45% slower |
+| NFL team correlation | stacking a QB adds; sharing a backfield subtracts — measured inside the owner's roster |
+| Red zone and TDs | share of the chances inside the 20, plus **expected** touchdowns per game |
+
+Two of those deserve their own note.
+
+**Expected touchdowns.** Scored touchdowns carry luck with them, and luck does
+not repeat. So each season is fitted by least squares, per position, over the
+opportunities that produced it — `td ≈ b₁·(red-zone touches) + b₂·(the rest)` —
+and the Fit uses the expectation rather than the result. The coefficients come
+out of the same feed being scored, so there is no invented constant and no
+second source to reconcile. Where the sample cannot support a fit, no number is
+published at all.
+
+**Three seasons, not one.** A single year is a small sample: one injury or a new
+coordinator moves every number in it. The player's own rates are blended across
+three seasons at 50/30/20 toward the present, with a season he missed having its
+weight redistributed rather than counted as a bad year — and with older seasons
+fading further the longer he is past his prime. Shares stay on the most recent
+season, because they are measured against today's offence and do not travel
+backwards.
 
 A player you already own is scored on renormalised weights with the need term
 removed — you cannot fill your own hole, and leaving it in grades your whole
-roster a flat C.
+roster a flat C. Redraft leagues reshape the weights again: what gets paid this
+Sunday goes up, what only pays with time goes down.
 
 ## Data sources
 

@@ -1,9 +1,9 @@
-import { BAD, GOOD, MID } from '../model/constants';
+import { BAD, GOOD, MID, POS } from '../model/constants';
 import { num } from '../model/math';
-import type { LeagueRow, Model } from '../model/types';
+import type { LeagueRow, Model, PlayerFit } from '../model/types';
 import type { App } from '../state/useApp';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
-import { cardTitle, dim, ellipsis } from '../ui/styles';
+import { cardTitle, dim, ellipsis, fitColor } from '../ui/styles';
 
 const STATUS_TEXT: Record<string, string> = {
   pre_draft: 'draft not started',
@@ -21,17 +21,33 @@ const windowColor = (r: LeagueRow) =>
   r.now <= 0 ? dim(0.35) : r.window === 'contender' ? GOOD : r.window === 'rebuild' ? BAD : MID;
 
 export function LeagueTab({ app, m }: { app: App; m: Model }) {
-  const modes: SegOption<'now' | 'future'>[] = m.isDynasty
-    ? [{ key: 'now', label: 'Strength today' }, { key: 'future', label: 'Future value' }]
-    : [{ key: 'now', label: 'Roster strength' }];
-  const mode = m.isDynasty ? app.rankMode : 'now';
+  type Mode = 'now' | 'future' | 'fit' | 'fitFut';
+  const modes: SegOption<Mode>[] = m.isDynasty
+    ? [
+      { key: 'now', label: 'Strength today' },
+      { key: 'future', label: 'Future value' },
+      { key: 'fit', label: 'Fit today' },
+      { key: 'fitFut', label: 'Fit ahead' },
+    ]
+    : [{ key: 'now', label: 'Roster strength' }, { key: 'fit', label: 'Fit Score' }];
+  const allowed = modes.map(o => o.key);
+  const mode: Mode = allowed.includes(app.rankMode) ? app.rankMode : 'now';
+  const isFitMode = mode === 'fit' || mode === 'fitFut';
 
-  const ranked = m.leagueRows.slice().sort((a, b) => (mode === 'future' ? b.future - a.future : b.now - a.now));
-  const note = !m.isDynasty
-    ? 'Redraft league: only this season\'s strength counts.'
-    : mode === 'future'
-      ? 'Each roster projected two seasons out with the age curve, plus the pick capital that team actually owns.'
-      : 'The sum of the best lineup each team can field today, at market values.';
+  const ranked = m.leagueRows.slice().sort((a, b) => (
+    mode === 'future' ? b.future - a.future
+      : mode === 'fit' ? b.fit - a.fit
+        : mode === 'fitFut' ? b.fitFut - a.fitFut
+          : b.now - a.now
+  ));
+  const NOTES: Record<Mode, string> = {
+    now: 'the sum of the best lineup each team can field today.',
+    future: 'the roster aged two seasons plus the pick capital it owns.',
+    fit: 'the average Fit of the optimal starters — quality, not volume.',
+    fitFut: 'the same Fit with the roster aged two seasons, picks excluded.',
+  };
+  const note = 'Ordered by ' + NOTES[mode] +
+    (m.isDynasty ? ' On the right, how far each team drifts from its raw strength.' : '');
 
   const facts = [
     { label: 'Teams', value: String(m.teamCount) },
@@ -98,22 +114,30 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
               </div>
             </div>
             <div style={{ textAlign: 'right', flex: 'none' }}>
-              <div style={{ fontSize: 12.5, color: dim(0.7) }}>
-                {num((mode === 'future' ? t.future : t.now) * 100)}
+              <div style={{ fontSize: 12.5, color: dim(0.7), fontVariantNumeric: 'tabular-nums' }}>
+                {isFitMode
+                  ? (t.now <= 0 ? '—' : Math.round(mode === 'fitFut' ? t.fitFut : t.fit))
+                  : num((mode === 'future' ? t.future : t.now) * 100)}
               </div>
-              {m.isDynasty ? (
-                <div style={{
-                  fontSize: 10, marginTop: 2,
-                  color: t.shift > 0 ? GOOD : t.shift < 0 ? BAD : dim(0.35),
-                }}>
-                  {t.shift > 0 ? `↑${t.shift} ahead` : t.shift < 0 ? `↓${-t.shift} ahead` : 'steady'}
-                </div>
-              ) : null}
+              {/* Across ten teams the order barely moves between measures, so a
+                  change of place says little. What does have range is how many
+                  Fit points a roster loses as it ages. */}
+              {m.isDynasty && t.now > 0 ? (() => {
+                const d = Math.round(t.fitFut - t.fit);
+                if (Math.abs(d) < 2) return null;
+                return (
+                  <div style={{ fontSize: 10, marginTop: 2, color: d > 0 ? GOOD : BAD }}>
+                    {(d > 0 ? '+' : '') + d} in 2 yrs
+                  </div>
+                );
+              })() : null}
             </div>
             <div style={{ flex: 'none', padding: '6px 4px 6px 8px', color: 'var(--color-accent)', fontSize: 15 }}>›</div>
           </div>
         ))}
       </div>
+
+      <TopPlayers app={app} m={m} />
 
       <Card>
         <div style={{ ...cardTitle, marginBottom: 10 }}>Format</div>
@@ -162,3 +186,104 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
     </Screen>
   );
 }
+
+/**
+ * The best players in the league, seen through three lenses. The neutral one
+ * drops the need term and measures the stack inside the owner's own roster —
+ * how good he is, full stop. "For you" is a different question: how much he
+ * would help YOU. And "in 2 years" ages everyone, which is where the players
+ * the league has not priced yet show up.
+ */
+function TopPlayers({ app, m }: { app: App; m: Model }) {
+  const lens = app.topLens;
+  const valueOf = (x: PlayerFit) => (lens === 'me' ? x.fitMe : lens === 'fut' ? x.fit2 : x.fit);
+
+  const list = m.allFits
+    .filter(x => app.topPos === 'ALL' || x.pos === app.topPos)
+    .slice()
+    .sort((a, b) => valueOf(b) - valueOf(a))
+    .slice(0, 15);
+
+  const lensOptions: SegOption<'neutral' | 'me' | 'fut'>[] = m.isDynasty
+    ? [{ key: 'neutral', label: 'Today' }, { key: 'me', label: 'For you' }, { key: 'fut', label: 'In 2 yrs' }]
+    : [{ key: 'neutral', label: 'Today' }, { key: 'me', label: 'For you' }];
+
+  const lensNote = lens === 'me'
+    ? 'With YOUR positional need and the stack against your roster: how much having him would actually help you.'
+    : lens === 'fut'
+      ? 'Every player aged two seasons, his quality discounted by his position\'s curve and his metrics recomputed at that age. The ones that climb are the ones the league has not priced yet.'
+      : 'No need term, and the stack measured inside his owner\'s roster: how good he is, full stop. The same for everybody.';
+
+  if (!m.allFits.length) return null;
+
+  return (
+    <Card>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => app.setTopOpen(!app.topOpen)}
+        onKeyDown={e => { if (e.key === 'Enter') app.setTopOpen(!app.topOpen); }}
+        style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, cursor: 'pointer' }}
+      >
+        <div style={cardTitle}>Best in the league</div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span style={{ fontSize: 11.5, color: dim(0.45), ...ellipsis }}>
+            {app.topOpen ? 'top 15' : `${list[0]?.name ?? 'top 15'} ${list[0] ? valueOf(list[0]) : ''}`}
+          </span>
+          <span style={{ color: 'var(--color-accent)', fontSize: 13 }}>{app.topOpen ? '⌄' : '›'}</span>
+        </div>
+      </div>
+
+      {app.topOpen ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+          <Segmented options={POS_OPTIONS} value={app.topPos} onChange={app.setTopPos} size="sm" />
+          <Segmented options={lensOptions} value={lens} onChange={app.setTopLens} size="sm" />
+          <div style={{ fontSize: 11, lineHeight: 1.45, color: dim(0.42), textWrap: 'pretty' }}>{lensNote}</div>
+
+          <div style={{ marginTop: 2 }}>
+            {list.map((x, i) => (
+              <div
+                key={x.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => app.setDetail(x.id)}
+                onKeyDown={e => { if (e.key === 'Enter') app.setDetail(x.id); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px',
+                  borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+                  cursor: 'pointer',
+                  background: x.mine ? 'rgba(145,132,217,.09)' : 'transparent',
+                }}
+              >
+                <span style={{ width: 16, flex: 'none', color: dim(0.4), fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
+                  {i + 1}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{x.name}</div>
+                  <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2, ...ellipsis }}>
+                    {x.pos} · {x.team || 'FA'} ·{' '}
+                    {lens === 'fut' ? `${x.age ?? '?'}→${(x.age || 25) + 2} yrs` : `${x.age ?? '?'} yrs`} ·{' '}
+                    {x.mine ? 'yours' : x.owner}
+                    {lens === 'fut'
+                      ? ` · today ${x.fit}${x.fit2 - x.fit > 1 ? ' ↑' : x.fit - x.fit2 > 1 ? ' ↓' : ''}`
+                      : ''}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 12.5, flex: 'none', padding: '2px 8px', borderRadius: 6,
+                  fontVariantNumeric: 'tabular-nums',
+                  background: 'rgba(145,132,217,.12)', color: fitColor(valueOf(x)),
+                }}>
+                  {valueOf(x)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+const POS_OPTIONS: SegOption<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>[] =
+  [{ key: 'ALL', label: 'All' }, ...POS.map(p => ({ key: p, label: p }))];

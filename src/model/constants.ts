@@ -10,12 +10,35 @@ export const BAD = '#d9a08e';
 export const MID = '#c9c0f0';
 export const MUTED = 'rgba(233,233,237,.45)';
 
-/** Age at which each position stops gaining and starts shedding value, and
- *  how fast it sheds afterwards. RB falls off a cliff; QB barely moves. */
-export const PEAK: Record<Pos, number> = { QB: 27, RB: 24, WR: 26, TE: 27 };
-export const DECAY: Record<Pos, number> = { QB: 0.05, RB: 0.13, WR: 0.08, TE: 0.07 };
+/**
+ * A prime is a window, not a point: inside it a player is at full value and
+ * neither improving nor declining. Before it they climb toward it, after it
+ * they fall away from it — and both rates differ by position. A back arrives
+ * ready and is finished early; a quarterback takes years to arrive and then
+ * lasts a decade; a tight end is the slowest of all to break out.
+ */
+export const PRIME: Record<Pos, [number, number]> = {
+  QB: [26, 33], RB: [23, 26], WR: [24, 28], TE: [25, 29],
+};
+/** Value lost per year BEFORE the prime window. */
+export const RISE: Record<Pos, number> = { QB: 0.07, RB: 0.05, WR: 0.06, TE: 0.09 };
+/** Value lost per year AFTER it. */
+export const DECAY: Record<Pos, number> = { QB: 0.05, RB: 0.15, WR: 0.08, TE: 0.07 };
+/** Where the prime window opens — used wherever a single number is needed. */
+export const PEAK: Record<Pos, number> = { QB: 26, RB: 23, WR: 24, TE: 25 };
 
-export type MetricKey = 'talent' | 'need' | 'value' | 'floor' | 'boom' | 'age' | 'stack' | 'rz';
+/** Bumped when the shape of the usage map changes, so a cached map from an
+ *  older build cannot survive a reload and publish one season's numbers under
+ *  a three-season label. */
+export const USAGE_V = 3;
+
+/** How many seasons of usage to blend, and how much each is worth. The most
+ *  recent leads; a season the player missed has its weight redistributed
+ *  across the ones they played, so an injury year is not counted as a bad year. */
+export const USAGE_WEIGHTS: [number, number, number] = [0.5, 0.3, 0.2];
+
+export type MetricKey =
+  | 'talent' | 'need' | 'value' | 'floor' | 'boom' | 'combo' | 'age' | 'stack' | 'rz';
 export type Weights = Record<MetricKey, number>;
 export type StratKey = 'balanced' | 'floor' | 'upside';
 
@@ -30,17 +53,17 @@ export interface Strategy {
 export const STRATS: Record<StratKey, Strategy> = {
   balanced: {
     label: 'Balanced',
-    w: { talent: 0.34, need: 0.16, value: 0.10, floor: 0.10, boom: 0.08, age: 0.05, stack: 0.06, rz: 0.11 },
-    copy: 'Quality leads, need breaks the tie, and the red zone carries weight because that is where touchdowns are scored.',
+    w: { talent: 0.30, need: 0.14, value: 0.08, floor: 0.06, boom: 0.06, combo: 0.18, age: 0.05, stack: 0.05, rz: 0.08 },
+    copy: 'Real balance: it demands floor AND ceiling in the same player, not one or the other. The geometric mean punishes the lopsided — out goes the one who gives you 4 points one Sunday and 22 the next.',
   },
   floor: {
     label: 'Safe floor',
-    w: { talent: 0.29, need: 0.15, value: 0.08, floor: 0.21, boom: 0.04, age: 0.08, stack: 0.05, rz: 0.10 },
+    w: { talent: 0.26, need: 0.15, value: 0.08, floor: 0.26, boom: 0.03, combo: 0, age: 0.07, stack: 0.05, rz: 0.10 },
     copy: 'I prioritise an established role, volume and red-zone presence. Less variance, less ceiling.',
   },
   upside: {
     label: 'Upside',
-    w: { talent: 0.27, need: 0.13, value: 0.08, floor: 0.04, boom: 0.24, age: 0.08, stack: 0.06, rz: 0.10 },
+    w: { talent: 0.25, need: 0.12, value: 0.07, floor: 0.03, boom: 0.30, combo: 0, age: 0.09, stack: 0.06, rz: 0.08 },
     copy: 'Chasing ceiling: youth, likely breakouts, stacks with your QB and whoever lives in the red zone.',
   },
 };
@@ -49,8 +72,9 @@ export const METRIC_LABEL: Record<MetricKey, string> = {
   talent: 'Player quality',
   need: 'Positional need',
   value: 'Value vs. availability',
-  floor: 'Floor (snap %)',
-  boom: 'Explosiveness (ball share)',
+  floor: 'Floor (snaps and volume)',
+  boom: 'Explosiveness (yards per touch)',
+  combo: 'Floor AND ceiling (geometric mean)',
   age: 'Age curve',
   stack: 'NFL team correlation',
   rz: 'Red zone and TDs',

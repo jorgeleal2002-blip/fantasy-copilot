@@ -1,5 +1,6 @@
 import type { Pos, SleeperDraft, SleeperLeague, SleeperPick, SleeperPlayer } from '../api/types';
 import type { MetricKey, Weights } from './constants';
+// Weights is re-exported through the Model's wUsed below.
 import type { Metrics } from './score';
 import type { Usage } from './usage';
 
@@ -112,6 +113,10 @@ export interface LeagueRow {
   now: number;
   future: number;
   pickCapital: number;
+  /** average Fit of the optimal starters, today */
+  fit: number;
+  /** the same, with the roster aged two seasons */
+  fitFut: number;
   avgAge: number;
   window: Window;
   worst: Pos | null;
@@ -149,6 +154,33 @@ export interface DraftDeal {
 export interface LineupSlot {
   slot: string;
   player?: RosterPlayer;
+}
+
+/** One row of the search index over Sleeper's whole catalog. */
+export interface SearchEntry {
+  id: string;
+  name: string;
+  /** pre-lowercased so a keystroke does not re-case the catalog */
+  lower: string;
+  pos: Pos;
+  rank: number;
+}
+
+/** One rostered player, scored through the three lenses of the top list. */
+export interface PlayerFit {
+  id: string;
+  name: string;
+  pos: Pos;
+  team: string;
+  age: number | null;
+  /** no need term, stack inside the owner's roster — how good he is, full stop */
+  fit: number;
+  /** with your positional need and the stack against your roster */
+  fitMe: number;
+  /** aged two seasons */
+  fit2: number;
+  owner: string;
+  mine: boolean;
 }
 
 export interface PositionMultiplier {
@@ -216,6 +248,13 @@ export interface Model {
   leagueRows: LeagueRow[];
   leagueHasRosters: boolean;
   multInfo: PositionMultiplier[];
+  /** every rostered player in the league, scored through the three lenses */
+  allFits: PlayerFit[];
+  searchIndex: SearchEntry[];
+  /** market vs. production percentiles for the player sheet */
+  qDiverge: (pl: SleeperPlayer | null, id: string) => { mkt: number; prod: number } | null;
+  /** the weights actually in force — redraft leagues reshape them */
+  wUsed: Weights;
   /** how many assets the market feed matched — 0 when it never loaded */
   marketCount: number;
 

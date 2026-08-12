@@ -5,10 +5,11 @@ import {
 } from './constants';
 import { ageCurve, clamp, dynastyVal, playerName } from './math';
 import type { Market } from './market';
-import { ownedWeights, scorePlayer } from './score';
+import { ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
-  OppPlayer, PickAsset, PositionMultiplier, RosterPlayer, TeamEntry, TeamProfile, TeamSheet, Window,
+  OppPlayer, PickAsset, PlayerFit, PositionMultiplier, RosterPlayer, SearchEntry, TeamEntry, TeamProfile,
+  TeamSheet, Window,
 } from './types';
 import type { UsageMap } from './usage';
 
@@ -31,8 +32,6 @@ export function buildModel(input: ModelInput): Model {
   const { data: d, usage, market: mk, strat, boardMode, pickSel } = input;
   const players = d.players;
   const league = d.league;
-  const w = STRATS[strat].w;
-  const metricKeys = Object.keys(w) as MetricKey[];
   const uFor = (id: string) => usage[id];
 
   // ── Format: which slots this league starts, and how many of each.
@@ -42,6 +41,8 @@ export function buildModel(input: ModelInput): Model {
   const flex = rp.filter(x => x === 'FLEX' || x === 'SUPER_FLEX' || x === 'REC_FLEX').length;
   const sflx = rp.indexOf('SUPER_FLEX') >= 0;
   const isDynasty = (league.settings || {}).type === 2;
+  const w = isDynasty ? STRATS[strat].w : redraftWeights(STRATS[strat].w);
+  const metricKeys = Object.keys(w) as MetricKey[];
 
   const slotToRoster = (d.draft && d.draft.slot_to_roster_id) || {};
   const draftOrder = (d.draft && d.draft.draft_order) || {};
@@ -99,6 +100,62 @@ export function buildModel(input: ModelInput): Model {
   const quality = (pl: SleeperPlayer): number => {
     const v = mval(pl);
     return v != null ? v : dynastyVal(pl, mult) * 100;
+  };
+
+  // ── Quality measured twice. The market is the best judgement available, but
+  // it is somebody else's judgement: where you only copy the market you cannot
+  // beat it. Real production is the second opinion. Where they agree there is
+  // nothing to do; where they diverge is the edge. Note this feeds the Fit
+  // only — trades are still priced at pure market, because a rival will not
+  // accept an offer with YOUR opinion baked into it.
+  const prodMap: Partial<Record<Pos, { vals: number[]; ppgs: number[] }>> = {};
+  {
+    const byPos: Partial<Record<Pos, { v: number; ppg: number }[]>> = {};
+    for (const pid in players) {
+      const pl = players[pid];
+      if (!pl || POS.indexOf(pl.position as Pos) < 0) continue;
+      const u = uFor(pid);
+      const v = mval(pl);
+      if (v == null || !u || !Number.isFinite(u.ppg) || !(u.gp >= 4)) continue;
+      (byPos[pl.position as Pos] = byPos[pl.position as Pos] || []).push({ v, ppg: u.ppg as number });
+    }
+    POS.forEach(p => {
+      const arr = byPos[p];
+      if (!arr || arr.length < 10) return;
+      prodMap[p] = {
+        vals: arr.map(x => x.v).sort((a, b) => a - b),
+        ppgs: arr.map(x => x.ppg).sort((a, b) => a - b),
+      };
+    });
+  }
+  const pctOf = (arr: number[], x: number) => {
+    let i = 0;
+    while (i < arr.length && arr[i] < x) i++;
+    return arr.length > 1 ? i / (arr.length - 1) : 0;
+  };
+  // Quantile mapping: a player's PPG percentile within his position is
+  // translated to the market value sitting at that same percentile. Production
+  // and market end up in one unit without inventing a conversion factor
+  // between points and value.
+  const prodVal = (pl: SleeperPlayer, pid: string): number | null => {
+    const m = prodMap[pl.position as Pos];
+    const u = uFor(pid);
+    if (!m || !u || !Number.isFinite(u.ppg) || !(u.gp >= 4)) return null;
+    const pct = pctOf(m.ppgs, u.ppg as number);
+    return m.vals[Math.min(Math.round(pct * (m.vals.length - 1)), m.vals.length - 1)];
+  };
+  const talentQ = (pl: SleeperPlayer, pid: string): number => {
+    const v = quality(pl);
+    const p = prodVal(pl, pid);
+    return p == null ? v : v * 0.6 + p * 0.4;
+  };
+  /** Where market and production disagree, for the player sheet. */
+  const qDiverge = (pl: SleeperPlayer | null, pid: string) => {
+    const m = pl ? prodMap[pl.position as Pos] : null;
+    const u = uFor(pid);
+    const v = pl ? mval(pl) : null;
+    if (!m || v == null || !u || !Number.isFinite(u.ppg) || !(u.gp >= 4)) return null;
+    return { mkt: pctOf(m.vals, v), prod: pctOf(m.ppgs, u.ppg as number) };
   };
 
   // ── Positional strength: the quality of the starters you can actually field
@@ -199,8 +256,8 @@ export function buildModel(input: ModelInput): Model {
 
   // ── NFL-team correlation: sharing an offence with your QB pays twice;
   //    sharing the ball with your own player cuts both your players' shares.
-  const stackFor = (pl: SleeperPlayer, exclude?: string): number => {
-    const mates = myPlayers.filter(x => x.team === pl.team && x.id !== exclude);
+  const stackIn = (roster: { id: string; pos: Pos; team: string }[], pl: SleeperPlayer, exclude?: string): number => {
+    const mates = roster.filter(x => x.team === pl.team && x.id !== exclude);
     let v = 0.5;
     const isCatcher = pl.position === 'WR' || pl.position === 'TE';
     if (isCatcher && mates.some(x => x.pos === 'QB')) v += 0.25;
@@ -211,6 +268,8 @@ export function buildModel(input: ModelInput): Model {
     if (mates.length >= 3) v -= 0.12;
     return clamp(v, 0, 1);
   };
+  /** The bound case: correlation against my own roster. */
+  const stackFor = (pl: SleeperPlayer, exclude?: string) => stackIn(myPlayers, pl, exclude);
 
   const byTeam: Record<string, RosterPlayer[]> = {};
   myPlayers.forEach(p => { (byTeam[p.team] = byTeam[p.team] || []).push(p); });
@@ -231,13 +290,13 @@ export function buildModel(input: ModelInput): Model {
     if (list.length >= 4) concentration.push({ team: t, text: list.length + ' of your players on ' + t, why: 'Same bye week and the same bad-game risk' });
   });
 
-  const dvAll = pool.slice(0, 60).map(x => quality(x.raw)).concat(myPlayers.map(p => quality(p.raw)));
+  const dvAll = pool.slice(0, 60).map(x => talentQ(x.raw, x.id)).concat(myPlayers.map(p => talentQ(p.raw, p.id)));
   const dvMax = Math.max.apply(null, dvAll.concat([0.01]));
 
   const scored: BoardPlayer[] = pool.slice(0, 160).map((x, i) => {
     const p = x.raw;
     const s = scorePlayer(p, needScore, {
-      idx: i + 1, pick: pickForValue, dv: quality(p), dvMax,
+      idx: i + 1, pick: pickForValue, dv: talentQ(p, x.id), dvMax,
       stack: stackFor(p), use: uFor(x.id), redraft: !isDynasty,
     }, w);
     return {
@@ -250,7 +309,7 @@ export function buildModel(input: ModelInput): Model {
   const wOwn = ownedWeights(w);
   myPlayers.forEach(p => {
     const s = scorePlayer(p.raw, {}, {
-      dv: quality(p.raw), dvMax, stack: stackFor(p.raw, p.id), use: uFor(p.id), redraft: !isDynasty,
+      dv: talentQ(p.raw, p.id), dvMax, stack: stackFor(p.raw, p.id), use: uFor(p.id), redraft: !isDynasty,
     }, wOwn);
     p.use = uFor(p.id);
     p.m = s.m;
@@ -288,6 +347,41 @@ export function buildModel(input: ModelInput): Model {
       return sum;
     }, 0);
   };
+  /**
+   * A team's Fit Score: the average Fit of its optimal starters, scored on the
+   * weights without the need term (nobody fills their own hole) and with the
+   * stack measured inside THEIR roster, not mine.
+   *
+   * `years` of 0 measures today; 2 ages every player two seasons and picks the
+   * starters again on the projected quality — whoever starts today may not
+   * start then.
+   */
+  const lineupFit = (list: OppPlayer[], years: number): number => {
+    const yr = years || 0;
+    const cands = list.map(p => {
+      if (!yr) return { p, raw: p.raw, q: p.q };
+      const el = clamp(p.q / (dvMax || 1), 0, 1);
+      const cur = ageCurve(p.pos, p.age, el) || 0.5;
+      const raw = { ...p.raw, age: (p.age || 25) + yr, years_exp: (p.raw.years_exp || 0) + yr };
+      return { p, raw, q: p.q * (ageCurve(p.pos, (p.age || 25) + yr, el) / Math.max(cur, 0.05)) };
+    });
+    const seen: Record<string, 1> = {};
+    const starters = lineupSlots.slice()
+      .sort((a, b) => ELIG[a].length - ELIG[b].length)
+      .map(slot => {
+        const c = cands.filter(x => !seen[x.p.id] && ELIG[slot].indexOf(x.p.pos) >= 0).sort((a, b) => b.q - a.q)[0];
+        if (c) seen[c.p.id] = 1;
+        return c;
+      })
+      .filter(Boolean);
+    if (!starters.length) return 0;
+    const sum = starters.reduce((a, x) => a + scorePlayer(x.raw, {}, {
+      dv: talentQ(x.raw, x.p.id), dvMax, stack: stackIn(list, x.raw, x.p.id),
+      use: uFor(x.p.id), redraft: !isDynasty,
+    }, wOwn).fit, 0);
+    return sum / starters.length;
+  };
+
   const myBase = lineupSum(myPlayers);
 
   // ── Rookie picks as tradeable capital: real owner from the league's traded
@@ -402,10 +496,50 @@ export function buildModel(input: ModelInput): Model {
       avatar: (teams.find(t => t.id === r.owner_id) || {} as TeamEntry).avatar || null,
       posStrength: st ? st.s : {},
       now, future: decayed * 0.55 + pickCapital, pickCapital,
+      fit: lineupFit(list, 0),
+      fitFut: isDynasty ? lineupFit(list, 2) : 0,
       avgAge: prof.avgAge || 0, window: prof.window || 'medio', worst: prof.worst || null,
       rankNow: 0, rankFut: 0, shift: 0,
     };
   });
+
+  // ── Every player in the league, scored through three lenses. Neutral is
+  //    "how good is he, full stop"; "for you" adds your own positional need and
+  //    measures the stack against your roster; "in two years" ages him and
+  //    discounts his quality by exactly what his position keeps at that age.
+  const allFits: PlayerFit[] = [];
+  (d.rosters || []).forEach(r => {
+    const list = mapRoster(r.players);
+    const owner = teamName(r.owner_id);
+    const mine = r.owner_id === d.me.user_id;
+    list.forEach(p => {
+      const neutral = scorePlayer(p.raw, {}, {
+        dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(list, p.raw, p.id),
+        use: uFor(p.id), redraft: !isDynasty,
+      }, wOwn);
+      if (!Number.isFinite(neutral.fit)) return;
+      const forMe = scorePlayer(p.raw, needScore, {
+        dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(myPlayers, p.raw, p.id),
+        use: uFor(p.id), redraft: !isDynasty,
+      }, w);
+      const el = clamp(talentQ(p.raw, p.id) / (dvMax || 1), 0, 1);
+      const cur = ageCurve(p.pos, p.age, el) || 0.5;
+      const keep = ageCurve(p.pos, (p.age || 25) + 2, el) / Math.max(cur, 0.05);
+      const raw2 = { ...p.raw, age: (p.age || 25) + 2, years_exp: (p.raw.years_exp || 0) + 2 };
+      const ahead = scorePlayer(raw2, {}, {
+        dv: talentQ(p.raw, p.id) * keep, dvMax, stack: stackIn(list, p.raw, p.id),
+        use: uFor(p.id), redraft: !isDynasty,
+      }, wOwn);
+      allFits.push({
+        id: p.id, name: p.name, pos: p.pos, team: p.team, age: p.age,
+        fit: neutral.fit,
+        fitMe: Number.isFinite(forMe.fit) ? forMe.fit : neutral.fit,
+        fit2: Number.isFinite(ahead.fit) ? ahead.fit : neutral.fit,
+        owner, mine,
+      });
+    });
+  });
+  allFits.sort((a, b) => b.fit - a.fit);
   const orderNow = leagueRows.slice().sort((a, b) => b.now - a.now);
   const orderFut = leagueRows.slice().sort((a, b) => b.future - a.future);
   leagueRows.forEach(x => {
@@ -558,12 +692,22 @@ export function buildModel(input: ModelInput): Model {
   const fading = myPlayers.filter(p => (p.age || 25) > (PEAK[p.pos] || 26) + 1).sort((a, b) => b.q - a.q).slice(0, 4);
   const buried = myPlayers.filter(p => optIds.indexOf(p.id) < 0).sort((a, b) => b.q - a.q).slice(0, 3);
 
+  // A flat index for the search box: built once per model rather than walking
+  // the whole catalog on every keystroke.
+  const searchIndex: SearchEntry[] = [];
+  for (const id in players) {
+    const pl = players[id];
+    if (!pl || POS.indexOf(pl.position as Pos) < 0) continue;
+    const name = playerName(pl);
+    if (name) searchIndex.push({ id, name, lower: name.toLowerCase(), pos: pl.position as Pos, rank: pl.search_rank || 99999 });
+  }
+
   // Any player in the league can open a full profile, including other rosters'.
   const scoreAny = (id: string): BoardPlayer | null => {
     const pl = players[id];
     if (!pl || POS.indexOf(pl.position as Pos) < 0) return null;
     const s = scorePlayer(pl, needScore, {
-      dv: quality(pl), dvMax, stack: stackFor(pl), use: uFor(id), redraft: !isDynasty,
+      dv: talentQ(pl, id), dvMax, stack: stackFor(pl), use: uFor(id), redraft: !isDynasty,
     }, w);
     const ownerRow = (d.rosters || []).find(r => (r.players || []).indexOf(id) >= 0);
     return {
@@ -590,6 +734,7 @@ export function buildModel(input: ModelInput): Model {
     pickAssets, myPickList, upcoming, selPick,
     nextOverall, myRound, myPickInRound, myNextOverall, mySlot,
     offers, bestDeals, leagueRows, leagueHasRosters, multInfo,
+    allFits, searchIndex, qDiverge, wUsed: w,
     marketCount: mk ? Object.keys(mk.players).length : 0,
     teamInfo, posRankOf, scoreAny, metricKeys,
   };

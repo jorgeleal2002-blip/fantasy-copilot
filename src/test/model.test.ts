@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { ELIG, PEAK, STRATS } from '../model/constants';
-import { ageCurve, grade, rankScore, talentBase } from '../model/math';
+import { ELIG, PRIME, STRATS } from '../model/constants';
+import { ageCurve, ageCurveRedraft, grade, rankScore, talentBase } from '../model/math';
 import { parseMarket } from '../model/market';
 import { buildModel } from '../model/model';
-import { ownedWeights, scorePlayer } from '../model/score';
-import { buildUsage } from '../model/usage';
+import { ownedWeights, redraftWeights, scorePlayer } from '../model/score';
+import { buildUsage, seasonUsage, type Usage } from '../model/usage';
 import { makeBundle, makeFantasyCalc, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
 
@@ -14,22 +14,43 @@ const usage = buildUsage(makeStats(bundle.players), bundle.players);
 const model = buildModel({ data: bundle, usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0 });
 
 describe('age curve', () => {
-  it('peaks at the position peak and decays afterwards', () => {
+  it('is flat across the prime window, climbing before and falling after', () => {
     for (const pos of ['QB', 'RB', 'WR', 'TE'] as const) {
-      const peak = PEAK[pos];
-      expect(ageCurve(pos, peak)).toBeGreaterThan(ageCurve(pos, peak + 3));
-      expect(ageCurve(pos, peak)).toBeGreaterThanOrEqual(ageCurve(pos, peak - 4));
+      const [start, end] = PRIME[pos];
+      expect(ageCurve(pos, start)).toBe(1);
+      expect(ageCurve(pos, end)).toBe(1);
+      // a window, not a point: every age inside it is worth the same
+      expect(ageCurve(pos, Math.round((start + end) / 2))).toBe(1);
+      expect(ageCurve(pos, start - 3)).toBeLessThan(1);
+      expect(ageCurve(pos, end + 3)).toBeLessThan(1);
     }
   });
 
   it('drops running backs faster than quarterbacks', () => {
-    const rbLoss = ageCurve('RB', PEAK.RB) - ageCurve('RB', PEAK.RB + 4);
-    const qbLoss = ageCurve('QB', PEAK.QB) - ageCurve('QB', PEAK.QB + 4);
+    const rbLoss = 1 - ageCurve('RB', PRIME.RB[1] + 4);
+    const qbLoss = 1 - ageCurve('QB', PRIME.QB[1] + 4);
     expect(rbLoss).toBeGreaterThan(qbLoss);
+  });
+
+  it('lets a star hold the window longer and decay slower', () => {
+    const [, end] = PRIME.WR;
+    // still at full value where a replacement-level player has already dropped
+    expect(ageCurve('WR', end + 1, 1)).toBe(1);
+    expect(ageCurve('WR', end + 1, 0)).toBeLessThan(1);
+    expect(ageCurve('WR', end + 5, 1)).toBeGreaterThan(ageCurve('WR', end + 5, 0));
+  });
+
+  it('prices a redraft season as wear, not decline', () => {
+    const old = PRIME.RB[1] + 4;
+    // no climb before the window, and the fall is far gentler than dynasty's
+    expect(ageCurveRedraft('RB', PRIME.RB[0] - 3)).toBe(1);
+    expect(1 - ageCurveRedraft('RB', old)).toBeLessThan(1 - ageCurve('RB', old));
+    expect(ageCurveRedraft('RB', 40)).toBeGreaterThanOrEqual(0.45);
   });
 
   it('falls back to a neutral value with no age', () => {
     expect(ageCurve('WR', null)).toBe(0.72);
+    expect(ageCurveRedraft('WR', null)).toBe(0.8);
   });
 });
 
@@ -70,10 +91,42 @@ describe('fit score', () => {
     expect(high.m.floor).toBeGreaterThan(low.m.floor + 0.4);
   });
 
-  it('switches the age curve off for redraft leagues', () => {
+  it('softens the age term for redraft leagues', () => {
     const old = { position: 'RB', age: 31, years_exp: 9, search_rank: 60 };
-    expect(scorePlayer(old, {}, { redraft: true }, w).m.age).toBe(0.8);
-    expect(scorePlayer(old, {}, { redraft: false }, w).m.age).toBeLessThan(0.5);
+    const redraft = scorePlayer(old, {}, { redraft: true }, w).m.age;
+    const dynasty = scorePlayer(old, {}, { redraft: false }, w).m.age;
+    expect(redraft).toBeGreaterThan(dynasty);
+    expect(dynasty).toBeLessThan(0.5);
+  });
+
+  it('demands both floor and ceiling through the combo term', () => {
+    const lopsided = Math.sqrt(0.9 * 0.1);
+    const even = Math.sqrt(0.5 * 0.5);
+    // averaging would tie these; the geometric mean does not
+    expect(lopsided).toBeLessThan(even);
+    const p = { position: 'WR', age: 25, years_exp: 3, search_rank: 40 };
+    const { m } = scorePlayer(p, {}, { use: usageStub(0.8, 0.2) }, w);
+    expect(m.combo).toBeCloseTo(Math.sqrt(m.floor * m.boom), 10);
+  });
+
+  it('charges injuries and depth-chart demotions against the floor', () => {
+    const base = { position: 'RB', age: 25, years_exp: 3, search_rank: 40 };
+    const healthy = scorePlayer(base, {}, {}, w).m.floor;
+    const hurt = scorePlayer({ ...base, injury_status: 'Out' }, {}, {}, w).m.floor;
+    const backup = scorePlayer({ ...base, depth_chart_order: 3 }, {}, {}, w).m.floor;
+    expect(hurt).toBeLessThan(healthy);
+    expect(backup).toBeLessThan(healthy);
+    // talent is untouched — only the certainty of producing moves
+    expect(scorePlayer({ ...base, injury_status: 'Out' }, {}, {}, w).m.talent)
+      .toBe(scorePlayer(base, {}, {}, w).m.talent);
+  });
+
+  it('reshapes the weights for redraft without changing their sum', () => {
+    const r = redraftWeights(w);
+    const total = Object.values(r).reduce((a, b) => a + b, 0);
+    expect(total).toBeCloseTo(1, 10);
+    expect(r.age).toBeLessThan(w.age);     // the future stops being paid for
+    expect(r.value).toBeGreaterThan(w.value); // reaching hurts more
   });
 
   it('renormalises weights for players you already own', () => {
@@ -304,10 +357,14 @@ describe('the catalog itself', () => {
   });
 });
 
-function usageStub(snap: number, tgt: number) {
+function usageStub(snap: number, tgt: number): Usage {
   return {
-    snap, tgt, gp: 16, shareLabel: 'Target share', ppg: 12,
-    rz: 10, rzShare: 0.1, rzPerGame: 0.6, td: 6, tdPerGame: 0.4, tdShare: 0.2, rank: 12,
+    snap, tgt, vol: tgt, gp: 16,
+    shareLabel: 'Target share', shareText: (tgt * 100).toFixed(1) + '%',
+    eff: 8, effLabel: 'Yards per touch', ltr: 0.02, longTd: 2,
+    xtd: 5, xtdPerGame: 0.31, tdLuck: 1,
+    ppg: 12, rz: 10, rzShare: 0.1, rzPerGame: 0.6,
+    td: 6, tdPerGame: 0.4, tdShare: 0.2, rank: 12,
   };
 }
 
@@ -336,5 +393,99 @@ describe('sheet navigation stack', () => {
 
   it('stays empty when stepping back with nothing open', () => {
     expect(nextDetailStack([], null)).toEqual([]);
+  });
+});
+
+describe('expected touchdowns', () => {
+  // A feed built so that td = 0.20·(red-zone touches) + 0.02·(the rest), exactly.
+  // If the least-squares fit is right it has to recover those two rates.
+  const RZ_RATE = 0.20;
+  const NZ_RATE = 0.02;
+  const players: Record<string, { player_id: string; position: string; team: string; age: number }> = {};
+  const stats: Record<string, Record<string, number>> = {};
+  for (let i = 0; i < 40; i++) {
+    const id = 'x' + i;
+    players[id] = { player_id: id, position: 'RB', team: 'AAA', age: 25 };
+    const rz = 5 + i;
+    const nz = 40 + i * 4;
+    stats[id] = {
+      gp: 16, rush_att: rz + nz, rush_rz_att: rz,
+      rush_td: RZ_RATE * rz + NZ_RATE * nz,
+      rush_yd: (rz + nz) * 4.2, off_snp: 500, tm_off_snp: 1000,
+    };
+  }
+  const built = seasonUsage(stats, players);
+
+  it('recovers the rates that generated the data', () => {
+    const id = 'x10';
+    const st = stats[id];
+    const expected = RZ_RATE * st.rush_rz_att + NZ_RATE * (st.rush_att - st.rush_rz_att);
+    expect(built[id].xtd).toBeCloseTo(expected, 6);
+  });
+
+  it('separates luck from opportunity', () => {
+    // same opportunities, but this one got hot and scored four extra
+    const lucky = { ...stats, x10: { ...stats.x10, rush_td: stats.x10.rush_td + 4 } };
+    const u = seasonUsage(lucky, players);
+    expect(u.x10.tdLuck).toBeGreaterThan(3);
+    // the expectation barely moves — it is built from chances, not results
+    expect(u.x10.xtd).toBeCloseTo(built.x10.xtd!, 0);
+  });
+
+  it('publishes no number at all when the sample cannot support one', () => {
+    const thin = { a: stats.x1, b: stats.x2 };
+    const thinPlayers = { a: players.x1, b: players.x2 };
+    expect(seasonUsage(thin, thinPlayers).a.xtd).toBeNull();
+  });
+
+  it('feeds the Fit through expected rather than scored touchdowns', () => {
+    const w = STRATS.balanced.w;
+    const p = { position: 'RB', age: 25, years_exp: 3, search_rank: 40 };
+    const base = usageStub(0.8, 0.2);
+    const hot = scorePlayer(p, {}, { use: { ...base, xtdPerGame: 0.2, tdPerGame: 0.9 } }, w);
+    const cold = scorePlayer(p, {}, { use: { ...base, xtdPerGame: 0.2, tdPerGame: 0.1 } }, w);
+    // scored TDs swing wildly between these two; the red-zone metric does not
+    expect(hot.m.rz).toBeCloseTo(cold.m.rz, 10);
+  });
+});
+
+describe('league fit and the top list', () => {
+  it('scores every team today and two years out', () => {
+    for (const row of model.leagueRows) {
+      expect(row.fit).toBeGreaterThan(0);
+      expect(row.fitFut).toBeGreaterThan(0);
+    }
+  });
+
+  it('leaves fitFut at zero in redraft, where there is no future to price', () => {
+    const redraft = buildModel({
+      data: { ...bundle, league: { ...bundle.league, settings: { ...bundle.league.settings, type: 0 } } },
+      usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+    });
+    expect(redraft.leagueRows.every(r => r.fitFut === 0)).toBe(true);
+  });
+
+  it('scores every rostered player through three lenses', () => {
+    const rostered = bundle.rosters.reduce((a, r) => a + (r.players || []).length, 0);
+    expect(model.allFits.length).toBe(rostered);
+    for (const x of model.allFits) {
+      for (const v of [x.fit, x.fitMe, x.fit2]) {
+        expect(Number.isFinite(v)).toBe(true);
+        expect(v).toBeGreaterThanOrEqual(0);
+        expect(v).toBeLessThanOrEqual(100);
+      }
+    }
+    expect(model.allFits.some(x => x.mine)).toBe(true);
+  });
+
+  it('ranks the neutral lens from best to worst', () => {
+    const fits = model.allFits.map(x => x.fit);
+    expect([...fits].sort((a, b) => b - a)).toEqual(fits);
+  });
+
+  it('indexes the whole catalog for search, lowercased once', () => {
+    expect(model.searchIndex.length).toBeGreaterThan(100);
+    const hit = model.searchIndex.find(e => e.name.includes('Rookie'));
+    expect(hit!.lower).toBe(hit!.name.toLowerCase());
   });
 });
