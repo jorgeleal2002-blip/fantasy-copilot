@@ -37,9 +37,11 @@ function Summary({ app, m }: { app: App; m: Model }) {
   const bestFut = Math.max(...m.leagueRows.map(x => x.future), 1);
   const shift = me?.shift ?? 0;
 
+  // Naming the seasons matters: the numbers below are a three-year blend, and
+  // a reader who assumes they are last season's will misread every one of them.
   const usageBadge = app.usageState === 'ok'
-    ? 'Real usage connected: snap %, target share and PPG'
-    : app.usageState === 'loading' ? 'Loading snap % and target share…'
+    ? `Real usage connected (${app.usageSeasons || 'last season'}): snap %, ball share, yards per touch and expected TDs`
+    : app.usageState === 'loading' ? 'Loading three seasons of usage…'
       : app.usageState === 'fail' ? 'No real usage: floor and explosiveness fall back to the model' : '';
   const usageColor = app.usageState === 'ok' ? GOOD : app.usageState === 'fail' ? BAD : MID;
 
