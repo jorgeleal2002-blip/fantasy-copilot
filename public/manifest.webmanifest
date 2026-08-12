@@ -1,6 +1,6 @@
 {
-  "name": "Fantasy Copilot",
-  "short_name": "Copilot",
+  "name": "Doctors Fantasy",
+  "short_name": "Doctors",
   "description": "Sleeper-connected dynasty assistant: optimal lineup, trade engine and rookie draft AI.",
   "start_url": "./",
   "scope": "./",

@@ -27,10 +27,10 @@ export function ConnectScreen({ app }: { app: App }) {
           animation: 'pulseGlow 3s ease-in-out infinite',
         }}
       >
-        <Mark size={72} title="Fantasy Copilot" />
+        <Mark size={72} title="Doctors Fantasy" />
       </div>
       <h1 style={{ fontSize: 30, lineHeight: 1.1, fontWeight: 500, letterSpacing: '-0.025em', margin: '26px 0 8px' }}>
-        Fantasy Copilot
+        Doctors Fantasy
       </h1>
       <p style={{ fontSize: 13.5, lineHeight: 1.5, color: dim(0.5), margin: '0 0 28px', maxWidth: '30ch' }}>
         Connect your Sleeper account. Read-only.

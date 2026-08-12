@@ -1,4 +1,4 @@
-# Fantasy Copilot
+# Doctors Fantasy
 
 A Sleeper-connected dynasty assistant for fantasy football. Sign in with your
 Sleeper username, pick a league, and the app reads your real rosters, draft
