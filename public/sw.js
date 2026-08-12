@@ -29,16 +29,35 @@ self.addEventListener('fetch', event => {
 
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
-      try {
-        // 'no-cache' still revalidates rather than refetching whole — a 304 on
-        // an unchanged deploy, the new entry the moment there is one.
-        const fresh = await fetch(request.url, { cache: 'no-cache' });
-        const cache = await caches.open(CACHE);
-        await cache.put(SHELL, fresh.clone());
-        return fresh;
-      } catch {
-        return (await caches.match(SHELL)) ?? Response.error();
+      // A launch on a weak signal used to fail once and silently hand back
+      // whatever entry was cached — the old app, with no sign anything went
+      // wrong. One retry covers the radio still waking up.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          // 'no-cache' still revalidates rather than refetching whole — a 304
+          // on an unchanged deploy, the new entry the moment there is one.
+          const fresh = await fetch(request.url, { cache: 'no-cache' });
+          const cache = await caches.open(CACHE);
+          await cache.put(SHELL, fresh.clone());
+          return fresh;
+        } catch {
+          if (attempt === 0) await new Promise(r => setTimeout(r, 600));
+        }
       }
+
+      // Genuinely offline. Serve the last entry seen so the shell renders,
+      // and go looking for a new one so the next launch is current.
+      event.waitUntil((async () => {
+        try {
+          const late = await fetch(request.url, { cache: 'no-cache' });
+          const cache = await caches.open(CACHE);
+          await cache.put(SHELL, late.clone());
+        } catch {
+          /* still offline — the next launch tries again */
+        }
+      })());
+
+      return (await caches.match(SHELL)) ?? Response.error();
     })());
     return;
   }
