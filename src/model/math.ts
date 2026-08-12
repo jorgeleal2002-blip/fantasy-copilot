@@ -1,5 +1,5 @@
 import type { Pos, SleeperPlayer } from '../api/types';
-import { DECAY, PRIME, RISE } from './constants';
+import { DECAY, ELITE_HOLD, PRIME, RISE } from './constants';
 
 export const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
 
@@ -18,7 +18,11 @@ export function ageCurve(
   elite?: number,
 ): number {
   if (!age) return 0.72;
-  const e = Number.isFinite(elite) ? clamp(elite as number, 0, 1) : 0;
+  // The bonus is scaled by how much longevity talent can actually buy at this
+  // position — see ELITE_HOLD. Flat across positions, it kept old running
+  // backs alive for years they do not get.
+  const hold = ELITE_HOLD[pos as Pos] ?? 0.7;
+  const e = (Number.isFinite(elite) ? clamp(elite as number, 0, 1) : 0) * hold;
   const [start, end0] = PRIME[pos as Pos] ?? [24, 28];
   const end = end0 + 1.5 * e;
   const decay = (DECAY[pos as Pos] ?? 0.09) * (1 - 0.45 * e);
@@ -40,7 +44,8 @@ export function ageCurveRedraft(
 ): number {
   if (!age) return 0.8;
   const [, end0] = PRIME[pos as Pos] ?? [24, 28];
-  const end = end0 + 1.5 * (Number.isFinite(elite) ? clamp(elite as number, 0, 1) : 0);
+  const hold = ELITE_HOLD[pos as Pos] ?? 0.7;
+  const end = end0 + 1.5 * (Number.isFinite(elite) ? clamp(elite as number, 0, 1) : 0) * hold;
   if (age <= end) return 1;
   return clamp(1 - (age - end) * (DECAY[pos as Pos] ?? 0.09) * 0.45, 0.45, 1);
 }

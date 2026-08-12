@@ -489,3 +489,29 @@ describe('league fit and the top list', () => {
     expect(hit!.lower).toBe(hit!.name.toLowerCase());
   });
 });
+
+describe('what talent buys at each position', () => {
+  const keeps = (pos: 'QB' | 'RB' | 'WR' | 'TE', age: number, elite: number) =>
+    ageCurve(pos, age + 2, elite) / Math.max(ageCurve(pos, age, elite), 0.05);
+
+  it('does not let a star running back age like a star quarterback', () => {
+    // A back's decline is a body absorbing 300 carries a year; ability does
+    // not postpone it. A passer's decline is craft, and craft keeps.
+    expect(keeps('RB', 29, 1)).toBeLessThan(keeps('QB', 29, 1));
+    // and the gap is large, not a rounding difference
+    expect(keeps('QB', 29, 1) - keeps('RB', 29, 1)).toBeGreaterThan(0.25);
+  });
+
+  it('still rewards the elite back, just far less than before', () => {
+    const star = keeps('RB', 29, 1);
+    const scrub = keeps('RB', 29, 0);
+    expect(star).toBeGreaterThan(scrub);          // talent is worth something
+    expect(star).toBeLessThan(0.7);               // but a 31-year-old back is not 80% of himself
+  });
+
+  it('leaves the flat bonus intact where it belongs', () => {
+    // A quarterback is inside his prime window at 29 either way.
+    expect(ageCurve('QB', 29, 1)).toBe(1);
+    expect(ageCurve('QB', 29, 0)).toBe(1);
+  });
+});

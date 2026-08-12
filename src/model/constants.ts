@@ -24,6 +24,17 @@ export const PRIME: Record<Pos, [number, number]> = {
 export const RISE: Record<Pos, number> = { QB: 0.07, RB: 0.05, WR: 0.06, TE: 0.09 };
 /** Value lost per year AFTER it. */
 export const DECAY: Record<Pos, number> = { QB: 0.05, RB: 0.15, WR: 0.08, TE: 0.07 };
+
+/**
+ * How much of the elite-longevity bonus each position actually gets.
+ *
+ * Talent buys a quarterback years — his decline is craft, and craft keeps. It
+ * buys a running back almost nothing: that decline is a body absorbing 300
+ * carries a year, and no amount of ability postpones it. Applying one flat
+ * bonus to every position had a 29-year-old star back keeping 81% of his value
+ * two years out, which is not a thing that happens.
+ */
+export const ELITE_HOLD: Record<Pos, number> = { QB: 1, TE: 0.8, WR: 0.7, RB: 0.3 };
 /** Where the prime window opens — used wherever a single number is needed. */
 export const PEAK: Record<Pos, number> = { QB: 26, RB: 23, WR: 24, TE: 25 };
 
