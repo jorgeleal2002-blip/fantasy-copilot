@@ -133,6 +133,10 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
         </div>
       </Card>
 
+      <div style={{ ...cardNote, textAlign: 'center', fontSize: 10.5 }}>
+        Build {__BUILD__} UTC
+      </div>
+
       <div style={{ height: 8 }} />
     </Screen>
   );
