@@ -12,7 +12,13 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html, body, #root { height: 100%; }
+html, body, #root {
+  height: 100%;
+  height: 100dvh;
+}
+/* The shell owns its own scrolling; letting the document scroll too is what
+   lets iOS drag the whole app up and expose a band of bare background. */
+body { overflow: hidden; }
 
 body {
   margin: 0;
@@ -79,8 +85,14 @@ button { font-family: inherit; }
 
 /* Phone-shaped by design. On a wide screen the column stays 402px — the
    prototype's width — centred on the same radial ground, with no device bezel. */
+/* `height: 100%` resolves against a viewport iOS keeps frozen while its chrome
+   collapses and the home indicator comes and goes, so the column ends up
+   shorter than the screen and leaves dead space under the tab bar. `dvh`
+   tracks the area actually on screen; the plain `100%` above it is the
+   fallback for browsers that predate the unit. */
 .app-frame {
   height: 100%;
+  height: 100dvh;
   display: flex;
   justify-content: center;
   background: radial-gradient(1200px 600px at 50% -10%, #1c1e30 0%, #0f101a 70%);
