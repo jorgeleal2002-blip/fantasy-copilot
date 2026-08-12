@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Number seven moustache crest">
+  <!-- Club-crest variant: a shield on the Norwegian cross, with the mark held
+       in a white roundel where a club would put its monogram. -->
+  <defs>
+    <path id="shield" d="M76 52 H436 V292 C436 388, 364 448, 256 486 C148 448, 76 388, 76 292 Z"/>
+    <clipPath id="shield-clip"><use href="#shield"/></clipPath>
+    <clipPath id="head-c">
+      <ellipse cx="256" cy="238" rx="78" ry="92"/>
+    </clipPath>
+    <path id="tache-c" d="M256 272
+             C273 270, 287 265, 299 257
+             C307 252, 319 251, 320 259
+             C321 268, 314 275, 304 281
+             C292 287, 277 291, 256 292 Z"/>
+  </defs>
+
+  <g clip-path="url(#shield-clip)">
+    <rect width="512" height="512" fill="#C8102E"/>
+    <!-- Norwegian cross, centred here rather than offset — a crest wants symmetry -->
+    <rect x="216" y="0" width="80" height="512" fill="#FFFFFF"/>
+    <rect x="0" y="198" width="512" height="80" fill="#FFFFFF"/>
+    <rect x="234" y="0" width="44" height="512" fill="#00205B"/>
+    <rect x="0" y="216" width="512" height="44" fill="#00205B"/>
+  </g>
+
+  <!-- roundel -->
+  <circle cx="256" cy="238" r="106" fill="#00205B"/>
+  <circle cx="256" cy="238" r="96" fill="#F4F1EC"/>
+
+  <g clip-path="url(#head-c)">
+    <ellipse cx="256" cy="238" rx="78" ry="92" fill="#C98A55"/>
+    <path d="M256 236 C261 245, 265 254, 265 259 C265 263, 247 263, 247 259 C247 254, 251 245, 256 236 Z" fill="#B67846"/>
+    <path d="M172 148 H340 V210 Q256 227 172 210 Z" fill="#FFFFFF"/>
+  </g>
+
+  <ellipse cx="233" cy="243" rx="9" ry="7" fill="#2B2B33"/>
+  <ellipse cx="279" cy="243" rx="9" ry="7" fill="#2B2B33"/>
+
+  <g fill="#FFFFFF">
+    <use href="#tache-c"/>
+    <use href="#tache-c" transform="translate(512,0) scale(-1,1)"/>
+  </g>
+
+  <path d="M240 168 H272 V177 L256 208 H241 L257 177 H240 Z" fill="#00205B"/>
+
+  <use href="#shield" fill="none" stroke="#00205B" stroke-width="16"/>
+</svg>

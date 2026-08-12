@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Fantasy Copilot app icon">
+  <!-- Square cut of the badge for the home screen: the ring sits on navy so
+       the icon fills its tile instead of leaving the corners empty. -->
+  <defs>
+    <clipPath id="head-a"><ellipse cx="256" cy="266" rx="100" ry="119"/></clipPath>
+    <path id="tache-a" d="M256 285
+             C280 283, 298 276, 315 266
+             C327 259, 342 258, 344 268
+             C345 279, 338 289, 326 297
+             C309 306, 285 313, 256 313 Z"/>
+  </defs>
+
+  <rect width="512" height="512" fill="#00205B"/>
+  <circle cx="256" cy="256" r="212" fill="#FFFFFF"/>
+  <circle cx="256" cy="256" r="202" fill="#C8102E"/>
+
+  <circle cx="351" cy="184" r="16" fill="#E4E4EA"/>
+  <path d="M346 189 C371 201, 381 226, 376 248 C368 234, 355 216, 338 204 Z" fill="#E4E4EA"/>
+
+  <g clip-path="url(#head-a)">
+    <ellipse cx="256" cy="266" rx="100" ry="119" fill="#C98A55"/>
+    <path d="M256 249 C263 263, 269 278, 269 286 C269 291, 243 291, 243 286 C243 278, 249 263, 256 249 Z" fill="#B67846"/>
+    <path d="M234 327 Q256 333 278 327" stroke="#8B5A32" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <path d="M149 130 H363 V205 Q256 227 149 205 Z" fill="#FFFFFF"/>
+  </g>
+
+  <path d="M204 236 L240 231 L240 241 L204 245 Z" fill="#4A2C17"/>
+  <path d="M308 236 L272 231 L272 241 L308 245 Z" fill="#4A2C17"/>
+  <ellipse cx="225" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+  <ellipse cx="287" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+
+  <g fill="#FFFFFF">
+    <use href="#tache-a"/>
+    <use href="#tache-a" transform="translate(512,0) scale(-1,1)"/>
+  </g>
+
+  <path d="M236 155 H276 V165 L257 204 H239 L258 165 H236 Z" fill="#00205B"/>
+</svg>

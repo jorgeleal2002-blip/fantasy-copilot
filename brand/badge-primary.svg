@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Number seven moustache badge">
+  <defs>
+    <clipPath id="head">
+      <ellipse cx="256" cy="296" rx="118" ry="140"/>
+    </clipPath>
+    <!-- Right half of the handlebar, mirrored for the left.
+         Three rules keep it from reading as a grin: the bottom edge droops
+         toward the centre instead of arcing up, the tip hooks above the body,
+         and the mass sits tight under the nose rather than over the mouth. -->
+    <path id="tache-half" d="M256 318
+             C284 315, 306 307, 326 295
+             C340 286, 358 284, 360 296
+             C362 309, 353 322, 338 331
+             C318 342, 290 350, 256 351 Z"/>
+  </defs>
+
+  <!-- ring -->
+  <circle cx="256" cy="256" r="248" fill="#00205B"/>
+  <circle cx="256" cy="256" r="236" fill="#FFFFFF"/>
+  <circle cx="256" cy="256" r="228" fill="#C8102E"/>
+
+  <!-- durag tail, tucked behind the head so it reads as depth -->
+  <circle cx="368" cy="210" r="19" fill="#E4E4EA"/>
+  <path d="M362 216 C392 230, 404 260, 398 286 C388 270, 372 248, 352 234 Z" fill="#E4E4EA"/>
+
+  <g clip-path="url(#head)">
+    <ellipse cx="256" cy="296" rx="118" ry="140" fill="#C98A55"/>
+    <!-- nose, so the white mass below it can only be a moustache -->
+    <path d="M256 276 C264 292, 271 310, 271 320 C271 326, 241 326, 241 320 C241 310, 248 292, 256 276 Z" fill="#B67846"/>
+    <!-- closed mouth, which the moustache overhangs -->
+    <path d="M230 368 Q256 375 282 368" stroke="#8B5A32" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <!-- chin shadow -->
+    <ellipse cx="256" cy="392" rx="34" ry="12" fill="#BF8049" opacity="0.55"/>
+    <!-- the durag: crown to brow, its edge sagging at the temples -->
+    <path d="M130 140 H382 V228 Q256 254 130 228 Z" fill="#FFFFFF"/>
+  </g>
+
+  <!-- brows and eyes -->
+  <path d="M198 260 L240 254 L240 266 L198 270 Z" fill="#4A2C17"/>
+  <path d="M314 260 L272 254 L272 266 L314 270 Z" fill="#4A2C17"/>
+  <ellipse cx="220" cy="284" rx="13" ry="10" fill="#2B2B33"/>
+  <ellipse cx="292" cy="284" rx="13" ry="10" fill="#2B2B33"/>
+
+  <!-- the moustache: the whole point of the mark -->
+  <g fill="#FFFFFF">
+    <use href="#tache-half"/>
+    <use href="#tache-half" transform="translate(512,0) scale(-1,1)"/>
+  </g>
+
+  <!-- 7, worn on the durag the way a crest would be -->
+  <path d="M232 170 H280 V182 L257 228 H236 L259 182 H232 Z" fill="#00205B"/>
+</svg>

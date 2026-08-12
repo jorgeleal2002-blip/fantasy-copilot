@@ -1,0 +1,131 @@
+import type { CSSProperties } from 'react';
+import { ACCENT, BAD, GOOD, MID } from '../model/constants';
+
+/** Text tints used all over the prototype, named once. */
+export const dim = (a: number) => `rgba(233,233,237,${a})`;
+
+export const fitColor = (f: number) => (f >= 75 ? GOOD : f >= 60 ? MID : dim(0.6));
+
+/** The pill that carries a Fit Score next to a heading. */
+export function fitStyle(fit: number): CSSProperties {
+  const c = fit >= 75 ? GOOD : fit >= 60 ? MID : dim(0.55);
+  return {
+    fontSize: 12.5, fontWeight: 500, padding: '2px 9px', borderRadius: 7, flex: 'none',
+    color: c,
+    border: '1px solid ' + (fit >= 60 ? c + '55' : 'var(--color-divider)'),
+    background: fit >= 60 ? c + '18' : 'transparent',
+  };
+}
+
+export type SegSize = 'md' | 'sm';
+
+/** Outlined segmented option — the system's one selection control. */
+export function seg(active: boolean, size: SegSize = 'md'): CSSProperties {
+  return {
+    flex: 1,
+    textAlign: 'center',
+    padding: size === 'sm' ? '7px 3px' : '8px 4px',
+    borderRadius: size === 'sm' ? 8 : 9,
+    fontSize: size === 'sm' ? 11 : 11.5,
+    lineHeight: 1.3,
+    cursor: 'pointer',
+    border: '1px solid ' + (active ? ACCENT : 'var(--color-divider)'),
+    color: active ? ACCENT : dim(0.6),
+    background: active ? 'rgba(145,132,217,.12)' : 'transparent',
+    userSelect: 'none',
+  };
+}
+
+export function tabStyle(on: boolean): CSSProperties {
+  return {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 3,
+    padding: '8px 0 6px',
+    borderRadius: 12,
+    cursor: 'pointer',
+    color: on ? ACCENT : dim(0.4),
+    background: 'transparent',
+    border: 0,
+  };
+}
+
+/** Position chip that doubles as the player's portrait once one is available. */
+export function posBadge(photo: string | null): CSSProperties {
+  return {
+    width: 34, height: 34, flex: 'none', borderRadius: 9,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: 10, fontWeight: 600, letterSpacing: '.04em',
+    color: photo ? 'transparent' : ACCENT,
+    background: 'rgba(145,132,217,.14)' + (photo ? ` url(${photo}) center/cover no-repeat` : ''),
+  };
+}
+
+export const surface: CSSProperties = {
+  background: 'var(--color-surface)',
+  borderRadius: 12,
+  padding: '14px 13px',
+};
+
+/** The one saturated ground the system allows, used for the two hero cards. */
+export const heroCard: CSSProperties = {
+  borderRadius: 14,
+  padding: 16,
+  background: 'linear-gradient(150deg,#262a60 0%,#232532 62%)',
+  position: 'relative',
+  overflow: 'hidden',
+};
+
+export const heroGlow: CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  background: 'radial-gradient(220px 120px at 88% 0%,rgba(145,132,217,.32),transparent 70%)',
+};
+
+export const kicker: CSSProperties = {
+  fontSize: 10,
+  letterSpacing: '.11em',
+  textTransform: 'uppercase',
+  color: '#b3a9e6',
+};
+
+export const cardTitle: CSSProperties = { fontSize: 13, fontWeight: 500 };
+
+export const cardNote: CSSProperties = {
+  fontSize: 11,
+  lineHeight: 1.45,
+  color: dim(0.42),
+  textWrap: 'pretty' as CSSProperties['textWrap'],
+};
+
+export const ellipsis: CSSProperties = {
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+/** Small capsule hint — the system prefers these over paragraphs of help text. */
+export const capsule: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  fontSize: 10,
+  letterSpacing: '.04em',
+  color: dim(0.45),
+  background: 'rgba(233,233,237,.05)',
+  borderRadius: 6,
+  padding: '4px 8px',
+};
+
+export const trackStyle: CSSProperties = {
+  height: 6,
+  borderRadius: 3,
+  background: 'rgba(233,233,237,.08)',
+  overflow: 'hidden',
+};
+
+export const rowDivider = '1px solid var(--color-divider)';
+
+export { ACCENT, GOOD, BAD, MID };

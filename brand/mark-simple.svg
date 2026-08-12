@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Number seven moustache mark">
+  <!-- The small-size sibling of the badge: nose, mouth, brows, tail and the
+       pinstripe ring are all dropped, and what survives is scaled up to fill
+       the circle. Everything here has to still read at 32px. -->
+  <defs>
+    <clipPath id="head-s">
+      <ellipse cx="256" cy="300" rx="152" ry="176"/>
+    </clipPath>
+    <path id="tache-s" d="M256 330
+             C292 326, 322 316, 348 300
+             C366 289, 389 286, 392 302
+             C395 319, 383 337, 363 349
+             C337 364, 300 374, 256 375 Z"/>
+  </defs>
+
+  <circle cx="256" cy="256" r="252" fill="#00205B"/>
+  <circle cx="256" cy="256" r="240" fill="#C8102E"/>
+
+  <g clip-path="url(#head-s)">
+    <ellipse cx="256" cy="300" rx="152" ry="176" fill="#C98A55"/>
+    <!-- even here the nose stays: without it the moustache reads as a grin -->
+    <path d="M256 288 C265 304, 273 322, 273 330 C273 335, 239 335, 239 330 C239 322, 247 304, 256 288 Z" fill="#B67846"/>
+    <path d="M96 110 H416 V236 Q256 268 96 236 Z" fill="#FFFFFF"/>
+  </g>
+
+  <ellipse cx="204" cy="280" rx="17" ry="14" fill="#2B2B33"/>
+  <ellipse cx="308" cy="280" rx="17" ry="14" fill="#2B2B33"/>
+
+  <g fill="#FFFFFF">
+    <use href="#tache-s"/>
+    <use href="#tache-s" transform="translate(512,0) scale(-1,1)"/>
+  </g>
+
+  <path d="M225 148 H291 V164 L259 226 H231 L263 164 H225 Z" fill="#00205B"/>
+</svg>
