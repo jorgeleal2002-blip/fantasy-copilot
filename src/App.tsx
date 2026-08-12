@@ -2,12 +2,14 @@ import { AppShell } from './screens/AppShell';
 import { BootScreen, ConnectScreen, LeaguesScreen } from './screens/Onboarding';
 import { useApp } from './state/useApp';
 import { Mark } from './ui/Mark';
+import { ViewportProbe } from './ui/ViewportProbe';
 
 export default function App() {
   const app = useApp();
 
   return (
     <div className="app-frame">
+      <ViewportProbe />
       <div className="app-column">
         {app.stage === 'connect' && <ConnectScreen app={app} />}
         {app.stage === 'leagues' && <LeaguesScreen app={app} />}
