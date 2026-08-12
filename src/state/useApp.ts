@@ -8,6 +8,7 @@ import { DRAFT_POLL_MS, STORAGE_PHOTOS, STORAGE_SESSION, StratKey } from '../mod
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import { buildUsage, type UsageMap } from '../model/usage';
+import { nextDetailStack, topDetail } from './detail-stack';
 
 export type Stage = 'connect' | 'leagues' | 'app';
 export type Tab = 'team' | 'trades' | 'draft' | 'league' | 'settings';
@@ -77,7 +78,15 @@ export function useApp() {
   const [rankMode, setRankMode] = useState<'now' | 'future'>('now');
   const [pickSel, setPickSel] = useState(0);
   const [strat, setStrat] = useState<StratKey>('balanced');
-  const [detail, setDetail] = useState<string | null>(null);
+  /* Sheets stack: opening a player from a rival's team has to come back to
+   * that team, not to the tab underneath it. Only the top one renders. */
+  const [detailStack, setDetailStack] = useState<string[]>([]);
+  const detail = topDetail(detailStack);
+
+  /** An id opens a sheet on top; null steps back one level. */
+  const setDetail = useCallback((id: string | null) => {
+    setDetailStack(stack => nextDetailStack(stack, id));
+  }, []);
   const [passed, setPassed] = useState<string[]>([]);
 
   // ── ephemera
@@ -229,7 +238,7 @@ export function useApp() {
     setData(null);
     setStep(0);
     setPassed([]);
-    setDetail(null);
+    setDetailStack([]);
     setTab('team');
     void load(id, username);
   }, [load, username]);
@@ -250,7 +259,7 @@ export function useApp() {
     setLeagues([]);
     setLeagueId(null);
     setAuthError('');
-    setDetail(null);
+    setDetailStack([]);
     setTab('team');
     setMarket(null);
     setMarketState('idle');
@@ -354,7 +363,7 @@ export function useApp() {
 
     setUsername: (v: string) => { setUsername(v); setAuthError(''); },
     connectUser, pickLeague, switchLeague, logout, refreshAll, refreshPicks, retry,
-    setTab: (t: Tab) => { setTab(t); setDetail(null); },
+    setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
     setTeamView, setDraftView, setFilter, setRosterFilter, setRosterSort,
     setBoardMode, setRankMode, setPickSel, setStrat, setDetail,
     passOffer: (key: string) => setPassed(p => p.concat(key)),

@@ -6,6 +6,7 @@ import { buildModel } from '../model/model';
 import { ownedWeights, scorePlayer } from '../model/score';
 import { buildUsage } from '../model/usage';
 import { makeBundle, makeFantasyCalc, makePlayers, makeStats, TEAMS } from './fixture';
+import { nextDetailStack, topDetail } from '../state/detail-stack';
 
 const bundle = makeBundle();
 const market = parseMarket(makeFantasyCalc(bundle.players));
@@ -309,3 +310,31 @@ function usageStub(snap: number, tgt: number) {
     rz: 10, rzShare: 0.1, rzPerGame: 0.6, td: 6, tdPerGame: 0.4, tdShare: 0.2, rank: 12,
   };
 }
+
+describe('sheet navigation stack', () => {
+  it('steps back to the team a player was opened from', () => {
+    let s = nextDetailStack([], 'team-5');
+    s = nextDetailStack(s, 'jaxon');
+    expect(topDetail(s)).toBe('jaxon');
+
+    s = nextDetailStack(s, null);
+    expect(topDetail(s)).toBe('team-5');
+
+    s = nextDetailStack(s, null);
+    expect(topDetail(s)).toBe(null);
+  });
+
+  it('leaves a sheet opened straight from a tab in one step', () => {
+    const s = nextDetailStack(nextDetailStack([], 'caleb'), null);
+    expect(topDetail(s)).toBe(null);
+  });
+
+  it('ignores re-opening whatever is already on top', () => {
+    const s = nextDetailStack(nextDetailStack([], 'caleb'), 'caleb');
+    expect(s).toHaveLength(1);
+  });
+
+  it('stays empty when stepping back with nothing open', () => {
+    expect(nextDetailStack([], null)).toEqual([]);
+  });
+});
