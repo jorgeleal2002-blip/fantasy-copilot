@@ -515,3 +515,41 @@ describe('what talent buys at each position', () => {
     expect(ageCurve('QB', 29, 0)).toBe(1);
   });
 });
+
+describe('what a player is worth', () => {
+  it('reports the market feed\'s own number, not the internal scaling', () => {
+    const rows = makeFantasyCalc(bundle.players);
+    const anyone = model.searchIndex.find(e => rows.some(r => r.player?.sleeperId === e.id))!;
+    const feed = rows.find(r => r.player?.sleeperId === anyone.id)!;
+    const v = model.marketValue(anyone.id)!;
+    expect(v.real).toBe(true);
+    expect(v.pts).toBe(feed.value);
+  });
+
+  it('ranks a price inside its own position, best first', () => {
+    const ranked = model.searchIndex
+      .map(e => ({ e, v: model.marketValue(e.id) }))
+      .filter(x => x.v && x.v.pos === 'WR' && x.v.posRank)
+      .sort((a, b) => a.v!.posRank! - b.v!.posRank!);
+    expect(ranked.length).toBeGreaterThan(3);
+    expect(ranked[0].v!.posRank).toBe(1);
+    // a better rank never carries a lower price
+    for (let i = 1; i < Math.min(ranked.length, 12); i++) {
+      expect(ranked[i - 1].v!.pts).toBeGreaterThanOrEqual(ranked[i].v!.pts);
+    }
+  });
+
+  it('falls back to the model and says so when the feed never loaded', () => {
+    const blind = buildModel({
+      data: bundle, usage, market: null, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+    });
+    const id = blind.searchIndex[0].id;
+    const v = blind.marketValue(id)!;
+    expect(v.real).toBe(false);
+    expect(v.pts).toBeGreaterThan(0);
+  });
+
+  it('returns nothing for an id that is not a skill-position player', () => {
+    expect(model.marketValue('no-such-player')).toBe(null);
+  });
+});

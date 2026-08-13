@@ -8,7 +8,7 @@ import type { Market } from './market';
 import { ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
-  OppPlayer, PickAsset, PlayerFit, PositionMultiplier, RosterPlayer, SearchEntry, TeamEntry, TeamProfile,
+  OppPlayer, PickAsset, PlayerFit, PlayerValue, PositionMultiplier, RosterPlayer, SearchEntry, TeamEntry, TeamProfile,
   TeamSheet, Window,
 } from './types';
 import type { UsageMap } from './usage';
@@ -100,6 +100,35 @@ export function buildModel(input: ModelInput): Model {
   const quality = (pl: SleeperPlayer): number => {
     const v = mval(pl);
     return v != null ? v : dynastyVal(pl, mult) * 100;
+  };
+
+  // ── What a player is worth, ready to show. A price on its own means nothing
+  //    — 6,100 is either a superstar or a bench piece depending on the year —
+  //    so it always travels with its rank inside the position.
+  const valueRank: Record<string, number> = {};
+  {
+    const byPos: Partial<Record<Pos, { id: string; v: number }[]>> = {};
+    for (const pid in players) {
+      const pl = players[pid];
+      if (!pl || POS.indexOf(pl.position as Pos) < 0) continue;
+      (byPos[pl.position as Pos] = byPos[pl.position as Pos] || []).push({ id: pid, v: quality(pl) });
+    }
+    POS.forEach(p => {
+      (byPos[p] || []).sort((a, b) => b.v - a.v).forEach((x, i) => { valueRank[x.id] = i + 1; });
+    });
+  }
+  const marketValue = (id: string): PlayerValue | null => {
+    const pl = players[id];
+    if (!pl || POS.indexOf(pl.position as Pos) < 0) return null;
+    const v = mval(pl);
+    return {
+      // ×100 undoes the internal scaling, so a live feed reports FantasyCalc's
+      // own number and the fallback lands on a comparable scale.
+      pts: Math.round((v != null ? v : dynastyVal(pl, mult) * 100) * 100),
+      real: v != null,
+      pos: pl.position as Pos,
+      posRank: valueRank[id] || null,
+    };
   };
 
   // ── Quality measured twice. The market is the best judgement available, but
@@ -740,6 +769,6 @@ export function buildModel(input: ModelInput): Model {
     offers, bestDeals, leagueRows, leagueHasRosters, multInfo,
     allFits, searchIndex, qDiverge, wUsed: w,
     marketCount: mk ? Object.keys(mk.players).length : 0,
-    teamInfo, posRankOf, scoreAny, metricKeys,
+    teamInfo, posRankOf, scoreAny, marketValue, metricKeys,
   };
 }

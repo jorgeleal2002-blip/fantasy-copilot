@@ -3,6 +3,7 @@ import { num } from '../model/math';
 import type { Model, Offer, TradeAsset } from '../model/types';
 import type { App } from '../state/useApp';
 import { clockTime, ord } from '../ui/format';
+import { PlayerSearch } from '../ui/PlayerSearch';
 import { Empty, Screen } from '../ui/primitives';
 import { dim, ellipsis } from '../ui/styles';
 
@@ -45,6 +46,10 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
           {app.syncing ? 'Updating…' : 'Update now'}
         </button>
       </div>
+
+      {/* Look a player up before you offer for him: the price comes first,
+          then his rank at the position and what he would do for your lineup. */}
+      <PlayerSearch app={app} m={m} placeholder="Look up any player's value" />
 
       <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
         {m.offers.length === 1 ? '1 trade' : m.offers.length + ' trades'} simulated with your bench and your picks —

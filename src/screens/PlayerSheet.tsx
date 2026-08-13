@@ -1,4 +1,5 @@
 import { ACCENT, GOOD, METRIC_LABEL, PEAK, type Weights } from '../model/constants';
+import { num } from '../model/math';
 import type { Metrics } from '../model/score';
 import type { SleeperPlayer } from '../api/types';
 import type { Model } from '../model/types';
@@ -65,7 +66,17 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const fin = Number.isFinite;
   const diverge = m.qDiverge(p.raw, p.id);
 
+  const val = m.marketValue(p.id);
+
   const stats = [
+    {
+      // The first thing anyone wants before proposing a trade: the price, and
+      // whether that price is the market's or the model's stand-in for it.
+      label: val && !val.real ? 'Value (modelled)' : 'Market value',
+      value: val
+        ? num(val.pts) + (val.posRank ? ' · ' + val.pos + val.posRank + ' at his position' : '')
+        : 'no data',
+    },
     {
       label: 'Availability',
       value: (() => {

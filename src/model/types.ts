@@ -169,6 +169,19 @@ export interface SearchEntry {
   rank: number;
 }
 
+/**
+ * What a player is worth, ready to display. `pts` is the market's own number
+ * when the feed loaded; when it did not, it is the model's stand-in on the same
+ * scale, and `real` says which one you are looking at.
+ */
+export interface PlayerValue {
+  pts: number;
+  real: boolean;
+  pos: Pos;
+  /** where that price ranks him inside his own position */
+  posRank: number | null;
+}
+
 /** One rostered player, scored through the three lenses of the top list. */
 export interface PlayerFit {
   id: string;
@@ -264,5 +277,7 @@ export interface Model {
   teamInfo: (rosterId: number) => TeamSheet | null;
   posRankOf: (rosterId: number, pos: Pos) => number;
   scoreAny: (playerId: string) => BoardPlayer | null;
+  /** the price tag for one player, with its rank inside his position */
+  marketValue: (playerId: string) => PlayerValue | null;
   metricKeys: MetricKey[];
 }
