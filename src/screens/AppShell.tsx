@@ -45,8 +45,9 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
   const isTeamDetail = typeof detail === 'string' && detail.startsWith('team-');
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="shell">
       <header
+        className="shell-head"
         style={{
           padding: 'calc(var(--safe-top) + 11px) 15px 9px',
           display: 'flex', alignItems: 'center', gap: 11,
@@ -92,7 +93,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
         </button>
       </header>
 
-      <main style={{ flex: 1, overflow: 'auto', padding: '0 15px 14px', WebkitOverflowScrolling: 'touch' }}>
+      <main className="shell-main">
         {app.tab === 'team' && <TeamTab app={app} m={model} />}
         {app.tab === 'trades' && <TradesTab app={app} m={model} />}
         {app.tab === 'draft' && <DraftTab app={app} m={model} />}
@@ -100,25 +101,20 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
         {app.tab === 'settings' && <SettingsTab app={app} m={model} />}
       </main>
 
-      <nav
-        style={{
-          display: 'flex', padding: '5px 10px calc(var(--safe-bottom) + 3px)', gap: 4,
-          background: 'linear-gradient(to top,var(--color-bg) 60%,rgba(22,24,38,.4))',
-          borderTop: '1px solid var(--color-divider)',
-        }}
-      >
+      <nav className="shell-nav">
         {TABS.map(t => (
           <button
             key={t.key}
             type="button"
             onClick={() => app.setTab(t.key)}
             aria-current={app.tab === t.key ? 'page' : undefined}
+            className="tab-btn ghost-tap"
             style={tabStyle(app.tab === t.key)}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ flex: 'none' }}>
               {ICONS[t.key]}
             </svg>
-            <span style={{ fontSize: 10 }}>{t.label}</span>
+            <span>{t.label}</span>
           </button>
         ))}
       </nav>

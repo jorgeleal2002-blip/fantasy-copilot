@@ -28,6 +28,9 @@ export function seg(active: boolean, size: SegSize = 'md'): CSSProperties {
     borderRadius: size === 'sm' ? 8 : 9,
     fontSize: size === 'sm' ? 11 : 11.5,
     lineHeight: 1.3,
+    // "Free agents" broke across two lines and made the row twice as tall as
+    // its neighbour; a two-word option is still one option.
+    whiteSpace: 'nowrap',
     cursor: 'pointer',
     border: '1px solid ' + (active ? ACCENT : 'var(--color-divider)'),
     color: active ? ACCENT : dim(0.6),
@@ -36,20 +39,10 @@ export function seg(active: boolean, size: SegSize = 'md'): CSSProperties {
   };
 }
 
+/** Only the part that changes with state — the layout lives in `.tab-btn`,
+ *  because it has to become a row on a laptop and inline styles cannot. */
 export function tabStyle(on: boolean): CSSProperties {
-  return {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 3,
-    padding: '6px 0 4px',
-    borderRadius: 12,
-    cursor: 'pointer',
-    color: on ? ACCENT : dim(0.4),
-    background: 'transparent',
-    border: 0,
-  };
+  return { color: on ? ACCENT : dim(0.4) };
 }
 
 /** Position chip that doubles as the player's portrait once one is available. */

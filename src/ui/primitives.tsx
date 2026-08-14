@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import { cardNote, cardTitle, seg, SegSize, surface, trackStyle } from './styles';
 
 export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
@@ -95,6 +95,14 @@ export function Empty({ title, body, action }: { title: string; body: string; ac
 }
 
 /** Full-screen sheet that slides in over a tab — player and team detail. */
+/**
+ * A sheet over the current screen. On a phone it is the whole screen, pushed
+ * in from the right; on a laptop the same markup becomes a centred panel over
+ * a scrim, because there is room to keep the context visible behind it. Both
+ * shapes live in global.css — see `.overlay-panel`.
+ *
+ * Escape closes it, which is the first thing anyone tries with a keyboard.
+ */
 export function Overlay({
   children, onClose, label = 'Back', z = 5,
 }: {
@@ -103,27 +111,22 @@ export function Overlay({
   label?: string;
   z?: number;
 }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
-    <div
-      style={{
-        position: 'absolute', inset: 0, background: 'var(--color-bg)',
-        display: 'flex', flexDirection: 'column',
-        animation: 'slideIn .28s cubic-bezier(.3,.9,.35,1) both', zIndex: z,
-      }}
-    >
-      <div style={{ padding: 'calc(var(--safe-top) + 18px) 16px 10px' }}>
-        <button type="button" className="btn btn-ghost" onClick={onClose} style={{ fontSize: 14, padding: 0 }}>
-          ‹ {label}
-        </button>
-      </div>
-      <div
-        style={{
-          flex: 1, overflow: 'auto',
-          padding: '6px 18px calc(var(--safe-bottom) + 24px)',
-          WebkitOverflowScrolling: 'touch',
-        }}
-      >
-        {children}
+    <div style={{ position: 'absolute', inset: 0, zIndex: z }}>
+      <div className="overlay-scrim" onClick={onClose} aria-hidden="true" />
+      <div className="overlay-panel" role="dialog" aria-modal="true" aria-label={label}>
+        <div className="overlay-head">
+          <button type="button" className="btn btn-ghost" onClick={onClose} style={{ fontSize: 14, padding: 0 }}>
+            ‹ {label}
+          </button>
+        </div>
+        <div className="overlay-body">{children}</div>
       </div>
     </div>
   );

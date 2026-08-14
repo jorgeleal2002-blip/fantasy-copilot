@@ -5,10 +5,14 @@ import { Mark } from './ui/Mark';
 
 export default function App() {
   const app = useApp();
+  // Only the app itself earns the full window on a laptop. Connect and the
+  // league picker are one short form each — stretched across 1400px they would
+  // read as a broken page, not a spacious one.
+  const inApp = app.stage === 'app' && !!app.model;
 
   return (
     <div className="app-frame">
-      <div className="app-column">
+      <div className={inApp ? 'app-column app-column-wide' : 'app-column'}>
         {app.stage === 'connect' && <ConnectScreen app={app} />}
         {app.stage === 'leagues' && <LeaguesScreen app={app} />}
         {app.stage === 'app' && !app.model && <BootScreen app={app} />}
@@ -18,8 +22,8 @@ export default function App() {
           <div
             role="status"
             onClick={app.hideToast}
+            className="toast"
             style={{
-              position: 'absolute', left: 18, right: 18, bottom: 'calc(var(--safe-bottom) + 96px)', zIndex: 20,
               background: '#2f3245', border: '1px solid var(--color-divider)', borderRadius: 12,
               padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 10,
               boxShadow: 'var(--shadow-lg)', cursor: 'pointer', animation: 'fadeUp .25s ease both',

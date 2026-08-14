@@ -52,10 +52,22 @@ button { font-family: inherit; }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 ::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
 
-/* The prototype hid its scrollbars; a phone has none to begin with, and on
-   desktop they would cut into the 402px column. */
+/* The prototype hid its scrollbars; a phone has none to begin with. */
 ::-webkit-scrollbar { width: 0; height: 0; }
 * { scrollbar-width: none; }
+
+/* A laptop is a different machine. There is a real pointer, no scroll
+   momentum, and a bar you can grab — so give the scroller back its thumb. */
+@media (min-width: 900px) and (pointer: fine) {
+  .shell-main { scrollbar-width: thin; scrollbar-color: var(--color-neutral-800) transparent; }
+  .shell-main::-webkit-scrollbar { width: 10px; }
+  .shell-main::-webkit-scrollbar-thumb {
+    background: var(--color-neutral-800);
+    border: 3px solid var(--color-bg);
+    border-radius: 6px;
+  }
+  .shell-main::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-700); }
+}
 
 /* Rows and cards that respond to touch. Hover only where there is a pointer,
    so a tap on iOS does not leave the tint stuck on. */
@@ -84,8 +96,8 @@ button { font-family: inherit; }
   }
 }
 
-/* Phone-shaped by design. On a wide screen the column stays 402px — the
-   prototype's width — centred on the same radial ground, with no device bezel. */
+/* Phone-shaped up to a laptop, where it becomes a laptop app: see the
+   desktop block at the end of this file. */
 /* `height: 100%` resolves against a viewport iOS keeps frozen while its chrome
    collapses and the home indicator comes and goes, so the column ends up
    shorter than the screen and leaves dead space under the tab bar. `dvh`
@@ -114,5 +126,180 @@ button { font-family: inherit; }
   .app-column {
     border-left: 1px solid var(--color-divider);
     border-right: 1px solid var(--color-divider);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   The shell. On a phone: header, scrolling body, tab bar along the bottom.
+   The desktop rules below re-lay the same three elements without the screens
+   knowing anything about it.
+   ───────────────────────────────────────────────────────────────────────── */
+.shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.shell-main {
+  flex: 1;
+  overflow: auto;
+  padding: 0 15px 14px;
+  -webkit-overflow-scrolling: touch;
+}
+.shell-nav {
+  display: flex;
+  padding: 5px 10px calc(var(--safe-bottom) + 3px);
+  gap: 4px;
+  background: linear-gradient(to top, var(--color-bg) 60%, rgba(22, 24, 38, 0.4));
+  border-top: 1px solid var(--color-divider);
+}
+.tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 0 4px;
+  border-radius: 12px;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  font: inherit;
+}
+.tab-btn span { font-size: 10px; }
+
+/* ── Laptop and up ────────────────────────────────────────────────────────
+   A thumb reaches the bottom of a phone; a cursor does not want to travel
+   there on a 15-inch screen. The tab bar becomes a rail down the left, which
+   is also where the labels finally have room to be read rather than guessed.
+   ──────────────────────────────────────────────────────────────────────── */
+@media (min-width: 900px) {
+  .app-column-wide {
+    max-width: none;
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 216px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "nav head" "nav main";
+  }
+  /* Header and cards share one column: 760px of content inside 32px gutters.
+     Any other arrangement leaves the page title floating off the left edge of
+     everything it titles. */
+  .shell-head {
+    grid-area: head;
+    width: 100%;
+    max-width: 824px;
+    margin: 0 auto;
+    padding: 22px 32px 12px !important;
+  }
+  .shell-main {
+    grid-area: main;
+    /* The column stops at a readable measure instead of stretching a card of
+       four numbers across a metre of glass. */
+    padding: 0 32px 40px;
+    display: flex;
+    justify-content: center;
+    /* flex-start, not the default stretch: a stretched screen inherits the
+       viewport's height, and every card inside it then shrinks to fit rather
+       than scrolling. That is what flattened the draft hero to a stripe. */
+    align-items: flex-start;
+  }
+  .shell-main > * { width: 100%; max-width: 760px; }
+
+  .shell-nav {
+    grid-area: nav;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 20px 12px;
+    border-top: 0;
+    border-right: 1px solid var(--color-divider);
+    background: linear-gradient(to bottom, rgba(38, 42, 96, 0.22), transparent 40%);
+  }
+  .tab-btn {
+    flex: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 13px;
+    border-radius: 10px;
+  }
+  .tab-btn span { font-size: 13.5px; letter-spacing: -0.01em; }
+  .tab-btn[aria-current="page"] { background: rgba(145, 132, 217, 0.12); }
+}
+
+/* ── Sheets ───────────────────────────────────────────────────────────────
+   A phone pushes a new full screen in from the right. A laptop has room to
+   keep the context visible behind, so the same sheet becomes a centred panel
+   over a scrim that dismisses it.
+   ──────────────────────────────────────────────────────────────────────── */
+.overlay-scrim { display: none; }
+.overlay-panel {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.28s cubic-bezier(0.3, 0.9, 0.35, 1) both;
+}
+.overlay-head { padding: calc(var(--safe-top) + 18px) 16px 10px; }
+.overlay-body {
+  flex: 1;
+  overflow: auto;
+  padding: 6px 18px calc(var(--safe-bottom) + 24px);
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 900px) {
+  .overlay-scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(9, 10, 17, 0.62);
+    animation: fadeIn 0.18s ease both;
+    cursor: pointer;
+  }
+  .overlay-panel {
+    inset: auto;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(680px, calc(100vw - 96px));
+    max-height: min(880px, calc(100vh - 80px));
+    border: 1px solid var(--color-neutral-800);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    animation: popIn 0.2s cubic-bezier(0.3, 0.9, 0.35, 1) both;
+  }
+  .overlay-head { padding: 18px 24px 10px; }
+  .overlay-body { padding: 6px 24px 26px; }
+}
+
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes popIn {
+  from { transform: translate(-50%, -48%) scale(0.98); opacity: 0 }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1 }
+}
+
+/* The toast sits above the thumb on a phone and out of the way of the rail on
+   a laptop, where a banner spanning a whole 15-inch screen would be absurd. */
+.toast {
+  position: absolute;
+  z-index: 20;
+  left: 18px;
+  right: 18px;
+  bottom: calc(var(--safe-bottom) + 96px);
+}
+@media (min-width: 900px) {
+  .toast {
+    left: auto;
+    right: 32px;
+    bottom: 28px;
+    max-width: 360px;
   }
 }

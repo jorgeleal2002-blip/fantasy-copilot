@@ -142,17 +142,18 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                   ` · you hold ${m.myPickList.length} picks in this draft`
                 : 'Draft complete'}
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {m.isDynasty ? (
-                <Segmented
-                  options={[{ key: 'rookies', label: 'Rookies' }, { key: 'fa', label: 'Free agents' }]}
-                  value={app.boardMode}
-                  onChange={app.setBoardMode}
-                />
-              ) : (
-                <div style={{ ...capsule, flex: 1, justifyContent: 'center' }}>Available players</div>
-              )}
-            </div>
+            {/* Direct children of the screen's column, so each fills the width
+                like every other control row. Wrapping the segmented in a flex
+                row left it hugging its own text. */}
+            {m.isDynasty ? (
+              <Segmented
+                options={[{ key: 'rookies', label: 'Rookies' }, { key: 'fa', label: 'Free agents' }]}
+                value={app.boardMode}
+                onChange={app.setBoardMode}
+              />
+            ) : (
+              <div style={{ ...capsule, justifyContent: 'center' }}>Available players</div>
+            )}
             {/* Under the toggle, because it obeys it: the board is filtered and
                 a search over it that is not would hand you a name you cannot
                 draft. */}
