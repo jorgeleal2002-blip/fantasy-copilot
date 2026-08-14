@@ -2,7 +2,7 @@ import { ACCENT, GOOD, METRIC_LABEL, PEAK, type Weights } from '../model/constan
 import { num } from '../model/math';
 import type { Metrics } from '../model/score';
 import type { SleeperPlayer } from '../api/types';
-import type { Model } from '../model/types';
+import type { Model, TargetTrade } from '../model/types';
 import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
@@ -241,6 +241,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         <div style={{ fontSize: 14, lineHeight: 1.5, textWrap: 'pretty' }}>{verdict(p)}</div>
       </div>
 
+      <WhatHeCosts app={app} m={m} sheet={p} />
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
         {stats.map(s => (
           <div key={s.label} style={{ background: 'var(--color-surface)', borderRadius: 11, padding: 12 }}>
@@ -255,6 +257,111 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), marginTop: 14, textWrap: 'pretty' }}>{DATA_NOTE}</div>
     </Overlay>
   );
+}
+
+/**
+ * You have decided you want him. Now: what would it take?
+ *
+ * The Trades tab answers the opposite question — it starts from your spare
+ * parts and finds anything worth doing. This starts from one name, so it is
+ * allowed to cost you a starter, and it says so rather than quietly excluding
+ * every package that would.
+ */
+function WhatHeCosts({ app, m, sheet }: { app: App; m: Model; sheet: Sheet }) {
+  if (sheet.owned) return null;
+  const deals = m.offersFor(sheet.id);
+
+  // A free agent has no owner to negotiate with — that is a waiver claim.
+  if (!deals.length && sheet.ownerLabel === 'free agent') {
+    return (
+      <Card style={{ marginTop: 12 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 500, marginBottom: 5 }}>Nobody to trade with</div>
+        <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5) }}>
+          He is a free agent. Add him from the Draft tab's free-agent board — no trade needed.
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card style={{ marginTop: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 500 }}>What he would cost</div>
+        <div style={{ fontSize: 11, color: dim(0.42) }}>{sheet.ownerLabel}</div>
+      </div>
+
+      {!deals.length ? (
+        <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), marginTop: 8 }}>
+          Nothing you own gets there at a price his manager would take. Either he is worth more than
+          any package you can build, or his team is short at exactly his position.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
+          {deals.map((t, i) => (
+            <div key={t.give.map(g => g.id).join('+')} style={{
+              paddingTop: 11, marginTop: i === 0 ? 0 : 0,
+              borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.4) }}>
+                    You send
+                  </div>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-0.01em', marginTop: 3 }}>
+                    {t.give.map(g => g.name).join(' + ')}
+                  </div>
+                </div>
+                <div style={{ flex: 'none', textAlign: 'right' }}>
+                  <div style={{ fontSize: 15, fontWeight: 500, color: t.accept >= 70 ? GOOD : t.accept >= 50 ? ACCENT : dim(0.6) }}>
+                    {t.accept}
+                  </div>
+                  <div style={{ fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', color: dim(0.38) }}>
+                    they accept
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 5, lineHeight: 1.5 }}>
+                {t.give.map(g => (g.isPick ? g.label : g.pos + ' · ' + (g.age ?? '?') + ' yrs')).join(' · ')}
+                {' · '}{num(t.cost * 100)} vs his {num(t.target.q * 100)}
+              </div>
+
+              <div style={{ fontSize: 11.5, marginTop: 5, lineHeight: 1.5, color: dim(0.6) }}>
+                {priceRead(t)}
+              </div>
+
+              {t.give.filter(g => !g.isPick).map(g => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => app.setDetail(g.id)}
+                  className="btn btn-ghost"
+                  style={{ fontSize: 11, padding: '4px 0', marginRight: 12 }}
+                >
+                  Open {g.name}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/** One line saying what the package really is: a discount, a fair swap or a reach. */
+function priceRead(t: TargetTrade): string {
+  const pct = Math.round(Math.abs(t.edge) * 100);
+  const price = t.edge > 0.04 ? `You buy ${pct}% under market`
+    : t.edge < -0.04 ? `You overpay by ${pct}%`
+      : 'Roughly market price';
+  const lineup = t.myGain > 0.3 ? `your lineup rises ${t.myGain.toFixed(1)}`
+    : t.myGain < -0.3 ? `costs you ${Math.abs(t.myGain).toFixed(1)} of starter value`
+      : 'your lineup barely moves';
+  const why = t.fillsTheirNeed ? ' — and it fills the hole they actually have'
+    : t.theirGain > 0.3 ? ` — their lineup rises ${t.theirGain.toFixed(1)}`
+      : '';
+  return `${price}, ${lineup}${why}.`;
 }
 
 /** For a player you own the question is hold or sell; for anyone else it is buy. */

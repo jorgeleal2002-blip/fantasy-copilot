@@ -3,7 +3,7 @@ import { num } from '../model/math';
 import { reasons } from '../model/score';
 import type { DraftDeal, Model } from '../model/types';
 import type { App } from '../state/useApp';
-import { PlayerSearch } from '../ui/PlayerSearch';
+import { PlayerSearch, type SearchScope } from '../ui/PlayerSearch';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { capsule, dim, ellipsis, fitColor, fitStyle, heroCard, heroGlow, kicker, posBadge } from '../ui/styles';
 
@@ -27,6 +27,21 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
     ? [{ key: 'board', label: 'Board' }, { key: 'deals', label: 'Pick moves' }]
     : [{ key: 'board', label: 'Board' }];
   const view = m.isDynasty ? app.draftView : 'board';
+
+  // The search follows whichever board is on screen: a rookie draft has no
+  // business surfacing a rostered veteran you cannot select.
+  const rookieBoard = m.isDynasty && app.boardMode !== 'fa';
+  const searchScope: SearchScope & { placeholder: string } = rookieBoard
+    ? {
+      keep: e => e.rookie && !e.taken,
+      narrowed: 'not in the rookie pool. Switch to Free agents, or look them up from the Trades tab.',
+      placeholder: 'Search the rookie class',
+    }
+    : {
+      keep: e => !e.taken,
+      narrowed: 'already on a roster. Look them up from the Trades tab to see what they cost.',
+      placeholder: 'Search available players',
+    };
 
   return (
     <Screen>
@@ -127,7 +142,6 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                   ` · you hold ${m.myPickList.length} picks in this draft`
                 : 'Draft complete'}
             </div>
-            <PlayerSearch app={app} m={m} />
             <div style={{ display: 'flex', gap: 6 }}>
               {m.isDynasty ? (
                 <Segmented
@@ -139,6 +153,10 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                 <div style={{ ...capsule, flex: 1, justifyContent: 'center' }}>Available players</div>
               )}
             </div>
+            {/* Under the toggle, because it obeys it: the board is filtered and
+                a search over it that is not would hand you a name you cannot
+                draft. */}
+            <PlayerSearch app={app} m={m} placeholder={searchScope.placeholder} scope={searchScope} />
             <Segmented options={POS_FILTERS} value={app.filter} onChange={app.setFilter} />
           </div>
 

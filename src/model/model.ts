@@ -8,7 +8,8 @@ import type { Market } from './market';
 import { ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
-  OppPlayer, PickAsset, PlayerFit, PlayerValue, PositionMultiplier, RosterPlayer, SearchEntry, TeamEntry, TeamProfile,
+  OppPlayer, PickAsset, PlayerFit, PlayerValue, PositionMultiplier, RosterPlayer, SearchEntry, TargetTrade,
+  TeamEntry, TeamProfile,
   TeamSheet, Window,
 } from './types';
 import type { UsageMap } from './usage';
@@ -677,6 +678,97 @@ export function buildModel(input: ModelInput): Model {
   });
   offers.sort((a, b) => b.fit - a.fit);
 
+  /**
+   * The other direction: you have decided you want THIS player, now what does
+   * it cost? The suggestion engine starts from your spare parts and looks for
+   * anything good; this starts from one name and works backwards to the price.
+   *
+   * The difference matters. Here you are allowed to break your own lineup and
+   * to overpay, because wanting a specific player is a decision the model does
+   * not get to veto — it only has to price it honestly and say what it costs.
+   */
+  const offersFor = (targetId: string): TargetTrade[] => {
+    const pl = players[targetId];
+    if (!pl || POS.indexOf(pl.position as Pos) < 0) return [];
+    const owner = (d.rosters || []).find(r => (r.players || []).indexOf(targetId) >= 0);
+    if (!owner || owner.owner_id === d.me.user_id) return [];
+
+    const them = mapRoster(owner.players);
+    const target = them.find(x => x.id === targetId);
+    if (!target) return [];
+    const theirBase = lineupSum(them);
+    const themWithout = them.filter(x => x.id !== targetId);
+    const prof = teamProfile[owner.roster_id] || ({ window: 'medio', worst: null } as TeamProfile);
+    const partner = teamName(owner.owner_id);
+
+    // Everything you could send: every player you own plus every pick. Starters
+    // are on the table here — for a real target they usually have to be.
+    const assets: (RosterPlayer | PickAsset)[] =
+      (myPlayers as (RosterPlayer | PickAsset)[]).concat(pickAssets);
+
+    const packages: (RosterPlayer | PickAsset)[][] = [];
+    assets.forEach((a, i) => {
+      packages.push([a]);
+      for (let j = i + 1; j < assets.length; j++) packages.push([a, assets[j]]);
+    });
+
+    const out: TargetTrade[] = [];
+    packages.forEach(give => {
+      const cost = give.reduce((a, b) => a + b.q, 0);
+      // Outside this band there is no conversation: too little to be heard,
+      // or so much that you are the one being robbed. A rival will take a 40%
+      // overpay every time, which is exactly why it must not be suggested.
+      if (cost < target.q * 0.90 || cost > target.q * 1.25) return;
+
+      const giveIds = give.map(x => x.id);
+      const theirAfter = lineupSum(
+        (themWithout as LineupItem[]).concat(give.filter(x => !x.isPick) as LineupItem[]),
+      );
+      const theirGain = theirAfter - theirBase;
+      const myAfter = lineupSum(
+        (myPlayers as LineupItem[]).filter(p => giveIds.indexOf(p.id) < 0).concat([target as LineupItem]),
+      );
+      const myGain = myAfter - myBase;
+
+      // + you buy under market · − you overpay
+      const edge = (target.q - cost) / Math.max(target.q, cost, 1);
+      // They only take a discount to the extent their own lineup improves.
+      if (edge > clamp(0.03 + Math.max(theirGain, 0) * 0.02, 0, 0.16)) return;
+      // A team that loses lineup points needs a real premium to even answer.
+      if (theirGain < -0.3 && edge > -0.06) return;
+      // Nobody trades away the position they are already thinnest at, unless
+      // you are handing that same position straight back.
+      if (prof.worst && target.pos === prof.worst && !give.some(x => x.pos === prof.worst)) return;
+      // And a package that guts your own starting lineup is not a way to get
+      // him — it is a way to get worse while feeling busy.
+      if (myGain < -0.6) return;
+
+      const fillsTheirNeed = !!prof.worst && give.some(x => x.pos === prof.worst);
+      const accept = clamp(Math.round(
+        52 - edge * 150 + Math.min(Math.max(theirGain, 0), 6) * 2.2 + (fillsTheirNeed ? 8 : 0)
+        - (give.length > 1 ? 3 : 0),   // two-for-one is always a harder sell
+      ), 5, 95);
+
+      out.push({ partner, target, give, cost, edge, accept, myGain, theirGain, fillsTheirNeed, prof });
+    });
+
+    // Cheapest acceptable package first — the question is "what would it TAKE",
+    // and the answer is the least you can pay and still be answered. Sorting by
+    // acceptance instead would lead with the biggest overpay every time, which
+    // is the one offer nobody needs help finding.
+    const seen: Record<string, 1> = {};
+    return out
+      .filter(x => x.accept >= 45)
+      .sort((a, b) => b.edge - a.edge || a.give.length - b.give.length || b.myGain - a.myGain)
+      .filter(x => {
+        const key = x.give.map(g => g.pos).sort().join('+') + '|' + x.give.length;
+        if (seen[key]) return false;
+        seen[key] = 1;
+        return true;
+      })
+      .slice(0, 4);
+  };
+
   // ── Pick movement for the draft: trade up (pay a premium to consolidate) or
   //    down (charge a premium to collect two swings), priced off the market.
   const draftDeals: DraftDeal[] = [];
@@ -732,7 +824,14 @@ export function buildModel(input: ModelInput): Model {
     const pl = players[id];
     if (!pl || POS.indexOf(pl.position as Pos) < 0) continue;
     const name = playerName(pl);
-    if (name) searchIndex.push({ id, name, lower: name.toLowerCase(), pos: pl.position as Pos, rank: pl.search_rank || 99999 });
+    if (!name) continue;
+    searchIndex.push({
+      id, name, lower: name.toLowerCase(), pos: pl.position as Pos, rank: pl.search_rank || 99999,
+      // Carried on the entry rather than recomputed per keystroke, so the draft
+      // board can narrow its own search to whatever it is showing.
+      rookie: (pl.years_exp === 0 || pl.years_exp == null) && !!pl.age && pl.age <= 24,
+      taken: takenIds.has(id),
+    });
   }
 
   // Any player in the league can open a full profile, including other rosters'.
@@ -769,6 +868,6 @@ export function buildModel(input: ModelInput): Model {
     offers, bestDeals, leagueRows, leagueHasRosters, multInfo,
     allFits, searchIndex, qDiverge, wUsed: w,
     marketCount: mk ? Object.keys(mk.players).length : 0,
-    teamInfo, posRankOf, scoreAny, marketValue, metricKeys,
+    teamInfo, posRankOf, scoreAny, marketValue, offersFor, metricKeys,
   };
 }

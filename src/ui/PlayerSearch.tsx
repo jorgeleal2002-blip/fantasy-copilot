@@ -1,7 +1,14 @@
 import { num } from '../model/math';
-import type { Model } from '../model/types';
+import type { Model, SearchEntry } from '../model/types';
 import type { App } from '../state/useApp';
 import { dim, ellipsis, fitColor } from './styles';
+
+export interface SearchScope {
+  /** which entries this screen is allowed to show */
+  keep: (e: SearchEntry) => boolean;
+  /** what to say when the scope is what hid the hits */
+  narrowed: string;
+}
 
 /**
  * Search across Sleeper's whole catalog rather than one screen's list: the
@@ -10,15 +17,22 @@ import { dim, ellipsis, fitColor } from './styles';
  * type, and each one arrives with its price — the first thing you want before
  * proposing anything.
  */
-export function PlayerSearch({ app, m, placeholder }: { app: App; m: Model; placeholder?: string }) {
+export function PlayerSearch(
+  { app, m, placeholder, scope }: { app: App; m: Model; placeholder?: string; scope?: SearchScope },
+) {
   const q = app.query.trim().toLowerCase();
   const hasQuery = q.length >= 2;
   const label = placeholder || 'Search any NFL player';
+
+  // Counted before the scope is applied, so an empty list can tell you whether
+  // the name is missing from the catalog or merely missing from THIS list.
+  let hiddenByScope = 0;
 
   const results = hasQuery ? (() => {
     const out = [];
     for (const e of m.searchIndex) {
       if (e.lower.indexOf(q) < 0) continue;
+      if (scope && !scope.keep(e)) { hiddenByScope++; continue; }
       out.push(e);
       if (out.length > 400) break;
     }
@@ -78,8 +92,10 @@ export function PlayerSearch({ app, m, placeholder }: { app: App; m: Model; plac
       {hasQuery ? (
         <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
           {results.length === 0 ? (
-            <div style={{ padding: '14px 12px', fontSize: 12.5, color: dim(0.5) }}>
-              Nobody by that name in the catalog.
+            <div style={{ padding: '14px 12px', fontSize: 12.5, lineHeight: 1.5, color: dim(0.5) }}>
+              {hiddenByScope && scope
+                ? `${hiddenByScope === 1 ? '1 match is' : hiddenByScope + ' matches are'} ${scope.narrowed}`
+                : 'Nobody by that name in the catalog.'}
             </div>
           ) : results.map((r, i) => (
             <div

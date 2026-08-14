@@ -553,3 +553,69 @@ describe('what a player is worth', () => {
     expect(model.marketValue('no-such-player')).toBe(null);
   });
 });
+
+describe('the search index knows what each screen may show', () => {
+  it('flags rookies and everyone already on a roster', () => {
+    const { rookies, vets } = makePlayers();
+    const byId = Object.fromEntries(model.searchIndex.map(e => [e.id, e]));
+    expect(rookies.every(id => !byId[id] || byId[id].rookie)).toBe(true);
+    // veterans are dealt onto rosters by the fixture, so they read as taken
+    expect(vets.filter(id => byId[id]?.taken).length).toBeGreaterThan(0);
+  });
+
+  it('leaves a rookie board with rookies only, and none of them owned', () => {
+    const pool = model.searchIndex.filter(e => e.rookie && !e.taken);
+    expect(pool.length).toBeGreaterThan(0);
+    expect(pool.every(e => e.rookie)).toBe(true);
+    expect(model.scored.every(p => pool.some(e => e.id === p.id))).toBe(true);
+  });
+});
+
+describe('what it would cost to get one specific player', () => {
+  const theirs = model.leagueRows.find(r => !r.isMe)!;
+  const target = model.teamInfo(theirs.id)!.list.sort((a, b) => b.q - a.q)[3];
+
+  it('prices a real target out of your own assets', () => {
+    const deals = model.offersFor(target.id);
+    expect(deals.length).toBeGreaterThan(0);
+    for (const t of deals) {
+      expect(t.target.id).toBe(target.id);
+      expect(t.give.length).toBeGreaterThan(0);
+      // never proposes a package built out of thin air
+      const mine = new Set([...model.myPlayers.map(p => p.id), ...model.pickAssets.map(p => p.id)]);
+      expect(t.give.every(g => mine.has(g.id))).toBe(true);
+      // and never one the other manager would laugh at
+      expect(t.cost).toBeGreaterThanOrEqual(target.q * 0.9);
+      expect(t.cost).toBeLessThanOrEqual(target.q * 1.25);
+      // and never one that guts your own starting lineup to get him
+      expect(t.myGain).toBeGreaterThan(-0.6);
+      expect(t.accept).toBeGreaterThanOrEqual(5);
+      expect(t.accept).toBeLessThanOrEqual(95);
+    }
+  });
+
+  it('leads with the cheapest package, not the one easiest to get accepted', () => {
+    const deals = model.offersFor(target.id);
+    for (let i = 1; i < deals.length; i++) {
+      expect(deals[i - 1].edge).toBeGreaterThanOrEqual(deals[i].edge);
+    }
+    // every one still has to be plausible, or cheap is just fantasy
+    expect(deals.every(t => t.accept >= 45)).toBe(true);
+  });
+
+  it('never proposes handing over far more value than he is worth', () => {
+    for (const row of model.leagueRows.filter(r => !r.isMe)) {
+      for (const p of model.teamInfo(row.id)!.list) {
+        for (const t of model.offersFor(p.id)) {
+          expect(t.edge).toBeGreaterThan(-0.25);
+        }
+      }
+    }
+  });
+
+  it('has nothing to say about your own players or a free agent', () => {
+    expect(model.offersFor(model.myPlayers[0].id)).toEqual([]);
+    const fa = model.searchIndex.find(e => !e.taken)!;
+    expect(model.offersFor(fa.id)).toEqual([]);
+  });
+});

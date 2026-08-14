@@ -144,6 +144,28 @@ export interface Offer {
   fillsTheirNeed: boolean;
 }
 
+/**
+ * A package you could send to acquire one specific player. Unlike `Offer`,
+ * which the engine proposes on its own, this one starts from a name you chose
+ * — so it may cost you a starter, and it reports that instead of hiding it.
+ */
+export interface TargetTrade {
+  partner: string;
+  target: OppPlayer;
+  give: (RosterPlayer | PickAsset)[];
+  /** market value of everything you send */
+  cost: number;
+  /** + you buy under market · − you overpay */
+  edge: number;
+  /** how likely the other manager is to say yes, 5–95 */
+  accept: number;
+  /** starter points your lineup gains — negative when the package costs you one */
+  myGain: number;
+  theirGain: number;
+  fillsTheirNeed: boolean;
+  prof: TeamProfile;
+}
+
 export interface DraftDeal {
   kind: 'up' | 'down';
   partner: string;
@@ -167,6 +189,10 @@ export interface SearchEntry {
   lower: string;
   pos: Pos;
   rank: number;
+  /** first-year player young enough to still be a rookie-draft asset */
+  rookie: boolean;
+  /** already on somebody's roster or off this draft's board */
+  taken: boolean;
 }
 
 /**
@@ -279,5 +305,7 @@ export interface Model {
   scoreAny: (playerId: string) => BoardPlayer | null;
   /** the price tag for one player, with its rank inside his position */
   marketValue: (playerId: string) => PlayerValue | null;
+  /** what it would cost to acquire one specific player from his owner */
+  offersFor: (playerId: string) => TargetTrade[];
   metricKeys: MetricKey[];
 }
