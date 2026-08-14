@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { num } from '../model/math';
 import type { Model, SearchEntry } from '../model/types';
 import type { App } from '../state/useApp';
 import { dim, ellipsis, fitColor } from './styles';
+import { TradePackages } from './TradePackages';
 
 export interface SearchScope {
   /** which entries this screen is allowed to show */
@@ -23,6 +25,9 @@ export function PlayerSearch(
   const q = app.query.trim().toLowerCase();
   const hasQuery = q.length >= 2;
   const label = placeholder || 'Search any NFL player';
+  // Only one row's packages at a time: pricing a target is a real computation,
+  // and eight of them on every keystroke would make typing feel broken.
+  const [openId, setOpenId] = useState<string | null>(null);
 
   // Counted before the scope is applied, so an empty list can tell you whether
   // the name is missing from the catalog or merely missing from THIS list.
@@ -47,6 +52,8 @@ export function PlayerSearch(
           : '',
         fit: sc && Number.isFinite(sc.fit) ? sc.fit : null,
         val: m.marketValue(x.id),
+        // Only a rival's player can be traded for; your own and free agents cannot.
+        owner: sc && sc.owner && !sc.owned ? sc.owner : null,
       };
     });
   })() : [];
@@ -98,36 +105,57 @@ export function PlayerSearch(
                 : 'Nobody by that name in the catalog.'}
             </div>
           ) : results.map((r, i) => (
-            <div
-              key={r.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => app.setDetail(r.id)}
-              onKeyDown={e => { if (e.key === 'Enter') app.setDetail(r.id); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)', cursor: 'pointer',
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{r.name}</div>
-                <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2, ...ellipsis }}>{r.meta}</div>
-              </div>
-              <div style={{ flex: 'none', textAlign: 'right' }}>
-                <div style={{
-                  fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em',
-                  // A modelled price is not a market price, and the app never
-                  // pretends otherwise: it arrives dimmed and labelled.
-                  color: r.val && r.val.real ? 'var(--color-text)' : dim(0.55),
-                }}>
-                  {r.val ? num(r.val.pts) : '—'}
+            <div key={r.id} style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)' }}>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => app.setDetail(r.id)}
+                onKeyDown={e => { if (e.key === 'Enter') app.setDetail(r.id); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer' }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{r.name}</div>
+                  <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2, ...ellipsis }}>{r.meta}</div>
                 </div>
-                <div style={{ fontSize: 10, color: dim(0.4), marginTop: 2, whiteSpace: 'nowrap' }}>
-                  {r.val && !r.val.real ? 'modelled · ' : ''}
-                  {r.val && r.val.posRank ? r.val.pos + String(r.val.posRank) + ' · ' : ''}
-                  Fit <span style={{ color: r.fit != null ? fitColor(r.fit) : dim(0.5) }}>{r.fit ?? '—'}</span>
+                <div style={{ flex: 'none', textAlign: 'right' }}>
+                  <div style={{
+                    fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em',
+                    // A modelled price is not a market price, and the app never
+                    // pretends otherwise: it arrives dimmed and labelled.
+                    color: r.val && r.val.real ? 'var(--color-text)' : dim(0.55),
+                  }}>
+                    {r.val ? num(r.val.pts) : '—'}
+                  </div>
+                  <div style={{ fontSize: 10, color: dim(0.4), marginTop: 2, whiteSpace: 'nowrap' }}>
+                    {r.val && !r.val.real ? 'modelled · ' : ''}
+                    {r.val && r.val.posRank ? r.val.pos + String(r.val.posRank) + ' · ' : ''}
+                    Fit <span style={{ color: r.fit != null ? fitColor(r.fit) : dim(0.5) }}>{r.fit ?? '—'}</span>
+                  </div>
                 </div>
               </div>
+
+              {/* Shortlist him without leaving the search: the packages open
+                  right here, with the same button the player sheet has. */}
+              {r.owner ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(openId === r.id ? null : r.id)}
+                    aria-expanded={openId === r.id}
+                    style={{
+                      width: '100%', textAlign: 'left', padding: '0 12px 10px', fontSize: 11,
+                      color: 'var(--color-accent)', background: 'transparent', border: 0, cursor: 'pointer',
+                    }}
+                  >
+                    {openId === r.id ? 'Hide what he would cost' : 'What he would cost ›'}
+                  </button>
+                  {openId === r.id ? (
+                    <div style={{ padding: '0 12px 12px', background: 'rgba(233,233,237,.03)' }}>
+                      <TradePackages app={app} m={m} targetId={r.id} targetName={r.name} compact />
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
             </div>
           ))}
         </div>
