@@ -166,6 +166,31 @@ export interface TargetTrade {
   prof: TeamProfile;
 }
 
+/**
+ * A trade you said you were interested in, kept across launches.
+ *
+ * It stores its own text rather than only ids, because the offer it came from
+ * is recomputed from live data on every load: a roster move can make the exact
+ * deal disappear, and a shortlist that silently loses rows is worse than one
+ * that says "this is gone now".
+ */
+export interface SavedTrade {
+  key: string;
+  leagueId: string;
+  partner: string;
+  giveIds: string[];
+  getIds: string[];
+  giveText: string;
+  getText: string;
+  /** 'offer' came from the suggestions, 'target' from a player you went after */
+  kind: 'offer' | 'target';
+  /** the read at the moment you saved it */
+  note: string;
+  /** Fit for a suggestion, acceptance odds for a target */
+  score: number;
+  savedAt: number;
+}
+
 export interface DraftDeal {
   kind: 'up' | 'down';
   partner: string;

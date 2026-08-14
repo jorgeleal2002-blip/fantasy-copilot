@@ -4,9 +4,10 @@ import {
   loadLeague, matchMe, userLeagues, playerPhoto,
 } from '../api/sleeper';
 import type { LeagueBundle, SleeperLeague } from '../api/types';
-import { DRAFT_POLL_MS, STORAGE_PHOTOS, STORAGE_SESSION, StratKey, USAGE_V } from '../model/constants';
+import { DRAFT_POLL_MS, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, StratKey, USAGE_V } from '../model/constants';
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
+import type { SavedTrade } from '../model/types';
 import { blendSeasons, seasonUsage, type UsageMap } from '../model/usage';
 import { nextDetailStack, topDetail } from './detail-stack';
 
@@ -73,6 +74,7 @@ export function useApp() {
   const [tab, setTab] = useState<Tab>('team');
   const [teamView, setTeamView] = useState<TeamView>('resumen');
   const [draftView, setDraftView] = useState<'board' | 'deals'>('board');
+  const [tradeView, setTradeView] = useState<'suggested' | 'saved'>('suggested');
   const [filter, setFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterSort, setRosterSort] = useState<'value' | 'age' | 'snap'>('value');
@@ -95,6 +97,10 @@ export function useApp() {
   const [topLens, setTopLens] = useState<'neutral' | 'me' | 'fut'>('neutral');
   const [topOpen, setTopOpen] = useState(false);
   const [passed, setPassed] = useState<string[]>([]);
+  // Every league's shortlist lives in one record; the screens only ever see
+  // the current league's, so a saved deal cannot follow you somewhere it
+  // makes no sense.
+  const [savedAll, setSavedAll] = useState<SavedTrade[]>([]);
 
   // ── ephemera
   const [toast, setToast] = useState('');
@@ -215,6 +221,7 @@ export function useApp() {
   // ── boot: resume the saved session, or ask for a username.
   useEffect(() => {
     setPhotos(readJson<Record<string, string>>(STORAGE_PHOTOS, {}));
+    setSavedAll(readJson<SavedTrade[]>(STORAGE_SAVED, []));
     const saved = readJson<{ username?: string; leagueId?: string } | null>(STORAGE_SESSION, null);
     if (saved && saved.leagueId && saved.username) {
       setUsername(saved.username);
@@ -373,6 +380,37 @@ export function useApp() {
     showToast('Original photo restored');
   }, [showToast]);
 
+  // ── The shortlist: trades you said you were interested in.
+  const saved = useMemo(
+    () => savedAll.filter(t => t.leagueId === leagueId).sort((a, b) => b.savedAt - a.savedAt),
+    [savedAll, leagueId],
+  );
+  const savedKeys = useMemo(() => new Set(saved.map(t => t.key)), [saved]);
+  const isSaved = useCallback((key: string) => savedKeys.has(key), [savedKeys]);
+
+  const unsaveTrade = useCallback((key: string) => {
+    setSavedAll(prev => {
+      const next = prev.filter(t => !(t.key === key && t.leagueId === leagueId));
+      writeJson(STORAGE_SAVED, next);
+      return next;
+    });
+    showToast('Removed from your shortlist');
+  }, [leagueId, showToast]);
+
+  /** Tapping the same trade twice takes it back off the list. */
+  const toggleSaved = useCallback((t: Omit<SavedTrade, 'leagueId' | 'savedAt'>) => {
+    if (!leagueId) return;
+    setSavedAll(prev => {
+      const mine = prev.some(x => x.key === t.key && x.leagueId === leagueId);
+      const next = mine
+        ? prev.filter(x => !(x.key === t.key && x.leagueId === leagueId))
+        : prev.concat([{ ...t, leagueId, savedAt: Date.now() }]);
+      writeJson(STORAGE_SAVED, next);
+      showToast(mine ? 'Removed from your shortlist' : 'Saved — propose it in Sleeper when you are ready');
+      return next;
+    });
+  }, [leagueId, showToast]);
+
   // ── The model is pure: it re-derives whenever any of its inputs move.
   const model = useMemo(
     () => (data ? buildModel({ data, usage, market, strat, boardMode, pickSel }) : null),
@@ -383,17 +421,19 @@ export function useApp() {
     stage, username, leagues, authBusy, authError, error,
     data, step, model, syncing, syncedAt,
     usageState, usageSeasons, marketState,
-    tab, teamView, draftView, filter, rosterFilter, rosterSort, boardMode, rankMode,
+    tab, teamView, draftView, tradeView, filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 
     setUsername: (v: string) => { setUsername(v); setAuthError(''); },
     connectUser, pickLeague, switchLeague, logout, refreshAll, refreshPicks, retry,
     setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
-    setTeamView, setDraftView, setFilter, setRosterFilter, setRosterSort,
+    setTeamView, setDraftView, setTradeView, setFilter, setRosterFilter, setRosterSort,
     setBoardMode, setRankMode, setPickSel, setStrat, setDetail,
     setQuery, setTopPos, setTopLens, setTopOpen,
     passOffer: (key: string) => setPassed(p => p.concat(key)),
     resetOffers: () => setPassed([]),
+
+    saved, isSaved, toggleSaved, unsaveTrade,
     showToast, hideToast, photoFor, setPhoto, clearPhoto,
   };
 }

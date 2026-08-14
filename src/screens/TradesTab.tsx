@@ -1,10 +1,10 @@
 import { BAD, GOOD, MID } from '../model/constants';
 import { num } from '../model/math';
-import type { Model, Offer, TradeAsset } from '../model/types';
+import type { Model, Offer, SavedTrade, TradeAsset } from '../model/types';
 import type { App } from '../state/useApp';
 import { clockTime, ord } from '../ui/format';
 import { PlayerSearch } from '../ui/PlayerSearch';
-import { Empty, Screen } from '../ui/primitives';
+import { Card, Empty, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { dim, ellipsis } from '../ui/styles';
 
 const assetMeta = (a: TradeAsset): string =>
@@ -20,6 +20,10 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
   const badgeColor = app.marketState === 'ok' ? GOOD : app.marketState === 'fail' ? BAD : MID;
 
   const visible = m.offers.filter(o => app.passed.indexOf(o.partner + o.get.id) < 0).slice(0, 6);
+  const views: SegOption<'suggested' | 'saved'>[] = [
+    { key: 'suggested', label: 'Suggested' },
+    { key: 'saved', label: app.saved.length ? `Shortlist · ${app.saved.length}` : 'Shortlist' },
+  ];
 
   return (
     <Screen>
@@ -51,32 +55,154 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
           then his rank at the position and what he would do for your lineup. */}
       <PlayerSearch app={app} m={m} placeholder="Look up any player's value" />
 
-      <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
-        {m.offers.length === 1 ? '1 trade' : m.offers.length + ' trades'} simulated with your bench and your picks —
-        never with your starters. Some raise your lineup immediately; others turn pieces that never play into draft capital.
-      </div>
+      <Segmented options={views} value={app.tradeView} onChange={app.setTradeView} size="sm" />
 
-      {visible.map(o => (
-        <OfferCard key={o.partner + o.get.id} app={app} offer={o} />
-      ))}
+      {app.tradeView === 'saved' ? (
+        <Shortlist app={app} m={m} />
+      ) : (
+        <>
+          <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
+            {m.offers.length === 1 ? '1 trade' : m.offers.length + ' trades'} simulated with your bench and your picks —
+            never with your starters. Some raise your lineup immediately; others turn pieces that never play into draft capital.
+          </div>
 
-      {m.offers.length === 0 ? (
-        <Empty
-          title="No clear trades today"
-          body="No bench piece of yours improves your lineup without the other manager losing value. Check back after the rookie draft."
-          action={
-            <button type="button" onClick={app.resetOffers} className="btn btn-secondary" style={{ borderRadius: 9 }}>
-              Recalculate
-            </button>
-          }
-        />
-      ) : null}
+          {visible.map(o => (
+            <OfferCard key={o.partner + o.get.id} app={app} offer={o} />
+          ))}
 
-      <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), textWrap: 'pretty' }}>
-        Every offer is simulated: your optimal lineup and theirs are recomputed with the swap applied. An offer only shows
-        up if you gain and the other manager would plausibly accept — rookie picks included, on both sides.
-      </div>
+          {m.offers.length === 0 ? (
+            <Empty
+              title="No clear trades today"
+              body="No bench piece of yours improves your lineup without the other manager losing value. Check back after the rookie draft."
+              action={
+                <button type="button" onClick={app.resetOffers} className="btn btn-secondary" style={{ borderRadius: 9 }}>
+                  Recalculate
+                </button>
+              }
+            />
+          ) : null}
+
+          <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), textWrap: 'pretty' }}>
+            Every offer is simulated: your optimal lineup and theirs are recomputed with the swap applied. An offer only shows
+            up if you gain and the other manager would plausibly accept — rookie picks included, on both sides.
+          </div>
+        </>
+      )}
     </Screen>
+  );
+}
+
+/** Stable across rebuilds of the model, so a saved deal is recognisable later. */
+export const offerKey = (o: Offer) => 'offer|' + o.partner + '|' + o.get.id + '|' + o.give.id;
+
+function savedFromOffer(o: Offer): Omit<SavedTrade, 'leagueId' | 'savedAt'> {
+  return {
+    key: offerKey(o),
+    partner: o.partner,
+    giveIds: [o.give.id],
+    getIds: [o.get.id],
+    giveText: o.give.name,
+    getText: o.get.name,
+    kind: 'offer',
+    note: whyMe(o),
+    score: o.fit,
+  };
+}
+
+/**
+ * The trades you said you wanted. They are re-checked against live data every
+ * time you open this: rosters move, and a shortlist that quietly keeps showing
+ * a deal the other manager can no longer make is worse than one that says so.
+ */
+function Shortlist({ app, m }: { app: App; m: Model }) {
+  if (!app.saved.length) {
+    return (
+      <Empty
+        title="Nothing on your shortlist yet"
+        body={"Tap “I’m interested” on any suggested trade, or open a player and save what it would cost to get him. They stay here until you remove them."}
+      />
+    );
+  }
+
+  const liveOffer = new Set(m.offers.map(offerKey));
+
+  return (
+    <>
+      <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
+        {app.saved.length === 1 ? '1 trade' : app.saved.length + ' trades'} you marked as interesting. Sleeper has no
+        API for sending offers, so propose them there — this is the list to work from.
+      </div>
+
+      {app.saved.map(t => {
+        const live = t.kind === 'offer'
+          ? liveOffer.has(t.key)
+          : m.offersFor(t.getIds[0]).some(x => x.give.map(g => g.id).join(',') === t.giveIds.join(','));
+        return (
+          <Card key={t.key}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ fontSize: 12.5, color: dim(0.55), ...ellipsis }}>
+                with <span style={{ color: 'var(--color-text)' }}>{t.partner}</span>
+              </div>
+              <span style={{
+                flex: 'none', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase',
+                padding: '3px 8px', borderRadius: 6,
+                background: live ? 'rgba(142,201,168,.16)' : 'rgba(217,160,142,.16)',
+                color: live ? GOOD : BAD,
+              }}>
+                {live ? 'still on' : 'gone'}
+              </span>
+            </div>
+
+            {/* start, not center: a two-line package on one side would drag its
+                own label out of line with the other's. */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 20px 1fr', gap: 8, alignItems: 'start', marginTop: 11 }}>
+              <SavedSide label="Receive" color={GOOD} text={t.getText} onOpen={() => app.setDetail(t.getIds[0])} />
+              <div style={{ color: dim(0.28), fontSize: 15, textAlign: 'center', paddingTop: 17 }}>⇄</div>
+              <SavedSide label="Send" color={BAD} text={t.giveText} onOpen={undefined} />
+            </div>
+
+            <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.55), marginTop: 10, textWrap: 'pretty' }}>
+              {live
+                ? t.note
+                : 'The rosters moved since you saved this, so the model no longer builds this exact deal. Open the player to see what he costs now.'}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={() => app.unsaveTrade(t.key)}
+                className="btn btn-ghost"
+                style={{ fontSize: 12, padding: '4px 0' }}
+              >
+                Remove
+              </button>
+              <span style={{ fontSize: 10.5, color: dim(0.35) }}>
+                saved {clockTime(t.savedAt)} · {t.kind === 'offer' ? 'fit ' + t.score : t.score + '% they accept'}
+              </span>
+            </div>
+          </Card>
+        );
+      })}
+    </>
+  );
+}
+
+function SavedSide({ label, color, text, onOpen }: {
+  label: string; color: string; text: string; onOpen?: () => void;
+}) {
+  return (
+    <div
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onClick={onOpen}
+      onKeyDown={onOpen ? e => { if (e.key === 'Enter') onOpen(); } : undefined}
+      style={{ cursor: onOpen ? 'pointer' : 'default', minWidth: 0 }}
+    >
+      <div style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color, marginBottom: 6 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-0.01em', lineHeight: 1.25 }}>{text}</div>
+    </div>
   );
 }
 
@@ -165,13 +291,15 @@ function OfferCard({ app, offer: o }: { app: App; offer: Offer }) {
         <button
           type="button"
           className="accent-tap"
-          onClick={() => app.showToast('Propose in Sleeper: send ' + o.give.name + ', receive ' + o.get.name)}
+          onClick={() => app.toggleSaved(savedFromOffer(o))}
+          aria-pressed={app.isSaved(offerKey(o))}
           style={{
             flex: 1, textAlign: 'center', padding: 12, fontSize: 13, fontWeight: 500,
-            color: 'var(--color-accent)', background: 'transparent', border: 0, cursor: 'pointer',
+            color: app.isSaved(offerKey(o)) ? GOOD : 'var(--color-accent)',
+            background: 'transparent', border: 0, cursor: 'pointer',
           }}
         >
-          Propose
+          {app.isSaved(offerKey(o)) ? '✓ On your shortlist' : "I'm interested"}
         </button>
       </div>
     </div>

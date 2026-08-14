@@ -2,7 +2,7 @@ import { ACCENT, GOOD, METRIC_LABEL, PEAK, type Weights } from '../model/constan
 import { num } from '../model/math';
 import type { Metrics } from '../model/score';
 import type { SleeperPlayer } from '../api/types';
-import type { Model, TargetTrade } from '../model/types';
+import type { Model, SavedTrade, TargetTrade } from '../model/types';
 import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
@@ -330,23 +330,55 @@ function WhatHeCosts({ app, m, sheet }: { app: App; m: Model; sheet: Sheet }) {
                 {priceRead(t)}
               </div>
 
-              {t.give.filter(g => !g.isPick).map(g => (
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0 14px', marginTop: 2 }}>
                 <button
-                  key={g.id}
                   type="button"
-                  onClick={() => app.setDetail(g.id)}
+                  onClick={() => app.toggleSaved(savedFromTarget(t, sheet))}
+                  aria-pressed={app.isSaved(targetKey(t, sheet.id))}
                   className="btn btn-ghost"
-                  style={{ fontSize: 11, padding: '4px 0', marginRight: 12 }}
+                  style={{
+                    fontSize: 11.5, padding: '4px 0', fontWeight: 500,
+                    color: app.isSaved(targetKey(t, sheet.id)) ? GOOD : 'var(--color-accent)',
+                  }}
                 >
-                  Open {g.name}
+                  {app.isSaved(targetKey(t, sheet.id)) ? '✓ On your shortlist' : "I'm interested"}
                 </button>
-              ))}
+                {t.give.filter(g => !g.isPick).map(g => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => app.setDetail(g.id)}
+                    className="btn btn-ghost"
+                    style={{ fontSize: 11, padding: '4px 0' }}
+                  >
+                    Open {g.name}
+                  </button>
+                ))}
+              </div>
             </div>
           ))}
         </div>
       )}
     </Card>
   );
+}
+
+/** Stable across rebuilds of the model, so a saved package is recognisable later. */
+const targetKey = (t: TargetTrade, targetId: string) =>
+  'target|' + targetId + '|' + t.give.map(g => g.id).sort().join(',');
+
+function savedFromTarget(t: TargetTrade, sheet: Sheet): Omit<SavedTrade, 'leagueId' | 'savedAt'> {
+  return {
+    key: targetKey(t, sheet.id),
+    partner: t.partner,
+    giveIds: t.give.map(g => g.id),
+    getIds: [sheet.id],
+    giveText: t.give.map(g => g.name).join(' + '),
+    getText: sheet.name,
+    kind: 'target',
+    note: priceRead(t),
+    score: t.accept,
+  };
 }
 
 /** One line saying what the package really is: a discount, a fair swap or a reach. */
