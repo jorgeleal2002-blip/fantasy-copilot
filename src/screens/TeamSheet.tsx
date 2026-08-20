@@ -3,7 +3,7 @@ import { num } from '../model/math';
 import type { Model, TeamSheet as Sheet } from '../model/types';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
-import { RankStrip } from '../ui/charts';
+import { Meter, markFor } from '../ui/charts';
 import { Card, CardHead, DividedRow, Overlay } from '../ui/primitives';
 import { cardTitle, dim } from '../ui/styles';
 
@@ -31,6 +31,10 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
       ` · age ${row.avgAge.toFixed(1)}`;
 
   const pickTotal = info.picks.reduce((a, b) => a + b.q, 0);
+  const maxPos = (p: (typeof POS)[number]) =>
+    Math.max(...m.leagueRows.map(x => x.posStrength[p] || 0), 0.01);
+  const avgPos = (p: (typeof POS)[number]) =>
+    m.leagueRows.reduce((a, x) => a + (x.posStrength[p] || 0), 0) / Math.max(m.leagueRows.length, 1);
 
   return (
     <Overlay onClose={() => app.setDetail(null)} label="The league" z={6}>
@@ -79,12 +83,11 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
                   <span style={{ fontWeight: 600, letterSpacing: '.06em', color: ACCENT }}>{p}</span>
                   <span style={{ color }}>{ord(rank)}</span>
                 </div>
-                <RankStrip
-                  points={m.leagueRows.map(r => ({
-                    id: r.id, value: r.posStrength[p] || 0, mine: r.id === row.id, name: r.name,
-                  }))}
-                  state={rank <= 3 ? 'good' : rank >= m.leagueRows.length - 2 ? 'bad' : 'mid'}
-                  label={`${p}: ${ord(rank)} of ${m.leagueRows.length} teams`}
+                <Meter
+                  pct={Math.round((row.posStrength[p] || 0) / maxPos(p) * 100)}
+                  color={markFor(rank <= 3 ? 'good' : rank >= m.leagueRows.length - 2 ? 'bad' : 'mid')}
+                  mark={(avgPos(p) / maxPos(p)) * 100}
+                  markLabel="league average"
                 />
               </div>
             );

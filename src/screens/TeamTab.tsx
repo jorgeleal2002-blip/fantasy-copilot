@@ -3,7 +3,7 @@ import { ageCurve, grade, num } from '../model/math';
 import type { Model, RosterPlayer } from '../model/types';
 import type { App, TeamView } from '../state/useApp';
 import { ord, pct } from '../ui/format';
-import { Meter, RankStrip, SERIES } from '../ui/charts';
+import { Meter, SERIES, markFor } from '../ui/charts';
 import { Card, CardHead, DividedRow, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { capsule, cardNote, cardTitle, dim, ellipsis, heroCard, heroGlow, kicker, posBadge } from '../ui/styles';
 
@@ -147,10 +147,12 @@ function Summary({ app, m }: { app: App; m: Model }) {
             const best = m.leagueHasRosters ? rows[0] : null;
             const mine = m.leagueHasRosters && me ? m.posRankOf(me.id, p) : 0;
             const color = mine && mine <= 3 ? GOOD : mine >= m.leagueRows.length - 2 ? BAD : MID;
-            const state = mine && mine <= 3 ? 'good' : mine >= m.leagueRows.length - 2 ? 'bad' : 'mid';
-            const points = rows.map(r => ({
-              id: r.id, value: r.posStrength[p] || 0, mine: !!me && r.id === me.id, name: r.name,
-            }));
+            const top = Math.max(best?.posStrength[p] || 0, 0.01);
+            const width = Math.round((me?.posStrength[p] || 0) / top * 100);
+            // The bar alone cannot separate leading by a mile from leading by
+            // nothing — everyone who leads draws a full one. The league average
+            // sitting on it is what tells the two apart.
+            const avg = rows.reduce((a, r) => a + (r.posStrength[p] || 0), 0) / Math.max(rows.length, 1);
             return (
               <div
                 key={p}
@@ -167,13 +169,11 @@ function Summary({ app, m }: { app: App; m: Model }) {
                   </div>
                   <span style={{ fontSize: 10.5, color: dim(0.38) }}>best: {best ? best.name : 'not drafted'}</span>
                 </div>
-                {/* Every team on one axis, yours marked — a bar scaled to the
-                    leader draws a full bar for anyone who leads, which is the
-                    same picture at all four positions when you lead all four. */}
-                <RankStrip
-                  points={points}
-                  state={state}
-                  label={`${p}: you are ${mine ? ord(mine) : 'unranked'} of ${m.leagueRows.length} teams`}
+                <Meter
+                  pct={width}
+                  color={markFor(mine && mine <= 3 ? 'good' : mine >= m.leagueRows.length - 2 ? 'bad' : 'mid')}
+                  mark={(avg / top) * 100}
+                  markLabel="league average"
                 />
               </div>
             );
@@ -484,12 +484,11 @@ function Assets({ app, m }: { app: App; m: Model }) {
                     {ord(rank)} of {m.teamCount}
                   </span>
                 </div>
-                <RankStrip
-                  points={m.leagueRows.map(r => ({
-                    id: r.id, value: r.posStrength[p] || 0, mine: r.isMe, name: r.name,
-                  }))}
-                  state={strong ? 'good' : weak ? 'bad' : 'mid'}
-                  label={`${p}: ${ord(rank)} of ${m.teamCount} teams`}
+                <Meter
+                  pct={Math.max(4, Math.round(m.posPct[p] * 100))}
+                  color={markFor(strong ? 'good' : weak ? 'bad' : 'mid')}
+                  mark={50}
+                  markLabel="middle of the league"
                 />
               </div>
             );
