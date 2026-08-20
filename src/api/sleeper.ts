@@ -21,19 +21,34 @@ export async function loadPlayerCatalog(): Promise<PlayerCatalog> {
   return catalog;
 }
 
+/**
+ * Sleeper publishes every image twice: a thumbnail around 100px, and the full
+ * upload. A phone is a 3× screen, so a 34px avatar needs 102 real pixels and a
+ * 64px portrait needs 192 — the thumbnail is already being stretched at the
+ * smaller size and visibly upscaled at the larger. Avatars are small files and
+ * there are only a handful on screen, so they come full size.
+ */
 export function avatarUrl(a: string | null | undefined): string | null {
   // Sleeper stores an uploaded team logo as a full URL in metadata, and an
   // account avatar as a bare hash. Both reach us through the same field.
   if (!a) return null;
-  return /^https?:/.test(a) ? a : 'https://sleepercdn.com/avatars/thumbs/' + a;
+  return /^https?:/.test(a) ? a : 'https://sleepercdn.com/avatars/' + a;
 }
 
 export function leagueAvatar(a: string | null | undefined): string | null {
-  return a ? 'https://sleepercdn.com/avatars/thumbs/' + a : null;
+  return a ? 'https://sleepercdn.com/avatars/' + a : null;
 }
 
-export const playerPhoto = (id: string): string | null =>
-  /^\d+$/.test(String(id)) ? 'https://sleepercdn.com/content/nfl/players/thumb/' + id + '.jpg' : null;
+/**
+ * Player portraits are the heavy ones, so this stays a choice: the thumbnail
+ * for a 34px roster row, where dozens load at once and 100px is enough for the
+ * 102 the row actually needs, and the full image for the 64px one on the sheet,
+ * where there is exactly one and the thumbnail is stretched to twice its size.
+ */
+export const playerPhoto = (id: string, size: 'thumb' | 'full' = 'thumb'): string | null =>
+  /^\d+$/.test(String(id))
+    ? 'https://sleepercdn.com/content/nfl/players/' + (size === 'full' ? '' : 'thumb/') + id + '.jpg'
+    : null;
 
 export async function findUser(name: string): Promise<SleeperUser> {
   const user = await get<SleeperUser | null>('/user/' + encodeURIComponent(name));

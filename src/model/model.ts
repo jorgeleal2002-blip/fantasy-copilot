@@ -3,7 +3,7 @@ import type { LeagueBundle, Pos, SleeperPlayer, SleeperRoster } from '../api/typ
 import {
   BASE_ROUND_VALUE, ELIG, MetricKey, POS, PEAK, SLOT_SORT, STRATS, StratKey,
 } from './constants';
-import { ageCurve, clamp, dynastyVal, playerName } from './math';
+import { ageCurve, clamp, modelVal, playerName } from './math';
 import type { Market } from './market';
 import { ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
@@ -74,23 +74,59 @@ export function buildModel(input: ModelInput): Model {
   const nextSlot = ((nextOverall - 1) % teamCount) + 1;
 
   // ── The format's positional premium, read from this league's real scoring
-  //    rules: superflex lifts QB, TE premium lifts TE, and RB carries a dynasty
-  //    discount because its value curve falls faster than any other position's.
+  //    rules AND its type: superflex lifts QB, a TE premium lifts TE, and the
+  //    age-based adjustments only apply where age has time to matter.
   const sc = league.scoring_settings || {};
   const rec = sc.rec || 0, teB = sc.bonus_rec_te || 0, rushFd = sc.rush_fd || 0, recFd = sc.rec_fd || 0;
   const passTd = sc.pass_td != null ? sc.pass_td : 4;
   const passYd = sc.pass_yd != null ? sc.pass_yd : 0.04;
+  // Two of these premiums are arguments about TIME, and time is exactly what a
+  // redraft league does not have. A back is discounted in dynasty because his
+  // value curve collapses over the following seasons, and a receiver carries a
+  // premium because his holds — neither claim survives a league that is settled
+  // in January. Applying them anyway is how a redraft league ended up being
+  // told about a "dynasty age discount".
   const mult: Record<Pos, number> = {
+    // Scarcity, not time: you start one quarterback either way.
     QB: (sflx ? 1.32 : 0.78) * (1 + (passTd - 4) * 0.05) * (1 + (passYd - 0.04) * 3),
-    RB: 0.84 * (1 + rushFd * 0.30),
-    WR: 1.06 * (0.94 + rec * 0.12 + recFd * 0.30),
+    RB: (isDynasty ? 0.84 : 1.00) * (1 + rushFd * 0.30),
+    WR: (isDynasty ? 1.06 : 0.98) * (0.94 + rec * 0.12 + recFd * 0.30),
+    // Also scarcity: the drop from TE1 to TE12 is steep in both formats.
     TE: 0.88 * (1 + (teB + recFd * 0.5) * 0.32),
   };
   const multInfo: PositionMultiplier[] = [
-    { pos: 'QB', mult: mult.QB, why: sflx ? 'Superflex: you can start two QBs, the scarcest slot in the format' : '1QB: no scarcity premium' },
-    { pos: 'RB', mult: mult.RB, why: rushFd ? 'Dynasty age discount, offset by +' + rushFd + ' per rushing first down' : 'Dynasty discount: the position that sheds value fastest' },
-    { pos: 'WR', mult: mult.WR, why: rec + ' per reception' + (recFd ? ' plus receiving first downs' : ' and no receiving first-down bonus') },
-    { pos: 'TE', mult: mult.TE, why: teB ? 'TE premium: +' + teB + ' extra per catch, so ' + (rec + teB) + ' a reception' : 'No TE premium' },
+    {
+      pos: 'QB',
+      mult: mult.QB,
+      why: sflx
+        ? 'Superflex: you can start two QBs, the scarcest slot in the format'
+        : '1QB: no scarcity premium',
+    },
+    {
+      pos: 'RB',
+      mult: mult.RB,
+      why: isDynasty
+        ? (rushFd
+          ? 'Dynasty age discount, offset by +' + rushFd + ' per rushing first down'
+          : 'Dynasty discount: the position that sheds value fastest')
+        : (rushFd
+          ? 'Redraft: no age discount, and +' + rushFd + ' per rushing first down on top'
+          : 'Redraft: no age discount — this season is all that is being bought'),
+    },
+    {
+      pos: 'WR',
+      mult: mult.WR,
+      why: (isDynasty ? 'Ages well, and ' : 'No longevity premium in redraft · ')
+        + rec + ' per reception'
+        + (recFd ? ' plus receiving first downs' : ' and no receiving first-down bonus'),
+    },
+    {
+      pos: 'TE',
+      mult: mult.TE,
+      why: teB
+        ? 'TE premium: +' + teB + ' extra per catch, so ' + (rec + teB) + ' a reception'
+        : 'No TE premium',
+    },
   ];
 
   // ── Value: real market when it loaded, our own model when it did not.
@@ -100,7 +136,7 @@ export function buildModel(input: ModelInput): Model {
   };
   const quality = (pl: SleeperPlayer): number => {
     const v = mval(pl);
-    return v != null ? v : dynastyVal(pl, mult) * 100;
+    return v != null ? v : modelVal(pl, mult, !isDynasty) * 100;
   };
 
   // ── What a player is worth, ready to show. A price on its own means nothing
@@ -125,7 +161,7 @@ export function buildModel(input: ModelInput): Model {
     return {
       // ×100 undoes the internal scaling, so a live feed reports FantasyCalc's
       // own number and the fallback lands on a comparable scale.
-      pts: Math.round((v != null ? v : dynastyVal(pl, mult) * 100) * 100),
+      pts: Math.round((v != null ? v : modelVal(pl, mult, !isDynasty) * 100) * 100),
       real: v != null,
       pos: pl.position as Pos,
       posRank: valueRank[id] || null,

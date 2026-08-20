@@ -61,7 +61,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
     );
   }
 
-  const photo = app.photoFor(p.id);
+  const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
   const u = p.use;
 

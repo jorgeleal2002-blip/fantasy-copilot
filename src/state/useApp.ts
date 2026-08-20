@@ -339,7 +339,7 @@ export function useApp() {
 
   // ── Player photos: whatever you upload wins over Sleeper's portrait.
   const photoFor = useCallback(
-    (id: string) => photos[id] || playerPhoto(id),
+    (id: string, size?: 'thumb' | 'full') => photos[id] || playerPhoto(id, size),
     [photos],
   );
 

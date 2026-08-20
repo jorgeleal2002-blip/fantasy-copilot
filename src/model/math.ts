@@ -59,10 +59,20 @@ export const rankScore = (r: number | null | undefined) =>
 export const talentBase = (adp: number | null | undefined) =>
   clamp(Math.exp(-((adp || 900) - 1) / 70), 0.008, 1);
 
-/** Fallback dynasty value when the market feed is down:
- *  talent × the format's positional premium × the position's age curve. */
-export const dynastyVal = (pl: SleeperPlayer, mult: Record<string, number>) =>
-  talentBase(pl.search_rank) * (mult[pl.position || ''] || 1) * ageCurve(pl.position, pl.age);
+/**
+ * Fallback value when the market feed is down: talent × the format's positional
+ * premium × the age curve — and the age curve has to be the right one. In a
+ * redraft league a 31-year-old back is worth 70% of himself, not the 40% that
+ * three more seasons of decline would price him at.
+ */
+export const modelVal = (
+  pl: SleeperPlayer,
+  mult: Record<string, number>,
+  redraft = false,
+) =>
+  talentBase(pl.search_rank)
+  * (mult[pl.position || ''] || 1)
+  * (redraft ? ageCurveRedraft : ageCurve)(pl.position, pl.age);
 
 export const grade = (v: number) =>
   v >= 0.80 ? 'A+' : v >= 0.72 ? 'A' : v >= 0.65 ? 'B+' : v >= 0.57 ? 'B'

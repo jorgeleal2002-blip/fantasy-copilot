@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ELIG, PRIME, STRATS } from '../model/constants';
-import { ageCurve, ageCurveRedraft, grade, rankScore, talentBase } from '../model/math';
-import { parseMarket } from '../model/market';
+import { ageCurve, ageCurveRedraft, grade, modelVal, rankScore, talentBase } from '../model/math';
+import { marketQuery, parseMarket } from '../model/market';
 import { buildModel } from '../model/model';
 import { ownedWeights, redraftWeights, scorePlayer } from '../model/score';
 import { buildUsage, seasonUsage, type Usage } from '../model/usage';
@@ -617,5 +617,37 @@ describe('what it would cost to get one specific player', () => {
     expect(model.offersFor(model.myPlayers[0].id)).toEqual([]);
     const fa = model.searchIndex.find(e => !e.taken)!;
     expect(model.offersFor(fa.id)).toEqual([]);
+  });
+});
+
+describe('a redraft league is not priced as a dynasty', () => {
+  const redraftBundle = makeBundle();
+  redraftBundle.league = { ...redraftBundle.league, settings: { ...redraftBundle.league.settings, type: 0 } };
+  const rd = buildModel({
+    data: redraftBundle, usage, market, strat: 'balanced', boardMode: 'fa', pickSel: 0,
+  });
+
+  it('drops the running-back age discount, and says so', () => {
+    const dynRb = model.multInfo.find(x => x.pos === 'RB')!;
+    const rdRb = rd.multInfo.find(x => x.pos === 'RB')!;
+    expect(rdRb.mult).toBeGreaterThan(dynRb.mult);
+    expect(dynRb.why).toMatch(/[Dd]ynasty/);
+    // the thing the screenshot caught: a redraft league being told about dynasty
+    expect(rdRb.why).not.toMatch(/[Dd]ynasty/);
+  });
+
+  it('never explains a redraft league in dynasty terms', () => {
+    for (const info of rd.multInfo) expect(info.why).not.toMatch(/[Dd]ynasty/);
+  });
+
+  it('asks the market feed for redraft values', () => {
+    expect(marketQuery(redraftBundle.league)).toContain('isDynasty=false');
+    expect(marketQuery(model.league)).toContain('isDynasty=true');
+  });
+
+  it('values an old back on the redraft curve when the feed is down', () => {
+    const old = { position: 'RB', age: 31, search_rank: 40 } as never;
+    const mult = { RB: 1 };
+    expect(modelVal(old, mult, true)).toBeGreaterThan(modelVal(old, mult, false) * 1.5);
   });
 });
