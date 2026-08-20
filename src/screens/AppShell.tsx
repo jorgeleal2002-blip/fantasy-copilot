@@ -1,7 +1,7 @@
 import { leagueAvatar } from '../api/sleeper';
 import type { Model } from '../model/types';
 import type { App, Tab } from '../state/useApp';
-import { dim, ellipsis, tabStyle } from '../ui/styles';
+import { NOISE, dim, ellipsis, tabStyle } from '../ui/styles';
 import { DraftTab } from './DraftTab';
 import { LeagueTab } from './LeagueTab';
 import { PlayerSheet } from './PlayerSheet';
@@ -51,7 +51,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
         style={{
           padding: 'calc(var(--safe-top) + 11px) 15px 9px',
           display: 'flex', alignItems: 'center', gap: 11,
-          background: 'linear-gradient(to bottom,rgba(38,42,96,.35),transparent)',
+          background: `${NOISE}, linear-gradient(to bottom,rgba(38,42,96,.35),transparent)`,
         }}
       >
         {logo ? (

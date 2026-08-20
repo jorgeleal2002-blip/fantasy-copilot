@@ -217,7 +217,7 @@ function OfferCard({ app, offer: o }: { app: App; offer: Offer }) {
 
   return (
     <div style={{
-      background: 'var(--color-surface)', borderRadius: 14, overflow: 'hidden', animation: 'pop .28s ease both',
+      background: 'var(--color-surface)', borderRadius: 14, overflow: 'hidden', animation: 'pop .28s ease backwards',
     }}>
       <div style={{ padding: '14px 14px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>

@@ -109,7 +109,7 @@ export function Overlay({
   }, [onClose]);
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: z }}>
+    <div className="overlay-host" style={{ position: 'absolute', inset: 0, zIndex: z }}>
       <div className="overlay-scrim" onClick={onClose} aria-hidden="true" />
       <div className="overlay-panel" role="dialog" aria-modal="true" aria-label={label}>
         <div className="overlay-head">
@@ -124,7 +124,7 @@ export function Overlay({
 }
 
 /** The screen-level scroller: every tab's content sits in one of these. */
-export function Screen({ children, animation = 'fadeUp .3s ease both' }: { children: ReactNode; animation?: string }) {
+export function Screen({ children, animation = 'fadeUp .3s ease backwards' }: { children: ReactNode; animation?: string }) {
   return (
     <div style={{ animation, display: 'flex', flexDirection: 'column', gap: 9 }}>
       {children}

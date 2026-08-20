@@ -18,7 +18,7 @@ export function ConnectScreen({ app }: { app: App }) {
       style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         padding: `${topPad(34)} 24px calc(var(--safe-bottom) + 26px)`,
-        animation: 'fadeUp .4s ease both',
+        animation: 'fadeUp .4s ease backwards',
       }}
     >
       <div
@@ -95,7 +95,7 @@ export function LeaguesScreen({ app }: { app: App }) {
       style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         padding: `${topPad(30)} 22px calc(var(--safe-bottom) + 26px)`,
-        animation: 'slideIn .3s ease both', overflow: 'auto',
+        animation: 'slideIn .3s ease backwards', overflow: 'auto',
       }}
     >
       <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--color-accent)' }}>

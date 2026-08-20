@@ -26,7 +26,7 @@ export default function App() {
             style={{
               background: '#2f3245', border: '1px solid var(--color-divider)', borderRadius: 12,
               padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 10,
-              boxShadow: 'var(--shadow-lg)', cursor: 'pointer', animation: 'fadeUp .25s ease both',
+              boxShadow: 'var(--shadow-lg)', cursor: 'pointer', animation: 'fadeUp .25s ease backwards',
             }}
           >
             <Mark size={20} />
