@@ -112,13 +112,25 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
         </div>
       </div>
 
-      <Segmented options={views} value={view} onChange={app.setDraftView} size="sm" />
+      {/* A picker with one option is not a picker. Redraft leagues have no
+          pick-movement view, so there is nothing to switch between. */}
+      {views.length > 1
+        ? <Segmented options={views} value={view} onChange={app.setDraftView} size="sm" />
+        : null}
 
       {view === 'board' ? (
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* A grid, not a row. A dynasty rookie draft gives you four picks
+                and a row fits; a redraft league gives you thirteen and a row
+                runs off the side of the phone, taking the last nine with it.
+                Wrapping keeps every pick of yours visible and tappable. */}
             {m.upcoming.length ? (
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(58px, 1fr))',
+                gap: 6,
+              }}>
                 {m.upcoming.map((p, i) => (
                   <button
                     key={p.overall}
@@ -208,7 +220,6 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
 
 function segChip(active: boolean) {
   return {
-    flex: 1,
     textAlign: 'center' as const,
     padding: '8px 4px',
     borderRadius: 9,
