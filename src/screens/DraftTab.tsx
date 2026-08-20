@@ -79,7 +79,10 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                 {top ? top.name : '—'}
               </div>
               <div style={{ fontSize: 12.5, color: dim(0.6), marginTop: 4 }}>
-                {top ? `${top.pos} · ${top.team} · ${top.age ?? '?'} yrs · ADP ${top.adp}` : ''}
+                {/* A rookie has no NFL team until he is drafted, and Sleeper
+                    reports that as null — which a template literal prints as
+                    the word "null". */}
+                {top ? [top.pos, top.team || 'no team yet', (top.age ?? '?') + ' yrs', 'ADP ' + top.adp].join(' · ') : ''}
               </div>
             </div>
             <div style={{ textAlign: 'right', flex: 'none' }}>
@@ -195,7 +198,8 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{p.name}</div>
                     <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 2 }}>
-                      {p.pos} · {p.team} · {p.age ?? '?'} yrs{gone ? ' · unlikely to last' : ''}
+                      {[p.pos, p.team || 'no team yet', (p.age ?? '?') + ' yrs'].join(' · ')}
+                      {gone ? ' · unlikely to last' : ''}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flex: 'none' }}>

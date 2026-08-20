@@ -1,21 +1,6 @@
 import type { CSSProperties } from 'react';
 import { ACCENT, BAD, GOOD, MID } from '../model/constants';
 
-/**
- * A film of noise, tiled at 140px and about 3% strong.
- *
- * A long, low-contrast wash across a dark card has only a handful of 8-bit
- * steps to cross, so instead of fading it draws visible stripes — the thing
- * that makes a dark app look cheap on a screen good enough to show it.
- * Dithering breaks the step edges apart and the stripes disappear. It costs one
- * inline SVG and no DOM.
- */
-export const NOISE =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E"
-  + "%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' "
-  + "stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' "
-  + "opacity='0.55'/%3E%3C/svg%3E\")";
-
 /** Text tints used all over the prototype, named once. */
 export const dim = (a: number) => `rgba(233,233,237,${a})`;
 
@@ -81,8 +66,7 @@ export const surface: CSSProperties = {
 export const heroCard: CSSProperties = {
   borderRadius: 14,
   padding: 13,
-  // The noise film sits over the gradient — see NOISE.
-  background: `${NOISE}, linear-gradient(150deg,#262a60 0%,#232532 62%)`,
+  background: 'linear-gradient(150deg,#262a60 0%,#232532 62%)',
   position: 'relative',
   overflow: 'hidden',
 };
@@ -90,7 +74,7 @@ export const heroCard: CSSProperties = {
 export const heroGlow: CSSProperties = {
   position: 'absolute',
   inset: 0,
-  background: `${NOISE}, radial-gradient(220px 120px at 88% 0%,rgba(145,132,217,.32),transparent 70%)`,
+  background: 'radial-gradient(220px 120px at 88% 0%,rgba(145,132,217,.32),transparent 70%)',
 };
 
 export const kicker: CSSProperties = {
