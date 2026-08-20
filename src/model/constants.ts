@@ -11,6 +11,30 @@ export const MID = '#c9c0f0';
 export const MUTED = 'rgba(233,233,237,.45)';
 
 /**
+ * The same three states again, stepped for FILLS rather than text.
+ *
+ * The text steps above are light because they have to be readable as 11px type
+ * on a dark ground. Painted as chart marks on the card surface they came out
+ * washed and too close together: measured against the surface they sat outside
+ * the usable lightness band, under the chroma floor — reading as grey — and the
+ * warning/bad pair separated by only ΔE 13.5 to normal vision, below the 15
+ * floor. These steps are deeper, and clear every check: worst adjacent pair
+ * ΔE 16.9 to deuteranopes and 21.2 to normal vision, all three above 3:1
+ * against the surface.
+ *
+ * Two steps per state, not one: a colour dark enough to be a good mark on a
+ * dark surface is too dark to be small type on it.
+ */
+export const MARK_GOOD = '#3fa877';
+export const MARK_MID = '#8073c9';
+export const MARK_BAD = '#cc6a4e';
+
+/** Recessive: the empty part of a meter is context, not data. */
+export const TRACK = 'rgba(233,233,237,.08)';
+/** The surface a mark is painted on — used for the gap that separates marks. */
+export const MARK_GAP = '#232532';
+
+/**
  * A prime is a window, not a point: inside it a player is at full value and
  * neither improving nor declining. Before it they climb toward it, after it
  * they fall away from it — and both rates differ by position. A back arrives

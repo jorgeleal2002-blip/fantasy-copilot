@@ -3,7 +3,8 @@ import { ageCurve, grade, num } from '../model/math';
 import type { Model, RosterPlayer } from '../model/types';
 import type { App, TeamView } from '../state/useApp';
 import { ord, pct } from '../ui/format';
-import { Bar, Card, CardHead, DividedRow, Screen, Segmented, type SegOption } from '../ui/primitives';
+import { Meter, RankStrip, SERIES } from '../ui/charts';
+import { Card, CardHead, DividedRow, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { capsule, cardNote, cardTitle, dim, ellipsis, heroCard, heroGlow, kicker, posBadge } from '../ui/styles';
 
 const POS_FILTERS: SegOption<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>[] =
@@ -146,7 +147,10 @@ function Summary({ app, m }: { app: App; m: Model }) {
             const best = m.leagueHasRosters ? rows[0] : null;
             const mine = m.leagueHasRosters && me ? m.posRankOf(me.id, p) : 0;
             const color = mine && mine <= 3 ? GOOD : mine >= m.leagueRows.length - 2 ? BAD : MID;
-            const width = Math.round((me?.posStrength[p] || 0) / Math.max(best?.posStrength[p] || 1, 0.01) * 100);
+            const state = mine && mine <= 3 ? 'good' : mine >= m.leagueRows.length - 2 ? 'bad' : 'mid';
+            const points = rows.map(r => ({
+              id: r.id, value: r.posStrength[p] || 0, mine: !!me && r.id === me.id, name: r.name,
+            }));
             return (
               <div
                 key={p}
@@ -163,7 +167,14 @@ function Summary({ app, m }: { app: App; m: Model }) {
                   </div>
                   <span style={{ fontSize: 10.5, color: dim(0.38) }}>best: {best ? best.name : 'not drafted'}</span>
                 </div>
-                <Bar pct={width} color={mine && mine <= 3 ? GOOD : mine >= m.leagueRows.length - 2 ? BAD : ACCENT} />
+                {/* Every team on one axis, yours marked — a bar scaled to the
+                    leader draws a full bar for anyone who leads, which is the
+                    same picture at all four positions when you lead all four. */}
+                <RankStrip
+                  points={points}
+                  state={state}
+                  label={`${p}: you are ${mine ? ord(mine) : 'unranked'} of ${m.leagueRows.length} teams`}
+                />
               </div>
             );
           })}
@@ -186,6 +197,10 @@ function Summary({ app, m }: { app: App; m: Model }) {
 /* ── Lineup ──────────────────────────────────────────────────────────────── */
 
 function Lineup({ app, m }: { app: App; m: Model }) {
+  // The reference every explosiveness meter is read against.
+  const boomAvg = m.myPlayers.length
+    ? m.myPlayers.reduce((a, b) => a + b.m.boom, 0) / m.myPlayers.length
+    : 0.5;
   const swapNames = m.swaps.map(o => o.player!.name).join(', ');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -236,7 +251,10 @@ function Lineup({ app, m }: { app: App; m: Model }) {
 
       <Card>
         <div style={{ ...cardTitle, marginBottom: 2 }}>Your explosive players</div>
-        <div style={{ ...cardNote, marginBottom: 12 }}>Highest ceiling on the roster according to the upside model</div>
+        <div style={{ ...cardNote, marginBottom: 12 }}>
+          Highest ceiling on the roster according to the upside model. The line on each meter is
+          your roster&apos;s own average, so a long bar means long <em>for you</em>.
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           {m.explosive.map(p => (
             <div
@@ -251,7 +269,12 @@ function Lineup({ app, m }: { app: App; m: Model }) {
                 <span style={{ fontSize: 12.5, fontWeight: 500 }}>{p.name}</span>
                 <span style={{ fontSize: 11, color: dim(0.45) }}>{Math.round(p.m.boom * 100)} boom</span>
               </div>
-              <Bar pct={p.m.boom * 100} color={p.m.boom > 0.7 ? GOOD : ACCENT} />
+              <Meter
+                pct={p.m.boom * 100}
+                color={SERIES}
+                mark={boomAvg * 100}
+                markLabel="your roster average"
+              />
               <div style={{ fontSize: 10.5, color: dim(0.38), marginTop: 4 }}>
                 {p.pos} · {p.age ?? '?'} yrs · {p.team}
               </div>
@@ -461,7 +484,13 @@ function Assets({ app, m }: { app: App; m: Model }) {
                     {ord(rank)} of {m.teamCount}
                   </span>
                 </div>
-                <Bar pct={Math.max(4, Math.round(m.posPct[p] * 100))} color={strong ? GOOD : weak ? BAD : ACCENT} />
+                <RankStrip
+                  points={m.leagueRows.map(r => ({
+                    id: r.id, value: r.posStrength[p] || 0, mine: r.isMe, name: r.name,
+                  }))}
+                  state={strong ? 'good' : weak ? 'bad' : 'mid'}
+                  label={`${p}: ${ord(rank)} of ${m.teamCount} teams`}
+                />
               </div>
             );
           })}

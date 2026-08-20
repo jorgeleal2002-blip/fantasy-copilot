@@ -2,7 +2,8 @@ import { ACCENT, BAD, GOOD, METRIC_LABEL, MID, STRATS, StratKey } from '../model
 import { clamp } from '../model/math';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
-import { Bar, Card, Screen, Segmented, type SegOption } from '../ui/primitives';
+import { Meter, SERIES, markFor } from '../ui/charts';
+import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
 
 const STRAT_OPTIONS: SegOption<StratKey>[] =
@@ -79,15 +80,21 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
       <Card>
         <div style={{ ...cardTitle, marginBottom: 4 }}>Fit Score weights</div>
         <div style={{ fontSize: 11.5, color: dim(0.45), marginBottom: 12 }}>Fit = Σ wᵢ × metricᵢ</div>
+        {/* Heaviest first, scaled against this profile's own largest weight:
+            ordered by size, the chart answers "what is this profile actually
+            buying?" without the reader ranking nine numbers by eye. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {m.metricKeys.map(k => (
+          {[...m.metricKeys].sort((a, b) => strat.w[b] - strat.w[a]).map(k => (
             <div key={k}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
-                <span>{METRIC_LABEL[k]}</span>
-                <span style={{ color: ACCENT }}>{Math.round(strat.w[k] * 100)}%</span>
+                <span style={{ color: strat.w[k] ? undefined : dim(0.4) }}>{METRIC_LABEL[k]}</span>
+                <span style={{ color: strat.w[k] ? ACCENT : dim(0.4) }}>{Math.round(strat.w[k] * 100)}%</span>
               </div>
-              {/* scaled against a 35% ceiling — the largest weight any strategy assigns */}
-              <Bar pct={strat.w[k] * 100 / 0.35} color={ACCENT} height={5} />
+              <Meter
+                pct={strat.w[k] / Math.max(...m.metricKeys.map(x => strat.w[x])) * 100}
+                color={SERIES}
+                height={5}
+              />
             </div>
           ))}
         </div>
@@ -109,10 +116,15 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
                   <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', color: ACCENT }}>{mi.pos}</span>
                   <span style={{ fontSize: 12.5, fontWeight: 500, color }}>×{mi.mult.toFixed(2)}</span>
                 </div>
-                <Bar
+                {/* The reference is ×1.00 — no premium. Without it the bar only
+                    says "some multiplier"; with it, it says which side of
+                    neutral this position falls on and by how far. */}
+                <Meter
                   pct={clamp(mi.mult / 1.4, 0.05, 1) * 100}
-                  color={mi.mult >= 1.05 ? GOOD : mi.mult <= 0.9 ? BAD : ACCENT}
-                  height={5}
+                  color={markFor(mi.mult >= 1.05 ? 'good' : mi.mult <= 0.9 ? 'bad' : 'mid')}
+                  mark={100 / 1.4}
+                  markLabel="no premium (×1.00)"
+                  height={7}
                 />
                 <div style={{ ...cardNote, fontSize: 10.5, marginTop: 5 }}>{mi.why}</div>
               </div>

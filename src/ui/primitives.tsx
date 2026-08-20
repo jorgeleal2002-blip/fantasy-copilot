@@ -1,5 +1,5 @@
 import { useEffect, type CSSProperties, type ReactNode } from 'react';
-import { cardNote, cardTitle, seg, SegSize, surface, trackStyle } from './styles';
+import { cardNote, cardTitle, seg, SegSize, surface } from './styles';
 
 export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return <div style={{ ...surface, ...style }}>{children}</div>;
@@ -14,15 +14,6 @@ export function CardHead({ title, right, note }: { title: string; right?: ReactN
       </div>
       {note ? <div style={{ ...cardNote, marginBottom: 10 }}>{note}</div> : null}
     </>
-  );
-}
-
-/** A progress track with one fill. Every meter in the app is this. */
-export function Bar({ pct, color, height = 6 }: { pct: number; color: string; height?: number }) {
-  return (
-    <div style={{ ...trackStyle, height }}>
-      <div style={{ height: '100%', borderRadius: 3, width: Math.max(0, Math.min(100, pct)) + '%', background: color }} />
-    </div>
   );
 }
 

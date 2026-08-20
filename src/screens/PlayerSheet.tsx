@@ -1,4 +1,4 @@
-import { ACCENT, GOOD, METRIC_LABEL, PEAK, type Weights } from '../model/constants';
+import { ACCENT, METRIC_LABEL, PEAK, type Weights } from '../model/constants';
 import { num } from '../model/math';
 import type { Metrics } from '../model/score';
 import type { SleeperPlayer } from '../api/types';
@@ -6,7 +6,8 @@ import type { Model } from '../model/types';
 import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
-import { Bar, Card, Overlay } from '../ui/primitives';
+import { Meter, SERIES } from '../ui/charts';
+import { Card, Overlay } from '../ui/primitives';
 import { TradePackages } from '../ui/TradePackages';
 import { dim, fitColor } from '../ui/styles';
 
@@ -209,24 +210,33 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       </div>
 
       <Card style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, color: dim(0.45), marginBottom: 12 }}>Breakdown — metric × weight</div>
+        <div style={{ fontSize: 12, color: dim(0.45), marginBottom: 12 }}>
+          Breakdown — metric × weight, biggest contribution first
+        </div>
+        {/* Ordered by what each metric actually put on the board. In fixed
+            metric order the reader has to find the big ones themselves; sorted,
+            the first row is the answer to "why is this number what it is". */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {m.metricKeys.filter(k => p.weights[k] > 0).map(k => (
-            <div key={k}>
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginBottom: 5,
-              }}>
-                <span style={{ fontSize: 12.5 }}>{METRIC_LABEL[k]}</span>
-                <span style={{ fontSize: 11.5, color: dim(0.45) }}>
-                  {Math.round(p.m[k] * 100)} × {Math.round(p.weights[k] * 100)}% = {Math.round(p.m[k] * p.weights[k] * 100)}
-                </span>
+          {m.metricKeys
+            .filter(k => p.weights[k] > 0)
+            .sort((a, b) => p.m[b] * p.weights[b] - p.m[a] * p.weights[a])
+            .map(k => (
+              <div key={k}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginBottom: 5,
+                }}>
+                  <span style={{ fontSize: 12.5 }}>{METRIC_LABEL[k]}</span>
+                  <span style={{ fontSize: 11.5, color: dim(0.45) }}>
+                    {Math.round(p.m[k] * 100)} × {Math.round(p.weights[k] * 100)}%
+                    {' = '}
+                    <span style={{ color: 'var(--color-text)', fontWeight: 500 }}>
+                      {Math.round(p.m[k] * p.weights[k] * 100)}
+                    </span>
+                  </span>
+                </div>
+                <Meter pct={p.m[k] * 100} color={SERIES} />
               </div>
-              <Bar
-                pct={p.m[k] * 100}
-                color={p.m[k] > 0.7 ? GOOD : p.m[k] > 0.45 ? ACCENT : 'rgba(145,132,217,.35)'}
-              />
-            </div>
-          ))}
+            ))}
         </div>
       </Card>
 
