@@ -201,8 +201,12 @@ export interface MockPick {
   team: string;
   mine: boolean;
   player: MockOption | null;
-  /** only on your picks: what else was on the board when your turn came */
+  /** only on your picks: the three lenses on this turn */
   options?: MockOption[];
+  /** and the rest of the board, so the choice is not limited to three names */
+  available?: MockOption[];
+  /** set when you picked someone here who was gone by the time it ran */
+  choiceLost?: boolean;
 }
 
 export interface MockOption {
@@ -372,7 +376,11 @@ export interface Model {
   marketValue: (playerId: string) => PlayerValue | null;
   /** what it would cost to acquire one specific player from his owner */
   offersFor: (playerId: string) => TargetTrade[];
-  /** play the rest of the draft out; the seed makes one run reproducible */
-  runMock: (seed: number) => MockResult;
+  /**
+   * Play the rest of the draft out. The seed makes one run reproducible;
+   * `choices` maps an overall pick of yours to the player you took there, so
+   * the board downstream reacts to what you actually did.
+   */
+  runMock: (seed: number, choices?: Record<number, string>) => MockResult;
   metricKeys: MetricKey[];
 }

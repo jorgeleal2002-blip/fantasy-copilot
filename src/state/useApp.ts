@@ -77,6 +77,8 @@ export function useApp() {
   // Seeded, so a mock stays put while you read it and only changes when
   // you ask for another run.
   const [mockSeed, setMockSeed] = useState(1);
+  /** overall pick → the player you took there, keyed so the sim can replay it */
+  const [mockChoices, setMockChoices] = useState<Record<number, string>>({});
   const [tradeView, setTradeView] = useState<'suggested' | 'saved'>('suggested');
   const [filter, setFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
@@ -424,14 +426,26 @@ export function useApp() {
     stage, username, leagues, authBusy, authError, error,
     data, step, model, syncing, syncedAt,
     usageState, usageSeasons, marketState,
-    tab, teamView, draftView, tradeView, mockSeed, filter, rosterFilter, rosterSort, boardMode, rankMode,
+    tab, teamView, draftView, tradeView, mockSeed, mockChoices, filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 
     setUsername: (v: string) => { setUsername(v); setAuthError(''); },
     connectUser, pickLeague, switchLeague, logout, refreshAll, refreshPicks, retry,
     setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
     setTeamView, setDraftView, setTradeView, setFilter,
-    rerollMock: () => setMockSeed(x => x + 1), setRosterFilter, setRosterSort,
+    rerollMock: () => { setMockSeed(x => x + 1); setMockChoices({}); },
+    /**
+     * Taking someone at one pick invalidates every choice after it — the board
+     * downstream moves, and a later pick you had locked in may be gone. Dropping
+     * them is more honest than replaying choices that no longer apply.
+     */
+    chooseMock: (overall: number, id: string) => setMockChoices(prev => {
+      const next: Record<number, string> = {};
+      Object.keys(prev).forEach(k => { if (Number(k) < overall) next[Number(k)] = prev[Number(k)]; });
+      next[overall] = id;
+      return next;
+    }),
+    clearMockChoices: () => setMockChoices({}), setRosterFilter, setRosterSort,
     setBoardMode, setRankMode, setPickSel, setStrat, setDetail,
     setQuery, setTopPos, setTopLens, setTopOpen,
     passOffer: (key: string) => setPassed(p => p.concat(key)),

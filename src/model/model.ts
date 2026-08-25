@@ -825,7 +825,7 @@ export function buildModel(input: ModelInput): Model {
    * records what was still there before it takes anyone, which is the whole
    * point: not "here is what happens" but "here is what reaches you".
    */
-  const runMock = (seed: number): MockResult => {
+  const runMock = (seed: number, choices?: Record<number, string>): MockResult => {
     // Deterministic per seed, so a run can be looked at twice and re-run
     // deliberately rather than shuffling under you on every render.
     let st = (seed || 1) >>> 0;
@@ -931,10 +931,17 @@ export function buildModel(input: ModelInput): Model {
           options.push(asOption(upside, 'upside', 'Highest ceiling', 'The highest ceiling still on the board'));
         }
 
-        // The sim takes whichever the need-weighted board actually rates
-        // highest — that is how the roster you end up with gets built — but
-        // all three are reported either way.
-        const taken = needScoreOf(best) >= (need ? needScoreOf(need) : 0) ? best : need;
+        // Your own pick wins over the model's. A choice can still be gone —
+        // change an earlier turn and the board downstream moves — so that is
+        // reported rather than silently swapped.
+        const wanted = choices ? choices[overall] : undefined;
+        const forced = wanted ? live.find(x => x.id === wanted) : undefined;
+        const choiceLost = !!wanted && !forced;
+        const taken = forced
+          || (needScoreOf(best) >= (need ? needScoreOf(need) : 0) ? best : need);
+        if (forced && !options.some(o => o.id === forced.id)) {
+          options.unshift(asOption(forced, 'best', 'Your pick', 'You took him here'));
+        }
         gone.add(taken.id);
         have[rid] = have[rid] || {};
         have[rid][taken.pos] = (have[rid][taken.pos] || 0) + 1;
@@ -943,6 +950,11 @@ export function buildModel(input: ModelInput): Model {
           overall, round, slot, label, team: teamName(owner?.owner_id), mine: true,
           player: options.find(o => o.id === taken.id) || asOption(taken, 'need', 'Fills your hole', ''),
           options,
+          // Everything else still on the board, so the choice is not three names.
+          available: live.filter(x => !options.some(o => o.id === x.id))
+            .slice(0, 12)
+            .map(x => asOption(x, 'best', '', '')),
+          choiceLost,
         });
         continue;
       }

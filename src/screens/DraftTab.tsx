@@ -1,7 +1,8 @@
-import { ACCENT, GOOD, POS } from '../model/constants';
+import { useState } from 'react';
+import { ACCENT, BAD, GOOD, POS } from '../model/constants';
 import { num } from '../model/math';
 import { reasons } from '../model/score';
-import type { DraftDeal, Model } from '../model/types';
+import type { DraftDeal, MockOption, MockPick, Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { PlayerSearch, type SearchScope } from '../ui/PlayerSearch';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
@@ -233,7 +234,8 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
  * could do with each turn".
  */
 function MockDraft({ app, m }: { app: App; m: Model }) {
-  const res = m.runMock(app.mockSeed);
+  const res = m.runMock(app.mockSeed, app.mockChoices);
+  const chosen = Object.keys(app.mockChoices).length;
 
   if (!res.mine.length) {
     return (
@@ -260,20 +262,32 @@ function MockDraft({ app, m }: { app: App; m: Model }) {
             {POS.map(p => res.shape[p] + ' ' + p).join(' · ')} when it is over
           </div>
         </div>
-        <button
-          type="button"
-          onClick={app.rerollMock}
-          className="btn btn-secondary"
-          style={{ borderRadius: 9, padding: '7px 11px', fontSize: 12, flex: 'none' }}
-        >
-          Run again
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 'none' }}>
+          <button
+            type="button"
+            onClick={app.rerollMock}
+            className="btn btn-secondary"
+            style={{ borderRadius: 9, padding: '7px 11px', fontSize: 12 }}
+          >
+            Run again
+          </button>
+          {chosen ? (
+            <button
+              type="button"
+              onClick={app.clearMockChoices}
+              className="btn btn-ghost"
+              style={{ fontSize: 11, padding: 0 }}
+            >
+              Undo my {chosen === 1 ? 'pick' : chosen + ' picks'}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.45), textWrap: 'pretty' }}>
-        One plausible board, not a prediction. The other managers draft for their own holes with
-        some noise in it, so run it a few times — the names that keep reaching you are the ones to
-        plan around.
+        Tap whoever you would actually take — the rest of the board reacts to it, so you can play
+        the draft out your way. The other managers draft for their own holes with some noise in
+        them, so run it a few times: the names that keep reaching you are the ones to plan around.
       </div>
 
       {res.mine.map(pick => (
@@ -283,45 +297,26 @@ function MockDraft({ app, m }: { app: App; m: Model }) {
             <div style={{ fontSize: 10.5, color: dim(0.4) }}>overall {pick.overall}</div>
           </div>
 
+          {pick.choiceLost ? (
+            <div style={{ fontSize: 11.5, color: BAD, marginTop: 6, lineHeight: 1.45 }}>
+              The player you took here went before your turn once the board changed. Pick again.
+            </div>
+          ) : null}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
             {(pick.options || []).map((o, i) => (
-              <div
+              <MockChoice
                 key={o.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => app.setDetail(o.id)}
-                onKeyDown={e => { if (e.key === 'Enter') app.setDetail(o.id); }}
-                style={{
-                  paddingTop: 10, cursor: 'pointer',
-                  borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 9.5, letterSpacing: '.09em', textTransform: 'uppercase',
-                      color: o.lens === 'need' ? GOOD : dim(0.4),
-                    }}>
-                      {o.title}
-                    </div>
-                    <div style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-0.01em', marginTop: 3, ...ellipsis }}>
-                      {o.name}
-                    </div>
-                    <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2 }}>
-                      {[o.pos, o.team || 'no team yet', (o.age ?? '?') + ' yrs', 'ADP ' + (o.adp || '—')].join(' · ')}
-                    </div>
-                  </div>
-                  <div style={{ flex: 'none', textAlign: 'right' }}>
-                    <div style={{ fontSize: 15, fontWeight: 500, color: fitColor(o.fit) }}>{o.fit}</div>
-                    <div style={{ fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', color: dim(0.35) }}>
-                      fit
-                    </div>
-                  </div>
-                </div>
-                <div style={{ fontSize: 11.5, color: dim(0.5), marginTop: 5, lineHeight: 1.45 }}>{o.why}</div>
-              </div>
+                app={app}
+                option={o}
+                overall={pick.overall}
+                taken={pick.player?.id === o.id}
+                first={i === 0}
+              />
             ))}
           </div>
+
+          <ShowMore app={app} pick={pick} />
         </Card>
       ))}
 
@@ -343,6 +338,101 @@ function MockDraft({ app, m }: { app: App; m: Model }) {
         </div>
       </Card>
     </div>
+  );
+}
+
+/**
+ * One selectable name. Tapping the row takes him — the whole point of a mock
+ * is playing it your way — so opening his sheet gets its own control rather
+ * than stealing the tap everyone will make first.
+ */
+function MockChoice({ app, option: o, overall, taken, first }: {
+  app: App; option: MockOption; overall: number; taken: boolean; first: boolean;
+}) {
+  return (
+    <div style={{ paddingTop: 10, borderTop: first ? 'none' : '1px solid var(--color-divider)' }}>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-pressed={taken}
+        onClick={() => app.chooseMock(overall, o.id)}
+        onKeyDown={e => { if (e.key === 'Enter') app.chooseMock(overall, o.id); }}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+          cursor: 'pointer', borderRadius: 9, padding: '6px 8px', margin: '0 -8px',
+          background: taken ? 'rgba(145,132,217,.14)' : 'transparent',
+          border: '1px solid ' + (taken ? ACCENT : 'transparent'),
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          {o.title ? (
+            <div style={{
+              fontSize: 9.5, letterSpacing: '.09em', textTransform: 'uppercase',
+              color: o.lens === 'need' ? GOOD : dim(0.4),
+            }}>
+              {o.title}
+            </div>
+          ) : null}
+          <div style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-0.01em', marginTop: 3, ...ellipsis }}>
+            {taken ? '✓ ' : ''}{o.name}
+          </div>
+          <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2 }}>
+            {[o.pos, o.team || 'no team yet', (o.age ?? '?') + ' yrs', 'ADP ' + (o.adp || '—')].join(' · ')}
+          </div>
+        </div>
+        <div style={{ flex: 'none', textAlign: 'right' }}>
+          <div style={{ fontSize: 15, fontWeight: 500, color: fitColor(o.fit) }}>{o.fit}</div>
+          <div style={{ fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', color: dim(0.35) }}>
+            fit
+          </div>
+        </div>
+      </div>
+      {o.why ? (
+        <div style={{ fontSize: 11.5, color: dim(0.5), marginTop: 4, lineHeight: 1.45 }}>{o.why}</div>
+      ) : null}
+      <button
+        type="button"
+        onClick={() => app.setDetail(o.id)}
+        className="btn btn-ghost"
+        style={{ fontSize: 11, padding: '3px 0' }}
+      >
+        See his breakdown
+      </button>
+    </div>
+  );
+}
+
+/** The rest of the board at that turn — three names is a shortlist, not a draft. */
+function ShowMore({ app, pick }: { app: App; pick: MockPick }) {
+  const [open, setOpen] = useState(false);
+  const rest = pick.available || [];
+  if (!rest.length) return null;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className="btn btn-ghost"
+        style={{ fontSize: 11.5, padding: '9px 0 0' }}
+      >
+        {open ? 'Hide the rest of the board' : 'Someone else · ' + rest.length + ' more available ›'}
+      </button>
+      {open ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
+          {rest.map((o, i) => (
+            <MockChoice
+              key={o.id}
+              app={app}
+              option={o}
+              overall={pick.overall}
+              taken={pick.player?.id === o.id}
+              first={i === 0}
+            />
+          ))}
+        </div>
+      ) : null}
+    </>
   );
 }
 

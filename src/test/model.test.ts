@@ -708,3 +708,40 @@ describe('the mock draft', () => {
     expect(total).toBe(held + added);
   });
 });
+
+describe('choosing inside the mock draft', () => {
+  const base = model.runMock(7);
+  const firstPick = base.mine[0];
+
+  it('takes whoever you picked, even against its own recommendation', () => {
+    const other = firstPick.options!.find(o => o.id !== firstPick.player!.id)!;
+    const run = model.runMock(7, { [firstPick.overall]: other.id });
+    expect(run.mine[0].player!.id).toBe(other.id);
+  });
+
+  it('moves the board after your pick, and leaves the board before it alone', () => {
+    const other = firstPick.options!.find(o => o.id !== firstPick.player!.id)!;
+    const run = model.runMock(7, { [firstPick.overall]: other.id });
+    const at = base.picks.findIndex(p => p.overall === firstPick.overall);
+    // everything up to your turn is untouched — nothing you do reaches backwards
+    expect(run.picks.slice(0, at).map(p => p.player!.id))
+      .toEqual(base.picks.slice(0, at).map(p => p.player!.id));
+    // and the player you took is not still sitting there for someone else
+    expect(run.picks.slice(at + 1).some(p => p.player!.id === other.id)).toBe(false);
+  });
+
+  it('offers the rest of the board too, so the choice is not three names', () => {
+    expect(firstPick.available!.length).toBeGreaterThan(3);
+    const ids = new Set(firstPick.options!.map(o => o.id));
+    expect(firstPick.available!.some(o => ids.has(o.id))).toBe(false);
+  });
+
+  it('flags a choice the changed board took before your turn', () => {
+    // Pick someone at your second turn, then take him at your first: by the
+    // time the second comes round he is already on your roster.
+    const second = base.mine[1];
+    const target = second.player!.id;
+    const run = model.runMock(7, { [firstPick.overall]: target, [second.overall]: target });
+    expect(run.mine[1].choiceLost).toBe(true);
+  });
+});
