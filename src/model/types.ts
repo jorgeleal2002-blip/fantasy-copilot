@@ -191,7 +191,7 @@ export interface SavedTrade {
   savedAt: number;
 }
 
-/** One selection in a simulated draft. */
+/** One selection already made in the mock, bot or yours. */
 export interface MockPick {
   overall: number;
   round: number;
@@ -201,12 +201,6 @@ export interface MockPick {
   team: string;
   mine: boolean;
   player: MockOption | null;
-  /** only on your picks: the three lenses on this turn */
-  options?: MockOption[];
-  /** and the rest of the board, so the choice is not limited to three names */
-  available?: MockOption[];
-  /** set when you picked someone here who was gone by the time it ran */
-  choiceLost?: boolean;
 }
 
 export interface MockOption {
@@ -217,24 +211,37 @@ export interface MockOption {
   age: number | null | undefined;
   adp: number | null | undefined;
   fit: number;
-  /** what makes this one the pick under a particular lens */
-  lens: 'best' | 'need' | 'upside';
+  /** set only on the three shortcuts offered at your turn */
+  lens?: 'best' | 'need' | 'upside';
   /** the heading, written where the facts are — "fills your hole" is a claim,
    *  and it is only true when the position is actually short */
-  title: string;
-  why: string;
+  title?: string;
+  why?: string;
 }
 
-export interface MockResult {
-  picks: MockPick[];
-  /** the slot you drafted from in this run */
+/**
+ * A mock draft room, frozen at the moment it is your turn.
+ *
+ * Not a finished simulation: the bots run up to your pick and stop, exactly
+ * like sitting on the clock. Everything the screen needs to let you draft is
+ * here, and taking someone advances it by replaying with one more choice.
+ */
+export interface MockState {
+  /** the seat you are drafting from */
   slot: number;
-  /** just your selections, in order */
-  mine: MockPick[];
-  /** what your roster would look like afterwards */
+  /** every selection made so far, oldest first */
+  made: MockPick[];
+  /** your turn, or null once the mock is over */
+  onClock: { overall: number; round: number; slot: number; label: string } | null;
+  /** the three rated shortcuts for this turn */
+  options: MockOption[];
+  /** everything still on the board, rated, best first */
+  board: MockOption[];
+  /** what you have taken in this mock, in order */
+  myTeam: MockOption[];
+  /** your roster shape including what you already own */
   shape: Record<Pos, number>;
-  /** how many rounds the simulation actually covered */
-  through: number;
+  done: boolean;
 }
 
 export interface DraftDeal {
@@ -383,12 +390,15 @@ export interface Model {
    * `choices` maps an overall pick of yours to the player you took there, so
    * the board downstream reacts to what you actually did.
    */
+  /**
+   * Run the mock up to your next turn and stop there. `choices` is every pick
+   * you have already made, keyed by overall; `fromSlot` drafts from a seat
+   * other than your own.
+   */
   runMock: (
     seed: number,
     choices?: Record<number, string>,
-    /** draft from this slot instead of your real one — the "what if I had 1.01"
-     *  question every mock draft exists to answer */
     fromSlot?: number | null,
-  ) => MockResult;
+  ) => MockState;
   metricKeys: MetricKey[];
 }

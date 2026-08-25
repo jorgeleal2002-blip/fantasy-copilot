@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { ACCENT, BAD, GOOD, POS } from '../model/constants';
+import { ACCENT, GOOD, POS } from '../model/constants';
 import { num } from '../model/math';
 import { reasons } from '../model/score';
-import type { DraftDeal, MockOption, MockPick, Model } from '../model/types';
+import type { DraftDeal, MockOption, Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { PlayerSearch, type SearchScope } from '../ui/PlayerSearch';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
-import { capsule, cardTitle, dim, ellipsis, fitColor, fitStyle, heroCard, heroGlow, kicker, posBadge } from '../ui/styles';
+import { capsule, cardNote, cardTitle, dim, ellipsis, fitColor, fitStyle, heroCard, heroGlow, kicker, posBadge } from '../ui/styles';
 
 const STATUS_TEXT: Record<string, string> = {
   pre_draft: 'Draft not started',
@@ -226,142 +226,152 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
 }
 
 /**
- * The rest of the draft, played out.
+ * A mock draft room.
  *
- * Every other manager takes the best player on the board for THEM, with enough
- * noise that two runs give two plausible boards — so the useful output is not
- * "this will happen" but "this is who tends to reach you, and here is what you
- * could do with each turn".
+ * The bots run up to your turn and stop — you are on the clock, with the whole
+ * board in front of you and a rating on every name, which is the part a real
+ * mock room does not give you. Taking somebody advances it and the bots run
+ * again.
  */
 function MockDraft({ app, m }: { app: App; m: Model }) {
-  const res = m.runMock(app.mockSeed, app.mockChoices, app.mockSlot);
-  const chosen = Object.keys(app.mockChoices).length;
-  const [board, setBoard] = useState(false);
-  const realSlot = m.mySlot;
+  const st = m.runMock(app.mockSeed, app.mockChoices, app.mockSlot);
+  const [pos, setPos] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
+  const [all, setAll] = useState(false);
+  const [log, setLog] = useState(false);
+  const started = st.made.length > 0 || Object.keys(app.mockChoices).length > 0;
 
-  if (!res.mine.length) {
-    return (
-      <Card>
-        <div style={{ fontSize: 13.5, fontWeight: 500, marginBottom: 6 }}>No picks left to simulate</div>
-        <div style={{ fontSize: 12.5, lineHeight: 1.5, color: dim(0.5) }}>
-          You have no selections remaining in this draft, so there is nothing to play out.
-        </div>
-      </Card>
-    );
-  }
+  const shortlist = st.options.map(o => o.id);
+  const rest = st.board
+    .filter(o => shortlist.indexOf(o.id) < 0)
+    .filter(o => pos === 'ALL' || o.pos === pos);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* The seat is only a choice before anyone has picked — changing it
+          halfway would silently throw the draft away. */}
+      {!started ? (
+        <Card>
+          <div style={{ ...cardTitle, marginBottom: 2 }}>Draft from slot</div>
+          <div style={{ ...cardNote, marginBottom: 9 }}>
+            {m.mySlot ? 'Yours is ' + m.mySlot + '. Take any seat to see how the board falls from there.'
+              : 'Pick a seat to mock from.'}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))', gap: 6 }}>
+            {Array.from({ length: m.teamCount }, (_, i) => i + 1).map(n => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => app.setMockSlot(n === m.mySlot ? null : n)}
+                aria-pressed={st.slot === n}
+                style={{ ...segChip(st.slot === n), font: 'inherit', fontSize: 11.5 }}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
         background: 'var(--color-surface)', borderRadius: 11, padding: '11px 12px',
       }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 500 }}>
-            {res.mine.length === 1 ? '1 pick of yours' : res.mine.length + ' picks of yours'} through round {res.through}
+          <div style={{
+            fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase',
+            color: st.done ? dim(0.4) : GOOD,
+          }}>
+            {st.done ? 'Mock complete' : 'On the clock'}
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 3 }}>
+            {st.onClock ? 'Pick ' + st.onClock.label : st.myTeam.length + ' players taken'}
           </div>
           <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 3 }}>
-            {POS.map(p => res.shape[p] + ' ' + p).join(' · ')} when it is over
+            slot {st.slot} · {st.made.length} picks in · {POS.map(p => st.shape[p] + ' ' + p).join(' · ')}
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 'none' }}>
-          <button
-            type="button"
-            onClick={app.rerollMock}
-            className="btn btn-secondary"
-            style={{ borderRadius: 9, padding: '7px 11px', fontSize: 12 }}
-          >
-            Run again
-          </button>
-          {chosen ? (
-            <button
-              type="button"
-              onClick={app.clearMockChoices}
-              className="btn btn-ghost"
-              style={{ fontSize: 11, padding: 0 }}
-            >
-              Undo my {chosen === 1 ? 'pick' : chosen + ' picks'}
-            </button>
-          ) : null}
-        </div>
+        <button
+          type="button"
+          onClick={app.rerollMock}
+          className="btn btn-secondary"
+          style={{ borderRadius: 9, padding: '7px 11px', fontSize: 12, flex: 'none' }}
+        >
+          {started ? 'Restart' : 'Reshuffle'}
+        </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-        <div style={{ fontSize: 11, letterSpacing: '.02em', color: dim(0.42) }}>
-          Draft from slot
-          {realSlot ? <span style={{ color: dim(0.3) }}> · yours is {realSlot}</span> : null}
-        </div>
-        {/* The question every mock exists to answer is "what if I picked
-            somewhere else", so the seat is a control and not a fact. */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))', gap: 6,
-        }}>
-          {Array.from({ length: m.teamCount }, (_, i) => i + 1).map(n => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => app.setMockSlot(n === realSlot ? null : n)}
-              aria-pressed={res.slot === n}
-              style={{ ...segChip(res.slot === n), font: 'inherit', fontSize: 11.5 }}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.45), textWrap: 'pretty' }}>
-        Bots draft every other seat, for their own holes, with noise in it — so run it a few times.
-        Tap whoever you would take and the rest of the board reacts. Every name carries its Fit,
-        which is the part a mock room does not give you.
-      </div>
-
-      {res.mine.map(pick => (
-        <Card key={pick.overall}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-0.01em' }}>Pick {pick.label}</div>
-            <div style={{ fontSize: 10.5, color: dim(0.4) }}>overall {pick.overall}</div>
-          </div>
-
-          {pick.choiceLost ? (
-            <div style={{ fontSize: 11.5, color: BAD, marginTop: 6, lineHeight: 1.45 }}>
-              The player you took here went before your turn once the board changed. Pick again.
+      {st.onClock ? (
+        <>
+          <Card>
+            <div style={{ ...cardTitle, marginBottom: 2 }}>Take one</div>
+            <div style={{ ...cardNote, marginBottom: 4 }}>
+              Three ways to use the pick, rated. Or take anybody from the board below.
             </div>
-          ) : null}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {st.options.map((o, i) => (
+                <MockChoice key={o.id} app={app} option={o} overall={st.onClock!.overall} first={i === 0} />
+              ))}
+            </div>
+          </Card>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
-            {(pick.options || []).map((o, i) => (
-              <MockChoice
-                key={o.id}
-                app={app}
-                option={o}
-                overall={pick.overall}
-                taken={pick.player?.id === o.id}
-                first={i === 0}
-              />
-            ))}
-          </div>
-
-          <ShowMore app={app} pick={pick} />
+          <Card>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+              <div style={cardTitle}>The board</div>
+              <div style={{ fontSize: 10.5, color: dim(0.4) }}>{rest.length} available</div>
+            </div>
+            <Segmented options={POS_FILTERS} value={pos} onChange={setPos} size="sm" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8 }}>
+              {rest.slice(0, all ? 60 : 10).map((o, i) => (
+                <MockChoice key={o.id} app={app} option={o} overall={st.onClock!.overall} first={i === 0} />
+              ))}
+            </div>
+            {rest.length > 10 ? (
+              <button
+                type="button"
+                onClick={() => setAll(!all)}
+                className="btn btn-ghost"
+                style={{ fontSize: 11.5, padding: '10px 0 0' }}
+              >
+                {all ? 'Show fewer' : 'Show more of the board ›'}
+              </button>
+            ) : null}
+          </Card>
+        </>
+      ) : (
+        <Card>
+          <div style={{ ...cardTitle, marginBottom: 8 }}>What you drafted</div>
+          {st.myTeam.length ? st.myTeam.map((o, i) => (
+            <div key={o.id} style={{
+              display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5,
+              paddingTop: 8, borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+            }}>
+              <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{o.name}</span>
+              <span style={{ color: dim(0.42), flex: 'none' }}>{o.pos} · fit {o.fit}</span>
+            </div>
+          )) : (
+            <div style={{ fontSize: 12.5, color: dim(0.5) }}>
+              No picks of yours left in this draft — there is nothing to mock.
+            </div>
+          )}
         </Card>
-      ))}
+      )}
 
       <Card>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-          <div style={cardTitle}>The whole board</div>
+          <div style={cardTitle}>{st.done ? 'Every pick' : 'Gone since you last picked'}</div>
           <button
             type="button"
-            onClick={() => setBoard(!board)}
-            aria-expanded={board}
+            onClick={() => setLog(!log)}
+            aria-expanded={log}
             className="btn btn-ghost"
             style={{ fontSize: 11.5, padding: 0 }}
           >
-            {board ? 'Hide' : res.picks.length + ' picks ›'}
+            {log ? 'Hide' : st.made.length + ' picks ›'}
           </button>
         </div>
-        {board ? (
+        {log ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-            {res.picks.map(p => (
+            {st.made.slice().reverse().map(p => (
               <div
                 key={p.overall}
                 style={{
@@ -375,44 +385,37 @@ function MockDraft({ app, m }: { app: App; m: Model }) {
                 <span style={{ flex: 1, minWidth: 0, fontWeight: p.mine ? 500 : 400, ...ellipsis }}>
                   {p.player?.name}
                 </span>
-                <span style={{ color: dim(0.4), flex: 'none', maxWidth: 130, ...ellipsis }}>
-                  {p.player?.pos} · {p.mine ? 'you' : p.team}
+                <span style={{ color: dim(0.4), flex: 'none', maxWidth: 120, ...ellipsis }}>
+                  {p.player?.pos} · {p.team}
                 </span>
               </div>
             ))}
+            {!st.made.length ? (
+              <div style={{ fontSize: 12, color: dim(0.5) }}>Nothing yet — you are first up.</div>
+            ) : null}
           </div>
-        ) : (
-          <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), marginTop: 6 }}>
-            Every selection the bots make, round by round, with yours marked.
-          </div>
-        )}
+        ) : null}
       </Card>
     </div>
   );
 }
 
-/**
- * One selectable name. Tapping the row takes him — the whole point of a mock
- * is playing it your way — so opening his sheet gets its own control rather
- * than stealing the tap everyone will make first.
- */
-function MockChoice({ app, option: o, overall, taken, first }: {
-  app: App; option: MockOption; overall: number; taken: boolean; first: boolean;
+/** One name on the board. Tapping it drafts him and the bots run again. */
+function MockChoice({ app, option: o, overall, first }: {
+  app: App; option: MockOption; overall: number; first: boolean;
 }) {
   return (
-    <div style={{ paddingTop: 10, borderTop: first ? 'none' : '1px solid var(--color-divider)' }}>
+    <div style={{ paddingTop: 9, borderTop: first ? 'none' : '1px solid var(--color-divider)' }}>
       <div
         role="button"
         tabIndex={0}
-        aria-pressed={taken}
         onClick={() => app.chooseMock(overall, o.id)}
         onKeyDown={e => { if (e.key === 'Enter') app.chooseMock(overall, o.id); }}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
           cursor: 'pointer', borderRadius: 9, padding: '6px 8px', margin: '0 -8px',
-          background: taken ? 'rgba(145,132,217,.14)' : 'transparent',
-          border: '1px solid ' + (taken ? ACCENT : 'transparent'),
         }}
+        className="row-tap"
       >
         <div style={{ minWidth: 0 }}>
           {o.title ? (
@@ -423,8 +426,8 @@ function MockChoice({ app, option: o, overall, taken, first }: {
               {o.title}
             </div>
           ) : null}
-          <div style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-0.01em', marginTop: 3, ...ellipsis }}>
-            {taken ? '✓ ' : ''}{o.name}
+          <div style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-0.01em', marginTop: o.title ? 3 : 0, ...ellipsis }}>
+            {o.name}
           </div>
           <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2 }}>
             {[o.pos, o.team || 'no team yet', (o.age ?? '?') + ' yrs', 'ADP ' + (o.adp || '—')].join(' · ')}
@@ -438,51 +441,9 @@ function MockChoice({ app, option: o, overall, taken, first }: {
         </div>
       </div>
       {o.why ? (
-        <div style={{ fontSize: 11.5, color: dim(0.5), marginTop: 4, lineHeight: 1.45 }}>{o.why}</div>
+        <div style={{ fontSize: 11.5, color: dim(0.5), marginTop: 3, lineHeight: 1.45 }}>{o.why}</div>
       ) : null}
-      <button
-        type="button"
-        onClick={() => app.setDetail(o.id)}
-        className="btn btn-ghost"
-        style={{ fontSize: 11, padding: '3px 0' }}
-      >
-        See his breakdown
-      </button>
     </div>
-  );
-}
-
-/** The rest of the board at that turn — three names is a shortlist, not a draft. */
-function ShowMore({ app, pick }: { app: App; pick: MockPick }) {
-  const [open, setOpen] = useState(false);
-  const rest = pick.available || [];
-  if (!rest.length) return null;
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        className="btn btn-ghost"
-        style={{ fontSize: 11.5, padding: '9px 0 0' }}
-      >
-        {open ? 'Hide the rest of the board' : 'Someone else · ' + rest.length + ' more available ›'}
-      </button>
-      {open ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
-          {rest.map((o, i) => (
-            <MockChoice
-              key={o.id}
-              app={app}
-              option={o}
-              overall={pick.overall}
-              taken={pick.player?.id === o.id}
-              first={i === 0}
-            />
-          ))}
-        </div>
-      ) : null}
-    </>
   );
 }
 

@@ -8,7 +8,7 @@ import type { Market } from './market';
 import { ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
-  MockOption, MockResult, MockPick,
+  MockOption, MockPick, MockState,
   OppPlayer, PickAsset, PlayerFit, PlayerValue, PositionMultiplier, RosterPlayer, SearchEntry, TargetTrade,
   TeamEntry, TeamProfile,
   TeamSheet, Window,
@@ -816,26 +816,28 @@ export function buildModel(input: ModelInput): Model {
   };
 
   /**
-   * Play the rest of the draft out.
+   * A mock draft room: run the bots up to your turn and STOP there.
    *
-   * Every other manager takes the best player on the board FOR THEM — market
-   * value lifted by how thin they are at that position, which is how people
-   * actually draft — with a little noise, so running it twice gives you two
-   * plausible boards rather than the same one twice. At your turn the sim
-   * records what was still there before it takes anyone, which is the whole
-   * point: not "here is what happens" but "here is what reaches you".
+   * Not a finished simulation handed to you as a report — that answered "what
+   * would happen" when the question is "what do I do now". The bots draft for
+   * their own holes with noise in them, the board freezes the moment you are on
+   * the clock, and taking somebody replays the whole thing with one more choice
+   * recorded. Which is what sitting in a mock room actually is.
    */
   const runMock = (
     seed: number,
     choices?: Record<number, string>,
     fromSlot?: number | null,
-  ): MockResult => {
-    // Sitting in a different seat is the whole reason to mock a draft: every
+  ): MockState => {
+    // Sitting in a different seat is half the reason to mock a draft: every
     // pick in that slot becomes yours and whoever really owns it drafts as a
-    // bot, exactly like joining a mock room from a slot you did not earn.
-    const seat = fromSlot || mySlot || slotOfRoster[myRow.roster_id] || 1;
-    // Deterministic per seed, so a run can be looked at twice and re-run
-    // deliberately rather than shuffling under you on every render.
+    // bot, exactly like joining a room from a slot you did not earn.
+    const mySeat = mySlot || slotOfRoster[myRow.roster_id] || 1;
+    const seat = fromSlot || mySeat;
+    const moved = seat !== mySeat;
+
+    // Deterministic per seed, so the bots do not reshuffle every time you take
+    // somebody — only the picks after yours can move.
     let st = (seed || 1) >>> 0;
     const rnd = () => {
       st = (st + 0x6d2b79f5) >>> 0;
@@ -864,32 +866,27 @@ export function buildModel(input: ModelInput): Model {
     const shortAt = (rid: number, pos: Pos) =>
       Math.max(0, (slots[pos] || 1) - ((have[rid] || {})[pos] || 0));
 
-    // Only as far as your last pick — nobody needs a simulated round 14 they
-    // do not select in. From a borrowed seat that is the last pick that seat
-    // holds, not the last one your real team does.
-    const movedSeat = seat !== (mySlot || slotOfRoster[myRow.roster_id]);
-    const lastMine = movedSeat
+    const lastMine = moved
       ? rounds * teamCount
       : (myPickList.length ? myPickList[myPickList.length - 1].overall : nextOverall);
     const stop = Math.min(lastMine, rounds * teamCount);
     const snake = !!(d.draft && d.draft.type === 'snake');
 
-    const picks: MockPick[] = [];
-    const mineShape = {} as Record<Pos, number>;
-    POS.forEach(p => { mineShape[p] = (have[myRow.roster_id] || {})[p] || 0; });
+    const made: MockPick[] = [];
+    const myTeam: MockOption[] = [];
+    const shape = {} as Record<Pos, number>;
+    POS.forEach(p => { shape[p] = (have[myRow.roster_id] || {})[p] || 0; });
 
-    const asOption = (
+    const rate = (
       x: { id: string; raw: SleeperPlayer; pos: Pos },
-      lens: MockOption['lens'],
-      title: string,
-      why: string,
+      extra?: Partial<MockOption>,
     ): MockOption => {
       const sc = scorePlayer(x.raw, needScore, {
         dv: talentQ(x.raw, x.id), dvMax, stack: stackFor(x.raw), use: uFor(x.id), redraft: !isDynasty,
       }, w);
       return {
         id: x.id, name: playerName(x.raw), pos: x.pos, team: x.raw.team,
-        age: x.raw.age, adp: x.raw.search_rank, fit: sc.fit, lens, title, why,
+        age: x.raw.age, adp: x.raw.search_rank, fit: sc.fit, ...extra,
       };
     };
 
@@ -897,13 +894,9 @@ export function buildModel(input: ModelInput): Model {
       const round = Math.floor((overall - 1) / teamCount) + 1;
       const inRound = ((overall - 1) % teamCount) + 1;
       const slot = snake && round % 2 === 0 ? teamCount - inRound + 1 : inRound;
-      // The real owner, not whoever the slot started with — see pickOwner.
-      // Unless you moved seats, in which case the seat decides.
-      const moved = seat !== (mySlot || slotOfRoster[myRow.roster_id]);
       const seatOwner = moved ? (slotToRoster[slot] ?? 0) : (pickOwner[overall] ?? slotToRoster[slot]);
       const mine = moved ? slot === seat : seatOwner === myRow.roster_id;
-      // Borrowing a seat does not borrow a roster: your holes are still yours,
-      // so a pick that is yours counts against your own team either way.
+      // Borrowing a seat does not borrow a roster: your holes stay yours.
       const rid = mine ? myRow.roster_id : seatOwner;
       const label = round + '.' + String(inRound).padStart(2, '0');
       const owner = (d.rosters || []).find(r => r.roster_id === seatOwner);
@@ -911,74 +904,75 @@ export function buildModel(input: ModelInput): Model {
       if (!live.length) break;
 
       if (mine) {
-        // Three ways to use the pick, and deliberately three DIFFERENT players.
-        // Ranking each lens over the whole board collapses them into one name
-        // whenever the best player also happens to fill the hole — which is
-        // true often enough that the screen showed a single option most turns.
-        // Each lens picks from what the ones before it did not take, so the
-        // card always answers "and if not him?".
-        const shortlist = live.slice(0, 40);
-        const boom = (x: { id: string; raw: SleeperPlayer }) => scorePlayer(x.raw, {}, {
-          dv: talentQ(x.raw, x.id), dvMax, use: uFor(x.id), redraft: !isDynasty,
-        }, w).m.boom;
-        const needScoreOf = (x: { pos: Pos; q: number }) => x.q * (1 + shortAt(rid, x.pos) * 0.35);
-
-        const best = live[0];
-        const rest = shortlist.filter(x => x.id !== best.id);
-        const need = rest.slice().sort((a, b) => needScoreOf(b) - needScoreOf(a))[0];
-        const upside = rest.filter(x => !need || x.id !== need.id)
-          .sort((a, b) => boom(b) - boom(a))[0];
-
-        const options: MockOption[] = [];
-        const bestAlsoFills = shortAt(rid, best.pos) > 0;
-        options.push(asOption(best, 'best', 'Best available', bestAlsoFills
-          ? 'The best player left — and he fills a hole, so the other two are only if you disagree'
-          : 'The best player left, whatever you need'));
-        if (need) {
-          const short = shortAt(rid, need.pos);
-          options.push(asOption(
-            need, 'need',
-            short ? 'Fills your hole' : 'Deepest position',
-            short
-              ? 'You are ' + short + ' short at ' + need.pos
-              : 'No hole left to fill, so this is the best of what you already start',
-          ));
-        }
-        if (upside) {
-          options.push(asOption(upside, 'upside', 'Highest ceiling', 'The highest ceiling still on the board'));
-        }
-
-        // Your own pick wins over the model's. A choice can still be gone —
-        // change an earlier turn and the board downstream moves — so that is
-        // reported rather than silently swapped.
         const wanted = choices ? choices[overall] : undefined;
-        const forced = wanted ? live.find(x => x.id === wanted) : undefined;
-        const choiceLost = !!wanted && !forced;
-        const taken = forced
-          || (needScoreOf(best) >= (need ? needScoreOf(need) : 0) ? best : need);
-        if (forced && !options.some(o => o.id === forced.id)) {
-          options.unshift(asOption(forced, 'best', 'Your pick', 'You took him here'));
+        const taken = wanted ? live.find(x => x.id === wanted) : undefined;
+
+        if (!taken) {
+          // You are on the clock. Everything the room needs, and nothing after.
+          const shortlist = live.slice(0, 40);
+          const boom = (x: { id: string; raw: SleeperPlayer }) => scorePlayer(x.raw, {}, {
+            dv: talentQ(x.raw, x.id), dvMax, use: uFor(x.id), redraft: !isDynasty,
+          }, w).m.boom;
+          const needOf = (x: { pos: Pos; q: number }) => x.q * (1 + shortAt(rid, x.pos) * 0.35);
+
+          // Three DIFFERENT names. Ranking each lens over the whole board
+          // collapsed them onto one whenever the best player also filled the
+          // hole, which is most turns.
+          const best = live[0];
+          const rest = shortlist.filter(x => x.id !== best.id);
+          const need = rest.slice().sort((a, b) => needOf(b) - needOf(a))[0];
+          const upside = rest.filter(x => !need || x.id !== need.id)
+            .sort((a, b) => boom(b) - boom(a))[0];
+
+          const options: MockOption[] = [rate(best, {
+            lens: 'best',
+            title: 'Best available',
+            why: shortAt(rid, best.pos)
+              ? 'The best player left — and he fills a hole'
+              : 'The best player left, whatever you need',
+          })];
+          if (need) {
+            const short = shortAt(rid, need.pos);
+            options.push(rate(need, {
+              lens: 'need',
+              title: short ? 'Fills your hole' : 'Deepest position',
+              why: short
+                ? 'You are ' + short + ' short at ' + need.pos
+                : 'No hole left to fill, so this is the best of what you already start',
+            }));
+          }
+          if (upside) {
+            options.push(rate(upside, {
+              lens: 'upside', title: 'Highest ceiling', why: 'The highest ceiling still on the board',
+            }));
+          }
+
+          return {
+            slot: seat,
+            made,
+            onClock: { overall, round, slot, label },
+            options,
+            // The whole board, rated — a mock room lets you take anybody.
+            board: live.slice(0, 120).map(x => rate(x)),
+            myTeam,
+            shape,
+            done: false,
+          };
         }
+
         gone.add(taken.id);
         have[rid] = have[rid] || {};
         have[rid][taken.pos] = (have[rid][taken.pos] || 0) + 1;
-        mineShape[taken.pos] = (mineShape[taken.pos] || 0) + 1;
-        picks.push({
-          overall, round, slot, label, team: teamName(owner?.owner_id), mine: true,
-          player: options.find(o => o.id === taken.id) || asOption(taken, 'need', 'Fills your hole', ''),
-          options,
-          // Everything else still on the board, so the choice is not three names.
-          available: live.filter(x => !options.some(o => o.id === x.id))
-            .slice(0, 12)
-            .map(x => asOption(x, 'best', '', '')),
-          choiceLost,
-        });
+        shape[taken.pos] = (shape[taken.pos] || 0) + 1;
+        const opt = rate(taken);
+        myTeam.push(opt);
+        made.push({ overall, round, slot, label, team: 'you', mine: true, player: opt });
         continue;
       }
 
-      // Somebody else. Value lifted by their own thinness, then a weighted
-      // draw from the top of that list rather than the strict maximum — real
-      // managers reach, and a board that never does is not a forecast.
+      // A bot. Value lifted by its own thinness, then a weighted draw from the
+      // top of that list rather than the strict maximum — real managers reach,
+      // and a board that never does is not a forecast.
       const ranked = live.slice(0, 25)
         .map(x => ({ x, s: x.q * (1 + (rid ? shortAt(rid, x.pos) : 0) * 0.3) }))
         .sort((a, b) => b.s - a.s);
@@ -993,21 +987,20 @@ export function buildModel(input: ModelInput): Model {
         have[rid] = have[rid] || {};
         have[rid][choice.pos] = (have[rid][choice.pos] || 0) + 1;
       }
-      picks.push({
+      made.push({
         overall, round, slot, label, team: teamName(owner?.owner_id), mine: false,
         player: {
           id: choice.id, name: playerName(choice.raw), pos: choice.pos, team: choice.raw.team,
-          age: choice.raw.age, adp: choice.raw.search_rank, fit: 0, lens: 'best', title: '', why: '',
+          age: choice.raw.age, adp: choice.raw.search_rank, fit: 0,
         },
       });
     }
 
+    // Ran out of picks or of players: the mock is over.
     return {
-      picks,
-      slot: seat,
-      mine: picks.filter(p => p.mine),
-      shape: mineShape,
-      through: picks.length ? picks[picks.length - 1].round : 0,
+      slot: seat, made, onClock: null, options: [],
+      board: board.filter(x => !gone.has(x.id)).slice(0, 40).map(x => rate(x)),
+      myTeam, shape, done: true,
     };
   };
 

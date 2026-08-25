@@ -652,136 +652,70 @@ describe('a redraft league is not priced as a dynasty', () => {
   });
 });
 
-describe('the mock draft', () => {
-  const run = model.runMock(7);
+describe('the mock draft room', () => {
+  const open = model.runMock(7);
 
-  it('never picks the same player twice, or one already owned', () => {
-    const ids = run.picks.map(p => p.player!.id);
-    expect(new Set(ids).size).toBe(ids.length);
+  it('runs the bots up to your turn and stops there', () => {
+    expect(open.done).toBe(false);
+    expect(open.onClock).not.toBe(null);
+    // everything already made belongs to somebody else, and it is contiguous
+    expect(open.made.every(p => !p.mine)).toBe(true);
+    open.made.forEach((p, i) => expect(p.overall).toBe(model.nextOverall + i));
+    // your turn is the very next pick after the last one made
+    expect(open.onClock!.overall).toBe(model.nextOverall + open.made.length);
+  });
+
+  it('never offers a player who is already gone', () => {
+    const taken = new Set(open.made.map(p => p.player!.id));
     const owned = new Set(bundle.rosters.flatMap(r => r.players || []));
-    expect(ids.some(id => owned.has(id))).toBe(false);
-  });
-
-  it('runs from the next pick forward, in order, and stops at your last one', () => {
-    expect(run.picks[0].overall).toBe(model.nextOverall);
-    for (let i = 1; i < run.picks.length; i++) {
-      expect(run.picks[i].overall).toBe(run.picks[i - 1].overall + 1);
+    for (const o of open.board) {
+      expect(taken.has(o.id)).toBe(false);
+      expect(owned.has(o.id)).toBe(false);
     }
-    const lastMine = model.myPickList[model.myPickList.length - 1].overall;
-    expect(run.picks[run.picks.length - 1].overall).toBeLessThanOrEqual(lastMine);
   });
 
-  it('puts you on the clock exactly at the picks you hold', () => {
-    const simMine = run.picks.filter(p => p.mine).map(p => p.overall);
-    const held = model.myPickList.map(p => p.overall).filter(o => o >= model.nextOverall);
-    expect(simMine).toEqual(held);
+  it('offers three rated shortcuts, none of them repeated on the board', () => {
+    expect(open.options.length).toBe(3);
+    expect(open.options.map(o => o.lens)).toEqual(['best', 'need', 'upside']);
+    expect(new Set(open.options.map(o => o.id)).size).toBe(3);
+    for (const o of open.options) expect(o.fit).toBeGreaterThan(0);
   });
 
-  it('offers three distinct options at each of your picks, and takes one of them', () => {
-    for (const p of run.mine) {
-      // Distinct names in a fixed order. Fewer than three only where the board
-      // itself has run that thin, which is the tail of a rookie draft.
-      expect(p.options!.length).toBeGreaterThan(0);
-      expect(new Set(p.options!.map(o => o.id)).size).toBe(p.options!.length);
-      expect(p.options!.map(o => o.lens))
-        .toEqual(['best', 'need', 'upside'].slice(0, p.options!.length));
-      expect(p.options!.map(o => o.id)).toContain(p.player!.id);
+  it('advances one turn when you take somebody', () => {
+    const pick = open.options[1];
+    const next = model.runMock(7, { [open.onClock!.overall]: pick.id });
+    expect(next.myTeam.map(p => p.id)).toEqual([pick.id]);
+    expect(next.made.some(p => p.mine && p.player!.id === pick.id)).toBe(true);
+    expect(next.onClock!.overall).toBeGreaterThan(open.onClock!.overall);
+    // and he is off the board for everyone else
+    expect(next.board.some(o => o.id === pick.id)).toBe(false);
+  });
+
+  it('leaves the picks before your turn alone, whatever you take', () => {
+    const a = model.runMock(7, { [open.onClock!.overall]: open.options[0].id });
+    const b = model.runMock(7, { [open.onClock!.overall]: open.options[2].id });
+    const upToMe = (r: typeof a) => r.made.filter(p => p.overall < open.onClock!.overall);
+    expect(upToMe(a).map(p => p.player!.id)).toEqual(upToMe(b).map(p => p.player!.id));
+  });
+
+  it('finishes once you are out of picks', () => {
+    let choices: Record<number, string> = {};
+    let st = model.runMock(7);
+    let guard = 0;
+    while (st.onClock && guard++ < 50) {
+      choices = { ...choices, [st.onClock.overall]: st.options[0].id };
+      st = model.runMock(7, choices);
     }
-    // With a full board the three lenses must genuinely spread. Ranking each
-    // over the whole pool collapsed them onto one name whenever the best
-    // player also filled the hole, which was most turns.
-    expect(run.mine[0].options!.length).toBe(3);
+    expect(st.done).toBe(true);
+    expect(st.onClock).toBe(null);
+    expect(st.myTeam.length).toBe(4);   // the four picks this team holds
   });
 
-  it('is reproducible for a seed and different across seeds', () => {
-    const again = model.runMock(7);
-    expect(again.picks.map(p => p.player!.id)).toEqual(run.picks.map(p => p.player!.id));
-    const other = model.runMock(8);
-    expect(other.picks.map(p => p.player!.id)).not.toEqual(run.picks.map(p => p.player!.id));
-  });
-
-  it('reports the roster you would end up with, counting what you already hold', () => {
-    const before = model.have;
-    const added = run.mine.length;
-    const total = (Object.values(run.shape) as number[]).reduce((a, b) => a + b, 0);
-    const held = (Object.values(before) as number[]).reduce((a, b) => a + b, 0);
-    expect(total).toBe(held + added);
-  });
-});
-
-describe('choosing inside the mock draft', () => {
-  const base = model.runMock(7);
-  const firstPick = base.mine[0];
-
-  it('takes whoever you picked, even against its own recommendation', () => {
-    const other = firstPick.options!.find(o => o.id !== firstPick.player!.id)!;
-    const run = model.runMock(7, { [firstPick.overall]: other.id });
-    expect(run.mine[0].player!.id).toBe(other.id);
-  });
-
-  it('moves the board after your pick, and leaves the board before it alone', () => {
-    const other = firstPick.options!.find(o => o.id !== firstPick.player!.id)!;
-    const run = model.runMock(7, { [firstPick.overall]: other.id });
-    const at = base.picks.findIndex(p => p.overall === firstPick.overall);
-    // everything up to your turn is untouched — nothing you do reaches backwards
-    expect(run.picks.slice(0, at).map(p => p.player!.id))
-      .toEqual(base.picks.slice(0, at).map(p => p.player!.id));
-    // and the player you took is not still sitting there for someone else
-    expect(run.picks.slice(at + 1).some(p => p.player!.id === other.id)).toBe(false);
-  });
-
-  it('offers the rest of the board too, so the choice is not three names', () => {
-    expect(firstPick.available!.length).toBeGreaterThan(3);
-    const ids = new Set(firstPick.options!.map(o => o.id));
-    expect(firstPick.available!.some(o => ids.has(o.id))).toBe(false);
-  });
-
-  it('flags a choice the changed board took before your turn', () => {
-    // Pick someone at your second turn, then take him at your first: by the
-    // time the second comes round he is already on your roster.
-    const second = base.mine[1];
-    const target = second.player!.id;
-    const run = model.runMock(7, { [firstPick.overall]: target, [second.overall]: target });
-    expect(run.mine[1].choiceLost).toBe(true);
-  });
-});
-
-describe('mocking from a different slot', () => {
-  const real = model.runMock(3);
-  const fromOne = model.runMock(3, undefined, 1);
-
-  it('reports the seat it drafted from', () => {
-    expect(real.slot).toBe(model.mySlot);
-    expect(fromOne.slot).toBe(1);
-  });
-
-  it('puts you on the clock at that slot in every round', () => {
-    for (const p of fromOne.mine) {
-      // linear in the fixture, so slot 1 is the first pick of each round
-      expect(p.slot).toBe(1);
-    }
-    // Exactly one per round: a borrowed seat gets that seat's picks and no
-    // others. Your real team holds four here because it traded for one, which
-    // is the difference the seat does not carry with it.
-    expect(fromOne.mine.length).toBe(model.rounds);
-    expect(real.mine.length).toBe(4);
-  });
-
-  it('gives you the first pick overall when you take slot one', () => {
-    expect(fromOne.picks[0].mine).toBe(true);
-    expect(fromOne.picks[0].overall).toBe(model.nextOverall);
-  });
-
-  it('borrows the seat but not a roster — your holes stay yours', () => {
-    // The shape starts from what you already own, whatever seat you sit in.
-    const held = (Object.values(model.have) as number[]).reduce((a, b) => a + b, 0);
-    const total = (Object.values(fromOne.shape) as number[]).reduce((a, b) => a + b, 0);
-    expect(total).toBe(held + fromOne.mine.length);
-  });
-
-  it('drafts the real team in that seat as a bot', () => {
-    // Slot 1 belongs to somebody else in the fixture, and in this run they no
-    // longer select there — the seat is yours.
-    expect(fromOne.picks.filter(p => p.slot === 1).every(p => p.mine)).toBe(true);
+  it('lets you sit in another seat, and drafts its real owner as a bot', () => {
+    const one = model.runMock(7, undefined, 1);
+    expect(one.slot).toBe(1);
+    // slot 1 is the first pick of the draft, so nothing precedes you
+    expect(one.made.length).toBe(0);
+    expect(one.onClock!.slot).toBe(1);
   });
 });
