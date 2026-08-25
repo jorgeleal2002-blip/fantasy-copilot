@@ -234,8 +234,10 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
  * could do with each turn".
  */
 function MockDraft({ app, m }: { app: App; m: Model }) {
-  const res = m.runMock(app.mockSeed, app.mockChoices);
+  const res = m.runMock(app.mockSeed, app.mockChoices, app.mockSlot);
   const chosen = Object.keys(app.mockChoices).length;
+  const [board, setBoard] = useState(false);
+  const realSlot = m.mySlot;
 
   if (!res.mine.length) {
     return (
@@ -284,10 +286,34 @@ function MockDraft({ app, m }: { app: App; m: Model }) {
         </div>
       </div>
 
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <div style={{ fontSize: 11, letterSpacing: '.02em', color: dim(0.42) }}>
+          Draft from slot
+          {realSlot ? <span style={{ color: dim(0.3) }}> · yours is {realSlot}</span> : null}
+        </div>
+        {/* The question every mock exists to answer is "what if I picked
+            somewhere else", so the seat is a control and not a fact. */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))', gap: 6,
+        }}>
+          {Array.from({ length: m.teamCount }, (_, i) => i + 1).map(n => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => app.setMockSlot(n === realSlot ? null : n)}
+              aria-pressed={res.slot === n}
+              style={{ ...segChip(res.slot === n), font: 'inherit', fontSize: 11.5 }}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.45), textWrap: 'pretty' }}>
-        Tap whoever you would actually take — the rest of the board reacts to it, so you can play
-        the draft out your way. The other managers draft for their own holes with some noise in
-        them, so run it a few times: the names that keep reaching you are the ones to plan around.
+        Bots draft every other seat, for their own holes, with noise in it — so run it a few times.
+        Tap whoever you would take and the rest of the board reacts. Every name carries its Fit,
+        which is the part a mock room does not give you.
       </div>
 
       {res.mine.map(pick => (
@@ -321,21 +347,45 @@ function MockDraft({ app, m }: { app: App; m: Model }) {
       ))}
 
       <Card>
-        <div style={{ ...cardTitle, marginBottom: 8 }}>What goes before your next turn</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-          {res.picks
-            .slice(0, Math.max(res.picks.findIndex(p => p.mine), 0))
-            .map(p => (
-              <div key={p.overall} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
-                <span style={{ color: dim(0.45), flex: 'none', width: 44 }}>{p.label}</span>
-                <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{p.player?.name}</span>
-                <span style={{ color: dim(0.4), flex: 'none' }}>{p.player?.pos} · {p.team}</span>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+          <div style={cardTitle}>The whole board</div>
+          <button
+            type="button"
+            onClick={() => setBoard(!board)}
+            aria-expanded={board}
+            className="btn btn-ghost"
+            style={{ fontSize: 11.5, padding: 0 }}
+          >
+            {board ? 'Hide' : res.picks.length + ' picks ›'}
+          </button>
+        </div>
+        {board ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+            {res.picks.map(p => (
+              <div
+                key={p.overall}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12,
+                  padding: p.mine ? '4px 7px' : '4px 0', margin: p.mine ? '0 -7px' : 0,
+                  borderRadius: 7,
+                  background: p.mine ? 'rgba(145,132,217,.14)' : 'transparent',
+                }}
+              >
+                <span style={{ color: dim(0.45), flex: 'none', width: 42 }}>{p.label}</span>
+                <span style={{ flex: 1, minWidth: 0, fontWeight: p.mine ? 500 : 400, ...ellipsis }}>
+                  {p.player?.name}
+                </span>
+                <span style={{ color: dim(0.4), flex: 'none', maxWidth: 130, ...ellipsis }}>
+                  {p.player?.pos} · {p.mine ? 'you' : p.team}
+                </span>
               </div>
             ))}
-          {res.picks.findIndex(p => p.mine) <= 0 ? (
-            <div style={{ fontSize: 12, color: dim(0.5) }}>You are on the clock — nothing goes first.</div>
-          ) : null}
-        </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), marginTop: 6 }}>
+            Every selection the bots make, round by round, with yours marked.
+          </div>
+        )}
       </Card>
     </div>
   );

@@ -79,6 +79,8 @@ export function useApp() {
   const [mockSeed, setMockSeed] = useState(1);
   /** overall pick → the player you took there, keyed so the sim can replay it */
   const [mockChoices, setMockChoices] = useState<Record<number, string>>({});
+  /** null = your real seat; a number = the slot you are mocking from instead */
+  const [mockSlot, setMockSlot] = useState<number | null>(null);
   const [tradeView, setTradeView] = useState<'suggested' | 'saved'>('suggested');
   const [filter, setFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
@@ -426,7 +428,7 @@ export function useApp() {
     stage, username, leagues, authBusy, authError, error,
     data, step, model, syncing, syncedAt,
     usageState, usageSeasons, marketState,
-    tab, teamView, draftView, tradeView, mockSeed, mockChoices, filter, rosterFilter, rosterSort, boardMode, rankMode,
+    tab, teamView, draftView, tradeView, mockSeed, mockChoices, mockSlot, filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 
     setUsername: (v: string) => { setUsername(v); setAuthError(''); },
@@ -434,6 +436,8 @@ export function useApp() {
     setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
     setTeamView, setDraftView, setTradeView, setFilter,
     rerollMock: () => { setMockSeed(x => x + 1); setMockChoices({}); },
+    // A different seat is a different draft, so nothing carries over.
+    setMockSlot: (n: number | null) => { setMockSlot(n); setMockChoices({}); },
     /**
      * Taking someone at one pick invalidates every choice after it — the board
      * downstream moves, and a later pick you had locked in may be gone. Dropping

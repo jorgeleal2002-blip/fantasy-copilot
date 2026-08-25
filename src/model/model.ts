@@ -825,7 +825,15 @@ export function buildModel(input: ModelInput): Model {
    * records what was still there before it takes anyone, which is the whole
    * point: not "here is what happens" but "here is what reaches you".
    */
-  const runMock = (seed: number, choices?: Record<number, string>): MockResult => {
+  const runMock = (
+    seed: number,
+    choices?: Record<number, string>,
+    fromSlot?: number | null,
+  ): MockResult => {
+    // Sitting in a different seat is the whole reason to mock a draft: every
+    // pick in that slot becomes yours and whoever really owns it drafts as a
+    // bot, exactly like joining a mock room from a slot you did not earn.
+    const seat = fromSlot || mySlot || slotOfRoster[myRow.roster_id] || 1;
     // Deterministic per seed, so a run can be looked at twice and re-run
     // deliberately rather than shuffling under you on every render.
     let st = (seed || 1) >>> 0;
@@ -857,8 +865,12 @@ export function buildModel(input: ModelInput): Model {
       Math.max(0, (slots[pos] || 1) - ((have[rid] || {})[pos] || 0));
 
     // Only as far as your last pick — nobody needs a simulated round 14 they
-    // do not select in.
-    const lastMine = myPickList.length ? myPickList[myPickList.length - 1].overall : nextOverall;
+    // do not select in. From a borrowed seat that is the last pick that seat
+    // holds, not the last one your real team does.
+    const movedSeat = seat !== (mySlot || slotOfRoster[myRow.roster_id]);
+    const lastMine = movedSeat
+      ? rounds * teamCount
+      : (myPickList.length ? myPickList[myPickList.length - 1].overall : nextOverall);
     const stop = Math.min(lastMine, rounds * teamCount);
     const snake = !!(d.draft && d.draft.type === 'snake');
 
@@ -886,10 +898,15 @@ export function buildModel(input: ModelInput): Model {
       const inRound = ((overall - 1) % teamCount) + 1;
       const slot = snake && round % 2 === 0 ? teamCount - inRound + 1 : inRound;
       // The real owner, not whoever the slot started with — see pickOwner.
-      const rid = pickOwner[overall] ?? slotToRoster[slot];
-      const mine = rid === myRow.roster_id;
+      // Unless you moved seats, in which case the seat decides.
+      const moved = seat !== (mySlot || slotOfRoster[myRow.roster_id]);
+      const seatOwner = moved ? (slotToRoster[slot] ?? 0) : (pickOwner[overall] ?? slotToRoster[slot]);
+      const mine = moved ? slot === seat : seatOwner === myRow.roster_id;
+      // Borrowing a seat does not borrow a roster: your holes are still yours,
+      // so a pick that is yours counts against your own team either way.
+      const rid = mine ? myRow.roster_id : seatOwner;
       const label = round + '.' + String(inRound).padStart(2, '0');
-      const owner = (d.rosters || []).find(r => r.roster_id === rid);
+      const owner = (d.rosters || []).find(r => r.roster_id === seatOwner);
       const live = board.filter(x => !gone.has(x.id));
       if (!live.length) break;
 
@@ -987,6 +1004,7 @@ export function buildModel(input: ModelInput): Model {
 
     return {
       picks,
+      slot: seat,
       mine: picks.filter(p => p.mine),
       shape: mineShape,
       through: picks.length ? picks[picks.length - 1].round : 0,

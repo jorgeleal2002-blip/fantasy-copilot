@@ -745,3 +745,43 @@ describe('choosing inside the mock draft', () => {
     expect(run.mine[1].choiceLost).toBe(true);
   });
 });
+
+describe('mocking from a different slot', () => {
+  const real = model.runMock(3);
+  const fromOne = model.runMock(3, undefined, 1);
+
+  it('reports the seat it drafted from', () => {
+    expect(real.slot).toBe(model.mySlot);
+    expect(fromOne.slot).toBe(1);
+  });
+
+  it('puts you on the clock at that slot in every round', () => {
+    for (const p of fromOne.mine) {
+      // linear in the fixture, so slot 1 is the first pick of each round
+      expect(p.slot).toBe(1);
+    }
+    // Exactly one per round: a borrowed seat gets that seat's picks and no
+    // others. Your real team holds four here because it traded for one, which
+    // is the difference the seat does not carry with it.
+    expect(fromOne.mine.length).toBe(model.rounds);
+    expect(real.mine.length).toBe(4);
+  });
+
+  it('gives you the first pick overall when you take slot one', () => {
+    expect(fromOne.picks[0].mine).toBe(true);
+    expect(fromOne.picks[0].overall).toBe(model.nextOverall);
+  });
+
+  it('borrows the seat but not a roster — your holes stay yours', () => {
+    // The shape starts from what you already own, whatever seat you sit in.
+    const held = (Object.values(model.have) as number[]).reduce((a, b) => a + b, 0);
+    const total = (Object.values(fromOne.shape) as number[]).reduce((a, b) => a + b, 0);
+    expect(total).toBe(held + fromOne.mine.length);
+  });
+
+  it('drafts the real team in that seat as a bot', () => {
+    // Slot 1 belongs to somebody else in the fixture, and in this run they no
+    // longer select there — the seat is yours.
+    expect(fromOne.picks.filter(p => p.slot === 1).every(p => p.mine)).toBe(true);
+  });
+});

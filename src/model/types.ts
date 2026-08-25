@@ -227,6 +227,8 @@ export interface MockOption {
 
 export interface MockResult {
   picks: MockPick[];
+  /** the slot you drafted from in this run */
+  slot: number;
   /** just your selections, in order */
   mine: MockPick[];
   /** what your roster would look like afterwards */
@@ -381,6 +383,12 @@ export interface Model {
    * `choices` maps an overall pick of yours to the player you took there, so
    * the board downstream reacts to what you actually did.
    */
-  runMock: (seed: number, choices?: Record<number, string>) => MockResult;
+  runMock: (
+    seed: number,
+    choices?: Record<number, string>,
+    /** draft from this slot instead of your real one — the "what if I had 1.01"
+     *  question every mock draft exists to answer */
+    fromSlot?: number | null,
+  ) => MockResult;
   metricKeys: MetricKey[];
 }
