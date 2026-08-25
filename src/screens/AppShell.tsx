@@ -4,6 +4,7 @@ import type { App, Tab } from '../state/useApp';
 import { dim, ellipsis, tabStyle } from '../ui/styles';
 import { DraftTab } from './DraftTab';
 import { LeagueTab } from './LeagueTab';
+import { MockRoom } from './MockRoom';
 import { PlayerSheet } from './PlayerSheet';
 import { SettingsTab } from './SettingsTab';
 import { TeamSheet } from './TeamSheet';
@@ -119,6 +120,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
         ))}
       </nav>
 
+      {app.mockOpen ? <MockRoom app={app} m={model} /> : null}
       {isTeamDetail ? <TeamSheet app={app} m={model} rosterId={Number(detail!.slice(5))} /> : null}
       {detail && !isTeamDetail ? <PlayerSheet app={app} m={model} playerId={detail} /> : null}
     </div>

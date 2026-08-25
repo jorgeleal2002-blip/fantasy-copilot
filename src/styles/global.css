@@ -311,3 +311,54 @@ button { font-family: inherit; }
     max-width: 360px;
   }
 }
+
+/* ── The mock draft room ──────────────────────────────────────────────────
+   Full bleed on purpose: you are in a draft, not looking at a panel inside a
+   page. It covers the tab bar too — leaving is a deliberate act, not a
+   mis-tap on a nav icon.
+   ──────────────────────────────────────────────────────────────────────── */
+/* Fixed, not absolute: the room has to cover the tab bar and the header, and
+   `.shell` is a grid whose height follows its content. */
+.mock-room {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  animation: fadeIn 0.16s ease backwards;
+}
+.mock-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(var(--safe-top) + 12px) 15px 8px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.mock-ticker {
+  padding: 10px 15px 11px;
+  border-bottom: 1px solid var(--color-divider);
+  background: linear-gradient(to bottom, rgba(38, 42, 96, 0.22), transparent);
+  min-height: 54px;
+}
+.mock-body {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 15px calc(var(--safe-bottom) + 28px);
+  -webkit-overflow-scrolling: touch;
+}
+/* On a laptop the room keeps its full-bleed bars — a draft room should feel
+   like a room — but the content inside them stays in one readable column
+   instead of stretching a segmented control across 1400px. */
+@media (min-width: 900px) {
+  .mock-room {
+    --gutter: max(32px, calc((100% - 1040px) / 2));
+  }
+  .mock-head { padding: 18px var(--gutter) 10px; }
+  .mock-ticker { padding: 12px var(--gutter); }
+  .mock-body { padding: 14px var(--gutter) 40px; }
+  .mock-room > div:nth-of-type(2) { padding: 0 var(--gutter) !important; }
+}
