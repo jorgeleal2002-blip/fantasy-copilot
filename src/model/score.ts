@@ -6,10 +6,13 @@ import type { Usage } from './usage';
 export type Metrics = Record<MetricKey, number>;
 
 export interface ScoreContext {
-  /** 1-based index of the player on the current board */
+  /** 1-based index of the player among what is STILL AVAILABLE */
   idx?: number;
   /** the pick number we are scoring for — value depends on where you select */
   pick?: number;
+  /** the overall pick the draft has actually reached, which is what turns an
+   *  index among survivors back into a position in the whole draft */
+  now?: number;
   /** market (or modelled) value of this player, and the board's maximum */
   dv?: number;
   dvMax?: number;
@@ -18,6 +21,9 @@ export interface ScoreContext {
   use?: Usage;
   /** redraft leagues switch the age curve off entirely */
   redraft?: boolean;
+  /** consensus rank on the board — the market's order, not Sleeper's search
+   *  index. Falls back to `search_rank` only when nothing better exists. */
+  rank?: number | null;
 }
 
 export interface ScoreResult {
@@ -40,16 +46,29 @@ export function scorePlayer(
   ctx: ScoreContext,
   w: Weights,
 ): ScoreResult {
-  const adp = p.search_rank;
+  const adp = ctx.rank ?? p.search_rank;
   const rs = rankScore(adp);
   const exp = p.years_exp || 0;
   const age = p.age || 26;
   const talent = ctx.dv != null ? clamp(ctx.dv / (ctx.dvMax || 1), 0, 1) : rs;
+  /** Where this player comes off the board if it runs to consensus from here. */
+  const board = Math.max((ctx.now || 1) - 1 + (ctx.idx || 0), 1);
 
   const m: Metrics = {
     need: needScore[p.position || ''] || 0,
     talent,
-    value: ctx.idx ? clamp(0.5 + (ctx.idx - (ctx.pick || 0)) / (ctx.idx + (ctx.pick || 0)) * 0.5, 0, 1) : 0.5,
+    // Value is a DISCOUNT: he is still sitting there later than the board says
+    // he should be. `idx` counts survivors, so it has to be put back on the
+    // draft's own scale first — with `now - 1` picks already gone, the player
+    // idx-th in the queue comes off at `now - 1 + idx`. Cheaper than your pick
+    // is a slide; dearer than it is a reach.
+    //
+    // The comparison used to run the other way, which scored the deepest name
+    // on the board as the biggest bargain at an early pick and hung a "falling"
+    // chip on what was actually a ten-spot reach.
+    value: ctx.idx
+      ? clamp(0.5 + ((ctx.pick || 0) - board) / ((ctx.pick || 0) + board) * 0.5, 0, 1)
+      : 0.5,
     floor: clamp(rs * 0.7 + (exp >= 3 ? 0.3 : exp >= 1 ? 0.18 : 0.05), 0, 1),
     boom: clamp(rs * 0.45 + (age <= 24 ? 0.42 : age <= 26 ? 0.26 : 0.08) + (exp <= 2 ? 0.12 : 0), 0, 1),
     combo: 0,
@@ -165,12 +184,17 @@ export function redraftWeights(w: Weights): Weights {
   return r;
 }
 
-/** Short chips explaining why the top recommendation is the top recommendation. */
-export function reasons(m: Metrics, adp: number | null | undefined, pos: string, age: number | null | undefined): string[] {
+/**
+ * Short chips explaining why the top recommendation is the top recommendation.
+ *
+ * `at` is where the board has him, already written as a pick ("1.04"), so the
+ * chips talk in the units the draft is conducted in.
+ */
+export function reasons(m: Metrics, at: string | null, pos: string, age: number | null | undefined): string[] {
   const out: string[] = [];
-  if (m.talent > 0.72) out.push('Top ' + adp + ' on the board');
+  if (m.talent > 0.72) out.push(at ? 'Board has him at ' + at : 'Near the top of the board');
   if (m.need > 0.6) out.push('You need ' + pos);
-  if (m.value > 0.6) out.push('Falling below ADP (' + adp + ')');
+  if (m.value > 0.6) out.push(at ? 'Falling past ' + at : 'Falling past his slot');
   if (m.age > 0.9) out.push((age || '?') + ' years old, still rising');
   if (m.boom > 0.7) out.push('High ceiling');
   if (m.floor > 0.75) out.push('Safe floor');

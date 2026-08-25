@@ -16,7 +16,7 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
   const badge = app.marketState === 'ok'
     ? `Market live · ${m.marketCount} assets`
     : app.marketState === 'loading' ? 'Loading market values…'
-      : 'No market feed: using the ADP and age model';
+      : 'No market feed: using the ranking and age model';
   const badgeColor = app.marketState === 'ok' ? GOOD : app.marketState === 'fail' ? BAD : MID;
 
   const visible = m.offers.filter(o => app.passed.indexOf(o.partner + o.get.id) < 0).slice(0, 6);

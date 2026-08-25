@@ -63,6 +63,20 @@ describe('value helpers', () => {
     expect(talentBase(62) / talentBase(162)).toBeGreaterThan(3);
   });
 
+  it('scores a slide as value and a reach as none', () => {
+    const w = STRATS.balanced.w;
+    const p = { position: 'WR', age: 24, years_exp: 2, search_rank: 30 };
+    // Picking at 20 with the best man alive still on the board: a slide.
+    const slide = scorePlayer(p, {}, { idx: 1, pick: 20, now: 1, dv: 50, dvMax: 100 }, w).m.value;
+    // Picking at 5 for someone the board has 15th: a ten-spot reach.
+    const reach = scorePlayer(p, {}, { idx: 15, pick: 5, now: 1, dv: 50, dvMax: 100 }, w).m.value;
+    expect(slide).toBeGreaterThan(0.6);
+    expect(reach).toBeLessThan(0.4);
+    // On schedule is neither: at pick 20 the top survivor is exactly on time.
+    expect(scorePlayer(p, {}, { idx: 1, pick: 20, now: 20, dv: 50, dvMax: 100 }, w).m.value)
+      .toBeCloseTo(0.5, 5);
+  });
+
   it('grades span A+ to D', () => {
     expect(grade(0.85)).toBe('A+');
     expect(grade(0.6)).toBe('B');
@@ -244,6 +258,39 @@ describe('draft board', () => {
   it('is sorted by fit, best first', () => {
     const fits = model.scored.map(p => p.fit);
     expect([...fits].sort((a, b) => b - a)).toEqual(fits);
+  });
+
+  it('places a player by the market, not by Sleeper\'s search index', () => {
+    // `goes` is his position among what is still available, so ordering it must
+    // reproduce the market's own value order. Sleeper's `search_rank` is a
+    // relevance index over the whole catalogue and disagrees with it — reading
+    // that as an ADP is what put a second-round back at "ADP 142".
+    const board = model.scored.slice().sort((a, b) => (a.goes || 0) - (b.goes || 0));
+    const vals = board.map(p => model.marketValue(p.id)?.pts ?? 0);
+    expect([...vals].sort((a, b) => b - a)).toEqual(vals);
+
+    // And when the two genuinely disagree, the market wins: bury the best
+    // rookie at the bottom of Sleeper's index and he keeps the 1.01.
+    const bestId = board[0].id;
+    const skewed = {
+      ...bundle,
+      players: {
+        ...bundle.players,
+        [bestId]: { ...bundle.players[bestId], search_rank: 899 },
+      },
+    };
+    const after = buildModel({
+      data: skewed, usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+    });
+    expect(after.scored.find(p => p.id === bestId)?.goes).toBe(1);
+  });
+
+  it('never reports a rank the market did not give it', () => {
+    for (const p of model.scored) {
+      if (p.rank == null) continue;
+      expect(p.rank).toBeGreaterThan(0);
+      expect(model.marketValue(p.id)?.real).toBe(true);
+    }
   });
 
   it('reorders when the strategy changes the weights', () => {

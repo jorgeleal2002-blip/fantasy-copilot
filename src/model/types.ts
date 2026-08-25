@@ -18,7 +18,9 @@ export interface RosterPlayer extends LineupItem {
   age: number | null;
   team: string;
   exp: number | null;
-  adp: number | null | undefined;
+  /** consensus rank across the whole board, from the market. Null where the
+   *  market has no opinion on him — never Sleeper's search index. */
+  rank: number | null;
   injury: string;
   /** currently in the Sleeper starting lineup */
   starter: boolean;
@@ -40,7 +42,11 @@ export interface BoardPlayer {
   team: string | null | undefined;
   age: number | null | undefined;
   exp: number | null | undefined;
-  adp: number | null | undefined;
+  /** where he sits among what is STILL AVAILABLE, so the screens can render it
+   *  as the pick he goes at. Null when he was not scored off a board. */
+  goes: number | null;
+  /** consensus rank across every player the market prices. */
+  rank: number | null;
   m: Metrics;
   fit: number;
   raw: SleeperPlayer;
@@ -209,7 +215,10 @@ export interface MockOption {
   pos: Pos;
   team: string | null | undefined;
   age: number | null | undefined;
-  adp: number | null | undefined;
+  /** consensus rank across every player the market prices. */
+  rank: number | null;
+  /** his place among what is still on the mock's board. */
+  goes?: number | null;
   fit: number;
   /** set only on the three shortcuts offered at your turn */
   lens?: 'best' | 'need' | 'upside';

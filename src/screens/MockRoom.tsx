@@ -3,6 +3,7 @@ import { ACCENT, GOOD, POS, POS_COLOR } from '../model/constants';
 import type { MockOption, MockPick, Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { Segmented, type SegOption } from '../ui/primitives';
+import { pickLabel } from '../model/math';
 import { dim, ellipsis, fitColor } from '../ui/styles';
 
 const POS_FILTERS: SegOption<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>[] =
@@ -129,12 +130,14 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
               <div style={{ fontSize: 11.5, color: dim(0.45), lineHeight: 1.5 }}>
                 Three ways to use it, rated — or take anybody from the board.
               </div>
-              {st.options.map((o, i) => <Row key={o.id} o={o} first={i === 0} onTake={take} />)}
+              {st.options.map((o, i) => <Row key={o.id} o={o} first={i === 0} teams={m.teamCount} onTake={take} />)}
 
               <div style={{ height: 4 }} />
               <Segmented options={POS_FILTERS} value={pos} onChange={setPos} size="sm" />
               <div style={{ fontSize: 10.5, color: dim(0.38) }}>{rest.length} available</div>
-              {rest.slice(0, all ? 80 : 12).map((o, i) => <Row key={o.id} o={o} first={i === 0} onTake={take} />)}
+              {rest.slice(0, all ? 80 : 12).map((o, i) => (
+                <Row key={o.id} o={o} first={i === 0} teams={m.teamCount} onTake={take} />
+              ))}
               {rest.length > 12 ? (
                 <button
                   type="button"
@@ -179,7 +182,9 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
 }
 
 /** One name you can take. */
-function Row({ o, first, onTake }: { o: MockOption; first: boolean; onTake: (id: string) => void }) {
+function Row({ o, first, teams, onTake }: {
+  o: MockOption; first: boolean; teams: number; onTake: (id: string) => void;
+}) {
   return (
     <div
       role="button"
@@ -206,7 +211,12 @@ function Row({ o, first, onTake }: { o: MockOption; first: boolean; onTake: (id:
           {o.name}
         </div>
         <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2 }}>
-          {[o.pos, o.team || 'no team yet', (o.age ?? '?') + ' yrs', 'ADP ' + (o.adp || '—')].join(' · ')}
+          {[
+            o.pos,
+            o.team || 'no team yet',
+            (o.age ?? '?') + ' yrs',
+            pickLabel(o.goes, teams) ? 'goes ' + pickLabel(o.goes, teams) : 'unranked',
+          ].join(' · ')}
         </div>
         {o.why ? (
           <div style={{ fontSize: 11, color: dim(0.45), marginTop: 3, lineHeight: 1.4 }}>{o.why}</div>

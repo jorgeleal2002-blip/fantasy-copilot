@@ -12,7 +12,8 @@ export interface SleeperPlayer {
   age?: number | null;
   team?: string | null;
   years_exp?: number | null;
-  /** Sleeper's internal ADP-ish ordering. Lower is better; missing means unranked. */
+  /** Sleeper's internal SEARCH ordering over the whole catalogue — a relevance
+   *  index, not an ADP. Only a last-resort fallback behind the market's rank. */
   search_rank?: number | null;
   injury_status?: string | null;
   active?: boolean;

@@ -155,6 +155,35 @@ export function buildModel(input: ModelInput): Model {
       (byPos[p] || []).sort((a, b) => b.v - a.v).forEach((x, i) => { valueRank[x.id] = i + 1; });
     });
   }
+  // ── Where the board actually has a player, as one number across every
+  //    position.
+  //
+  //    Sleeper ships `search_rank`, and it is tempting because it looks like an
+  //    ADP: a small integer, lower is better. It is not one. It is a relevance
+  //    index over the whole eleven-thousand-player catalogue — kickers,
+  //    defenders, practice-squad bodies and retired names included — ordered by
+  //    who gets looked up, not by who gets drafted. Reading it as ADP is what
+  //    printed "ADP 142" next to a back who goes in the second round.
+  //
+  //    This is the consensus the format is actually priced at: everyone the
+  //    market puts a number on, in value order. Players it does not price stay
+  //    unranked rather than being given a number nobody agreed to.
+  const consensus: Record<string, number> = {};
+  {
+    const priced: { id: string; v: number }[] = [];
+    for (const pid in players) {
+      const pl = players[pid];
+      if (!pl || POS.indexOf(pl.position as Pos) < 0) continue;
+      const v = mval(pl);
+      if (v == null) continue;
+      priced.push({ id: pid, v });
+    }
+    priced.sort((a, b) => b.v - a.v).forEach((x, i) => { consensus[x.id] = i + 1; });
+  }
+  /** Consensus where the market has an opinion; Sleeper's index behind it. */
+  const rankOf = (id: string, pl: SleeperPlayer) =>
+    consensus[id] || (pl.search_rank ? 5000 + pl.search_rank : 99999);
+
   const marketValue = (id: string): PlayerValue | null => {
     const pl = players[id];
     if (!pl || POS.indexOf(pl.position as Pos) < 0) return null;
@@ -260,12 +289,12 @@ export function buildModel(input: ModelInput): Model {
     if (!pl || !POS.includes(pl.position as Pos)) return null;
     return {
       id, name: playerName(pl), pos: pl.position as Pos, age: pl.age ?? null,
-      team: pl.team || 'FA', exp: pl.years_exp ?? null, adp: pl.search_rank,
+      team: pl.team || 'FA', exp: pl.years_exp ?? null, rank: consensus[id] || null,
       injury: pl.injury_status || '', starter: starterIds.indexOf(id) >= 0,
       round: pickRound[id], raw: pl,
     } as unknown as RosterPlayer;
   }).filter(Boolean) as RosterPlayer[];
-  myPlayers.sort((a, b) => POS.indexOf(a.pos) - POS.indexOf(b.pos) || (a.adp || 999) - (b.adp || 999));
+  myPlayers.sort((a, b) => POS.indexOf(a.pos) - POS.indexOf(b.pos) || (a.rank || 9999) - (b.rank || 9999));
 
   const have = {} as Record<Pos, number>;
   POS.forEach(p => { have[p] = myPlayers.filter(x => x.pos === p).length; });
@@ -328,7 +357,10 @@ export function buildModel(input: ModelInput): Model {
     }
     pool.push({ id, raw: p });
   }
-  pool.sort((a, b) => (a.raw.search_rank || 0) - (b.raw.search_rank || 0));
+  // Consensus order, so a player's place in this list IS where the board has
+  // him among what is still available — which is the number the draft screens
+  // show, and the baseline the value metric measures a fall against.
+  pool.sort((a, b) => rankOf(a.id, a.raw) - rankOf(b.id, b.raw));
 
   // ── NFL-team correlation: sharing an offence with your QB pays twice;
   //    sharing the ball with your own player cuts both your players' shares.
@@ -372,12 +404,15 @@ export function buildModel(input: ModelInput): Model {
   const scored: BoardPlayer[] = pool.slice(0, 160).map((x, i) => {
     const p = x.raw;
     const s = scorePlayer(p, needScore, {
-      idx: i + 1, pick: pickForValue, dv: talentQ(p, x.id), dvMax,
-      stack: stackFor(p), use: uFor(x.id), redraft: !isDynasty,
+      idx: i + 1, pick: pickForValue, now: nextOverall, dv: talentQ(p, x.id), dvMax,
+      stack: stackFor(p), use: uFor(x.id), redraft: !isDynasty, rank: rankOf(x.id, p),
     }, w);
     return {
       id: x.id, name: playerName(p), pos: p.position as Pos, team: p.team,
-      age: p.age, exp: p.years_exp, adp: s.adp, m: s.m, fit: s.fit, raw: p, use: uFor(x.id),
+      // `slot` is his place among what is still on the board, so it reads as
+      // the pick he goes at once the screen renders it round-by-pick.
+      age: p.age, exp: p.years_exp, goes: i + 1, rank: consensus[x.id] || null,
+      m: s.m, fit: s.fit, raw: p, use: uFor(x.id),
     };
   }).sort((a, b) => b.fit - a.fit);
 
@@ -385,7 +420,8 @@ export function buildModel(input: ModelInput): Model {
   const wOwn = ownedWeights(w);
   myPlayers.forEach(p => {
     const s = scorePlayer(p.raw, {}, {
-      dv: talentQ(p.raw, p.id), dvMax, stack: stackFor(p.raw, p.id), use: uFor(p.id), redraft: !isDynasty,
+      dv: talentQ(p.raw, p.id), dvMax, stack: stackFor(p.raw, p.id), use: uFor(p.id),
+      redraft: !isDynasty, rank: rankOf(p.id, p.raw),
     }, wOwn);
     p.use = uFor(p.id);
     p.m = s.m;
@@ -453,7 +489,7 @@ export function buildModel(input: ModelInput): Model {
     if (!starters.length) return 0;
     const sum = starters.reduce((a, x) => a + scorePlayer(x.raw, {}, {
       dv: talentQ(x.raw, x.p.id), dvMax, stack: stackIn(list, x.raw, x.p.id),
-      use: uFor(x.p.id), redraft: !isDynasty,
+      use: uFor(x.p.id), redraft: !isDynasty, rank: rankOf(x.p.id, x.raw),
     }, wOwn).fit, 0);
     return sum / starters.length;
   };
@@ -591,12 +627,12 @@ export function buildModel(input: ModelInput): Model {
     list.forEach(p => {
       const neutral = scorePlayer(p.raw, {}, {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(list, p.raw, p.id),
-        use: uFor(p.id), redraft: !isDynasty,
+        use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
       }, wOwn);
       if (!Number.isFinite(neutral.fit)) return;
       const forMe = scorePlayer(p.raw, needScore, {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(myPlayers, p.raw, p.id),
-        use: uFor(p.id), redraft: !isDynasty,
+        use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
       }, w);
       const el = clamp(talentQ(p.raw, p.id) / (dvMax || 1), 0, 1);
       const cur = ageCurve(p.pos, p.age, el) || 0.5;
@@ -604,7 +640,7 @@ export function buildModel(input: ModelInput): Model {
       const raw2 = { ...p.raw, age: (p.age || 25) + 2, years_exp: (p.raw.years_exp || 0) + 2 };
       const ahead = scorePlayer(raw2, {}, {
         dv: talentQ(p.raw, p.id) * keep, dvMax, stack: stackIn(list, p.raw, p.id),
-        use: uFor(p.id), redraft: !isDynasty,
+        use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
       }, wOwn);
       allFits.push({
         id: p.id, name: p.name, pos: p.pos, team: p.team, age: p.age,
@@ -886,7 +922,7 @@ export function buildModel(input: ModelInput): Model {
       }, w);
       return {
         id: x.id, name: playerName(x.raw), pos: x.pos, team: x.raw.team,
-        age: x.raw.age, adp: x.raw.search_rank, fit: sc.fit, ...extra,
+        age: x.raw.age, rank: consensus[x.id] || null, fit: sc.fit, ...extra,
       };
     };
 
@@ -924,7 +960,9 @@ export function buildModel(input: ModelInput): Model {
           const upside = rest.filter(x => !need || x.id !== need.id)
             .sort((a, b) => boom(b) - boom(a))[0];
 
+          const where = (x: { id: string }) => live.findIndex(y => y.id === x.id) + 1;
           const options: MockOption[] = [rate(best, {
+            goes: where(best),
             lens: 'best',
             title: 'Best available',
             why: shortAt(rid, best.pos)
@@ -934,6 +972,7 @@ export function buildModel(input: ModelInput): Model {
           if (need) {
             const short = shortAt(rid, need.pos);
             options.push(rate(need, {
+              goes: where(need),
               lens: 'need',
               title: short ? 'Fills your hole' : 'Deepest position',
               why: short
@@ -943,6 +982,7 @@ export function buildModel(input: ModelInput): Model {
           }
           if (upside) {
             options.push(rate(upside, {
+              goes: where(upside),
               lens: 'upside', title: 'Highest ceiling', why: 'The highest ceiling still on the board',
             }));
           }
@@ -953,7 +993,7 @@ export function buildModel(input: ModelInput): Model {
             onClock: { overall, round, slot, label },
             options,
             // The whole board, rated — a mock room lets you take anybody.
-            board: live.slice(0, 120).map(x => rate(x)),
+            board: live.slice(0, 120).map((x, i) => rate(x, { goes: i + 1 })),
             myTeam,
             shape,
             done: false,
@@ -991,7 +1031,7 @@ export function buildModel(input: ModelInput): Model {
         overall, round, slot, label, team: teamName(owner?.owner_id), mine: false,
         player: {
           id: choice.id, name: playerName(choice.raw), pos: choice.pos, team: choice.raw.team,
-          age: choice.raw.age, adp: choice.raw.search_rank, fit: 0,
+          age: choice.raw.age, rank: consensus[choice.id] || null, fit: 0,
         },
       });
     }
@@ -1061,7 +1101,10 @@ export function buildModel(input: ModelInput): Model {
     const name = playerName(pl);
     if (!name) continue;
     searchIndex.push({
-      id, name, lower: name.toLowerCase(), pos: pl.position as Pos, rank: pl.search_rank || 99999,
+      // Typeahead order. Sleeper's index is a reasonable relevance signal and
+      // it is the fallback here, but a player the market actually prices should
+      // come up before one it has never heard of.
+      id, name, lower: name.toLowerCase(), pos: pl.position as Pos, rank: rankOf(id, pl),
       // Carried on the entry rather than recomputed per keystroke, so the draft
       // board can narrow its own search to whatever it is showing.
       rookie: (pl.years_exp === 0 || pl.years_exp == null) && !!pl.age && pl.age <= 24,
@@ -1075,11 +1118,14 @@ export function buildModel(input: ModelInput): Model {
     if (!pl || POS.indexOf(pl.position as Pos) < 0) return null;
     const s = scorePlayer(pl, needScore, {
       dv: talentQ(pl, id), dvMax, stack: stackFor(pl), use: uFor(id), redraft: !isDynasty,
+      rank: rankOf(id, pl),
     }, w);
     const ownerRow = (d.rosters || []).find(r => (r.players || []).indexOf(id) >= 0);
     return {
       id, name: playerName(pl), pos: pl.position as Pos, team: pl.team || 'FA',
-      age: pl.age, exp: pl.years_exp, adp: s.adp, m: s.m, fit: s.fit, raw: pl, use: uFor(id),
+      // Scored off the board, so there is no slot: only where the market has him.
+      age: pl.age, exp: pl.years_exp, goes: null, rank: consensus[id] || null,
+      m: s.m, fit: s.fit, raw: pl, use: uFor(id),
       owner: ownerRow ? teamName(ownerRow.owner_id) : null,
       owned: !!ownerRow && ownerRow.owner_id === d.me.user_id,
     };

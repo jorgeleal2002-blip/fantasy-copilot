@@ -51,6 +51,17 @@ export function ageCurveRedraft(
 }
 
 /** Board position → a 0..1 score. Log-shaped: the top of a board is steep. */
+/**
+ * A place on the board, written the way a draft is spoken: "1.04".
+ *
+ * A bare rank is not a number anyone drafts by — "37th" makes you count. The
+ * pick it lands on at this league's size is the same fact, already answered.
+ */
+export const pickLabel = (n: number | null | undefined, teams: number) => {
+  if (!n || n < 1 || teams < 1) return null;
+  return (Math.floor((n - 1) / teams) + 1) + '.' + String(((n - 1) % teams) + 1).padStart(2, '0');
+};
+
 export const rankScore = (r: number | null | undefined) =>
   clamp(1 - Math.log10(Math.max(r || 900, 1)) / 3.1, 0.02, 1);
 

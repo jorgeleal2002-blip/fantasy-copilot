@@ -12,7 +12,7 @@ import { TradePackages } from '../ui/TradePackages';
 import { dim, fitColor } from '../ui/styles';
 
 const DATA_NOTE =
-  'Live from Sleeper: league, managers, draft order, picks and the NFL catalog (position, age, team, experience, internal ADP). ' +
+  'Live from Sleeper: league, managers, draft order, picks and the NFL catalog (position, age, team, experience). ' +
   'Market values come from FantasyCalc, priced for this league\'s format. The Fit Score, floor and upside are the app\'s own model on top of those.';
 
 interface Sheet {
@@ -21,7 +21,8 @@ interface Sheet {
   pos: string;
   team: string;
   age: number | null | undefined;
-  adp: number | null | undefined;
+  /** consensus rank across every player the market prices, or null. */
+  rank: number | null;
   fit: number;
   m: Metrics;
   weights: Weights;
@@ -35,7 +36,7 @@ function resolve(m: Model, id: string, strat: Weights): Sheet | null {
   const mine = m.myPlayers.find(p => p.id === id);
   if (mine) {
     return {
-      id, name: mine.name, pos: mine.pos, team: mine.team, age: mine.age, adp: mine.adp,
+      id, name: mine.name, pos: mine.pos, team: mine.team, age: mine.age, rank: mine.rank,
       fit: mine.fit, m: mine.m, weights: mine.wEff, owned: true, ownerLabel: 'yours',
       raw: mine.raw, use: mine.use,
     };
@@ -43,7 +44,7 @@ function resolve(m: Model, id: string, strat: Weights): Sheet | null {
   const board = m.scored.find(p => p.id === id) || m.scoreAny(id);
   if (!board) return null;
   return {
-    id, name: board.name, pos: board.pos, team: board.team || 'FA', age: board.age, adp: board.adp,
+    id, name: board.name, pos: board.pos, team: board.team || 'FA', age: board.age, rank: board.rank,
     fit: board.fit, m: board.m, weights: strat, owned: !!board.owned,
     ownerLabel: board.owned ? 'yours' : board.owner ? 'on ' + board.owner : 'free agent',
     raw: board.raw, use: board.use,
@@ -142,7 +143,9 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         : 'no data',
     },
     { label: 'PPG', value: u && u.ppg != null ? u.ppg.toFixed(1) + ' pts' : 'no data' },
-    { label: 'Age · ADP', value: (p.age ?? '?') + ' · #' + (p.adp || '—') },
+    // The market's own order across every player it prices — not a search
+    // index dressed up as an ADP.
+    { label: 'Age · market rank', value: (p.age ?? '?') + ' · ' + (p.rank ? '#' + p.rank : 'unranked') },
   ];
 
   return (
@@ -315,9 +318,9 @@ function verdict(p: Sheet): string {
     return 'Already yours, inside his maximum-value window. No rush to buy or sell.';
   }
   if (p.m.need > 0.6 && p.m.value > 0.55) {
-    return 'Clean fit: he fills your most expensive hole and falls below his ADP at this pick.';
+    return 'Clean fit: he fills your most expensive hole and is falling past where the board has him.';
   }
   if (p.m.need > 0.6) return 'Fills your most urgent need, though you would be taking him near his market price.';
   if (p.m.value > 0.65) return 'The best value on the board, not your need. Take him if you believe in best-player-available.';
-  return 'A reasonable option without being the best: it neither solves a hole nor gives you a discount on his ADP.';
+  return 'A reasonable option without being the best: it neither solves a hole nor gets him below where the board has him.';
 }

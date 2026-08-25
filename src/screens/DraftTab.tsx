@@ -1,5 +1,5 @@
 import { ACCENT, GOOD, POS } from '../model/constants';
-import { num } from '../model/math';
+import { num, pickLabel } from '../model/math';
 import { reasons } from '../model/score';
 import type { DraftDeal, Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -82,7 +82,13 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                 {/* A rookie has no NFL team until he is drafted, and Sleeper
                     reports that as null — which a template literal prints as
                     the word "null". */}
-                {top ? [top.pos, top.team || 'no team yet', (top.age ?? '?') + ' yrs', 'ADP ' + top.adp].join(' · ') : ''}
+                {top ? [
+                  top.pos,
+                  top.team || 'no team yet',
+                  (top.age ?? '?') + ' yrs',
+                  // Where the board has him among what is left, as a pick.
+                  pickLabel(top.goes, m.teamCount) ? 'goes ' + pickLabel(top.goes, m.teamCount) : 'unranked',
+                ].join(' · ') : ''}
               </div>
             </div>
             <div style={{ textAlign: 'right', flex: 'none' }}>
@@ -95,7 +101,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
             </div>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-            {top ? reasons(top.m, top.adp, top.pos, top.age).map(r => (
+            {top ? reasons(top.m, pickLabel(top.goes, m.teamCount), top.pos, top.age).map(r => (
               <span key={r} style={{
                 fontSize: 11, padding: '4px 9px', borderRadius: 7,
                 background: 'rgba(145,132,217,.18)', color: '#c9c0f0',
@@ -207,7 +213,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                       {p.fit}
                     </div>
                     <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2 }}>
-                      {gone ? 'gone before' : 'ADP ' + p.adp}
+                      {gone ? 'gone before' : (pickLabel(p.goes, m.teamCount) || 'unranked')}
                     </div>
                   </div>
                 </div>
