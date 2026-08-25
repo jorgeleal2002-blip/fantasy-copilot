@@ -191,6 +191,46 @@ export interface SavedTrade {
   savedAt: number;
 }
 
+/** One selection in a simulated draft. */
+export interface MockPick {
+  overall: number;
+  round: number;
+  slot: number;
+  label: string;
+  /** the manager on the clock */
+  team: string;
+  mine: boolean;
+  player: MockOption | null;
+  /** only on your picks: what else was on the board when your turn came */
+  options?: MockOption[];
+}
+
+export interface MockOption {
+  id: string;
+  name: string;
+  pos: Pos;
+  team: string | null | undefined;
+  age: number | null | undefined;
+  adp: number | null | undefined;
+  fit: number;
+  /** what makes this one the pick under a particular lens */
+  lens: 'best' | 'need' | 'upside';
+  /** the heading, written where the facts are — "fills your hole" is a claim,
+   *  and it is only true when the position is actually short */
+  title: string;
+  why: string;
+}
+
+export interface MockResult {
+  picks: MockPick[];
+  /** just your selections, in order */
+  mine: MockPick[];
+  /** what your roster would look like afterwards */
+  shape: Record<Pos, number>;
+  /** how many rounds the simulation actually covered */
+  through: number;
+}
+
 export interface DraftDeal {
   kind: 'up' | 'down';
   partner: string;
@@ -332,5 +372,7 @@ export interface Model {
   marketValue: (playerId: string) => PlayerValue | null;
   /** what it would cost to acquire one specific player from his owner */
   offersFor: (playerId: string) => TargetTrade[];
+  /** play the rest of the draft out; the seed makes one run reproducible */
+  runMock: (seed: number) => MockResult;
   metricKeys: MetricKey[];
 }

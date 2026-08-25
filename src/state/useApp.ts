@@ -73,7 +73,10 @@ export function useApp() {
   // ── view state
   const [tab, setTab] = useState<Tab>('team');
   const [teamView, setTeamView] = useState<TeamView>('resumen');
-  const [draftView, setDraftView] = useState<'board' | 'deals'>('board');
+  const [draftView, setDraftView] = useState<'board' | 'mock' | 'deals'>('board');
+  // Seeded, so a mock stays put while you read it and only changes when
+  // you ask for another run.
+  const [mockSeed, setMockSeed] = useState(1);
   const [tradeView, setTradeView] = useState<'suggested' | 'saved'>('suggested');
   const [filter, setFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
@@ -421,13 +424,14 @@ export function useApp() {
     stage, username, leagues, authBusy, authError, error,
     data, step, model, syncing, syncedAt,
     usageState, usageSeasons, marketState,
-    tab, teamView, draftView, tradeView, filter, rosterFilter, rosterSort, boardMode, rankMode,
+    tab, teamView, draftView, tradeView, mockSeed, filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 
     setUsername: (v: string) => { setUsername(v); setAuthError(''); },
     connectUser, pickLeague, switchLeague, logout, refreshAll, refreshPicks, retry,
     setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
-    setTeamView, setDraftView, setTradeView, setFilter, setRosterFilter, setRosterSort,
+    setTeamView, setDraftView, setTradeView, setFilter,
+    rerollMock: () => setMockSeed(x => x + 1), setRosterFilter, setRosterSort,
     setBoardMode, setRankMode, setPickSel, setStrat, setDetail,
     setQuery, setTopPos, setTopLens, setTopOpen,
     passOffer: (key: string) => setPassed(p => p.concat(key)),

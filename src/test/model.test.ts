@@ -651,3 +651,60 @@ describe('a redraft league is not priced as a dynasty', () => {
     expect(modelVal(old, mult, true)).toBeGreaterThan(modelVal(old, mult, false) * 1.5);
   });
 });
+
+describe('the mock draft', () => {
+  const run = model.runMock(7);
+
+  it('never picks the same player twice, or one already owned', () => {
+    const ids = run.picks.map(p => p.player!.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const owned = new Set(bundle.rosters.flatMap(r => r.players || []));
+    expect(ids.some(id => owned.has(id))).toBe(false);
+  });
+
+  it('runs from the next pick forward, in order, and stops at your last one', () => {
+    expect(run.picks[0].overall).toBe(model.nextOverall);
+    for (let i = 1; i < run.picks.length; i++) {
+      expect(run.picks[i].overall).toBe(run.picks[i - 1].overall + 1);
+    }
+    const lastMine = model.myPickList[model.myPickList.length - 1].overall;
+    expect(run.picks[run.picks.length - 1].overall).toBeLessThanOrEqual(lastMine);
+  });
+
+  it('puts you on the clock exactly at the picks you hold', () => {
+    const simMine = run.picks.filter(p => p.mine).map(p => p.overall);
+    const held = model.myPickList.map(p => p.overall).filter(o => o >= model.nextOverall);
+    expect(simMine).toEqual(held);
+  });
+
+  it('offers three distinct options at each of your picks, and takes one of them', () => {
+    for (const p of run.mine) {
+      // Distinct names in a fixed order. Fewer than three only where the board
+      // itself has run that thin, which is the tail of a rookie draft.
+      expect(p.options!.length).toBeGreaterThan(0);
+      expect(new Set(p.options!.map(o => o.id)).size).toBe(p.options!.length);
+      expect(p.options!.map(o => o.lens))
+        .toEqual(['best', 'need', 'upside'].slice(0, p.options!.length));
+      expect(p.options!.map(o => o.id)).toContain(p.player!.id);
+    }
+    // With a full board the three lenses must genuinely spread. Ranking each
+    // over the whole pool collapsed them onto one name whenever the best
+    // player also filled the hole, which was most turns.
+    expect(run.mine[0].options!.length).toBe(3);
+  });
+
+  it('is reproducible for a seed and different across seeds', () => {
+    const again = model.runMock(7);
+    expect(again.picks.map(p => p.player!.id)).toEqual(run.picks.map(p => p.player!.id));
+    const other = model.runMock(8);
+    expect(other.picks.map(p => p.player!.id)).not.toEqual(run.picks.map(p => p.player!.id));
+  });
+
+  it('reports the roster you would end up with, counting what you already hold', () => {
+    const before = model.have;
+    const added = run.mine.length;
+    const total = (Object.values(run.shape) as number[]).reduce((a, b) => a + b, 0);
+    const held = (Object.values(before) as number[]).reduce((a, b) => a + b, 0);
+    expect(total).toBe(held + added);
+  });
+});

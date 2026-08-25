@@ -8,6 +8,7 @@ import type { Market } from './market';
 import { ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
+  MockOption, MockResult, MockPick,
   OppPlayer, PickAsset, PlayerFit, PlayerValue, PositionMultiplier, RosterPlayer, SearchEntry, TargetTrade,
   TeamEntry, TeamProfile,
   TeamSheet, Window,
@@ -273,17 +274,26 @@ export function buildModel(input: ModelInput): Model {
   const slotOfRoster: Record<number, number> = {};
   Object.keys(slotToRoster).forEach(sl => { slotOfRoster[slotToRoster[sl]] = Number(sl); });
   const myPickList: MyDraftPick[] = [];
+  /**
+   * Who actually selects at each overall pick, trades applied.
+   *
+   * The slot map says who the pick STARTED with, which is a different question
+   * once anything has been traded — and reading the wrong one makes a pick you
+   * acquired disappear and one you sold reappear as yours.
+   */
+  const pickOwner: Record<number, number> = {};
   for (let r = 1; r <= rounds; r++) {
     (d.rosters || []).forEach(orig => {
       let owner = orig.roster_id;
       (d.traded || [])
         .filter(t => String(t.season) === String(league.season) && Number(t.round) === r && Number(t.roster_id) === orig.roster_id)
         .forEach(t => { owner = Number(t.owner_id); });
-      if (owner !== myRow.roster_id) return;
       const slot = slotOfRoster[orig.roster_id];
       if (!slot) return;
       const slotThisRound = (d.draft && d.draft.type === 'snake' && r % 2 === 0) ? (teamCount - slot + 1) : slot;
       const overall = (r - 1) * teamCount + slotThisRound;
+      pickOwner[overall] = owner;
+      if (owner !== myRow.roster_id) return;
       myPickList.push({
         round: r, slot: slotThisRound, overall,
         label: r + '.' + String(slotThisRound).padStart(2, '0'),
@@ -805,6 +815,172 @@ export function buildModel(input: ModelInput): Model {
       .slice(0, 4);
   };
 
+  /**
+   * Play the rest of the draft out.
+   *
+   * Every other manager takes the best player on the board FOR THEM — market
+   * value lifted by how thin they are at that position, which is how people
+   * actually draft — with a little noise, so running it twice gives you two
+   * plausible boards rather than the same one twice. At your turn the sim
+   * records what was still there before it takes anyone, which is the whole
+   * point: not "here is what happens" but "here is what reaches you".
+   */
+  const runMock = (seed: number): MockResult => {
+    // Deterministic per seed, so a run can be looked at twice and re-run
+    // deliberately rather than shuffling under you on every render.
+    let st = (seed || 1) >>> 0;
+    const rnd = () => {
+      st = (st + 0x6d2b79f5) >>> 0;
+      let t = st;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    const board = pool.map(x => ({
+      id: x.id, raw: x.raw, pos: x.raw.position as Pos, q: talentQ(x.raw, x.id),
+    })).sort((a, b) => b.q - a.q);
+    const gone = new Set<string>();
+
+    // What each roster already has, so their need moves as the draft goes on.
+    const have: Record<number, Partial<Record<Pos, number>>> = {};
+    (d.rosters || []).forEach(r => {
+      have[r.roster_id] = {};
+      (r.players || []).forEach(id => {
+        const pl = players[id];
+        if (!pl || POS.indexOf(pl.position as Pos) < 0) return;
+        const h = have[r.roster_id];
+        h[pl.position as Pos] = (h[pl.position as Pos] || 0) + 1;
+      });
+    });
+    const shortAt = (rid: number, pos: Pos) =>
+      Math.max(0, (slots[pos] || 1) - ((have[rid] || {})[pos] || 0));
+
+    // Only as far as your last pick — nobody needs a simulated round 14 they
+    // do not select in.
+    const lastMine = myPickList.length ? myPickList[myPickList.length - 1].overall : nextOverall;
+    const stop = Math.min(lastMine, rounds * teamCount);
+    const snake = !!(d.draft && d.draft.type === 'snake');
+
+    const picks: MockPick[] = [];
+    const mineShape = {} as Record<Pos, number>;
+    POS.forEach(p => { mineShape[p] = (have[myRow.roster_id] || {})[p] || 0; });
+
+    const asOption = (
+      x: { id: string; raw: SleeperPlayer; pos: Pos },
+      lens: MockOption['lens'],
+      title: string,
+      why: string,
+    ): MockOption => {
+      const sc = scorePlayer(x.raw, needScore, {
+        dv: talentQ(x.raw, x.id), dvMax, stack: stackFor(x.raw), use: uFor(x.id), redraft: !isDynasty,
+      }, w);
+      return {
+        id: x.id, name: playerName(x.raw), pos: x.pos, team: x.raw.team,
+        age: x.raw.age, adp: x.raw.search_rank, fit: sc.fit, lens, title, why,
+      };
+    };
+
+    for (let overall = nextOverall; overall <= stop; overall++) {
+      const round = Math.floor((overall - 1) / teamCount) + 1;
+      const inRound = ((overall - 1) % teamCount) + 1;
+      const slot = snake && round % 2 === 0 ? teamCount - inRound + 1 : inRound;
+      // The real owner, not whoever the slot started with — see pickOwner.
+      const rid = pickOwner[overall] ?? slotToRoster[slot];
+      const mine = rid === myRow.roster_id;
+      const label = round + '.' + String(inRound).padStart(2, '0');
+      const owner = (d.rosters || []).find(r => r.roster_id === rid);
+      const live = board.filter(x => !gone.has(x.id));
+      if (!live.length) break;
+
+      if (mine) {
+        // Three ways to use the pick, and deliberately three DIFFERENT players.
+        // Ranking each lens over the whole board collapses them into one name
+        // whenever the best player also happens to fill the hole — which is
+        // true often enough that the screen showed a single option most turns.
+        // Each lens picks from what the ones before it did not take, so the
+        // card always answers "and if not him?".
+        const shortlist = live.slice(0, 40);
+        const boom = (x: { id: string; raw: SleeperPlayer }) => scorePlayer(x.raw, {}, {
+          dv: talentQ(x.raw, x.id), dvMax, use: uFor(x.id), redraft: !isDynasty,
+        }, w).m.boom;
+        const needScoreOf = (x: { pos: Pos; q: number }) => x.q * (1 + shortAt(rid, x.pos) * 0.35);
+
+        const best = live[0];
+        const rest = shortlist.filter(x => x.id !== best.id);
+        const need = rest.slice().sort((a, b) => needScoreOf(b) - needScoreOf(a))[0];
+        const upside = rest.filter(x => !need || x.id !== need.id)
+          .sort((a, b) => boom(b) - boom(a))[0];
+
+        const options: MockOption[] = [];
+        const bestAlsoFills = shortAt(rid, best.pos) > 0;
+        options.push(asOption(best, 'best', 'Best available', bestAlsoFills
+          ? 'The best player left — and he fills a hole, so the other two are only if you disagree'
+          : 'The best player left, whatever you need'));
+        if (need) {
+          const short = shortAt(rid, need.pos);
+          options.push(asOption(
+            need, 'need',
+            short ? 'Fills your hole' : 'Deepest position',
+            short
+              ? 'You are ' + short + ' short at ' + need.pos
+              : 'No hole left to fill, so this is the best of what you already start',
+          ));
+        }
+        if (upside) {
+          options.push(asOption(upside, 'upside', 'Highest ceiling', 'The highest ceiling still on the board'));
+        }
+
+        // The sim takes whichever the need-weighted board actually rates
+        // highest — that is how the roster you end up with gets built — but
+        // all three are reported either way.
+        const taken = needScoreOf(best) >= (need ? needScoreOf(need) : 0) ? best : need;
+        gone.add(taken.id);
+        have[rid] = have[rid] || {};
+        have[rid][taken.pos] = (have[rid][taken.pos] || 0) + 1;
+        mineShape[taken.pos] = (mineShape[taken.pos] || 0) + 1;
+        picks.push({
+          overall, round, slot, label, team: teamName(owner?.owner_id), mine: true,
+          player: options.find(o => o.id === taken.id) || asOption(taken, 'need', 'Fills your hole', ''),
+          options,
+        });
+        continue;
+      }
+
+      // Somebody else. Value lifted by their own thinness, then a weighted
+      // draw from the top of that list rather than the strict maximum — real
+      // managers reach, and a board that never does is not a forecast.
+      const ranked = live.slice(0, 25)
+        .map(x => ({ x, s: x.q * (1 + (rid ? shortAt(rid, x.pos) : 0) * 0.3) }))
+        .sort((a, b) => b.s - a.s);
+      const top = ranked.slice(0, 5);
+      const total = top.reduce((a, b) => a + b.s, 0) || 1;
+      let r = rnd() * total;
+      let choice = top[0].x;
+      for (const c of top) { r -= c.s; if (r <= 0) { choice = c.x; break; } }
+
+      gone.add(choice.id);
+      if (rid) {
+        have[rid] = have[rid] || {};
+        have[rid][choice.pos] = (have[rid][choice.pos] || 0) + 1;
+      }
+      picks.push({
+        overall, round, slot, label, team: teamName(owner?.owner_id), mine: false,
+        player: {
+          id: choice.id, name: playerName(choice.raw), pos: choice.pos, team: choice.raw.team,
+          age: choice.raw.age, adp: choice.raw.search_rank, fit: 0, lens: 'best', title: '', why: '',
+        },
+      });
+    }
+
+    return {
+      picks,
+      mine: picks.filter(p => p.mine),
+      shape: mineShape,
+      through: picks.length ? picks[picks.length - 1].round : 0,
+    };
+  };
+
   // ── Pick movement for the draft: trade up (pay a premium to consolidate) or
   //    down (charge a premium to collect two swings), priced off the market.
   const draftDeals: DraftDeal[] = [];
@@ -904,6 +1080,6 @@ export function buildModel(input: ModelInput): Model {
     offers, bestDeals, leagueRows, leagueHasRosters, multInfo,
     allFits, searchIndex, qDiverge, wUsed: w,
     marketCount: mk ? Object.keys(mk.players).length : 0,
-    teamInfo, posRankOf, scoreAny, marketValue, offersFor, metricKeys,
+    teamInfo, posRankOf, scoreAny, marketValue, offersFor, runMock, metricKeys,
   };
 }

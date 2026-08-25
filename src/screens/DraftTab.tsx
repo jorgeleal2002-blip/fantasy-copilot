@@ -5,7 +5,7 @@ import type { DraftDeal, Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { PlayerSearch, type SearchScope } from '../ui/PlayerSearch';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
-import { capsule, dim, ellipsis, fitColor, fitStyle, heroCard, heroGlow, kicker, posBadge } from '../ui/styles';
+import { capsule, cardTitle, dim, ellipsis, fitColor, fitStyle, heroCard, heroGlow, kicker, posBadge } from '../ui/styles';
 
 const STATUS_TEXT: Record<string, string> = {
   pre_draft: 'Draft not started',
@@ -23,10 +23,10 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
   const status = m.draft ? (STATUS_TEXT[m.draft.status || ''] || m.draft.status || '—') : 'No draft configured';
   const dotColor = m.draft?.status === 'drafting' ? GOOD : m.draft?.status === 'complete' ? dim(0.4) : ACCENT;
 
-  const views: SegOption<'board' | 'deals'>[] = m.isDynasty
-    ? [{ key: 'board', label: 'Board' }, { key: 'deals', label: 'Pick moves' }]
-    : [{ key: 'board', label: 'Board' }];
-  const view = m.isDynasty ? app.draftView : 'board';
+  const views: SegOption<'board' | 'mock' | 'deals'>[] = m.isDynasty
+    ? [{ key: 'board', label: 'Board' }, { key: 'mock', label: 'Mock' }, { key: 'deals', label: 'Pick moves' }]
+    : [{ key: 'board', label: 'Board' }, { key: 'mock', label: 'Mock' }];
+  const view = app.draftView;
 
   // The search follows whichever board is on screen: a rookie draft has no
   // business surfacing a rostered veteran you cannot select.
@@ -215,10 +215,134 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
             })}
           </div>
         </>
+      ) : view === 'mock' ? (
+        <MockDraft app={app} m={m} />
       ) : (
         <PickMoves app={app} m={m} />
       )}
     </Screen>
+  );
+}
+
+/**
+ * The rest of the draft, played out.
+ *
+ * Every other manager takes the best player on the board for THEM, with enough
+ * noise that two runs give two plausible boards — so the useful output is not
+ * "this will happen" but "this is who tends to reach you, and here is what you
+ * could do with each turn".
+ */
+function MockDraft({ app, m }: { app: App; m: Model }) {
+  const res = m.runMock(app.mockSeed);
+
+  if (!res.mine.length) {
+    return (
+      <Card>
+        <div style={{ fontSize: 13.5, fontWeight: 500, marginBottom: 6 }}>No picks left to simulate</div>
+        <div style={{ fontSize: 12.5, lineHeight: 1.5, color: dim(0.5) }}>
+          You have no selections remaining in this draft, so there is nothing to play out.
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+        background: 'var(--color-surface)', borderRadius: 11, padding: '11px 12px',
+      }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 500 }}>
+            {res.mine.length === 1 ? '1 pick of yours' : res.mine.length + ' picks of yours'} through round {res.through}
+          </div>
+          <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 3 }}>
+            {POS.map(p => res.shape[p] + ' ' + p).join(' · ')} when it is over
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={app.rerollMock}
+          className="btn btn-secondary"
+          style={{ borderRadius: 9, padding: '7px 11px', fontSize: 12, flex: 'none' }}
+        >
+          Run again
+        </button>
+      </div>
+
+      <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.45), textWrap: 'pretty' }}>
+        One plausible board, not a prediction. The other managers draft for their own holes with
+        some noise in it, so run it a few times — the names that keep reaching you are the ones to
+        plan around.
+      </div>
+
+      {res.mine.map(pick => (
+        <Card key={pick.overall}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-0.01em' }}>Pick {pick.label}</div>
+            <div style={{ fontSize: 10.5, color: dim(0.4) }}>overall {pick.overall}</div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
+            {(pick.options || []).map((o, i) => (
+              <div
+                key={o.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => app.setDetail(o.id)}
+                onKeyDown={e => { if (e.key === 'Enter') app.setDetail(o.id); }}
+                style={{
+                  paddingTop: 10, cursor: 'pointer',
+                  borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 9.5, letterSpacing: '.09em', textTransform: 'uppercase',
+                      color: o.lens === 'need' ? GOOD : dim(0.4),
+                    }}>
+                      {o.title}
+                    </div>
+                    <div style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-0.01em', marginTop: 3, ...ellipsis }}>
+                      {o.name}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2 }}>
+                      {[o.pos, o.team || 'no team yet', (o.age ?? '?') + ' yrs', 'ADP ' + (o.adp || '—')].join(' · ')}
+                    </div>
+                  </div>
+                  <div style={{ flex: 'none', textAlign: 'right' }}>
+                    <div style={{ fontSize: 15, fontWeight: 500, color: fitColor(o.fit) }}>{o.fit}</div>
+                    <div style={{ fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', color: dim(0.35) }}>
+                      fit
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 11.5, color: dim(0.5), marginTop: 5, lineHeight: 1.45 }}>{o.why}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ))}
+
+      <Card>
+        <div style={{ ...cardTitle, marginBottom: 8 }}>What goes before your next turn</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {res.picks
+            .slice(0, Math.max(res.picks.findIndex(p => p.mine), 0))
+            .map(p => (
+              <div key={p.overall} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
+                <span style={{ color: dim(0.45), flex: 'none', width: 44 }}>{p.label}</span>
+                <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{p.player?.name}</span>
+                <span style={{ color: dim(0.4), flex: 'none' }}>{p.player?.pos} · {p.team}</span>
+              </div>
+            ))}
+          {res.picks.findIndex(p => p.mine) <= 0 ? (
+            <div style={{ fontSize: 12, color: dim(0.5) }}>You are on the clock — nothing goes first.</div>
+          ) : null}
+        </div>
+      </Card>
+    </div>
   );
 }
 
