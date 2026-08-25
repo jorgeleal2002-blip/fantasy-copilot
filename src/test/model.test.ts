@@ -260,29 +260,31 @@ describe('draft board', () => {
     expect([...fits].sort((a, b) => b - a)).toEqual(fits);
   });
 
-  it('places a player by the market, not by Sleeper\'s search index', () => {
-    // `goes` is his position among what is still available, so ordering it must
-    // reproduce the market's own value order. Sleeper's `search_rank` is a
-    // relevance index over the whole catalogue and disagrees with it — reading
-    // that as an ADP is what put a second-round back at "ADP 142".
+  it('orders the board by draft position, not by trade value', () => {
+    // Two different questions. `goes` answers "when does he come off the
+    // board", which is Sleeper's own ordering; the market answers "what is he
+    // worth", which in a superflex format puts quarterbacks ahead of the best
+    // back alive. Ordering by value is what dropped a back who goes second
+    // down to fourth.
     const board = model.scored.slice().sort((a, b) => (a.goes || 0) - (b.goes || 0));
-    const vals = board.map(p => model.marketValue(p.id)?.pts ?? 0);
-    expect([...vals].sort((a, b) => b - a)).toEqual(vals);
+    const searchOrder = board.map(p => bundle.players[p.id].search_rank || 0);
+    expect([...searchOrder].sort((a, b) => a - b)).toEqual(searchOrder);
+  });
 
-    // And when the two genuinely disagree, the market wins: bury the best
-    // rookie at the bottom of Sleeper's index and he keeps the 1.01.
-    const bestId = board[0].id;
-    const skewed = {
-      ...bundle,
-      players: {
-        ...bundle.players,
-        [bestId]: { ...bundle.players[bestId], search_rank: 899 },
-      },
-    };
+  it('does not let a rich valuation move a player up the board', () => {
+    const board = model.scored.slice().sort((a, b) => (a.goes || 0) - (b.goes || 0));
+    const cheap = board[board.length - 1].id;
+    // Make the last man on the board the most valuable asset in the league.
+    const rich = parseMarket(makeFantasyCalc(bundle.players).map(r => (
+      r.player?.sleeperId === cheap ? { ...r, value: 999999 } : r
+    )));
     const after = buildModel({
-      data: skewed, usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+      data: bundle, usage, market: rich, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
     });
-    expect(after.scored.find(p => p.id === bestId)?.goes).toBe(1);
+    const row = after.scored.find(p => p.id === cheap);
+    // Worth the most, still drafted last: value is not draft position.
+    expect(row?.rank).toBe(1);
+    expect(row?.goes).toBe(after.scored.length);
   });
 
   it('never reports a rank the market did not give it', () => {

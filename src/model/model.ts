@@ -155,20 +155,24 @@ export function buildModel(input: ModelInput): Model {
       (byPos[p] || []).sort((a, b) => b.v - a.v).forEach((x, i) => { valueRank[x.id] = i + 1; });
     });
   }
-  // ── Where the board actually has a player, as one number across every
-  //    position.
+  // ── Two different questions, two different sources.
   //
-  //    Sleeper ships `search_rank`, and it is tempting because it looks like an
-  //    ADP: a small integer, lower is better. It is not one. It is a relevance
-  //    index over the whole eleven-thousand-player catalogue — kickers,
-  //    defenders, practice-squad bodies and retired names included — ordered by
-  //    who gets looked up, not by who gets drafted. Reading it as ADP is what
-  //    printed "ADP 142" next to a back who goes in the second round.
+  //    WHERE A PLAYER GOES is Sleeper's `search_rank`. It is the order Sleeper
+  //    itself lists players in inside a draft, so for anyone fantasy-relevant
+  //    it tracks the consensus board closely. Its one flaw is that it counts
+  //    the whole catalogue, which is why a rookie who is the 1.01 of a rookie
+  //    draft carries a number in the hundreds — fixed by ranking within the
+  //    pool being drafted rather than by printing the raw figure.
   //
-  //    This is the consensus the format is actually priced at: everyone the
-  //    market puts a number on, in value order. Players it does not price stay
-  //    unranked rather than being given a number nobody agreed to.
-  const consensus: Record<string, number> = {};
+  //    WHAT A PLAYER IS WORTH is the market. That is a different question and
+  //    it gives a different order: in dynasty superflex the market puts three
+  //    quarterbacks ahead of the best back alive, which is true of trade value
+  //    and false of draft position. Ordering the board by value is what pushed
+  //    a back who goes second down to fourth.
+  //
+  //    So: draft order below, value order next to it, and neither pretends to
+  //    be the other.
+  const marketOrder: Record<string, number> = {};
   {
     const priced: { id: string; v: number }[] = [];
     for (const pid in players) {
@@ -178,11 +182,13 @@ export function buildModel(input: ModelInput): Model {
       if (v == null) continue;
       priced.push({ id: pid, v });
     }
-    priced.sort((a, b) => b.v - a.v).forEach((x, i) => { consensus[x.id] = i + 1; });
+    priced.sort((a, b) => b.v - a.v).forEach((x, i) => { marketOrder[x.id] = i + 1; });
   }
-  /** Consensus where the market has an opinion; Sleeper's index behind it. */
+  /** Draft order: Sleeper's board, with the market only breaking its ties. */
   const rankOf = (id: string, pl: SleeperPlayer) =>
-    consensus[id] || (pl.search_rank ? 5000 + pl.search_rank : 99999);
+    pl.search_rank && pl.search_rank < 9999
+      ? pl.search_rank
+      : 100000 + (marketOrder[id] || 9999);
 
   const marketValue = (id: string): PlayerValue | null => {
     const pl = players[id];
@@ -289,7 +295,7 @@ export function buildModel(input: ModelInput): Model {
     if (!pl || !POS.includes(pl.position as Pos)) return null;
     return {
       id, name: playerName(pl), pos: pl.position as Pos, age: pl.age ?? null,
-      team: pl.team || 'FA', exp: pl.years_exp ?? null, rank: consensus[id] || null,
+      team: pl.team || 'FA', exp: pl.years_exp ?? null, rank: marketOrder[id] || null,
       injury: pl.injury_status || '', starter: starterIds.indexOf(id) >= 0,
       round: pickRound[id], raw: pl,
     } as unknown as RosterPlayer;
@@ -411,7 +417,7 @@ export function buildModel(input: ModelInput): Model {
       id: x.id, name: playerName(p), pos: p.position as Pos, team: p.team,
       // `slot` is his place among what is still on the board, so it reads as
       // the pick he goes at once the screen renders it round-by-pick.
-      age: p.age, exp: p.years_exp, goes: i + 1, rank: consensus[x.id] || null,
+      age: p.age, exp: p.years_exp, goes: i + 1, rank: marketOrder[x.id] || null,
       m: s.m, fit: s.fit, raw: p, use: uFor(x.id),
     };
   }).sort((a, b) => b.fit - a.fit);
@@ -922,7 +928,7 @@ export function buildModel(input: ModelInput): Model {
       }, w);
       return {
         id: x.id, name: playerName(x.raw), pos: x.pos, team: x.raw.team,
-        age: x.raw.age, rank: consensus[x.id] || null, fit: sc.fit, ...extra,
+        age: x.raw.age, rank: marketOrder[x.id] || null, fit: sc.fit, ...extra,
       };
     };
 
@@ -1031,7 +1037,7 @@ export function buildModel(input: ModelInput): Model {
         overall, round, slot, label, team: teamName(owner?.owner_id), mine: false,
         player: {
           id: choice.id, name: playerName(choice.raw), pos: choice.pos, team: choice.raw.team,
-          age: choice.raw.age, rank: consensus[choice.id] || null, fit: 0,
+          age: choice.raw.age, rank: marketOrder[choice.id] || null, fit: 0,
         },
       });
     }
@@ -1124,7 +1130,7 @@ export function buildModel(input: ModelInput): Model {
     return {
       id, name: playerName(pl), pos: pl.position as Pos, team: pl.team || 'FA',
       // Scored off the board, so there is no slot: only where the market has him.
-      age: pl.age, exp: pl.years_exp, goes: null, rank: consensus[id] || null,
+      age: pl.age, exp: pl.years_exp, goes: null, rank: marketOrder[id] || null,
       m: s.m, fit: s.fit, raw: pl, use: uFor(id),
       owner: ownerRow ? teamName(ownerRow.owner_id) : null,
       owned: !!ownerRow && ownerRow.owner_id === d.me.user_id,
