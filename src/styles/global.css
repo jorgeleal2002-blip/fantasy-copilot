@@ -350,6 +350,103 @@ button { font-family: inherit; }
   padding: 12px 15px calc(var(--safe-bottom) + 28px);
   -webkit-overflow-scrolling: touch;
 }
+/* ── The draft board ──────────────────────────────────────────────────────
+   Sized for a phone first. A ten-team board is 18px of round axis plus ten
+   32px cells, which fits inside the room's content width with nothing to
+   scroll; twelve and fourteen scroll, and a laptop lets the cells spread.
+   At 32px a cell holds one surname and a position, so the position tint is
+   what carries a run — five backs in a row is a colour, not a reading task.
+   ──────────────────────────────────────────────────────────────────────── */
+.bd-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.bd {
+  --cell: 32px;
+  --axis: 18px;
+  display: grid;
+  gap: 2px;
+}
+.bd-head {
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  padding: 2px 0 5px;
+  color: rgba(233, 233, 237, 0.35);
+}
+.bd-head.is-you {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+.bd-round {
+  font-size: 9px;
+  color: rgba(233, 233, 237, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.bd-cell {
+  min-height: 48px;
+  border-radius: 6px;
+  padding: 4px 2px;
+  overflow: hidden;
+  background: rgba(233, 233, 237, 0.03);
+  border: 1px solid transparent;
+}
+/* A filled cell is tinted with its position's hue. The `--pos` fallback keeps
+   a player with no listed position looking like a card, not a hole. */
+.bd-cell.is-filled {
+  background: color-mix(in srgb, var(--pos, #8073c9) 20%, var(--color-surface));
+}
+.bd-cell.is-mine {
+  border-color: rgba(145, 132, 217, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(145, 132, 217, 0.2);
+}
+.bd-cell.is-clock {
+  background: rgba(145, 132, 217, 0.09);
+  border-color: rgba(145, 132, 217, 0.32);
+}
+/* A surname does not fit a 32px cell on one line — "Jefferson" wants 41px in
+   a 25px box — so it wraps to two and breaks mid-word if it has to. Two lines
+   of 8.5px hold eleven characters, which covers all but a handful of names,
+   and those get the ellipsis. */
+.bd-name {
+  font-size: 8.5px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.bd-pos {
+  font-size: 7.5px;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+  color: var(--pos, rgba(233, 233, 237, 0.4));
+}
+.bd-clock {
+  font-size: 7.5px;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+/* Room to breathe once there is room: the same board, read at arm's length. */
+@media (min-width: 900px) {
+  .bd { gap: 4px; }
+  .bd-cell { min-height: 52px; border-radius: 8px; padding: 6px 7px; }
+  .bd-head { font-size: 11px; }
+  .bd-round { font-size: 10.5px; }
+  .bd-name { font-size: 11.5px; overflow-wrap: normal; }
+  .bd-pos { font-size: 9.5px; }
+  .bd-clock { font-size: 9px; }
+}
+
 /* On a laptop the room keeps its full-bleed bars — a draft room should feel
    like a room — but the content inside them stays in one readable column
    instead of stretching a segmented control across 1400px. */

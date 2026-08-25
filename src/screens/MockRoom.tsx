@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { ACCENT, GOOD, POS } from '../model/constants';
+import { ACCENT, GOOD, POS, POS_COLOR } from '../model/constants';
 import type { MockOption, MockPick, Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { Segmented, type SegOption } from '../ui/primitives';
@@ -220,7 +220,12 @@ function Row({ o, first, onTake }: { o: MockOption; first: boolean; onTake: (id:
   );
 }
 
-const CELL = 84;
+/** Phone-first board geometry. Ten seats plus the round axis land inside a
+ *  360px content width, so the common league fits with nothing to scroll.
+ *  Keep these in step with `--cell` / `--axis` in the stylesheet. */
+const CELL = 32;
+const GAP = 2;
+const AXIS = 18;
 
 /** The round numbers ride along as the board scrolls sideways. */
 const STICKY: CSSProperties = {
@@ -241,78 +246,60 @@ function MockBoard(
   const at = (round: number, col: number) => made.find(p => p.round === round && p.slot === col);
   const scroller = useRef<HTMLDivElement>(null);
 
-  // Ten seats do not fit on a phone, and yours is the one you came to see.
-  // Centre it once, on open; scrolling afterwards is the reader's business.
+  // A ten-team board fits a phone at this size, so there is nothing to scroll
+  // to. Wider leagues do scroll, and then your column is the one you came to
+  // see — centre it once, on open. Scrolling afterwards is the reader's.
   useEffect(() => {
     const el = scroller.current;
-    if (!el) return;
-    el.scrollLeft = Math.max(0, 30 + (slot - 0.5) * (CELL + 4) - el.clientWidth / 2);
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+    el.scrollLeft = Math.max(0, AXIS + (slot - 0.5) * (CELL + GAP) - el.clientWidth / 2);
   }, [slot]);
 
-  // No full-bleed here. A board that ran past the screen edge would need the
-  // sticky round column to cover the padding it scrolls through, and it never
-  // covers the gaps between rows. Clipping at the container edge is honest.
+  // No full-bleed. A board that ran past the screen edge would need the sticky
+  // round column to cover the padding it scrolls through, and it never covers
+  // the gaps between rows. Clipping at the container edge is honest.
   return (
-    <div ref={scroller} style={{ overflowX: 'auto' }}>
-      {/* `minmax(CELL, 1fr)` under a hard `minWidth`: the columns scroll on a
-          phone and spread to fill the room on a laptop, from one rule. */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: `26px repeat(${m.teamCount}, minmax(${CELL}px, 1fr))`,
-        gap: 4,
-        minWidth: 26 + m.teamCount * (CELL + 4),
-      }}>
+    <div ref={scroller} className="bd-scroll">
+      {/* Even columns under a floor on the whole grid: at ten teams the floor
+          is 358px, so the board fits a phone with nothing to scroll; wider
+          leagues push past it and scroll; a laptop lets the columns spread to
+          fill the room. `minmax(0, 1fr)` rather than `1fr` so a long name can
+          never widen its own column. */}
+      <div
+        className="bd"
+        style={{
+          gridTemplateColumns: `var(--axis) repeat(${m.teamCount}, minmax(0, 1fr))`,
+          minWidth: AXIS + m.teamCount * (CELL + GAP),
+        }}
+      >
         <div style={STICKY} />
         {cols.map(c => (
-          <div
-            key={'h' + c}
-            style={{
-              fontSize: 10, letterSpacing: '.06em', textAlign: 'center', padding: '2px 0 6px',
-              color: c === slot ? ACCENT : dim(0.35),
-              fontWeight: c === slot ? 600 : 400,
-            }}
-          >
+          <div key={'h' + c} className={'bd-head' + (c === slot ? ' is-you' : '')}>
             {c === slot ? 'YOU' : c}
           </div>
         ))}
         {rows.flatMap(r => [
-          <div
-            key={'r' + r}
-            style={{
-              ...STICKY,
-              fontSize: 10, color: dim(0.3), display: 'flex', alignItems: 'center',
-              justifyContent: 'flex-end', paddingRight: 2, fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            {r}
-          </div>,
+          <div key={'r' + r} className="bd-round" style={STICKY}>{r}</div>,
           ...cols.map(c => {
             const p = at(r, c);
             const onClock = !p && (r - 1) * m.teamCount + (r % 2 ? c : m.teamCount - c + 1) === next;
+            const pos = p?.player?.pos;
             return (
               <div
                 key={r + '-' + c}
-                style={{
-                  minHeight: 42, borderRadius: 8, padding: '5px 6px',
-                  background: p
-                    ? (p.mine ? 'rgba(145,132,217,.18)' : 'var(--color-surface)')
-                    : onClock ? 'rgba(145,132,217,.08)' : 'rgba(233,233,237,.03)',
-                  border: '1px solid ' + (p?.mine ? 'rgba(145,132,217,.45)'
-                    : onClock ? 'rgba(145,132,217,.3)' : 'transparent'),
-                }}
+                className={'bd-cell' + (p ? ' is-filled' : '') + (p?.mine ? ' is-mine' : '')
+                  + (onClock ? ' is-clock' : '')}
+                // The tint and the letters are the same hue, one variable.
+                style={pos ? ({ '--pos': POS_COLOR[pos] } as CSSProperties) : undefined}
+                title={p?.player?.name}
               >
                 {p ? (
                   <>
-                    <div style={{ fontSize: 8.5, color: dim(0.3), letterSpacing: '.04em' }}>{p.label}</div>
-                    <div style={{ fontSize: 10.5, fontWeight: 500, lineHeight: 1.2, marginTop: 2 }}>
-                      {short(p.player?.name)}
-                    </div>
-                    <div style={{ fontSize: 9, color: dim(0.4), marginTop: 1 }}>{p.player?.pos}</div>
+                    <div className="bd-name">{last(p.player?.name)}</div>
+                    <div className="bd-pos">{pos}</div>
                   </>
                 ) : onClock ? (
-                  <div style={{ fontSize: 8.5, color: ACCENT, letterSpacing: '.06em', textTransform: 'uppercase' }}>
-                    on the clock
-                  </div>
+                  <div className="bd-clock">on<br />clock</div>
                 ) : null}
               </div>
             );
@@ -323,9 +310,14 @@ function MockBoard(
   );
 }
 
-/** "Jahmyr Gibbs" → "J. Gibbs", so a 92px cell holds a name. */
-function short(name: string | undefined) {
+/**
+ * "Jahmyr Gibbs" → "Gibbs".
+ *
+ * A 32px cell holds one short word. The surname is the half people say out
+ * loud, and the column and row already say whose pick it was and when.
+ */
+function last(name: string | undefined) {
   if (!name) return '';
-  const parts = name.split(' ');
-  return parts.length < 2 ? name : parts[0][0] + '. ' + parts.slice(1).join(' ');
+  const parts = name.replace(/\s+(Jr\.?|Sr\.?|I{2,}|IV|V)$/i, '').split(' ');
+  return parts[parts.length - 1];
 }

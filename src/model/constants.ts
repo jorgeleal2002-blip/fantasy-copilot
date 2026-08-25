@@ -11,6 +11,28 @@ export const MID = '#c9c0f0';
 export const MUTED = 'rgba(233,233,237,.45)';
 
 /**
+ * One hue per position, for the draft board.
+ *
+ * A board cell on a phone is about 32px wide — too small for a position label
+ * to carry any weight, and the thing you want to read off a board is a run:
+ * five backs in a row. Colour is what makes that visible at that size, so the
+ * position gets a hue and the cell gets tinted with it.
+ *
+ * Position is nominal, so these are four distinct hues, not a ramp. Measured
+ * against the card surface they clear the dark lightness band (L .48–.67), the
+ * chroma floor, ΔE 15.8 to normal vision and ΔE 8.4 under simulated protan /
+ * deuteranopia across every pair — not just adjacent ones, because any two
+ * cells on a board can end up side by side. The letters stay printed in every
+ * cell regardless: colour is the fast read, never the only one.
+ */
+export const POS_COLOR: Record<Pos, string> = {
+  QB: '#ad8d28',
+  RB: '#2c8a5f',
+  WR: '#4b7fd0',
+  TE: '#c26e9a',
+};
+
+/**
  * The same three states again, stepped for FILLS rather than text.
  *
  * The text steps above are light because they have to be readable as 11px type
