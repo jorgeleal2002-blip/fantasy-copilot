@@ -335,66 +335,82 @@ button { font-family: inherit; }
   padding: calc(var(--safe-top) + 12px) 15px 8px;
   border-bottom: 1px solid var(--color-divider);
 }
-.mock-ticker {
-  padding: 10px 15px 11px;
-  border-bottom: 1px solid var(--color-divider);
-  background: linear-gradient(to bottom, rgba(38, 42, 96, 0.22), transparent);
-  min-height: 54px;
-}
-.mock-body {
-  flex: 1;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px 15px calc(var(--safe-bottom) + 28px);
-  -webkit-overflow-scrolling: touch;
-}
 /* ── The draft board ──────────────────────────────────────────────────────
-   Sized for a phone first. A ten-team board is 18px of round axis plus ten
-   32px cells, which fits inside the room's content width with nothing to
-   scroll; twelve and fourteen scroll, and a laptop lets the cells spread.
-   At 32px a cell holds one surname and a position, so the position tint is
-   what carries a run — five backs in a row is a colour, not a reading task.
+   A column per seat, a row per round. Cells are big enough to read a name
+   and a position at a glance, which means a phone shows four or five seats
+   and scrolls to the rest — the trade a real draft room makes too. Every
+   square carries its own pick number from the start, so an empty board still
+   reads as a draft order instead of a blank grid.
    ──────────────────────────────────────────────────────────────────────── */
+/* Takes the board's own height and no more: a three-round rookie draft would
+   otherwise leave a field of empty background between the last round and the
+   dock. A fifteen-round board stops at the cap and scrolls inside it.
+   No side padding — the grid scrolls THROUGH a scroller's padding, and the
+   sticky round column cannot cover the strip it passes under. The trailing
+   gap belongs to the grid instead, where it scrolls along with the cells. */
 .bd-scroll {
-  overflow-x: auto;
+  flex: 0 1 auto;
+  max-height: 52vh;
+  min-height: 110px;
+  overflow: auto;
+  padding: 8px 0 12px;
   -webkit-overflow-scrolling: touch;
 }
 .bd {
-  --cell: 32px;
-  --axis: 18px;
   display: grid;
-  gap: 2px;
+  gap: 3px;
+  padding-right: 15px;
 }
 .bd-head {
   font-size: 9.5px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-align: center;
-  padding: 2px 0 5px;
+  padding: 2px 2px 5px;
   color: rgba(233, 233, 237, 0.35);
+  min-width: 0;
+  overflow: hidden;
 }
-.bd-head.is-you {
+.bd-head.is-you { color: var(--color-accent); font-weight: 600; }
+.bd-claim {
+  width: 100%;
+  font: inherit;
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 5px 0;
+  border-radius: 999px;
+  cursor: pointer;
   color: var(--color-accent);
+  background: rgba(145, 132, 217, 0.12);
+  border: 1px solid rgba(145, 132, 217, 0.35);
+}
+.bd-claim.is-on {
+  color: var(--color-bg);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
   font-weight: 600;
 }
 .bd-round {
-  font-size: 9px;
+  font-size: 9.5px;
   color: rgba(233, 233, 237, 0.3);
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: 3px;
+  padding-right: 4px;
   font-variant-numeric: tabular-nums;
 }
 .bd-cell {
-  min-height: 48px;
-  border-radius: 6px;
-  padding: 4px 2px;
+  min-height: 54px;
+  border-radius: 8px;
+  padding: 4px 6px 3px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: rgba(233, 233, 237, 0.03);
   border: 1px solid transparent;
 }
+/* The column you are drafting from stays legible even when it is empty. */
+.bd-cell.is-seat { background: rgba(145, 132, 217, 0.05); }
 /* A filled cell is tinted with its position's hue. The `--pos` fallback keeps
    a player with no listed position looking like a card, not a hole. */
 .bd-cell.is-filled {
@@ -405,57 +421,223 @@ button { font-family: inherit; }
   box-shadow: inset 0 0 0 1px rgba(145, 132, 217, 0.2);
 }
 .bd-cell.is-clock {
-  background: rgba(145, 132, 217, 0.09);
-  border-color: rgba(145, 132, 217, 0.32);
+  background: rgba(145, 132, 217, 0.12);
+  border-color: rgba(145, 132, 217, 0.5);
 }
-/* A surname does not fit a 32px cell on one line — "Jefferson" wants 41px in
-   a 25px box — so it wraps to two and breaks mid-word if it has to. Two lines
-   of 8.5px hold eleven characters, which covers all but a handful of names,
-   and those get the ellipsis. */
-.bd-name {
+.bd-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 8.5px;
+  letter-spacing: 0.03em;
+  color: rgba(233, 233, 237, 0.32);
+  font-variant-numeric: tabular-nums;
+}
+.bd-cell.is-filled .bd-tag { color: rgba(233, 233, 237, 0.45); }
+.bd-live { color: var(--color-accent); font-size: 7px; }
+.bd-name {
+  font-size: 11.5px;
   font-weight: 500;
-  line-height: 1.15;
+  line-height: 1.2;
   letter-spacing: -0.01em;
-  overflow-wrap: anywhere;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  margin-top: 3px;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 .bd-pos {
-  font-size: 7.5px;
+  font-size: 9px;
   letter-spacing: 0.05em;
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--pos, rgba(233, 233, 237, 0.4));
 }
-.bd-clock {
-  font-size: 7.5px;
-  line-height: 1.25;
-  letter-spacing: 0.06em;
+/* The arrow points at wherever the next pick lands, which is how a snake
+   reads as a snake rather than as ten unrelated columns. */
+.bd-arrow {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(233, 233, 237, 0.2);
+}
+.bd-cell.is-clock .bd-arrow {
+  font-size: 8px;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--color-accent);
+  justify-content: flex-start;
+  align-items: center;
 }
-/* Room to breathe once there is room: the same board, read at arm's length. */
-@media (min-width: 900px) {
-  .bd { gap: 4px; }
-  .bd-cell { min-height: 52px; border-radius: 8px; padding: 6px 7px; }
-  .bd-head { font-size: 11px; }
-  .bd-round { font-size: 10.5px; }
-  .bd-name { font-size: 11.5px; overflow-wrap: normal; }
-  .bd-pos { font-size: 9.5px; }
-  .bd-clock { font-size: 9px; }
+
+/* ── The dock ─────────────────────────────────────────────────────────────
+   Who is left, parked under the board. Fixed height and its own scroll, so
+   the board never moves out from under a run you are watching.
+   ──────────────────────────────────────────────────────────────────────── */
+/* Basis zero, not auto: a hundred rows of content would otherwise claim the
+   whole screen as its natural height and squeeze the board out of the room. */
+.mock-dock {
+  flex: 1 1 0;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-divider);
+  border-radius: 16px 16px 0 0;
+  padding-bottom: var(--safe-bottom);
+}
+.dock-tabs {
+  display: flex;
+  gap: 18px;
+  padding: 11px 15px 0;
+  flex: none;
+}
+.dock-tab {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 0 0 8px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: rgba(233, 233, 237, 0.45);
+  cursor: pointer;
+}
+.dock-tab.is-on {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+}
+.dock-filters {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 9px 15px;
+  overflow-x: auto;
+  flex: none;
+  border-bottom: 1px solid var(--color-divider);
+}
+.pos-chip {
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1.1;
+  padding: 6px 11px;
+  border-radius: 999px;
+  flex: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  color: rgba(233, 233, 237, 0.6);
+  background: rgba(233, 233, 237, 0.05);
+  border: 1px solid transparent;
+}
+.pos-chip.is-on {
+  color: var(--color-text);
+  background: rgba(145, 132, 217, 0.18);
+  border-color: rgba(145, 132, 217, 0.45);
+}
+.pos-count {
+  font-size: 9px;
+  color: rgba(233, 233, 237, 0.4);
+  font-variant-numeric: tabular-nums;
+}
+.pos-chip.is-on .pos-count { color: rgba(233, 233, 237, 0.6); }
+.pos-chip.is-icon { padding: 8px 10px; color: rgba(233, 233, 237, 0.45); }
+.dock-search {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: var(--color-text);
+  background: rgba(233, 233, 237, 0.06);
+  border: 1px solid var(--color-divider);
+}
+.dock-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.pl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 15px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.pl-draft {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 7px 10px;
+  border-radius: 8px;
+  flex: none;
+  cursor: pointer;
+  color: var(--color-accent);
+  background: rgba(145, 132, 217, 0.14);
+  border: 1px solid rgba(145, 132, 217, 0.4);
+}
+/* Off the clock the button stays visible but plainly inert — hiding it would
+   move every row the moment your turn came round. */
+.pl-draft:disabled {
+  cursor: default;
+  color: rgba(233, 233, 237, 0.25);
+  background: rgba(233, 233, 237, 0.04);
+  border-color: transparent;
+}
+.pl-lens {
+  font-size: 9px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.pl-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pl-meta {
+  font-size: 10.5px;
+  color: rgba(233, 233, 237, 0.42);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pl-stat { flex: none; text-align: right; min-width: 34px; }
+.pl-stat-k {
+  font-size: 8.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(233, 233, 237, 0.32);
+}
+.pl-stat-v {
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
 }
 
 /* On a laptop the room keeps its full-bleed bars — a draft room should feel
-   like a room — but the content inside them stays in one readable column
-   instead of stretching a segmented control across 1400px. */
+   like a room — but the content inside them stays in one readable column.
+   The board is the exception: it gets the whole width, because more seats on
+   screen at once is the entire point of having it. */
 @media (min-width: 900px) {
   .mock-room {
     --gutter: max(32px, calc((100% - 1040px) / 2));
   }
   .mock-head { padding: 18px var(--gutter) 10px; }
-  .mock-ticker { padding: 12px var(--gutter); }
-  .mock-body { padding: 14px var(--gutter) 40px; }
-  .mock-room > div:nth-of-type(2) { padding: 0 var(--gutter) !important; }
+  .bd-scroll { padding: 14px 0 18px; max-height: 58vh; }
+  .bd { padding-left: 32px; padding-right: 32px; }
+  .mock-dock {
+    padding-left: max(0px, calc((100% - 1040px) / 2));
+    padding-right: max(0px, calc((100% - 1040px) / 2));
+  }
 }

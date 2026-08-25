@@ -83,6 +83,9 @@ export function useApp() {
   const [mockSlot, setMockSlot] = useState<number | null>(null);
   /** the room takes over the screen — a draft room is not a panel on a page */
   const [mockOpen, setMockOpen] = useState(false);
+  /** The room opens in a lobby: an empty board, seats to claim, and a start
+   *  button. Nothing is drafted until you say go. */
+  const [mockStarted, setMockStarted] = useState(false);
   const [tradeView, setTradeView] = useState<'suggested' | 'saved'>('suggested');
   const [filter, setFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
@@ -430,17 +433,19 @@ export function useApp() {
     stage, username, leagues, authBusy, authError, error,
     data, step, model, syncing, syncedAt,
     usageState, usageSeasons, marketState,
-    tab, teamView, draftView, tradeView, mockSeed, mockChoices, mockSlot, mockOpen, filter, rosterFilter, rosterSort, boardMode, rankMode,
+    tab, teamView, draftView, tradeView, mockSeed, mockChoices, mockSlot, mockOpen, mockStarted,
+    filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 
     setUsername: (v: string) => { setUsername(v); setAuthError(''); },
     connectUser, pickLeague, switchLeague, logout, refreshAll, refreshPicks, retry,
     setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
     setTeamView, setDraftView, setTradeView, setFilter,
-    rerollMock: () => { setMockSeed(x => x + 1); setMockChoices({}); },
+    rerollMock: () => { setMockSeed(x => x + 1); setMockChoices({}); setMockStarted(false); },
+    startMock: () => setMockStarted(true),
     // A different seat is a different draft, so nothing carries over.
     setMockSlot: (n: number | null) => { setMockSlot(n); setMockChoices({}); },
-    openMock: () => { setMockChoices({}); setMockOpen(true); },
+    openMock: () => { setMockChoices({}); setMockStarted(false); setMockOpen(true); },
     closeMock: () => setMockOpen(false),
     /**
      * Taking someone at one pick invalidates every choice after it — the board

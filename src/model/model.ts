@@ -1149,6 +1149,7 @@ export function buildModel(input: ModelInput): Model {
     offers, bestDeals, leagueRows, leagueHasRosters, multInfo,
     allFits, searchIndex, qDiverge, wUsed: w,
     marketCount: mk ? Object.keys(mk.players).length : 0,
+    snake: !!(d.draft && d.draft.type === 'snake'),
     teamInfo, posRankOf, scoreAny, marketValue, offersFor, runMock, metricKeys,
   };
 }

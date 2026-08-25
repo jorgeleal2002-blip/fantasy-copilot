@@ -5,7 +5,7 @@ import type { DraftDeal, Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { PlayerSearch, type SearchScope } from '../ui/PlayerSearch';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
-import { capsule, cardNote, cardTitle, dim, ellipsis, fitColor, fitStyle, heroCard, heroGlow, kicker, posBadge } from '../ui/styles';
+import { capsule, cardTitle, dim, ellipsis, fitColor, fitStyle, heroCard, heroGlow, kicker, posBadge } from '../ui/styles';
 
 const STATUS_TEXT: Record<string, string> = {
   pre_draft: 'Draft not started',
@@ -248,11 +248,11 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
         <div style={{ position: 'relative' }}>
           <div style={kicker}>Mock draft</div>
           <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 6 }}>
-            {m.teamCount} teams, {st.slot === m.mySlot ? 'your seat' : 'seat ' + st.slot}
+            {m.teamCount} teams, {m.rounds} rounds
           </div>
           <div style={{ fontSize: 12, color: dim(0.5), marginTop: 6, lineHeight: 1.5 }}>
-            The other {m.teamCount - 1} seats draft live while you watch. When the clock
-            reaches you, every name on the board carries a fit rating for your roster.
+            Claim a seat on the board, then start. The other {m.teamCount - 1} draft live
+            while you watch, and every name left carries a fit rating for your roster.
           </div>
           <button
             type="button"
@@ -275,30 +275,9 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
         </div>
       </div>
 
-      {/* The seat is only a choice before anyone has picked — changing it
-          halfway would silently throw the draft away. */}
-      {!going ? (
-        <Card>
-          <div style={{ ...cardTitle, marginBottom: 2 }}>Draft from slot</div>
-          <div style={{ ...cardNote, marginBottom: 9 }}>
-            {m.mySlot ? 'Yours is ' + m.mySlot + '. Take any seat to see how the board falls from there.'
-              : 'Pick a seat to mock from.'}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))', gap: 6 }}>
-            {Array.from({ length: m.teamCount }, (_, i) => i + 1).map(n => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => app.setMockSlot(n === m.mySlot ? null : n)}
-                aria-pressed={st.slot === n}
-                style={{ ...segChip(st.slot === n), font: 'inherit', fontSize: 11.5 }}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-        </Card>
-      ) : (
+      {/* Only worth a card once there is something in it. The seat is claimed
+          on the board inside the room, where you can see what you are claiming. */}
+      {going ? (
         <Card>
           <div style={{ ...cardTitle, marginBottom: 8 }}>What you have drafted</div>
           {st.myTeam.map((o, i) => (
@@ -314,7 +293,7 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
             {st.made.length} picks in · {POS.map(p => st.shape[p] + ' ' + p).join(' · ')}
           </div>
         </Card>
-      )}
+      ) : null}
     </div>
   );
 }

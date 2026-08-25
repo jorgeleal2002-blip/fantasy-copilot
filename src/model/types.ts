@@ -337,6 +337,8 @@ export interface Model {
   sflx: boolean;
   teamCount: number;
   rounds: number;
+  /** the draft reverses every other round, which the board has to draw */
+  snake: boolean;
   seasonNum: number;
 
   myPlayers: RosterPlayer[];
