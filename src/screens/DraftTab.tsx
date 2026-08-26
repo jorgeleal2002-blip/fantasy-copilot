@@ -161,7 +161,12 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                   `${Math.max(m.selPick.overall - m.nextOverall, 0)} selections before yours` +
                   (m.selPick.via ? ` · acquired from ${m.selPick.via}` : '') +
                   ` · you hold ${m.myPickList.length} picks in this draft`
-                : 'Draft complete'}
+                // No pick of yours left can mean two opposite things, and
+                // "complete" is the wrong one for a draft nobody has started:
+                // a league whose order is not set yet has no picks to name.
+                : m.picks.length >= m.rounds * m.teamCount
+                  ? 'Draft complete'
+                  : 'Draft order not set yet — Sleeper publishes it when the commissioner does'}
             </div>
             {/* Direct children of the screen's column, so each fills the width
                 like every other control row. Wrapping the segmented in a flex

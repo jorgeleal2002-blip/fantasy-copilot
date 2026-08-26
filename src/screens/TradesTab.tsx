@@ -73,7 +73,8 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
           {m.offers.length === 0 ? (
             <Empty
               title="No clear trades today"
-              body="No bench piece of yours improves your lineup without the other manager losing value. Check back after the rookie draft."
+              body={'No bench piece of yours improves your lineup without the other manager losing value. Check back after the '
+                + (m.isDynasty ? 'rookie draft.' : 'draft.')}
               action={
                 <button type="button" onClick={app.resetOffers} className="btn btn-secondary" style={{ borderRadius: 9 }}>
                   Recalculate

@@ -90,11 +90,20 @@ function Summary({ app, m }: { app: App; m: Model }) {
     },
     {
       label: 'Next pick',
-      value: m.myRound + '.' + String(m.myPickInRound).padStart(2, '0'),
-      sub: m.myNextOverall ? 'overall ' + m.myNextOverall : 'to be set', color: ACCENT,
+      // Without a draft order there is no pick to name. The fallback used to
+      // print whatever round the draft happened to be sitting on, which read
+      // as a real slot — "15.01" in a league that had not drafted at all.
+      value: m.myNextOverall ? m.myRound + '.' + String(m.myPickInRound).padStart(2, '0') : '—',
+      sub: m.myNextOverall ? 'overall ' + m.myNextOverall : 'draft order not set', color: ACCENT,
     },
     { label: 'Weakest position', value: weakest.value, sub: weakest.sub, color: BAD },
   ];
+
+  // Every number on this page is derived from players you own. With none, the
+  // page is a grid of dashes and zeros that reads like a failure to load —
+  // which is exactly what a redraft league looks like for the weeks before it
+  // drafts. Say so instead, and point at the screen that can do something.
+  const empty = !m.myPlayers.length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -105,13 +114,39 @@ function Summary({ app, m }: { app: App; m: Model }) {
         </div>
       ) : null}
 
+      {empty ? (
+        <div style={heroCard}>
+          <div style={heroGlow} />
+          <div style={{ position: 'relative' }}>
+            <div style={kicker}>Nothing on your roster yet</div>
+            <div style={{ fontSize: 13, lineHeight: 1.55, color: dim(0.62), marginTop: 9, textWrap: 'pretty' }}>
+              {m.draft?.status === 'drafting'
+                ? 'The draft is running and none of your picks have landed. Strength, holes and lineup quality all come from players you own, so they stay empty until one does.'
+                : 'This league has not drafted. Strength, holes and lineup quality are all measured off players you own, so there is nothing to rank until the picks are in.'}
+            </div>
+            <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.45), marginTop: 8, textWrap: 'pretty' }}>
+              The board is already rated and ready — every available player carries a Fit
+              score for the roster you are about to build.
+            </div>
+            <button
+              type="button"
+              onClick={() => app.setTab('draft')}
+              className="btn btn-primary"
+              style={{ marginTop: 14, borderRadius: 9, padding: '9px 14px' }}
+            >
+              Open the draft board
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {/* Four places, not one. "Future value" is a raw sum — the whole roster
           aged two years plus pick capital — so it rewards hoarding: a deep
           bench and a pile of picks can put you first while your starters are
           mid-table. The quality columns beside it measure only the optimal
           starters, which is the honest read. Shown together, the gap between
           them is itself the information. */}
-      <div style={heroCard}>
+      {empty ? null : <div style={heroCard}>
         <div style={heroGlow} />
         <div style={{ position: 'relative' }}>
           <div style={kicker}>Your place in the league</div>
@@ -136,9 +171,10 @@ function Summary({ app, m }: { app: App; m: Model }) {
             </div>
           ) : null}
         </div>
-      </div>
+      </div>}
 
-      <Card>
+      {/* A ranking of nothing against nine other teams is four empty bars. */}
+      {empty ? null : <Card>
         <div style={{ ...cardTitle, marginBottom: 2 }}>Rank by position</div>
         <div style={{ ...capsule, marginBottom: 9 }}>tap to filter your roster</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -179,7 +215,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
             );
           })}
         </div>
-      </Card>
+      </Card>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {stats.map(s => (
