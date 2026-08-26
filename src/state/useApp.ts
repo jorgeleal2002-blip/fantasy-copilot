@@ -4,7 +4,7 @@ import {
   loadLeague, matchMe, userLeagues, playerPhoto,
 } from '../api/sleeper';
 import type { LeagueBundle, SleeperLeague } from '../api/types';
-import { DRAFT_POLL_MS, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, StratKey, USAGE_V } from '../model/constants';
+import { DRAFT_POLL_MS, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
@@ -53,6 +53,9 @@ export function useApp() {
   const [username, setUsername] = useState('');
   const [leagues, setLeagues] = useState<SleeperLeague[]>([]);
   const [leagueId, setLeagueId] = useState<string | null>(null);
+  /** leagueId → roster_id you named as yours, when the account you signed in
+   *  with is not the one holding it. */
+  const [teamPick, setTeamPick] = useState<Record<string, number>>({});
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState('');
 
@@ -234,6 +237,7 @@ export function useApp() {
   useEffect(() => {
     setPhotos(readJson<Record<string, string>>(STORAGE_PHOTOS, {}));
     setSavedAll(readJson<SavedTrade[]>(STORAGE_SAVED, []));
+    setTeamPick(readJson<Record<string, number>>(STORAGE_TEAM, {}));
     const saved = readJson<{ username?: string; leagueId?: string } | null>(STORAGE_SESSION, null);
     if (saved && saved.leagueId && saved.username) {
       setUsername(saved.username);
@@ -425,8 +429,11 @@ export function useApp() {
 
   // ── The model is pure: it re-derives whenever any of its inputs move.
   const model = useMemo(
-    () => (data ? buildModel({ data, usage, market, strat, boardMode, pickSel }) : null),
-    [data, usage, market, strat, boardMode, pickSel],
+    () => (data ? buildModel({
+      data, usage, market, strat, boardMode, pickSel,
+      myRosterId: leagueId ? teamPick[leagueId] ?? null : null,
+    }) : null),
+    [data, usage, market, strat, boardMode, pickSel, leagueId, teamPick],
   );
 
   return {
@@ -437,6 +444,19 @@ export function useApp() {
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 
+    myRosterId: leagueId ? teamPick[leagueId] ?? null : null,
+    /** Name the roster that is yours here, or pass null to go back to matching
+     *  it off the signed-in account. */
+    setMyRoster: (rosterId: number | null) => {
+      if (!leagueId) return;
+      setTeamPick(prev => {
+        const next = { ...prev };
+        if (rosterId == null) delete next[leagueId];
+        else next[leagueId] = rosterId;
+        writeJson(STORAGE_TEAM, next);
+        return next;
+      });
+    },
     setUsername: (v: string) => { setUsername(v); setAuthError(''); },
     connectUser, pickLeague, switchLeague, logout, refreshAll, refreshPicks, retry,
     setTab: (t: Tab) => { setTab(t); setDetailStack([]); },

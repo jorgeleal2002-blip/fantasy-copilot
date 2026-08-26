@@ -144,15 +144,15 @@ function Summary({ app, m }: { app: App; m: Model }) {
             <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.45), marginTop: 8, textWrap: 'pretty' }}>
               {m.foundMyTeam
                 ? 'The board is already rated and ready — every available player carries a Fit score for the roster you are about to build.'
-                : 'If you joined under a different username, sign in with that one from the You tab.'}
+                : 'If you are in this league under a different username, name your team by hand from the You tab — it is remembered for this league.'}
             </div>
             <button
               type="button"
-              onClick={() => app.setTab(m.foundMyTeam ? 'draft' : 'league')}
+              onClick={() => app.setTab(m.foundMyTeam ? 'draft' : 'settings')}
               className="btn btn-primary"
               style={{ marginTop: 14, borderRadius: 9, padding: '9px 14px' }}
             >
-              {m.foundMyTeam ? 'Open the draft board' : 'See the league'}
+              {m.foundMyTeam ? 'Open the draft board' : 'Pick your team'}
             </button>
           </div>
         </div>

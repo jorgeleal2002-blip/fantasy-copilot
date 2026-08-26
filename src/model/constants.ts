@@ -160,3 +160,6 @@ export const STORAGE_SESSION = 'fc.session';
 export const STORAGE_PHOTOS = 'fc.photos';
 /** Trades you marked as interesting, kept per league across launches. */
 export const STORAGE_SAVED = 'fc.saved';
+/** leagueId → roster_id, for when your team is not under the account you
+ *  signed in with. Keyed by league because the answer differs per league. */
+export const STORAGE_TEAM = 'fc.team';

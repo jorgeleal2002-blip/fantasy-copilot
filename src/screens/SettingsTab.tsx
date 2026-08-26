@@ -4,6 +4,7 @@ import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { Meter, SERIES, markFor } from '../ui/charts';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
+import { useState } from 'react';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
 
 const STRAT_OPTIONS: SegOption<StratKey>[] =
@@ -149,27 +150,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           it to. When "your team" comes up empty this is the one fact that
           separates a broken match from a genuinely empty roster, and it saves
           a round trip to find out. */}
-      <Card>
-        <div style={{ ...cardTitle, marginBottom: 8 }}>This account</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {[
-            { label: 'Signed in as', value: m.me.name },
-            {
-              label: 'Your team here',
-              value: m.foundMyTeam
-                ? m.me.teamName + ' · ' + m.myPlayers.length + ' players'
-                : 'no roster matched',
-            },
-          ].map(r => (
-            <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
-              <span style={{ color: dim(0.5) }}>{r.label}</span>
-              <span style={{ textAlign: 'right', color: r.value === 'no roster matched' ? BAD : undefined }}>
-                {r.value}
-              </span>
-            </div>
-          ))}
-        </div>
-      </Card>
+      <TeamPicker app={app} m={m} />
 
       <div style={{ ...cardNote, textAlign: 'center', fontSize: 10.5 }}>
         Build {__BUILD__} UTC
@@ -177,5 +158,91 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
 
       <div style={{ height: 8 }} />
     </Screen>
+  );
+}
+
+/**
+ * Which of these teams is yours.
+ *
+ * The app infers it from the account you signed in with, which is right until
+ * it is not: plenty of people are in a league under a different handle than
+ * the one they typed, and then every number derived from "your team" comes
+ * back empty while the rest of the league reads fine. A deliberate answer
+ * beats an inferred one, so this lets you say it outright — and it is
+ * remembered per league, because the answer differs from one to the next.
+ */
+function TeamPicker({ app, m }: { app: App; m: Model }) {
+  const [open, setOpen] = useState(false);
+  const picked = app.myRosterId != null;
+  const mine = m.leagueRows.find(r => r.isMe);
+
+  return (
+    <Card>
+      <div style={{ ...cardTitle, marginBottom: 8 }}>This account</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Row label="Signed in as" value={m.me.name} />
+        <Row
+          label="Your team here"
+          value={m.foundMyTeam
+            ? (mine?.name || m.me.teamName) + ' · ' + m.myPlayers.length + ' players'
+            : 'no roster matched'}
+          bad={!m.foundMyTeam}
+        />
+        {picked ? <Row label="Chosen" value="by hand, not from the account" /> : null}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className="btn btn-ghost"
+        style={{ fontSize: 12, padding: '10px 0 0' }}
+      >
+        {open ? 'Close' : m.foundMyTeam ? 'Not your team? Pick it ›' : 'Pick your team ›'}
+      </button>
+
+      {open ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8 }}>
+          {m.leagueRows.map(r => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => { app.setMyRoster(r.id); setOpen(false); }}
+              className="row-tap"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                font: 'inherit', fontSize: 13, textAlign: 'left', cursor: 'pointer',
+                background: r.isMe ? 'rgba(145,132,217,.14)' : 'transparent',
+                border: 0, borderRadius: 9, padding: '9px 10px', color: 'inherit',
+              }}
+            >
+              <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{r.name}</span>
+              <span style={{ flex: 'none', fontSize: 11, color: r.isMe ? ACCENT : dim(0.4) }}>
+                {r.isMe ? 'yours' : (r.now > 0 ? 'drafted' : 'no roster')}
+              </span>
+            </button>
+          ))}
+          {picked ? (
+            <button
+              type="button"
+              onClick={() => { app.setMyRoster(null); setOpen(false); }}
+              className="btn btn-ghost"
+              style={{ fontSize: 12, padding: '9px 0 0' }}
+            >
+              Go back to matching it from my account
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+function Row({ label, value, bad }: { label: string; value: string; bad?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
+      <span style={{ color: dim(0.5) }}>{label}</span>
+      <span style={{ textAlign: 'right', color: bad ? BAD : undefined }}>{value}</span>
+    </div>
   );
 }

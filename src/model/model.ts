@@ -22,6 +22,9 @@ export interface ModelInput {
   strat: StratKey;
   boardMode: 'rookies' | 'fa';
   pickSel: number;
+  /** roster_id you picked by hand, when the account you signed in with is not
+   *  the one holding your team in this league. Overrides ownership entirely. */
+  myRosterId?: number | null;
 }
 
 /**
@@ -31,7 +34,7 @@ export interface ModelInput {
  * offers and the board honest.
  */
 export function buildModel(input: ModelInput): Model {
-  const { data: d, usage, market: mk, strat, boardMode, pickSel } = input;
+  const { data: d, usage, market: mk, strat, boardMode, pickSel, myRosterId } = input;
   const players = d.players;
   const league = d.league;
   const uFor = (id: string) => usage[id];
@@ -48,13 +51,13 @@ export function buildModel(input: ModelInput): Model {
 
   const slotToRoster = (d.draft && d.draft.slot_to_roster_id) || {};
   const draftOrder = (d.draft && d.draft.draft_order) || {};
-  const myRosterId = ((d.rosters || []).find(r =>
+  const mineRosterId = myRosterId || ((d.rosters || []).find(r =>
     (!!r.owner_id && r.owner_id === d.me.user_id)
     || (r.co_owners || []).indexOf(d.me.user_id) >= 0) || {} as SleeperRoster).roster_id;
   // Sleeper keys the draft order by the OWNING manager, so a co-owner has to
   // find their seat through the roster the slot maps to.
   const mySlot = draftOrder[d.me.user_id]
-    || Number(Object.keys(slotToRoster).find(k => slotToRoster[Number(k)] === myRosterId)) || null;
+    || Number(Object.keys(slotToRoster).find(k => slotToRoster[Number(k)] === mineRosterId)) || null;
 
   const teams: TeamEntry[] = d.users.map(u => ({
     id: u.user_id,
@@ -73,9 +76,15 @@ export function buildModel(input: ModelInput): Model {
   //    co-owner: the league page still lists all ten rosters and opening any
   //    manager shows their squad, but your own team comes back empty — which
   //    is exactly what a drafted league looked like from a shared account.
-  const isMine = (r: SleeperRoster) =>
-    (!!r.owner_id && r.owner_id === d.me.user_id)
-    || (r.co_owners || []).indexOf(d.me.user_id) >= 0;
+  const isMine = (r: SleeperRoster) => (
+    myRosterId
+      // Chosen by hand, because plenty of people are in a league under a
+      // different handle than the one they signed in with. A deliberate
+      // answer beats an inferred one.
+      ? r.roster_id === myRosterId
+      : (!!r.owner_id && r.owner_id === d.me.user_id)
+        || (r.co_owners || []).indexOf(d.me.user_id) >= 0
+  );
 
   // ── Who is already owned: drafted this year, or on any roster.
   const takenIds = new Set<string>(d.picks.map(p => p.player_id));
