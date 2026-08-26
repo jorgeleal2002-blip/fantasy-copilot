@@ -195,7 +195,15 @@ export function reasons(m: Metrics, at: string | null, pos: string, age: number 
   if (m.talent > 0.72) out.push(at ? 'Board has him at ' + at : 'Near the top of the board');
   if (m.need > 0.6) out.push('You need ' + pos);
   if (m.value > 0.6) out.push(at ? 'Falling past ' + at : 'Falling past his slot');
-  if (m.age > 0.9) out.push((age || '?') + ' years old, still rising');
+  // "Still rising" is a claim about a career, and the age term does not make
+  // it: in redraft the curve is flat through the thirties because the question
+  // is only this season, so a 31-year-old scored top marks and got told he was
+  // on the way up.
+  if (m.age > 0.9) {
+    out.push(age != null && age <= 25
+      ? age + ' years old, still rising'
+      : 'Age is no argument against him');
+  }
   if (m.boom > 0.7) out.push('High ceiling');
   if (m.floor > 0.75) out.push('Safe floor');
   return out.slice(0, 4);

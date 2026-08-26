@@ -295,6 +295,16 @@ describe('draft board', () => {
     }
   });
 
+  it('sorts the list by Fit while `goes` keeps the board order', () => {
+    // These are two different orders and the screens must not confuse them.
+    // Reading a row's position in this Fit-sorted list as its place on the
+    // board is what marked the best-fitting players "gone before your pick"
+    // no matter where the board actually had them.
+    const byFit = model.scored.map(p => p.goes);
+    expect(byFit.every(g => g != null)).toBe(true);
+    expect([...byFit].sort((a, b) => (a || 0) - (b || 0))).not.toEqual(byFit);
+  });
+
   it('reorders when the strategy changes the weights', () => {
     const upside = buildModel({ data: bundle, usage, market, strat: 'upside', boardMode: 'rookies', pickSel: 0 });
     const before = model.scored.map(p => p.id).join();

@@ -183,10 +183,18 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* How many names come off between now and the pick you are
+                looking at. Anyone the board has inside that many is unlikely
+                to reach you. */}
             {filtered.slice(0, 24).map(p => {
-              const idx = m.scored.indexOf(p) + 1;
-              // Anyone this far up the board should be gone before your pick lands.
-              const gone = m.selPick ? idx < (m.selPick.overall - m.nextOverall) - 1 : false;
+              const before = m.selPick ? Math.max(m.selPick.overall - m.nextOverall, 0) : 0;
+              // Against his place on the BOARD, not his place in this list.
+              // This list is sorted by Fit, so measuring against its index
+              // marked the best-fitting players gone no matter where the board
+              // actually had them — and then hid their pick number behind the
+              // warning, which is how the top of the board ended up showing no
+              // information at all.
+              const gone = !!p.goes && p.goes <= before;
               return (
                 <div
                   key={p.id}
@@ -213,7 +221,8 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                       {p.fit}
                     </div>
                     <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2 }}>
-                      {gone ? 'gone before' : (pickLabel(p.goes, m.teamCount) || 'unranked')}
+                      {/* The warning goes with the number, never over it. */}
+                      {pickLabel(p.goes, m.teamCount) || 'unranked'}
                     </div>
                   </div>
                 </div>
