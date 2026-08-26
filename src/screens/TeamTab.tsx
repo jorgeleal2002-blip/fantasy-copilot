@@ -44,10 +44,17 @@ function Summary({ app, m }: { app: App; m: Model }) {
       : app.usageState === 'fail' ? 'No real usage: floor and explosiveness fall back to the model' : '';
   const usageColor = app.usageState === 'ok' ? GOOD : app.usageState === 'fail' ? BAD : MID;
 
+  const drafted = m.draft?.status === 'complete' || m.picks.length >= m.rounds * m.teamCount;
   const oldest = m.myPlayers.filter(p => (p.age || 25) >= 28).length;
   const ages = m.myPlayers.filter(p => p.age);
   const weakest = (() => {
     if (!m.leagueHasRosters || !m.myPlayers.length || !me) return { value: '—', sub: 'draft not started' };
+    // A position you cannot field at all beats any ranking. Every team with an
+    // empty slot ties on strength there, so the ranking scattered them and
+    // named a different position weakest while the lineup sat with nobody
+    // eligible at this one.
+    const hole = POS.find(p => (m.slots[p] || 0) > 0 && !(m.have[p] || 0));
+    if (hole) return { value: hole, sub: 'nobody on the roster' };
     const p = POS.slice().sort((a, b) => m.posRankOf(me.id, b) - m.posRankOf(me.id, a))[0];
     return { value: p + ' ' + ord(m.posRankOf(me.id, p)), sub: 'of ' + m.teamCount + ' teams' };
   })();
@@ -90,11 +97,16 @@ function Summary({ app, m }: { app: App; m: Model }) {
     },
     {
       label: 'Next pick',
-      // Without a draft order there is no pick to name. The fallback used to
-      // print whatever round the draft happened to be sitting on, which read
-      // as a real slot — "15.01" in a league that had not drafted at all.
-      value: m.myNextOverall ? m.myRound + '.' + String(m.myPickInRound).padStart(2, '0') : '—',
-      sub: m.myNextOverall ? 'overall ' + m.myNextOverall : 'draft order not set', color: ACCENT,
+      // Two ways there is no pick to name, and neither should print one. The
+      // fallback used to show whatever round the draft was sitting on — a real
+      // -looking slot in a league that had not drafted, and an already-used one
+      // in a league that had finished.
+      value: drafted || !m.myNextOverall
+        ? '—'
+        : m.myRound + '.' + String(m.myPickInRound).padStart(2, '0'),
+      sub: drafted ? 'draft complete'
+        : m.myNextOverall ? 'overall ' + m.myNextOverall : 'draft order not set',
+      color: ACCENT,
     },
     { label: 'Weakest position', value: weakest.value, sub: weakest.sub, color: BAD },
   ];

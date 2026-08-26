@@ -18,6 +18,16 @@ const POS_FILTERS: SegOption<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>[] =
   [{ key: 'ALL', label: 'All' }, ...POS.map(p => ({ key: p, label: p }))];
 
 export function DraftTab({ app, m }: { app: App; m: Model }) {
+  // Once every pick is in, this screen stops being a draft board and becomes
+  // the free-agent pool. `selPick` falls back to your LAST pick when none are
+  // left, which is how a finished draft kept recommending a pick that had
+  // already been used and counting "0 selections before yours".
+  const done = m.draft?.status === 'complete' || m.picks.length >= m.rounds * m.teamCount;
+  /** Where a player sits. Once the draft is over "goes 2.03" is a claim about
+   *  a draft nobody is running, so it becomes his place in the free agents. */
+  const where = (goes: number | null) => (
+    done ? (goes ? 'FA #' + goes : 'unranked') : (pickLabel(goes, m.teamCount) || 'unranked')
+  );
   const filtered = app.filter === 'ALL' ? m.scored : m.scored.filter(p => p.pos === app.filter);
   const top = filtered[0] || m.scored[0];
   const status = m.draft ? (STATUS_TEXT[m.draft.status || ''] || m.draft.status || '—') : 'No draft configured';
@@ -71,7 +81,9 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
         <div style={heroGlow} />
         <div style={{ position: 'relative' }}>
           <div style={kicker}>
-            Recommendation · pick {m.myRound}.{String(m.myPickInRound).padStart(2, '0')}
+            {done
+              ? 'Best free agent available'
+              : `Recommendation · pick ${m.myRound}.${String(m.myPickInRound).padStart(2, '0')}`}
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 10 }}>
             <div style={{ minWidth: 0 }}>
@@ -87,7 +99,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                   top.team || 'no team yet',
                   (top.age ?? '?') + ' yrs',
                   // Where the board has him among what is left, as a pick.
-                  pickLabel(top.goes, m.teamCount) ? 'goes ' + pickLabel(top.goes, m.teamCount) : 'unranked',
+                  done ? where(top.goes) : 'goes ' + where(top.goes),
                 ].join(' · ') : ''}
               </div>
             </div>
@@ -134,7 +146,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                 and a row fits; a redraft league gives you thirteen and a row
                 runs off the side of the phone, taking the last nine with it.
                 Wrapping keeps every pick of yours visible and tappable. */}
-            {m.upcoming.length ? (
+            {!done && m.upcoming.length ? (
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(58px, 1fr))',
@@ -156,7 +168,9 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
               </div>
             ) : null}
             <div style={{ fontSize: 10.5, letterSpacing: '.02em', color: dim(0.38), padding: '0 2px' }}>
-              {m.selPick
+              {done
+                ? `Draft complete · ${m.picks.length} picks made · everyone below is still unrostered`
+                : m.selPick
                 ? `Overall pick ${m.selPick.overall} of ${m.rounds * m.teamCount} · ` +
                   `${Math.max(m.selPick.overall - m.nextOverall, 0)} selections before yours` +
                   (m.selPick.via ? ` · acquired from ${m.selPick.via}` : '') +
@@ -227,7 +241,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                     </div>
                     <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2 }}>
                       {/* The warning goes with the number, never over it. */}
-                      {pickLabel(p.goes, m.teamCount) || 'unranked'}
+                      {where(p.goes)}
                     </div>
                   </div>
                 </div>
