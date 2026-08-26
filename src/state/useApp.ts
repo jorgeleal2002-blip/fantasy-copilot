@@ -342,6 +342,9 @@ export function useApp() {
     try { localStorage.removeItem(STORAGE_SESSION); } catch { /* ignore */ }
     window.clearInterval(poll.current);
     marketCache.clear();
+    // The next person to meet this screen may not be the last one. Leaving
+    // their username in the box invites signing in as them by accident.
+    setUsername('');
     setStage('connect');
     setData(null);
     setLeagues([]);

@@ -72,7 +72,60 @@ export function ConnectScreen({ app }: { app: App }) {
         </div>
       ) : null}
 
-      <div style={{ flex: 1 }} />
+      {/* Whoever has used this phone before. This is the screen a second
+          person actually meets, so the choice belongs here rather than buried
+          in Settings — and coming back to your own account should never mean
+          typing a username from memory. */}
+      {app.accounts.length ? (
+        <div style={{ marginTop: 26 }}>
+          <div style={{
+            fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase',
+            color: dim(0.4), marginBottom: 9,
+          }}>
+            Or carry on as
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {app.accounts.map(a => (
+              <div key={a.username} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => app.switchAccount(a)}
+                  className="row-tap"
+                  style={{
+                    flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10,
+                    background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
+                    borderRadius: 11, padding: '12px 14px', cursor: 'pointer',
+                    font: "500 14px 'Inter', system-ui", color: 'var(--color-text)', textAlign: 'left',
+                  }}
+                >
+                  <span style={{
+                    width: 26, height: 26, flex: 'none', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10.5, fontWeight: 600, color: 'var(--color-accent)',
+                    background: 'rgba(145,132,217,.16)',
+                  }}>
+                    {a.username.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>@{a.username}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => app.forgetAccount(a.username)}
+                  aria-label={'Forget ' + a.username}
+                  style={{
+                    flex: 'none', background: 'none', border: 0, cursor: 'pointer',
+                    color: dim(0.35), font: "400 12px 'Inter', system-ui", padding: '0 2px',
+                  }}
+                >
+                  Forget
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div style={{ flex: 1, minHeight: 26 }} />
       <button
         type="button"
         onClick={() => void app.connectUser()}
