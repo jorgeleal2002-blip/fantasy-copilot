@@ -145,6 +145,32 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
         </div>
       </Card>
 
+      {/* Which account the app is signed in as, and which roster it matched
+          it to. When "your team" comes up empty this is the one fact that
+          separates a broken match from a genuinely empty roster, and it saves
+          a round trip to find out. */}
+      <Card>
+        <div style={{ ...cardTitle, marginBottom: 8 }}>This account</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            { label: 'Signed in as', value: m.me.name },
+            {
+              label: 'Your team here',
+              value: m.foundMyTeam
+                ? m.me.teamName + ' · ' + m.myPlayers.length + ' players'
+                : 'no roster matched',
+            },
+          ].map(r => (
+            <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
+              <span style={{ color: dim(0.5) }}>{r.label}</span>
+              <span style={{ textAlign: 'right', color: r.value === 'no roster matched' ? BAD : undefined }}>
+                {r.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       <div style={{ ...cardNote, textAlign: 'center', fontSize: 10.5 }}>
         Build {__BUILD__} UTC
       </div>
