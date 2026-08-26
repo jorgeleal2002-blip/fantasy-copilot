@@ -47,6 +47,11 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
         </div>
       </div>
 
+      {/* Directly under the account, because "which of these teams is mine"
+          is an account question — and when it is wrong every other screen is
+          empty, so it cannot sit below the weights and the league rules. */}
+      <TeamPicker app={app} m={m} />
+
       <div style={{ display: 'flex', gap: 8 }}>
         <button
           type="button"
@@ -150,8 +155,6 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           it to. When "your team" comes up empty this is the one fact that
           separates a broken match from a genuinely empty roster, and it saves
           a round trip to find out. */}
-      <TeamPicker app={app} m={m} />
-
       <div style={{ ...cardNote, textAlign: 'center', fontSize: 10.5 }}>
         Build {__BUILD__} UTC
       </div>
