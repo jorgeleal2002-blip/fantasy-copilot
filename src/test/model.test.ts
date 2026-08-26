@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ELIG, PRIME, STRATS } from '../model/constants';
 import { ageCurve, ageCurveRedraft, grade, modelVal, rankScore, talentBase } from '../model/math';
 import { marketQuery, parseMarket } from '../model/market';
+import { matchMe } from '../api/sleeper';
 import { buildModel } from '../model/model';
 import { ownedWeights, redraftWeights, scorePlayer } from '../model/score';
 import { buildUsage, seasonUsage, type Usage } from '../model/usage';
@@ -242,6 +243,28 @@ describe('pick capital', () => {
 });
 
 describe('finding your team', () => {
+  it('does not sign you in as another manager when the name matches nobody', () => {
+    const users = bundle.users;
+    // The real thing still resolves.
+    expect(matchMe(users, users[1].display_name as string).user_id).toBe(users[1].user_id);
+    // A stranger gets no identity rather than the first manager's.
+    const stranger = matchMe(users, 'nobody-here');
+    expect(stranger.user_id).toBe('');
+    expect(stranger.user_id).not.toBe(users[0].user_id);
+    expect(stranger.display_name).toBe('nobody-here');
+
+    // And that reads through the model as "we could not find your team",
+    // never as somebody else's roster.
+    const after = buildModel({
+      data: { ...bundle, me: stranger },
+      usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+    });
+    expect(after.foundMyTeam).toBe(false);
+    expect(after.myPlayers.length).toBe(0);
+    expect(after.leagueRows.some(r => r.isMe)).toBe(false);
+  });
+
+
   it('claims a roster you only co-own', () => {
     // Sleeper names ONE manager in `owner_id` and puts everyone else sharing
     // the team in `co_owners`. Matching on `owner_id` alone left a co-owner

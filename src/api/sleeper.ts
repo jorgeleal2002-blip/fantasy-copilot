@@ -82,9 +82,22 @@ export const getDraftPicks = (draftId: string) => get<SleeperPick[]>('/draft/' +
 export const getSeasonStats = (year: number) =>
   get<Record<string, SleeperStatLine>>('/stats/nfl/regular/' + year);
 
+/**
+ * Which manager in this league is the person signed in.
+ *
+ * It used to fall back to `users[0]` when the username matched nobody, which
+ * quietly signed you in AS another manager: their name in the header, their
+ * roster as "your team", their holes, their trades. A wrong answer delivered
+ * confidently is worse than no answer, and this is one the app cannot detect
+ * afterwards — the data all looks valid.
+ *
+ * So: no match, no identity. The empty `user_id` matches no roster, which the
+ * app reads as "we could not find your team" and offers you the picker.
+ */
 export function matchMe(users: SleeperUser[], username: string): SleeperUser {
-  const hit = users.find(u => (u.display_name || '').toLowerCase() === (username || '').toLowerCase());
-  return hit || users[0];
+  const name = (username || '').toLowerCase();
+  const hit = users.find(u => (u.display_name || '').toLowerCase() === name);
+  return hit || { user_id: '', display_name: username, avatar: null, metadata: null };
 }
 
 /** One pass over everything a league view needs. `onStep` drives the boot log. */

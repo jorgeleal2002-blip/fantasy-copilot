@@ -4,7 +4,7 @@ import {
   loadLeague, matchMe, userLeagues, playerPhoto,
 } from '../api/sleeper';
 import type { LeagueBundle, SleeperLeague } from '../api/types';
-import { DRAFT_POLL_MS, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import { DRAFT_POLL_MS, STORAGE_ACCOUNTS, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
@@ -56,6 +56,9 @@ export function useApp() {
   /** leagueId → roster_id you named as yours, when the account you signed in
    *  with is not the one holding it. */
   const [teamPick, setTeamPick] = useState<Record<string, number>>({});
+  /** Everyone who has signed in on this device. More than one person uses a
+   *  phone, and each of them has their own team. */
+  const [accounts, setAccounts] = useState<{ username: string; leagueId: string }[]>([]);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState('');
 
@@ -238,6 +241,7 @@ export function useApp() {
     setPhotos(readJson<Record<string, string>>(STORAGE_PHOTOS, {}));
     setSavedAll(readJson<SavedTrade[]>(STORAGE_SAVED, []));
     setTeamPick(readJson<Record<string, number>>(STORAGE_TEAM, {}));
+    setAccounts(readJson<{ username: string; leagueId: string }[]>(STORAGE_ACCOUNTS, []));
     const saved = readJson<{ username?: string; leagueId?: string } | null>(STORAGE_SESSION, null);
     if (saved && saved.leagueId && saved.username) {
       setUsername(saved.username);
@@ -280,6 +284,15 @@ export function useApp() {
 
   const pickLeague = useCallback((id: string) => {
     writeJson(STORAGE_SESSION, { username, leagueId: id });
+    // Remember who just signed in, newest first, so the next person — or this
+    // one coming back — is one tap rather than a username typed from memory.
+    setAccounts(prev => {
+      const next = [{ username, leagueId: id }]
+        .concat(prev.filter(a => a.username.toLowerCase() !== username.toLowerCase()))
+        .slice(0, 8);
+      writeJson(STORAGE_ACCOUNTS, next);
+      return next;
+    });
     window.clearInterval(poll.current);
     setLeagueId(id);
     setStage('app');
@@ -297,6 +310,33 @@ export function useApp() {
     setStage('leagues');
     if (!leagues.length) await connectUser();
   }, [connectUser, leagues.length]);
+
+  /** Sign in as somebody already known to this device. */
+  const switchAccount = useCallback((acc: { username: string; leagueId: string }) => {
+    writeJson(STORAGE_SESSION, acc);
+    window.clearInterval(poll.current);
+    marketCache.clear();
+    setUsername(acc.username);
+    setLeagueId(acc.leagueId);
+    setLeagues([]);
+    setAuthError('');
+    setStage('app');
+    setData(null);
+    setStep(0);
+    setPassed([]);
+    setDetailStack([]);
+    setTab('team');
+    void load(acc.leagueId, acc.username);
+  }, [load]);
+
+  /** Drop an account from the list without touching whoever is signed in. */
+  const forgetAccount = useCallback((name: string) => {
+    setAccounts(prev => {
+      const next = prev.filter(a => a.username.toLowerCase() !== name.toLowerCase());
+      writeJson(STORAGE_ACCOUNTS, next);
+      return next;
+    });
+  }, []);
 
   const logout = useCallback(() => {
     try { localStorage.removeItem(STORAGE_SESSION); } catch { /* ignore */ }
@@ -431,9 +471,9 @@ export function useApp() {
   const model = useMemo(
     () => (data ? buildModel({
       data, usage, market, strat, boardMode, pickSel,
-      myRosterId: leagueId ? teamPick[leagueId] ?? null : null,
+      myRosterId: leagueId ? teamPick[username + '/' + leagueId] ?? null : null,
     }) : null),
-    [data, usage, market, strat, boardMode, pickSel, leagueId, teamPick],
+    [data, usage, market, strat, boardMode, pickSel, leagueId, username, teamPick],
   );
 
   return {
@@ -444,15 +484,17 @@ export function useApp() {
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 
-    myRosterId: leagueId ? teamPick[leagueId] ?? null : null,
+    accounts, switchAccount, forgetAccount,
+    myRosterId: leagueId ? teamPick[username + '/' + leagueId] ?? null : null,
     /** Name the roster that is yours here, or pass null to go back to matching
      *  it off the signed-in account. */
     setMyRoster: (rosterId: number | null) => {
       if (!leagueId) return;
+      const key = username + '/' + leagueId;
       setTeamPick(prev => {
         const next = { ...prev };
-        if (rosterId == null) delete next[leagueId];
-        else next[leagueId] = rosterId;
+        if (rosterId == null) delete next[key];
+        else next[key] = rosterId;
         writeJson(STORAGE_TEAM, next);
         return next;
       });

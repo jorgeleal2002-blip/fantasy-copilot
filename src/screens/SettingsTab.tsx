@@ -175,7 +175,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
  * remembered per league, because the answer differs from one to the next.
  */
 function TeamPicker({ app, m }: { app: App; m: Model }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<'team' | 'who' | null>(null);
   const picked = app.myRosterId != null;
   const mine = m.leagueRows.find(r => r.isMe);
 
@@ -194,23 +194,89 @@ function TeamPicker({ app, m }: { app: App; m: Model }) {
         {picked ? <Row label="Chosen" value="by hand, not from the account" /> : null}
       </div>
 
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        className="btn btn-ghost"
-        style={{ fontSize: 12, padding: '10px 0 0' }}
-      >
-        {open ? 'Close' : m.foundMyTeam ? 'Not your team? Pick it ›' : 'Pick your team ›'}
-      </button>
+      <div style={{ display: 'flex', gap: 14, paddingTop: 10 }}>
+        <button
+          type="button"
+          onClick={() => { setOpen(open === 'team' ? null : 'team'); }}
+          aria-expanded={open === 'team'}
+          className="btn btn-ghost"
+          style={{ fontSize: 12, padding: 0 }}
+        >
+          {open === 'team' ? 'Close' : m.foundMyTeam ? 'Not your team? ›' : 'Pick your team ›'}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setOpen(open === 'who' ? null : 'who'); }}
+          aria-expanded={open === 'who'}
+          className="btn btn-ghost"
+          style={{ fontSize: 12, padding: 0 }}
+        >
+          {open === 'who' ? 'Close' : 'Switch account ›'}
+        </button>
+      </div>
 
-      {open ? (
+      {/* More than one person uses a phone. Everyone who has signed in here is
+          one tap away, so the second person does not have to type a username
+          from memory or sign the first one out to look at their own team. */}
+      {open === 'who' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8 }}>
+          {app.accounts.map(a => {
+            const current = a.username.toLowerCase() === m.me.name.toLowerCase();
+            return (
+              <div
+                key={a.username}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: current ? 'rgba(145,132,217,.14)' : 'transparent',
+                  borderRadius: 9,
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={current}
+                  onClick={() => { app.switchAccount(a); setOpen(null); }}
+                  className="row-tap"
+                  style={{
+                    flex: 1, minWidth: 0, font: 'inherit', fontSize: 13, textAlign: 'left',
+                    cursor: current ? 'default' : 'pointer', background: 'transparent',
+                    border: 0, borderRadius: 9, padding: '9px 10px', color: 'inherit',
+                  }}
+                >
+                  <span style={ellipsis}>{a.username}</span>
+                </button>
+                {current ? (
+                  <span style={{ flex: 'none', fontSize: 11, color: ACCENT, paddingRight: 10 }}>signed in</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => app.forgetAccount(a.username)}
+                    className="btn btn-ghost"
+                    style={{ flex: 'none', fontSize: 11, padding: '0 10px 0 0', color: dim(0.4) }}
+                  >
+                    Forget
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={app.logout}
+            className="btn btn-ghost"
+            style={{ fontSize: 12, padding: '9px 0 0' }}
+          >
+            Add another account ›
+          </button>
+        </div>
+      ) : null}
+
+      {open === 'team' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8 }}>
           {m.leagueRows.map(r => (
             <button
               key={r.id}
               type="button"
-              onClick={() => { app.setMyRoster(r.id); setOpen(false); }}
+              onClick={() => { app.setMyRoster(r.id); setOpen(null); }}
               className="row-tap"
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
@@ -228,7 +294,7 @@ function TeamPicker({ app, m }: { app: App; m: Model }) {
           {picked ? (
             <button
               type="button"
-              onClick={() => { app.setMyRoster(null); setOpen(false); }}
+              onClick={() => { app.setMyRoster(null); setOpen(null); }}
               className="btn btn-ghost"
               style={{ fontSize: 12, padding: '9px 0 0' }}
             >

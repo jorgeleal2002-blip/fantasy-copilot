@@ -160,6 +160,10 @@ export const STORAGE_SESSION = 'fc.session';
 export const STORAGE_PHOTOS = 'fc.photos';
 /** Trades you marked as interesting, kept per league across launches. */
 export const STORAGE_SAVED = 'fc.saved';
-/** leagueId → roster_id, for when your team is not under the account you
- *  signed in with. Keyed by league because the answer differs per league. */
+/** "username/leagueId" → roster_id, for when your team is not under the
+ *  account you signed in with. Keyed by both because two people sharing the
+ *  app can be in the same league with different teams. */
 export const STORAGE_TEAM = 'fc.team';
+/** Everyone who has used the app on this device, most recent first, so a
+ *  second person is one tap away rather than a username retyped. */
+export const STORAGE_ACCOUNTS = 'fc.accounts';
