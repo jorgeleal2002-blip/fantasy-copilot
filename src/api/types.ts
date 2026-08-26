@@ -33,7 +33,11 @@ export interface SleeperUser {
 
 export interface SleeperRoster {
   roster_id: number;
+  /** The manager Sleeper considers the owner. Can be null on an orphan team. */
   owner_id: string;
+  /** Anyone sharing the team. A co-owner never appears in `owner_id`, so a
+   *  roster is only "yours" if you check both. */
+  co_owners?: string[] | null;
   players?: string[] | null;
   starters?: string[] | null;
 }
@@ -71,7 +75,10 @@ export interface SleeperDraft {
 
 export interface SleeperPick {
   player_id: string;
+  /** Whoever tapped the button — on a shared team that can be either manager,
+   *  so it never identifies the TEAM. `roster_id` does. */
   picked_by?: string;
+  roster_id?: number;
   round: number;
   pick_no: number;
   draft_slot?: number;

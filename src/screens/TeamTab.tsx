@@ -130,23 +130,29 @@ function Summary({ app, m }: { app: App; m: Model }) {
         <div style={heroCard}>
           <div style={heroGlow} />
           <div style={{ position: 'relative' }}>
-            <div style={kicker}>Nothing on your roster yet</div>
+            <div style={kicker}>
+              {m.foundMyTeam ? 'Nothing on your roster yet' : 'We could not find your team'}
+            </div>
             <div style={{ fontSize: 13, lineHeight: 1.55, color: dim(0.62), marginTop: 9, textWrap: 'pretty' }}>
-              {m.draft?.status === 'drafting'
-                ? 'The draft is running and none of your picks have landed. Strength, holes and lineup quality all come from players you own, so they stay empty until one does.'
-                : 'This league has not drafted. Strength, holes and lineup quality are all measured off players you own, so there is nothing to rank until the picks are in.'}
+              {!m.foundMyTeam
+                ? 'No roster in ' + m.league.name + ' is registered to this Sleeper account, as owner or '
+                  + 'co-owner, so there is no team to read. The rest of the league is on the League tab.'
+                : m.draft?.status === 'drafting'
+                  ? 'The draft is running and none of your picks have landed. Strength, holes and lineup quality all come from players you own, so they stay empty until one does.'
+                  : 'This league has not drafted. Strength, holes and lineup quality are all measured off players you own, so there is nothing to rank until the picks are in.'}
             </div>
             <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.45), marginTop: 8, textWrap: 'pretty' }}>
-              The board is already rated and ready — every available player carries a Fit
-              score for the roster you are about to build.
+              {m.foundMyTeam
+                ? 'The board is already rated and ready — every available player carries a Fit score for the roster you are about to build.'
+                : 'If you joined under a different username, sign in with that one from the You tab.'}
             </div>
             <button
               type="button"
-              onClick={() => app.setTab('draft')}
+              onClick={() => app.setTab(m.foundMyTeam ? 'draft' : 'league')}
               className="btn btn-primary"
               style={{ marginTop: 14, borderRadius: 9, padding: '9px 14px' }}
             >
-              Open the draft board
+              {m.foundMyTeam ? 'Open the draft board' : 'See the league'}
             </button>
           </div>
         </div>

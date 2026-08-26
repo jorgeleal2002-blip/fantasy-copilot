@@ -378,6 +378,9 @@ export interface Model {
   bestDeals: DraftDeal[];
   leagueRows: LeagueRow[];
   leagueHasRosters: boolean;
+  /** false when this account matches no roster in the league — as an owner or
+   *  a co-owner. Everything derived from "your team" is empty when it is. */
+  foundMyTeam: boolean;
   multInfo: PositionMultiplier[];
   /** every rostered player in the league, scored through the three lenses */
   allFits: PlayerFit[];

@@ -241,6 +241,40 @@ describe('pick capital', () => {
   });
 });
 
+describe('finding your team', () => {
+  it('claims a roster you only co-own', () => {
+    // Sleeper names ONE manager in `owner_id` and puts everyone else sharing
+    // the team in `co_owners`. Matching on `owner_id` alone left a co-owner
+    // with an empty team while the league page still listed every roster.
+    const shared = {
+      ...bundle,
+      rosters: bundle.rosters.map(r => (
+        r.owner_id === bundle.me.user_id
+          ? { ...r, owner_id: 'someone-else', co_owners: [bundle.me.user_id] }
+          : r
+      )),
+    };
+    const mine = bundle.rosters.find(r => r.owner_id === bundle.me.user_id);
+    const after = buildModel({
+      data: shared, usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+    });
+    expect(after.foundMyTeam).toBe(true);
+    expect(after.myPlayers.length).toBe(
+      (mine?.players || []).filter(id => ['QB', 'RB', 'WR', 'TE'].includes(bundle.players[id].position as string)).length,
+    );
+    expect(after.leagueRows.filter(r => r.isMe).length).toBe(1);
+  });
+
+  it('says so when the account is in no roster at all', () => {
+    const stranger = { ...bundle, me: { ...bundle.me, user_id: 'nobody' } };
+    const after = buildModel({
+      data: stranger, usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+    });
+    expect(after.foundMyTeam).toBe(false);
+    expect(after.myPlayers.length).toBe(0);
+  });
+});
+
 describe('draft board', () => {
   it('shows only rookies in rookie mode, and nobody already rostered', () => {
     const owned = new Set(bundle.rosters.flatMap(r => r.players || []));

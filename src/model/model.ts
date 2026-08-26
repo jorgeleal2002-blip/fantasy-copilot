@@ -48,7 +48,13 @@ export function buildModel(input: ModelInput): Model {
 
   const slotToRoster = (d.draft && d.draft.slot_to_roster_id) || {};
   const draftOrder = (d.draft && d.draft.draft_order) || {};
-  const mySlot = draftOrder[d.me.user_id] || null;
+  const myRosterId = ((d.rosters || []).find(r =>
+    (!!r.owner_id && r.owner_id === d.me.user_id)
+    || (r.co_owners || []).indexOf(d.me.user_id) >= 0) || {} as SleeperRoster).roster_id;
+  // Sleeper keys the draft order by the OWNING manager, so a co-owner has to
+  // find their seat through the roster the slot maps to.
+  const mySlot = draftOrder[d.me.user_id]
+    || Number(Object.keys(slotToRoster).find(k => slotToRoster[Number(k)] === myRosterId)) || null;
 
   const teams: TeamEntry[] = d.users.map(u => ({
     id: u.user_id,
@@ -60,13 +66,28 @@ export function buildModel(input: ModelInput): Model {
   const teamName = (ownerId: string | undefined) =>
     (teams.find(t => t.id === ownerId) || {} as TeamEntry).name || 'Team';
 
+  // ── Which team is yours.
+  //
+  //    Sleeper puts ONE manager in `owner_id` and everybody else sharing the
+  //    team in `co_owners`. Matching on `owner_id` alone therefore fails for a
+  //    co-owner: the league page still lists all ten rosters and opening any
+  //    manager shows their squad, but your own team comes back empty — which
+  //    is exactly what a drafted league looked like from a shared account.
+  const isMine = (r: SleeperRoster) =>
+    (!!r.owner_id && r.owner_id === d.me.user_id)
+    || (r.co_owners || []).indexOf(d.me.user_id) >= 0;
+
   // ── Who is already owned: drafted this year, or on any roster.
   const takenIds = new Set<string>(d.picks.map(p => p.player_id));
   (d.rosters || []).forEach(r => (r.players || []).forEach(id => takenIds.add(id)));
-  const myRow = (d.rosters || []).find(r => r.owner_id === d.me.user_id) || ({} as SleeperRoster);
+  const myRow = (d.rosters || []).find(isMine) || ({} as SleeperRoster);
   const myIds = (myRow.players || []).slice();
+  /** True when the account is in this league at all. */
+  const foundMyTeam = !!myRow.roster_id;
   const pickRound: Record<string, number> = {};
-  d.picks.filter(p => p.picked_by === d.me.user_id).forEach(p => { pickRound[p.player_id] = p.round; });
+  // By roster, not by who clicked the button: a co-owner's picks are stamped
+  // with their own id, and either of you might have made any of them.
+  d.picks.filter(p => p.roster_id === myRow.roster_id).forEach(p => { pickRound[p.player_id] = p.round; });
 
   const teamCount = league.total_rosters || teams.length || 12;
   const rounds = (d.draft && d.draft.settings && d.draft.settings.rounds) || 15;
@@ -610,7 +631,7 @@ export function buildModel(input: ModelInput): Model {
     const st = allStrength.find(x => x.owner === r.owner_id);
     return {
       id: r.roster_id, ownerId: r.owner_id, name: teamName(r.owner_id),
-      isMe: r.owner_id === d.me.user_id,
+      isMe: isMine(r),
       avatar: (teams.find(t => t.id === r.owner_id) || {} as TeamEntry).avatar || null,
       posStrength: st ? st.s : {},
       now, future: decayed * 0.55 + pickCapital, pickCapital,
@@ -629,7 +650,7 @@ export function buildModel(input: ModelInput): Model {
   (d.rosters || []).forEach(r => {
     const list = mapRoster(r.players);
     const owner = teamName(r.owner_id);
-    const mine = r.owner_id === d.me.user_id;
+    const mine = isMine(r);
     list.forEach(p => {
       const neutral = scorePlayer(p.raw, {}, {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(list, p.raw, p.id),
@@ -692,7 +713,7 @@ export function buildModel(input: ModelInput): Model {
   //    lineup and theirs are recomputed with the swap applied, and the deal
   //    only survives if you gain and they would plausibly say yes.
   const offers: Offer[] = [];
-  (d.rosters || []).filter(r => r.owner_id !== d.me.user_id).forEach(r => {
+  (d.rosters || []).filter(r => !isMine(r)).forEach(r => {
     const them = mapRoster(r.players);
     if (!them.length) return;
     const theirBase = lineupSum(them);
@@ -779,7 +800,7 @@ export function buildModel(input: ModelInput): Model {
     const pl = players[targetId];
     if (!pl || POS.indexOf(pl.position as Pos) < 0) return [];
     const owner = (d.rosters || []).find(r => (r.players || []).indexOf(targetId) >= 0);
-    if (!owner || owner.owner_id === d.me.user_id) return [];
+    if (!owner || isMine(owner)) return [];
 
     const them = mapRoster(owner.players);
     const target = them.find(x => x.id === targetId);
@@ -1059,7 +1080,7 @@ export function buildModel(input: ModelInput): Model {
     const sweeteners: (PickAsset | RosterPlayer)[] = (pickAssets.filter(p => p.id !== myBestPick.id) as (PickAsset | RosterPlayer)[])
       .concat(myPlayers.filter(p => optIds.indexOf(p.id) < 0).sort((a, b) => b.q - a.q).slice(0, 6));
 
-    (d.rosters || []).filter(r => r.owner_id !== d.me.user_id).forEach(r => {
+    (d.rosters || []).filter(r => !isMine(r)).forEach(r => {
       const prof = teamProfile[r.roster_id] || ({ window: 'medio' } as TeamProfile);
       const partner = teamName(r.owner_id);
       const theirNow = (picksByOwner[r.roster_id] || []).filter(p => p.season === seasonNum);
@@ -1152,7 +1173,7 @@ export function buildModel(input: ModelInput): Model {
     explosive, fading, buried, stacks, conflicts, concentration,
     pickAssets, myPickList, upcoming, selPick,
     nextOverall, myRound, myPickInRound, myNextOverall, mySlot,
-    offers, bestDeals, leagueRows, leagueHasRosters, multInfo,
+    offers, bestDeals, leagueRows, leagueHasRosters, foundMyTeam, multInfo,
     allFits, searchIndex, qDiverge, wUsed: w,
     marketCount: mk ? Object.keys(mk.players).length : 0,
     snake: !!(d.draft && d.draft.type === 'snake'),
