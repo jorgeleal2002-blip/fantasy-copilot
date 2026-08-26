@@ -67,7 +67,7 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
           </div>
 
           {visible.map(o => (
-            <OfferCard key={o.partner + o.get.id} app={app} offer={o} />
+            <OfferCard key={o.partner + o.get.id} app={app} offer={o} dynasty={m.isDynasty} />
           ))}
 
           {m.offers.length === 0 ? (
@@ -207,7 +207,7 @@ function SavedSide({ label, color, text, onOpen }: {
   );
 }
 
-function OfferCard({ app, offer: o }: { app: App; offer: Offer }) {
+function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty: boolean }) {
   const fitTint = o.fit >= 75 ? GOOD : o.fit >= 62 ? MID : dim(0.6);
   const kind = o.edge > 0.04 ? 'Buying under market' : o.edge < -0.04 ? 'Justified overpay' : 'Fair price';
   const kindStyle = o.edge > 0.04
@@ -272,7 +272,7 @@ function OfferCard({ app, offer: o }: { app: App; offer: Offer }) {
           }}>
             Why it works for them
           </div>
-          <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.6), textWrap: 'pretty' }}>{whyThem(o)}</div>
+          <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.6), textWrap: 'pretty' }}>{whyThem(o, dynasty)}</div>
         </div>
       </div>
 
@@ -344,16 +344,19 @@ function whyMe(o: Offer): string {
   return base + (o.give.isPick ? ' You send draft capital, not players from your lineup.' : '');
 }
 
-function whyThem(o: Offer): string {
+function whyThem(o: Offer, dynasty: boolean): string {
+  // "Rebuilding" needs a next season to build toward, and redraft has none.
   const window = o.prof.window === 'contender' ? 'They are going for the title now'
-    : o.prof.window === 'rebuild' ? 'They are rebuilding' : 'They are mid-table';
+    : o.prof.window === 'rebuild'
+      ? (dynasty ? 'They are rebuilding' : 'They are out of the race')
+      : 'They are mid-table';
   const need = o.fillsTheirNeed
     ? `It lands right on ${o.prof.worst}, their weakest position. `
     : o.prof.worst ? `Their real hole is ${o.prof.worst}. ` : '';
   const outcome = o.theirGain > 0.3
     ? `Their lineup rises ${o.theirGain.toFixed(1)}.`
     : o.give.isPick
-      ? `Their lineup drops ${o.theirGain.toFixed(1)}, but they take ${Math.round(-o.edge * 100)}% extra value in future capital — which is exactly what a rebuild wants.`
+      ? `Their lineup drops ${o.theirGain.toFixed(1)}, but they take ${Math.round(-o.edge * 100)}% extra value in future capital — which is exactly what a team with nothing to play for wants.`
       : `Their lineup barely moves (${o.theirGain.toFixed(1)}), so they take it on market value.`;
   return `${window} (${ord(o.prof.rank)} in value, age ${o.prof.avgAge.toFixed(1)}). ${need}${outcome}`;
 }

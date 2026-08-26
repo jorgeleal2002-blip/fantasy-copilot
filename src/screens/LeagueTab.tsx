@@ -12,10 +12,16 @@ const STATUS_TEXT: Record<string, string> = {
   paused: 'draft paused',
 };
 
-const windowLabel = (r: LeagueRow) =>
+/**
+ * "Rebuilding" is a dynasty word. A redraft league has nothing to rebuild
+ * toward — every roster is torn up at the end of the season — so there the
+ * label can only be about how strong a team is right now.
+ */
+const windowLabel = (r: LeagueRow, dynasty: boolean) =>
   r.now <= 0 ? 'No roster'
     : r.window === 'contender' ? 'Contending'
-      : r.window === 'rebuild' ? 'Rebuilding' : 'Mid';
+      : r.window === 'rebuild' ? (dynasty ? 'Rebuilding' : 'Out of it')
+        : 'Mid';
 
 const windowColor = (r: LeagueRow) =>
   r.now <= 0 ? dim(0.35) : r.window === 'contender' ? GOOD : r.window === 'rebuild' ? BAD : MID;
@@ -103,7 +109,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
                 <span style={{ fontSize: 13, fontWeight: t.isMe ? 600 : 400, letterSpacing: '-0.01em', ...ellipsis }}>
                   {t.name}
                 </span>
-                <span style={{ fontSize: 10, color: windowColor(t), flex: 'none' }}>{windowLabel(t)}</span>
+                <span style={{ fontSize: 10, color: windowColor(t), flex: 'none' }}>{windowLabel(t, m.isDynasty)}</span>
               </div>
               <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2 }}>
                 {t.now <= 0

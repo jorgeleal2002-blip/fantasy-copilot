@@ -614,9 +614,16 @@ export function buildModel(input: ModelInput): Model {
     const weak = rank > Math.ceil(nTeams * 2 / 3);
     const old = avgAge >= 26.2, young = avgAge <= 24.6;
     const topHalf = rank <= nTeams / 2;
-    // An old roster in seventh place is not a contender — it is stuck in the middle.
+    // Age only bends the window in dynasty. A redraft team is not building
+    // toward anything — the rosters dissolve in January — so a young side in
+    // eighth is not "rebuilding", it is just eighth. There, strength today is
+    // the whole story.
+    //
+    // An old roster in seventh place is not a contender either; it is stuck in
+    // the middle.
     const window: Window = strong ? 'contender' : weak ? 'rebuild'
-      : (old && topHalf) ? 'contender' : (young && !topHalf) ? 'rebuild' : 'medio';
+      : !isDynasty ? 'medio'
+        : (old && topHalf) ? 'contender' : (young && !topHalf) ? 'rebuild' : 'medio';
     const st = allStrength.find(x => x.owner === r.owner_id);
     let worst: Pos | null = null, worstRank = 0;
     POS.forEach(p => {
