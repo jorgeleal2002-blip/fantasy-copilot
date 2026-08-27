@@ -4,7 +4,7 @@ import {
   loadLeague, matchMe, userLeagues, playerPhoto,
 } from '../api/sleeper';
 import type { LeagueBundle, SleeperLeague } from '../api/types';
-import { DRAFT_POLL_MS, STORAGE_ACCOUNTS, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import { DRAFT_POLL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
@@ -59,6 +59,8 @@ export function useApp() {
   /** Everyone who has signed in on this device. More than one person uses a
    *  phone, and each of them has their own team. */
   const [accounts, setAccounts] = useState<{ username: string; leagueId: string }[]>([]);
+  /** "username/leagueId" → the players you are shopping. */
+  const [blocks, setBlocks] = useState<Record<string, string[]>>({});
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState('');
 
@@ -92,7 +94,7 @@ export function useApp() {
   /** The room opens in a lobby: an empty board, seats to claim, and a start
    *  button. Nothing is drafted until you say go. */
   const [mockStarted, setMockStarted] = useState(false);
-  const [tradeView, setTradeView] = useState<'suggested' | 'saved'>('suggested');
+  const [tradeView, setTradeView] = useState<'suggested' | 'block' | 'saved'>('suggested');
   const [filter, setFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterSort, setRosterSort] = useState<'value' | 'age' | 'snap'>('value');
@@ -242,6 +244,7 @@ export function useApp() {
     setSavedAll(readJson<SavedTrade[]>(STORAGE_SAVED, []));
     setTeamPick(readJson<Record<string, number>>(STORAGE_TEAM, {}));
     setAccounts(readJson<{ username: string; leagueId: string }[]>(STORAGE_ACCOUNTS, []));
+    setBlocks(readJson<Record<string, string[]>>(STORAGE_BLOCK, {}));
     const saved = readJson<{ username?: string; leagueId?: string } | null>(STORAGE_SESSION, null);
     if (saved && saved.leagueId && saved.username) {
       setUsername(saved.username);
@@ -475,8 +478,9 @@ export function useApp() {
     () => (data ? buildModel({
       data, usage, market, strat, boardMode, pickSel,
       myRosterId: leagueId ? teamPick[username + '/' + leagueId] ?? null : null,
+      block: leagueId ? blocks[username + '/' + leagueId] : undefined,
     }) : null),
-    [data, usage, market, strat, boardMode, pickSel, leagueId, username, teamPick],
+    [data, usage, market, strat, boardMode, pickSel, leagueId, username, teamPick, blocks],
   );
 
   return {
@@ -488,6 +492,24 @@ export function useApp() {
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 
     accounts, switchAccount, forgetAccount,
+    block: (leagueId ? blocks[username + '/' + leagueId] : undefined) || [],
+    isOnBlock: (id: string) => (
+      (leagueId ? blocks[username + '/' + leagueId] : undefined) || []
+    ).indexOf(id) >= 0,
+    /** Put a player of yours up for trade, or take him back off. */
+    toggleBlock: (id: string) => {
+      if (!leagueId) return;
+      const key = username + '/' + leagueId;
+      setBlocks(prev => {
+        const cur = prev[key] || [];
+        const next = {
+          ...prev,
+          [key]: cur.indexOf(id) >= 0 ? cur.filter(x => x !== id) : cur.concat([id]),
+        };
+        writeJson(STORAGE_BLOCK, next);
+        return next;
+      });
+    },
     myRosterId: leagueId ? teamPick[username + '/' + leagueId] ?? null : null,
     /** Name the roster that is yours here, or pass null to go back to matching
      *  it off the signed-in account. */

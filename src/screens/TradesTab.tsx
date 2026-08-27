@@ -1,11 +1,12 @@
+import { useState } from 'react';
 import { BAD, GOOD, MID } from '../model/constants';
 import { num } from '../model/math';
-import type { Model, Offer, SavedTrade, TradeAsset } from '../model/types';
+import type { BlockReturn, Model, Offer, SavedTrade, TradeAsset } from '../model/types';
 import type { App } from '../state/useApp';
 import { clockTime, ord } from '../ui/format';
 import { PlayerSearch } from '../ui/PlayerSearch';
 import { Card, Empty, Screen, Segmented, type SegOption } from '../ui/primitives';
-import { dim, ellipsis } from '../ui/styles';
+import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
 
 const assetMeta = (a: TradeAsset): string =>
   a.isPick
@@ -20,8 +21,9 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
   const badgeColor = app.marketState === 'ok' ? GOOD : app.marketState === 'fail' ? BAD : MID;
 
   const visible = m.offers.filter(o => app.passed.indexOf(o.partner + o.get.id) < 0).slice(0, 6);
-  const views: SegOption<'suggested' | 'saved'>[] = [
+  const views: SegOption<'suggested' | 'block' | 'saved'>[] = [
     { key: 'suggested', label: 'Suggested' },
+    { key: 'block', label: app.block.length ? `Block · ${app.block.length}` : 'Block' },
     { key: 'saved', label: app.saved.length ? `Shortlist · ${app.saved.length}` : 'Shortlist' },
   ];
 
@@ -59,6 +61,8 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
 
       {app.tradeView === 'saved' ? (
         <Shortlist app={app} m={m} />
+      ) : app.tradeView === 'block' ? (
+        <Block app={app} m={m} />
       ) : (
         <>
           <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
@@ -115,6 +119,158 @@ function savedFromOffer(o: Offer): Omit<SavedTrade, 'leagueId' | 'savedAt'> {
  * time you open this: rosters move, and a shortlist that quietly keeps showing
  * a deal the other manager can no longer make is worse than one that says so.
  */
+/**
+ * The players you have put up for trade, and what the league would give back.
+ *
+ * The suggestions never touch a starter — the app should not propose taking
+ * your lineup apart on its own. Here you have already decided, so the search
+ * runs on exactly the men you named and is allowed to cost you lineup points
+ * if the return is worth it. Those points are shown either way.
+ */
+function Block({ app, m }: { app: App; m: Model }) {
+  const [adding, setAdding] = useState(false);
+  const shopping = m.myPlayers.filter(p => app.isOnBlock(p.id));
+  const rest = m.myPlayers.filter(p => !app.isOnBlock(p.id));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
+        Name the players you would move and the search runs on them — starters
+        included. Every offer is still simulated on both sides, so what you see
+        is what a rival would plausibly accept.
+      </div>
+
+      <Card>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+          <div style={cardTitle}>On the block</div>
+          <button
+            type="button"
+            onClick={() => setAdding(!adding)}
+            aria-expanded={adding}
+            className="btn btn-ghost"
+            style={{ fontSize: 12, padding: 0 }}
+          >
+            {adding ? 'Done' : 'Add a player ›'}
+          </button>
+        </div>
+
+        {shopping.length ? shopping.map((p, i) => (
+          <div
+            key={p.id}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, fontSize: 13,
+              paddingTop: i === 0 ? 0 : 9, marginTop: i === 0 ? 0 : 9,
+              borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+            }}
+          >
+            <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{p.name}</span>
+            <span style={{ flex: 'none', fontSize: 11, color: dim(0.42) }}>
+              {p.pos}{m.optIds.indexOf(p.id) >= 0 ? ' · starter' : ''}
+            </span>
+            <button
+              type="button"
+              onClick={() => app.toggleBlock(p.id)}
+              className="btn btn-ghost"
+              style={{ flex: 'none', fontSize: 11.5, padding: 0 }}
+            >
+              Remove
+            </button>
+          </div>
+        )) : (
+          <div style={{ fontSize: 12.5, color: dim(0.5) }}>Nobody yet.</div>
+        )}
+
+        {adding ? (
+          <div style={{ marginTop: 10, borderTop: '1px solid var(--color-divider)', paddingTop: 10 }}>
+            <div style={{ ...cardNote, marginBottom: 8 }}>Tap anyone from your roster.</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 260, overflow: 'auto' }}>
+              {rest.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => app.toggleBlock(p.id)}
+                  className="row-tap"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, font: 'inherit', fontSize: 13,
+                    textAlign: 'left', cursor: 'pointer', background: 'transparent', border: 0,
+                    borderRadius: 9, padding: '9px 10px', color: 'inherit',
+                  }}
+                >
+                  <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{p.name}</span>
+                  <span style={{ flex: 'none', fontSize: 11, color: dim(0.42) }}>
+                    {p.pos}{m.optIds.indexOf(p.id) >= 0 ? ' · starter' : ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </Card>
+
+      {!shopping.length ? null : m.blockOffers.length ? (
+        m.blockOffers.slice(0, 8).map(o => (
+          <ReturnCard key={o.partner + o.send.id + o.get.map(g => g.id).join('+')} r={o} />
+        ))
+      ) : (
+        <Empty
+          title="Nothing came back"
+          body="No manager in the league can pay for them without losing value themselves. Add another name, or check back once rosters move."
+        />
+      )}
+    </div>
+  );
+}
+
+/** One return: who pays, what comes back, and what it does to your lineup. */
+function ReturnCard({ r }: { r: BlockReturn }) {
+  const under = r.edge >= 0;
+  return (
+    <Card>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ ...cardTitle, ...ellipsis }}>with {r.partner}</div>
+        <div style={{ flex: 'none', fontSize: 11, color: r.accept >= 60 ? GOOD : MID }}>
+          {r.accept}% they say yes
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ ...cardNote, marginBottom: 3 }}>You send</div>
+          <div style={{ fontSize: 13.5, fontWeight: 500, ...ellipsis }}>{r.send.name}</div>
+          <div style={{ fontSize: 10.5, color: dim(0.42) }}>
+            {r.send.pos} · {num(r.send.q * 100)} market
+          </div>
+        </div>
+        <div style={{ flex: 'none', color: dim(0.35), fontSize: 15 }}>⇄</div>
+        <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+          <div style={{ ...cardNote, marginBottom: 3 }}>You get</div>
+          {r.get.map(g => (
+            <div key={g.id} style={{ fontSize: 13.5, fontWeight: 500, ...ellipsis }}>{g.name}</div>
+          ))}
+          <div style={{ fontSize: 10.5, color: dim(0.42) }}>
+            {r.get.map(g => g.pos).join(' + ')} · {num(r.back * 100)} market
+          </div>
+        </div>
+      </div>
+
+      <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.55), marginTop: 10, textWrap: 'pretty' }}>
+        {under
+          ? `You get back ${Math.round(r.edge * 100)}% more than he is worth.`
+          : `You take ${Math.round(-r.edge * 100)}% under his market price.`}
+        {' '}
+        {/* Losing lineup points is expected when you sell a starter, so it is
+            stated rather than buried — that is the cost of the deal. */}
+        {r.myGain < -0.1
+          ? `Your lineup drops ${(-r.myGain).toFixed(1)} pts this week.`
+          : r.myGain > 0.1
+            ? `Your lineup still rises ${r.myGain.toFixed(1)} pts.`
+            : 'Your lineup is unchanged.'}
+        {r.fillsTheirNeed ? ` He lands on ${r.prof.worst}, their weakest spot.` : ''}
+      </div>
+    </Card>
+  );
+}
+
 function Shortlist({ app, m }: { app: App; m: Model }) {
   if (!app.saved.length) {
     return (

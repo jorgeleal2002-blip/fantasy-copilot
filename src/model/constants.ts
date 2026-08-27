@@ -167,3 +167,5 @@ export const STORAGE_TEAM = 'fc.team';
 /** Everyone who has used the app on this device, most recent first, so a
  *  second person is one tap away rather than a username retyped. */
 export const STORAGE_ACCOUNTS = 'fc.accounts';
+/** "username/leagueId" → player ids you have put up for trade. */
+export const STORAGE_BLOCK = 'fc.block';

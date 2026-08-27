@@ -370,6 +370,54 @@ describe('draft board', () => {
   });
 });
 
+describe('the trade block', () => {
+  const starter = model.optimal.map(s => s.player).filter(Boolean)[0];
+
+  it('finds nothing until you name somebody', () => {
+    expect(model.blockOffers.length).toBe(0);
+  });
+
+  it('shops a starter the suggestions would never touch', () => {
+    const withBlock = buildModel({
+      data: bundle, usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+      block: [starter!.id],
+    });
+    // The suggestions never put a starter on the table; the block is the whole
+    // point of naming one.
+    expect(model.offers.every(o => o.give.id !== starter!.id)).toBe(true);
+    expect(withBlock.blockOffers.length).toBeGreaterThan(0);
+    expect(withBlock.blockOffers.every(o => o.send.id === starter!.id)).toBe(true);
+    // Best value back first.
+    const edges = withBlock.blockOffers.map(o => o.edge);
+    expect([...edges].sort((a, b) => b - a)).toEqual(edges);
+    // A star is paid for with a package, not one piece.
+    expect(withBlock.blockOffers.some(o => o.get.length > 1)).toBe(true);
+  });
+
+  it('never gives him away, and never robs the other manager', () => {
+    const withBlock = buildModel({
+      data: bundle, usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+      block: model.myPlayers.slice(0, 6).map(p => p.id),
+    });
+    expect(withBlock.blockOffers.length).toBeGreaterThan(0);
+    for (const o of withBlock.blockOffers) {
+      // Never sold short, never a robbery, and always a plausible yes.
+      expect(o.back).toBeGreaterThanOrEqual(o.send.q * 0.90);
+      expect(o.back).toBeLessThanOrEqual(o.send.q * 1.25);
+      expect(o.accept).toBeGreaterThanOrEqual(45);
+    }
+  });
+
+  it('leaves the ordinary suggestions alone', () => {
+    const withBlock = buildModel({
+      data: bundle, usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+      block: model.myPlayers.slice(0, 4).map(p => p.id),
+    });
+    expect(withBlock.offers.map(o => o.partner + o.get.id))
+      .toEqual(model.offers.map(o => o.partner + o.get.id));
+  });
+});
+
 describe('trade engine', () => {
   it('never offers a player from my optimal lineup', () => {
     for (const o of model.offers) {

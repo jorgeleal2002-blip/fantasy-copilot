@@ -8,7 +8,7 @@ import type { Market } from './market';
 import { ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
-  MockOption, MockPick, MockState,
+  BlockReturn, MockOption, MockPick, MockState,
   OppPlayer, PickAsset, PlayerFit, PlayerValue, PositionMultiplier, RosterPlayer, SearchEntry, TargetTrade,
   TeamEntry, TeamProfile,
   TeamSheet, Window,
@@ -22,6 +22,10 @@ export interface ModelInput {
   strat: StratKey;
   boardMode: 'rookies' | 'fa';
   pickSel: number;
+  /** Players of yours you have put up for trade. Unlike the suggestions, an
+   *  offer built around these is allowed to take a starter off your lineup —
+   *  you already said you would move him. */
+  block?: string[];
   /** roster_id you picked by hand, when the account you signed in with is not
    *  the one holding your team in this league. Overrides ownership entirely. */
   myRosterId?: number | null;
@@ -34,7 +38,7 @@ export interface ModelInput {
  * offers and the board honest.
  */
 export function buildModel(input: ModelInput): Model {
-  const { data: d, usage, market: mk, strat, boardMode, pickSel, myRosterId } = input;
+  const { data: d, usage, market: mk, strat, boardMode, pickSel, myRosterId, block } = input;
   const players = d.players;
   const league = d.league;
   const uFor = (id: string) => usage[id];
@@ -812,6 +816,93 @@ export function buildModel(input: ModelInput): Model {
    * to overpay, because wanting a specific player is a decision the model does
    * not get to veto — it only has to price it honestly and say what it costs.
    */
+  /**
+   * The mirror of `offersFor`: what the league gives back for a player of
+   * yours, rather than what he would cost.
+   *
+   * Packages matter in this direction too. Nobody pays for your best starter
+   * with one piece — the honest answer for him is two of theirs, and a search
+   * that only looks at singles reports "nothing came back" for exactly the men
+   * you most want to shop.
+   */
+  const returnsFor = (mineId: string): BlockReturn[] => {
+    const send = myPlayers.find(p => p.id === mineId);
+    if (!send) return [];
+    const mineWithout = (myPlayers as LineupItem[]).filter(p => p.id !== mineId);
+
+    const out: BlockReturn[] = [];
+    (d.rosters || []).filter(r => !isMine(r)).forEach(r => {
+      const them = mapRoster(r.players);
+      if (!them.length) return;
+      const theirBase = lineupSum(them);
+      const prof = teamProfile[r.roster_id] || ({ window: 'medio', worst: null } as TeamProfile);
+      const partner = teamName(r.owner_id);
+
+      const assets: (OppPlayer | PickAsset)[] = [];
+      them.slice().sort((a, b) => b.q - a.q).slice(0, 16).forEach(x => assets.push(x));
+      (picksByOwner[r.roster_id] || []).slice(0, 4).forEach(x => assets.push(x));
+
+      const packages: (OppPlayer | PickAsset)[][] = [];
+      assets.forEach((a, i) => {
+        packages.push([a]);
+        for (let j = i + 1; j < assets.length; j++) packages.push([a, assets[j]]);
+      });
+
+      packages.forEach(get => {
+        const back = get.reduce((a, b) => a + b.q, 0);
+        // The same band `offersFor` uses, read from the other side: less than
+        // 90% of him is selling him short, more than 125% is a robbery nobody
+        // agrees to.
+        if (back < send.q * 0.90 || back > send.q * 1.25) return;
+
+        const getIds = get.map(x => x.id);
+        const theirAfter = lineupSum(
+          (them as LineupItem[]).filter(x => getIds.indexOf(x.id) < 0).concat([send as LineupItem]),
+        );
+        const theirGain = theirAfter - theirBase;
+        const myAfter = lineupSum(
+          mineWithout.concat(get.filter(x => !x.isPick) as LineupItem[]),
+        );
+        const myGain = myAfter - myBase;
+
+        // + you get back more than he is worth · − you sell him short
+        const edge = (back - send.q) / Math.max(send.q, back, 1);
+        if (edge > clamp(0.03 + Math.max(theirGain, 0) * 0.02, 0, 0.16)) return;
+        if (theirGain < -0.3 && edge > -0.06) return;
+        // They will not hand back the position they are thinnest at unless the
+        // player going the other way plays it.
+        if (prof.worst && get.some(x => x.pos === prof.worst) && send.pos !== prof.worst) return;
+
+        const fillsTheirNeed = !!prof.worst && send.pos === prof.worst;
+        const accept = clamp(Math.round(
+          52 - edge * 150 + Math.min(Math.max(theirGain, 0), 6) * 2.2 + (fillsTheirNeed ? 8 : 0)
+          - (get.length > 1 ? 3 : 0),
+        ), 5, 95);
+
+        out.push({ partner, send, get, back, edge, accept, myGain, theirGain, fillsTheirNeed, prof });
+      });
+    });
+
+    // Most value back first — that is what shopping somebody is for — then the
+    // deal that costs your lineup least, then the simpler package.
+    const seen: Record<string, 1> = {};
+    return out
+      .filter(x => x.accept >= 45)
+      .sort((a, b) => b.edge - a.edge || b.myGain - a.myGain || a.get.length - b.get.length)
+      .filter(x => {
+        const key = x.partner + '|' + x.get.map(g => g.id).sort().join('+');
+        if (seen[key]) return false;
+        seen[key] = 1;
+        return true;
+      })
+      .slice(0, 4);
+  };
+
+  // Everything the league would give back for the men you put up, best first.
+  const blockOffers: BlockReturn[] = [];
+  (block || []).forEach(id => returnsFor(id).forEach(x => blockOffers.push(x)));
+  blockOffers.sort((a, b) => b.edge - a.edge || b.accept - a.accept);
+
   const offersFor = (targetId: string): TargetTrade[] => {
     const pl = players[targetId];
     if (!pl || POS.indexOf(pl.position as Pos) < 0) return [];
@@ -1189,7 +1280,8 @@ export function buildModel(input: ModelInput): Model {
     explosive, fading, buried, stacks, conflicts, concentration,
     pickAssets, myPickList, upcoming, selPick,
     nextOverall, myRound, myPickInRound, myNextOverall, mySlot,
-    offers, bestDeals, leagueRows, leagueHasRosters, foundMyTeam, multInfo,
+    offers, blockOffers,
+    bestDeals, leagueRows, leagueHasRosters, foundMyTeam, multInfo,
     allFits, searchIndex, qDiverge, wUsed: w,
     marketCount: mk ? Object.keys(mk.players).length : 0,
     snake: !!(d.draft && d.draft.type === 'snake'),

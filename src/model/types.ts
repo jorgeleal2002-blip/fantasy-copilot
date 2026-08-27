@@ -253,6 +253,33 @@ export interface MockState {
   done: boolean;
 }
 
+/**
+ * What the league would give back for a player you put up for trade.
+ *
+ * The mirror of `TargetTrade`: there you ask what a man would COST, here what
+ * he would FETCH. Packages matter in this direction too — nobody pays for your
+ * best starter with one piece, so the answer for him is two of theirs or
+ * nothing, and "nothing" is not an answer worth showing.
+ */
+export interface BlockReturn {
+  partner: string;
+  /** the player of yours going out */
+  send: RosterPlayer;
+  /** what comes back: one or two of their pieces */
+  get: (OppPlayer | PickAsset)[];
+  /** market value of everything coming back */
+  back: number;
+  /** + you get back more than he is worth · − you sell him short */
+  edge: number;
+  /** how likely the other manager is to say yes, 5–95 */
+  accept: number;
+  /** starter points your lineup gains — usually negative, since he was yours */
+  myGain: number;
+  theirGain: number;
+  fillsTheirNeed: boolean;
+  prof: TeamProfile;
+}
+
 export interface DraftDeal {
   kind: 'up' | 'down';
   partner: string;
@@ -375,6 +402,8 @@ export interface Model {
   mySlot: number | null;
 
   offers: Offer[];
+  /** What comes back for the players you put up for trade, best first. */
+  blockOffers: BlockReturn[];
   bestDeals: DraftDeal[];
   leagueRows: LeagueRow[];
   leagueHasRosters: boolean;
