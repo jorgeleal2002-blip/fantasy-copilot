@@ -6,7 +6,7 @@ import { matchMe } from '../api/sleeper';
 import { buildModel } from '../model/model';
 import { ownedWeights, redraftWeights, scorePlayer } from '../model/score';
 import { buildUsage, seasonUsage, type Usage } from '../model/usage';
-import { makeBundle, makeFantasyCalc, makePlayers, makeStats, TEAMS } from './fixture';
+import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
 
 const bundle = makeBundle();
@@ -153,6 +153,26 @@ describe('fit score', () => {
 });
 
 describe('market parsing', () => {
+  it('asks for this league\'s format, and does not turn standard into PPR', () => {
+    const base = makeLeague();
+    // Half PPR, superflex, ten teams, dynasty — straight through.
+    const q = new URLSearchParams(marketQuery(base));
+    expect(q.get('ppr')).toBe('0.5');
+    expect(q.get('numQbs')).toBe('2');
+    expect(q.get('numTeams')).toBe(String(base.total_rosters));
+    expect(q.get('isDynasty')).toBe('true');
+
+    // A league that pays nothing for a reception is standard, not full PPR.
+    // `rec || 1` used to make that 1, which is the biggest single lever there
+    // is on what a receiver is worth.
+    const std = { ...base, scoring_settings: { ...base.scoring_settings, rec: 0 } };
+    expect(new URLSearchParams(marketQuery(std)).get('ppr')).toBe('0');
+
+    // And a league with no scoring block at all still gets a sane default.
+    const bare = { ...base, scoring_settings: undefined };
+    expect(new URLSearchParams(marketQuery(bare)).get('ppr')).toBe('1');
+  });
+
   it('reads this draft\'s exact slots, generic future rounds and players', () => {
     expect(market.exact['2026-1-5']).toBeGreaterThan(0);
     expect(market.exact['2026-1-1']).toBeGreaterThan(market.exact['2026-1-5']);

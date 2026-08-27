@@ -108,8 +108,18 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
 
       <Card>
         <div style={{ ...cardTitle, marginBottom: 2 }}>Your scoring changes value</div>
+        {/* Be exact about what this drives. With the market feed up, prices come
+            from it — asked for this league's format, but not for its every
+            bonus — and this premium is the model that takes over if it drops.
+            Claiming it sets the values outright would be flattering and wrong. */}
         <div style={{ ...cardNote, marginBottom: 12 }}>
-          Positional premium derived from {m.league.name}'s real rules, not from a generic format
+          {app.marketState === 'ok'
+            ? `Positional premium from ${m.league.name}'s real rules. Prices come from the market, `
+              + `asked for this league's format — ${m.isDynasty ? 'dynasty' : 'redraft'}, `
+              + `${m.sflx ? 'superflex' : '1QB'}, ${m.teamCount} teams, `
+              + `${sc.rec || 0} per reception. This premium prices players if that feed drops.`
+            : `Positional premium derived from ${m.league.name}'s real rules — and with no market `
+              + 'feed right now, it is what every value on screen is built from.'}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {m.multInfo.map(mi => {

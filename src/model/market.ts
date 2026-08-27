@@ -72,7 +72,11 @@ export function marketQuery(league: SleeperLeague): string {
   const rp = league.roster_positions || [];
   const qbs = rp.indexOf('SUPER_FLEX') >= 0 ? 2 : 1;
   const teams = league.total_rosters || 12;
-  const ppr = (league.scoring_settings && league.scoring_settings.rec) || 1;
+  // `|| 1` here priced every standard-scoring league as full PPR, because a
+  // league that gives nothing for a reception has `rec: 0` and `0 || 1` is 1.
+  // That is the single biggest lever on what a receiver is worth.
+  const rec = league.scoring_settings ? league.scoring_settings.rec : null;
+  const ppr = typeof rec === 'number' ? Math.max(rec, 0) : 1;
   const dynasty = (league.settings || {}).type === 2;
   return `isDynasty=${dynasty ? 'true' : 'false'}&numQbs=${qbs}&numTeams=${teams}&ppr=${ppr}`;
 }
