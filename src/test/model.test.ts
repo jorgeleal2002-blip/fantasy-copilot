@@ -262,6 +262,55 @@ describe('pick capital', () => {
   });
 });
 
+describe('scoring the market never sees', () => {
+  const priceOf = (bundleIn: typeof bundle, pos: string) => {
+    const mm = buildModel({
+      data: bundleIn, usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+    });
+    const id = Object.keys(bundleIn.players).find(k => (
+      bundleIn.players[k].position === pos && !!mm.marketValue(k)?.real
+    ));
+    return mm.marketValue(id as string)!.pts;
+  };
+  const withScoring = (extra: Record<string, number>) => ({
+    ...bundle,
+    league: { ...bundle.league, scoring_settings: { ...bundle.league.scoring_settings, ...extra } },
+  });
+
+  it('lifts tight ends in a TE premium league', () => {
+    // FantasyCalc is never told about a TE premium, so a league that pays its
+    // tight ends an extra half point per catch was pricing them as if it did
+    // not. The correction is applied on top of the market price.
+    const plain = priceOf(withScoring({ bonus_rec_te: 0 }), 'TE');
+    const premium = priceOf(withScoring({ bonus_rec_te: 0.5 }), 'TE');
+    expect(premium).toBeGreaterThan(plain);
+    expect(premium / plain).toBeCloseTo(1.16, 2);
+  });
+
+  it('leaves every other position where it was', () => {
+    const base = withScoring({ bonus_rec_te: 0 });
+    const premium = withScoring({ bonus_rec_te: 0.5 });
+    for (const pos of ['QB', 'RB', 'WR']) {
+      expect(priceOf(premium, pos)).toBe(priceOf(base, pos));
+    }
+  });
+
+  it('changes nothing in a league without those bonuses', () => {
+    // The market already prices PPR, superflex, dynasty and team count. Only
+    // what it is NOT told may be applied, or it would be counted twice.
+    const bare = withScoring({ bonus_rec_te: 0, rush_fd: 0, rec_fd: 0, pass_td: 4, pass_yd: 0.04 });
+    const mm = buildModel({
+      data: bare, usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+    });
+    for (const id of Object.keys(bare.players).slice(0, 400)) {
+      const v = mm.marketValue(id);
+      if (!v || !v.real) continue;
+      const raw = market.players[id];
+      if (raw) expect(v.pts).toBe(Math.round(raw.value));
+    }
+  });
+});
+
 describe('finding your team', () => {
   it('does not sign you in as another manager when the name matches nobody', () => {
     const users = bundle.users;

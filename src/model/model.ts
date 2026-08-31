@@ -129,6 +129,30 @@ export function buildModel(input: ModelInput): Model {
     // Also scarcity: the drop from TE1 to TE12 is steep in both formats.
     TE: 0.88 * (1 + (teB + recFd * 0.5) * 0.32),
   };
+  /**
+   * The part of your scoring the market never hears about.
+   *
+   * FantasyCalc is asked for four things — dynasty or redraft, superflex,
+   * team count, points per reception — and prices the league accordingly. It
+   * is told nothing about a TE premium, a first-down bonus, or what a passing
+   * touchdown is worth, so a league that pays its tight ends an extra half a
+   * point per catch was getting tight ends priced as if it did not.
+   *
+   * This is the correction, and ONLY the correction: every term the market
+   * already covers is left out, or it would be counted twice. It is applied to
+   * both sides of every trade because it is not an opinion — it is the rule
+   * sheet everyone in the league plays under, so a rival's tight end is worth
+   * more for exactly the same reason yours is.
+   *
+   * In a league with none of these bonuses every entry is 1 and nothing moves.
+   */
+  const marketAdj: Record<Pos, number> = {
+    QB: (1 + (passTd - 4) * 0.05) * (1 + (passYd - 0.04) * 3),
+    RB: 1 + rushFd * 0.30,
+    WR: 1 + recFd * 0.30,
+    TE: 1 + (teB + recFd * 0.5) * 0.32,
+  };
+
   const multInfo: PositionMultiplier[] = [
     {
       pos: 'QB',
@@ -167,7 +191,8 @@ export function buildModel(input: ModelInput): Model {
   // ── Value: real market when it loaded, our own model when it did not.
   const mval = (pl: SleeperPlayer): number | null => {
     const row = mk && pl && pl.player_id ? mk.players[pl.player_id] : null;
-    return row ? row.value / 100 : null;
+    if (!row) return null;
+    return row.value / 100 * (marketAdj[pl.position as Pos] || 1);
   };
   const quality = (pl: SleeperPlayer): number => {
     const v = mval(pl);
