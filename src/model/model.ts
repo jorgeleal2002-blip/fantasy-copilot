@@ -1146,7 +1146,13 @@ export function buildModel(input: ModelInput): Model {
           }, w).m.boom;
 
           const byFit = pool.slice().sort((a, b) => fitOf(b) - fitOf(a));
-          const byValue = pool.slice().sort((a, b) => b.q - a.q);
+          /* "The most valuable man left" is a claim about price, so it is
+           * ordered by the market's own number and only falls back to talent
+           * where the market has never priced the player. Ordering by talent
+           * alone matched while the board was rookies — the two agree there —
+           * but stopped being true once veterans could be taken. */
+          const valueOf = (x: { id: string; q: number }) => marketValue(x.id)?.pts ?? x.q;
+          const byValue = pool.slice().sort((a, b) => valueOf(b) - valueOf(a));
           const holes = POS.filter(p => shortAt(rid, p) > 0);
 
           const where = (x: { id: string }) => live.findIndex(y => y.id === x.id) + 1;
