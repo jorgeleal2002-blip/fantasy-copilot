@@ -1,9 +1,9 @@
 import { avatarUrl } from '../api/sleeper';
-import type { LeagueBundle, Pos, SleeperPlayer, SleeperRoster } from '../api/types';
+import type { DraftPos, FillPos, LeagueBundle, Pos, SleeperPlayer, SleeperRoster } from '../api/types';
 import {
-  BASE_ROUND_VALUE, ELIG, MetricKey, POS, PEAK, SLOT_SORT, STRATS, StratKey,
+  BASE_ROUND_VALUE, DEF_SLOTS, ELIG, FILL, MetricKey, POS, PEAK, SLOT_SORT, STRATS, StratKey,
 } from './constants';
-import { ageCurve, clamp, modelVal, playerName, talentScale } from './math';
+import { ageCurve, clamp, modelVal, playerName, rankScore, talentScale } from './math';
 import type { Market } from './market';
 import { ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
@@ -48,6 +48,13 @@ export function buildModel(input: ModelInput): Model {
   const rp = league.roster_positions || [];
   const starters = {} as Record<Pos, number>;
   POS.forEach(p => { starters[p] = rp.filter(x => x === p).length; });
+  /* Kickers and defences, counted straight off the league's own slots — zero
+   * in a league that does not start them, which is most dynasty leagues and
+   * why they were absent from the model entirely until now. */
+  const fillSlots = {} as Record<FillPos, number>;
+  fillSlots.K = rp.filter(x => x === 'K').length;
+  fillSlots.DEF = rp.filter(x => DEF_SLOTS.indexOf(x) >= 0).length;
+  const fillPos = FILL.filter(p => fillSlots[p] > 0);
   const flex = rp.filter(x => x === 'FLEX' || x === 'SUPER_FLEX' || x === 'REC_FLEX').length;
   const sflx = rp.indexOf('SUPER_FLEX') >= 0;
   const isDynasty = (league.settings || {}).type === 2;
@@ -475,7 +482,14 @@ export function buildModel(input: ModelInput): Model {
   const mockPool: { id: string; raw: SleeperPlayer }[] = [];
   for (const id in players) {
     const p = players[id];
-    if (!p || !POS.includes(p.position as Pos) || takenIds.has(id)) continue;
+    if (!p || takenIds.has(id)) continue;
+    // Kickers and defences only where the league actually starts them. A
+    // redraft league does, and a mock that cannot draft one is missing two of
+    // its rounds; a dynasty league usually does not, and listing them there
+    // would be clutter.
+    const skill = POS.includes(p.position as Pos);
+    const fill = fillPos.indexOf(p.position as FillPos) >= 0;
+    if (!skill && !fill) continue;
     if (!isMockEligible(p)) continue;
     mockPool.push({ id, raw: p });
   }
@@ -1100,9 +1114,21 @@ export function buildModel(input: ModelInput): Model {
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
 
+    /* Draft order, not price. `mockPool` arrives sorted by where the board
+     * actually takes people; this used to re-sort it by market value, and the
+     * two are different questions — the same mistake the real board once made.
+     * A trade value is what a player is worth to hold, and it reads young: in
+     * a redraft league it floated rookies and quarterbacks up the mock while
+     * the draft screen next to it had them lower, so 17 of the mock's top 30
+     * sat five or more places from where the app itself said they would go.
+     *
+     * `q` is kept on every row, because the bots below still choose by value
+     * and need — they just choose from the next 25 on the board rather than
+     * from the 25 most valuable assets in the league, which is what a real
+     * manager does. */
     const board = mockPool.map(x => ({
       id: x.id, raw: x.raw, pos: x.raw.position as Pos, q: talentQ(x.raw, x.id),
-    })).sort((a, b) => b.q - a.q);
+    }));
     const gone = new Set<string>();
 
     // What each roster already has, so their need moves as the draft goes on.
@@ -1127,28 +1153,50 @@ export function buildModel(input: ModelInput): Model {
 
     const made: MockPick[] = [];
     const myTeam: MockOption[] = [];
-    const shape = {} as Record<Pos, number>;
-    POS.forEach(p => { shape[p] = (have[myRow.roster_id] || {})[p] || 0; });
+    const shape = {} as Record<DraftPos, number>;
+    (POS as DraftPos[]).concat(FILL).forEach(p => {
+      shape[p] = (have[myRow.roster_id] || {})[p as Pos] || 0;
+    });
 
     const rate = (
-      x: { id: string; raw: SleeperPlayer; pos: Pos },
+      x: { id: string; raw: SleeperPlayer; pos: DraftPos },
       extra?: Partial<MockOption>,
     ): MockOption => {
+      const row = {
+        id: x.id, name: playerName(x.raw), pos: x.pos, team: x.raw.team,
+        age: x.raw.age, rank: marketOrder[x.id] || null,
+      };
+      /* A kicker and a defence do not get a Fit Score, they get a place on the
+       * board. The Fit is nine metrics built from market value, snap share,
+       * targets, yards per touch, red-zone looks and an age curve, and not one
+       * of the nine exists for them: nobody trades a kicker, so the market
+       * never prices one, and a team defence has no snap count. Running them
+       * through it anyway would return a number made entirely of the defaults
+       * each missing metric falls back to.
+       *
+       * Where the consensus takes them is real, and it is the only thing that
+       * is, so that is the number. It lands around twenty, well under any
+       * startable skill player, which is also the honest answer to taking a
+       * kicker in the third round. */
+      if (POS.indexOf(x.pos as Pos) < 0) {
+        return { ...row, fit: Math.round(rankScore(x.raw.search_rank) * 100), ...extra };
+      }
       // What you have taken in THIS mock counts. Every player used to be scored
       // against the roster you walked in with, so the quarterback you took in
       // round one did not reduce the need for one in round two — the room kept
       // offering a second — and the receiver who shares an offence with him got
       // no credit for the pairing you had just made.
+      // Kickers and defences drop out here: correlation is about sharing an
+      // offence, and neither of them shares one with anybody.
       const mineNow = myPlayers.map(p => ({ id: p.id, pos: p.pos, team: p.team }))
-        .concat(myTeam.map(o => ({ id: o.id, pos: o.pos, team: o.team || 'FA' })));
+        .concat(myTeam
+          .filter(o => POS.indexOf(o.pos as Pos) >= 0)
+          .map(o => ({ id: o.id, pos: o.pos as Pos, team: o.team || 'FA' })));
       const sc = scorePlayer(x.raw, needFrom(shape), {
         dv: talentQ(x.raw, x.id), dvMax, stack: stackIn(mineNow, x.raw), use: uFor(x.id),
         redraft: !isDynasty,
       }, w);
-      return {
-        id: x.id, name: playerName(x.raw), pos: x.pos, team: x.raw.team,
-        age: x.raw.age, rank: marketOrder[x.id] || null, fit: sc.fit, ...extra,
-      };
+      return { ...row, fit: sc.fit, ...extra };
     };
 
     for (let overall = nextOverall; overall <= stop; overall++) {

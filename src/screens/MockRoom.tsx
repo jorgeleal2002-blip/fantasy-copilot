@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { ACCENT, GOOD, POS, POS_COLOR } from '../model/constants';
+import { ACCENT, GOOD, POS, colorOf } from '../model/constants';
 import { inviteUrl, shareInvite } from '../model/invite';
 import { pickLabel } from '../model/math';
 import type { Pos } from '../api/types';
@@ -323,8 +323,10 @@ function PlayerRow({ o, teams, canTake, onTake }: {
         ) : null}
         <div className="pl-name">{o.name}</div>
         <div className="pl-meta">
-          <span style={{ color: POS_COLOR[o.pos] }}>{o.pos}</span>
-          {' · ' + (o.team || 'no team yet') + ' · ' + (o.age ?? '?') + ' yrs'}
+          <span style={{ color: colorOf(o.pos) }}>{o.pos}</span>
+          {/* A team defence has no age, and printing "? yrs" for one implies a
+              number is missing rather than inapplicable. */}
+          {' · ' + (o.team || 'no team yet') + (o.age != null ? ' · ' + o.age + ' yrs' : '')}
         </div>
       </div>
       <div className="pl-stat">
@@ -349,7 +351,7 @@ function MyTeam({ st, m }: { st: MockState; m: Model }) {
         }}>
           <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{o.name}</span>
           <span style={{ color: dim(0.42), flex: 'none' }}>
-            <span style={{ color: POS_COLOR[o.pos] }}>{o.pos}</span>{' · fit ' + o.fit}
+            <span style={{ color: colorOf(o.pos) }}>{o.pos}</span>{' · fit ' + o.fit}
           </span>
         </div>
       )) : (
@@ -516,7 +518,7 @@ function MockBoard({ m, made, seat, next, claimable, onClaim }: {
                 key={r + '-' + c}
                 className={'bd-cell' + (p ? ' is-filled' : '') + (p?.mine ? ' is-mine' : '')
                   + (onClock ? ' is-clock' : '') + (c === seat ? ' is-seat' : '')}
-                style={pos ? ({ '--pos': POS_COLOR[pos] } as CSSProperties) : undefined}
+                style={pos ? ({ '--pos': colorOf(pos) } as CSSProperties) : undefined}
                 title={p?.player?.name}
               >
                 <div className="bd-tag">

@@ -1,4 +1,4 @@
-import type { Pos } from '../api/types';
+import type { DraftPos, FillPos, Pos } from '../api/types';
 
 export const POS: Pos[] = ['QB', 'RB', 'WR', 'TE'];
 
@@ -31,6 +31,24 @@ export const POS_COLOR: Record<Pos, string> = {
   WR: '#4b7fd0',
   TE: '#c26e9a',
 };
+
+/**
+ * Kickers and defences get no hue.
+ *
+ * The four above are hues because the thing you read off a board is a run —
+ * five backs going in a row — and colour is what makes that visible at 32px.
+ * Nobody has ever scanned a board for a run on kickers. Forcing two more hues
+ * into a palette that already clears its separation floors by a small margin
+ * would cost the four that carry meaning, so these stay a muted neutral, which
+ * also says what they are: the slots you fill at the end.
+ */
+export const FILL_COLOR = 'rgba(233,233,237,.42)';
+export const FILL: FillPos[] = ['K', 'DEF'];
+/** The colour for anything a draft board can hold, hue or not. */
+export const colorOf = (pos: DraftPos): string =>
+  POS_COLOR[pos as Pos] || FILL_COLOR;
+/** What Sleeper may call the team-defence slot. */
+export const DEF_SLOTS = ['DEF', 'DST', 'D/ST'];
 
 /**
  * The same three states again, stepped for FILLS rather than text.

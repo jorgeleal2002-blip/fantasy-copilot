@@ -85,6 +85,28 @@ export function makePlayers(): {
     }
   });
 
+  /* Kickers and team defences. They sit deep in the search rank, the way
+     Sleeper has them, so a board ordered by that rank naturally reaches them
+     only in the late rounds — which is the behaviour under test. A defence has
+     no age and no experience, exactly as the catalog reports it. */
+  let fillRank = 240;
+  for (let i = 0; i < 14; i++) {
+    const kid = String(++id);
+    players[kid] = {
+      player_id: kid, position: 'K', full_name: `Kicker ${i + 1}`,
+      first_name: 'Kicker', last_name: String(i + 1),
+      age: 27, team: NFL_TEAMS[i % NFL_TEAMS.length], years_exp: 4,
+      search_rank: fillRank++, active: true, status: 'Active', injury_status: null,
+    };
+    const did = String(++id);
+    players[did] = {
+      player_id: did, position: 'DEF', full_name: `${NFL_TEAMS[i % NFL_TEAMS.length]} Defense`,
+      first_name: NFL_TEAMS[i % NFL_TEAMS.length], last_name: 'Defense',
+      age: null, team: NFL_TEAMS[i % NFL_TEAMS.length], years_exp: null,
+      search_rank: fillRank++, active: true, status: 'Active', injury_status: null,
+    };
+  }
+
   return { players, vets, rookies, byPos };
 }
 

@@ -1209,3 +1209,65 @@ describe('the board an invite promises', () => {
     expect(picksOf(12, 3)).not.toEqual(picksOf(12, 1));
   });
 });
+
+describe('what a redraft mock board holds, and in what order', () => {
+  const REDRAFT = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF',
+    'BN', 'BN', 'BN', 'BN'];
+  const DYNASTY = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'SUPER_FLEX',
+    'BN', 'BN', 'BN', 'BN', 'BN'];
+
+  const league = (rp: string[], type: number) => {
+    const b = makeBundle();
+    b.league = {
+      ...b.league, roster_positions: rp,
+      settings: { ...b.league.settings, type, draft_rounds: 12 },
+    };
+    b.rosters = b.rosters.map(r => (r.roster_id === 1 ? { ...r, players: [] } : r));
+    const m = buildModel({
+      data: b,
+      usage: buildUsage(makeStats(b.players), b.players),
+      market: parseMarket(makeFantasyCalc(b.players)),
+      strat: 'balanced', boardMode: 'fa', pickSel: 0,
+    });
+    return { m, players: b.players };
+  };
+
+  it('runs in draft order, not in price order', () => {
+    // The two are different questions, and the draft board answers the first.
+    // Ordered by market value the list read 6, 1, 10, 5, 7 … — a trade value is
+    // what somebody is worth to hold, which is not where he comes off a board.
+    const { m, players } = league(REDRAFT, 0);
+    const board = m.runMock(5).board.slice(0, 40);
+    const sr = (id: string) => players[id]?.search_rank ?? 9999;
+    for (let i = 1; i < board.length; i++) {
+      expect(sr(board[i].id)).toBeGreaterThanOrEqual(sr(board[i - 1].id));
+    }
+  });
+
+  it('holds kickers and defences where the league starts them', () => {
+    const { m } = league(REDRAFT, 0);
+    const board = m.runMock(5).board;
+    expect(board.some(o => o.pos === 'K')).toBe(true);
+    expect(board.some(o => o.pos === 'DEF')).toBe(true);
+  });
+
+  it('and leaves them out where it does not', () => {
+    const { m } = league(DYNASTY, 2);
+    const board = m.runMock(5).board;
+    expect(board.some(o => o.pos === 'K' || o.pos === 'DEF')).toBe(false);
+  });
+
+  it('rates them off the board alone, well under a startable player', () => {
+    // Not a Fit: none of the nine metrics exists for a kicker. The number is
+    // where the consensus takes him, which is the only real signal there is —
+    // and it has to land far enough below a starter that no suggestion ever
+    // prefers one in an early round.
+    const { m } = league(REDRAFT, 0);
+    const board = m.runMock(5).board;
+    const k = board.find(o => o.pos === 'K')!;
+    const best = Math.max(...board.filter(o => o.pos === 'WR' || o.pos === 'RB').map(o => o.fit));
+    expect(k.fit).toBeLessThan(best - 25);
+    // and they sit deep enough that the bots' window never reaches them early
+    expect(board.findIndex(o => o.pos === 'K')).toBeGreaterThan(40);
+  });
+});

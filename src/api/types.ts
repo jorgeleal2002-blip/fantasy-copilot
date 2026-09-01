@@ -3,6 +3,21 @@
 
 export type Pos = 'QB' | 'RB' | 'WR' | 'TE';
 
+/**
+ * The two a roster has to fill and nobody agonises over.
+ *
+ * They are deliberately NOT part of `Pos`, and the reason is data rather than
+ * taste: the Fit Score is built from market value, snap share, targets, yards
+ * per touch, red-zone looks and an age curve. FantasyCalc does not price a
+ * kicker — nobody trades one — and there is no snap count for a team defence.
+ * Widening `Pos` would force all nine metrics to be invented for them. They are
+ * draftable, they occupy a starting spot, and that is the whole of what the
+ * model can honestly say about them.
+ */
+export type FillPos = 'K' | 'DEF';
+/** Anything a draft board can hold. */
+export type DraftPos = Pos | FillPos;
+
 export interface SleeperPlayer {
   player_id?: string;
   position?: string;

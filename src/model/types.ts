@@ -1,4 +1,4 @@
-import type { Pos, SleeperDraft, SleeperLeague, SleeperPick, SleeperPlayer } from '../api/types';
+import type { DraftPos, Pos, SleeperDraft, SleeperLeague, SleeperPick, SleeperPlayer } from '../api/types';
 import type { MetricKey, Weights } from './constants';
 // Weights is re-exported through the Model's wUsed below.
 import type { Metrics } from './score';
@@ -212,7 +212,8 @@ export interface MockPick {
 export interface MockOption {
   id: string;
   name: string;
-  pos: Pos;
+  /** a mock board also holds the kicker and the defence, which are not `Pos` */
+  pos: DraftPos;
   team: string | null | undefined;
   age: number | null | undefined;
   /** consensus rank across every player the market prices. */
@@ -249,7 +250,7 @@ export interface MockState {
   /** what you have taken in this mock, in order */
   myTeam: MockOption[];
   /** your roster shape including what you already own */
-  shape: Record<Pos, number>;
+  shape: Record<DraftPos, number>;
   done: boolean;
 }
 
