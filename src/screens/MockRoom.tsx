@@ -158,16 +158,21 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
           <MyTeam st={st} m={m} />
         ) : (
           <>
-            <PosFilter
-              m={m}
-              st={st}
-              pos={pos}
-              setPos={setPos}
-              q={q}
-              setQ={setQ}
-              searching={searching}
-              setSearching={setSearching}
-            />
+            {/* Only over the full board. On Take one the list is three fixed
+                names, so a position chip had nothing to filter and did
+                nothing when tapped. */}
+            {tab === 'players' ? (
+              <PosFilter
+                m={m}
+                st={st}
+                pos={pos}
+                setPos={setPos}
+                q={q}
+                setQ={setQ}
+                searching={searching}
+                setSearching={setSearching}
+              />
+            ) : null}
             <div className="dock-list">
               <PlayerList
                 st={st}

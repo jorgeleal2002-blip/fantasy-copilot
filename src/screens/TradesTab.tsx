@@ -55,7 +55,9 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
 
       {/* Look a player up before you offer for him: the price comes first,
           then his rank at the position and what he would do for your lineup. */}
-      <PlayerSearch app={app} m={m} placeholder="Look up any player's value" />
+      {/* Chips as well as a name box: this is the only player list in the app
+          you could not browse, and a position is the way people scan one. */}
+      <PlayerSearch app={app} m={m} placeholder="Look up any player's value" byPos />
 
       <Segmented options={views} value={app.tradeView} onChange={app.setTradeView} size="sm" />
 

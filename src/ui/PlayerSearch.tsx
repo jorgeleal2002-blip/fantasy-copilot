@@ -1,9 +1,15 @@
 import { useState } from 'react';
+import type { Pos } from '../api/types';
+import { POS } from '../model/constants';
 import { num } from '../model/math';
 import type { Model, SearchEntry } from '../model/types';
 import type { App } from '../state/useApp';
 import { dim, ellipsis, fitColor } from './styles';
+import { Segmented, type SegOption } from './primitives';
 import { TradePackages } from './TradePackages';
+
+const POS_FILTERS: SegOption<'ALL' | Pos>[] =
+  [{ key: 'ALL', label: 'All' }, ...POS.map(p => ({ key: p, label: p }))];
 
 export interface SearchScope {
   /** which entries this screen is allowed to show */
@@ -20,10 +26,17 @@ export interface SearchScope {
  * proposing anything.
  */
 export function PlayerSearch(
-  { app, m, placeholder, scope }: { app: App; m: Model; placeholder?: string; scope?: SearchScope },
+  { app, m, placeholder, scope, byPos }: {
+    app: App; m: Model; placeholder?: string; scope?: SearchScope;
+    /** Show position chips, so the list can be browsed and not only typed at. */
+    byPos?: boolean;
+  },
 ) {
   const q = app.query.trim().toLowerCase();
-  const hasQuery = q.length >= 2;
+  const [pos, setPos] = useState<'ALL' | Pos>('ALL');
+  // With chips on, a position on its own is a query: picking RB should list
+  // the backs rather than wait for two letters nobody wants to type.
+  const hasQuery = q.length >= 2 || (!!byPos && pos !== 'ALL');
   const label = placeholder || 'Search any NFL player';
   // Only one row's packages at a time: pricing a target is a real computation,
   // and eight of them on every keystroke would make typing feel broken.
@@ -36,7 +49,8 @@ export function PlayerSearch(
   const results = hasQuery ? (() => {
     const out = [];
     for (const e of m.searchIndex) {
-      if (e.lower.indexOf(q) < 0) continue;
+      if (q.length >= 2 && e.lower.indexOf(q) < 0) continue;
+      if (byPos && pos !== 'ALL' && e.pos !== pos) continue;
       if (scope && !scope.keep(e)) { hiddenByScope++; continue; }
       out.push(e);
       if (out.length > 400) break;
@@ -95,6 +109,10 @@ export function PlayerSearch(
           </button>
         ) : null}
       </div>
+
+      {byPos ? (
+        <Segmented options={POS_FILTERS} value={pos} onChange={setPos} size="sm" />
+      ) : null}
 
       {hasQuery ? (
         <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
