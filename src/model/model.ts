@@ -427,6 +427,24 @@ export function buildModel(input: ModelInput): Model {
   // show, and the baseline the value metric measures a fall against.
   pool.sort((a, b) => rankOf(a.id, a.raw) - rankOf(b.id, b.raw));
 
+  /* The mock runs on its own pool. The board above is deliberately narrow —
+   * this league drafts rookies, so that is what it lists — but a mock is a
+   * what-if, and the player you want to try is usually the one the board is
+   * filtered away from. Restricting the mock to the same slice made a veteran
+   * undraftable even when searched for by name: he simply was not there. So
+   * this takes everyone genuinely available, rookie or not, with only a rank
+   * far enough down to keep practice-squad names out of the list. */
+  const mockPool: { id: string; raw: SleeperPlayer }[] = [];
+  for (const id in players) {
+    const p = players[id];
+    if (!p || !POS.includes(p.position as Pos) || takenIds.has(id)) continue;
+    if (p.active === false) continue;
+    if (p.status && p.status !== 'Active') continue;
+    if (!p.search_rank || p.search_rank > 2500) continue;
+    mockPool.push({ id, raw: p });
+  }
+  mockPool.sort((a, b) => rankOf(a.id, a.raw) - rankOf(b.id, b.raw));
+
   // ── NFL-team correlation: sharing an offence with your QB pays twice;
   //    sharing the ball with your own player cuts both your players' shares.
   const stackIn = (roster: { id: string; pos: Pos; team: string }[], pl: SleeperPlayer, exclude?: string): number => {
@@ -1042,7 +1060,7 @@ export function buildModel(input: ModelInput): Model {
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
 
-    const board = pool.map(x => ({
+    const board = mockPool.map(x => ({
       id: x.id, raw: x.raw, pos: x.raw.position as Pos, q: talentQ(x.raw, x.id),
     })).sort((a, b) => b.q - a.q);
     const gone = new Set<string>();

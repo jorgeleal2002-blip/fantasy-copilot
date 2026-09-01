@@ -951,6 +951,17 @@ describe('the mock draft room', () => {
     expect([...fits].sort((a, b) => b - a)).toEqual(fits);
   });
 
+  it('offers players the rookie board filters away', () => {
+    // The board this league drafts from is rookies only. A mock is a what-if,
+    // so restricting it to that same slice made a veteran undraftable even
+    // when searched for by name — he was simply not in the list.
+    const rookie = (o: { id: string }) => {
+      const raw = bundle.players[o.id];
+      return (raw.years_exp === 0 || raw.years_exp == null) && !!raw.age && raw.age <= 24;
+    };
+    expect(open.board.some(o => !rookie(o))).toBe(true);
+  });
+
   it('advances one turn when you take somebody', () => {
     const pick = open.options[1];
     const next = model.runMock(7, { [open.onClock!.overall]: pick.id });
