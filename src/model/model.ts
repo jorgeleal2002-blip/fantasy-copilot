@@ -14,6 +14,7 @@ import type {
   TeamSheet, Window,
 } from './types';
 import type { UsageMap } from './usage';
+import { isMockEligible } from './mock-pool';
 
 export interface ModelInput {
   data: LeagueBundle;
@@ -475,9 +476,7 @@ export function buildModel(input: ModelInput): Model {
   for (const id in players) {
     const p = players[id];
     if (!p || !POS.includes(p.position as Pos) || takenIds.has(id)) continue;
-    if (p.active === false) continue;
-    if (p.status && p.status !== 'Active') continue;
-    if (!p.search_rank || p.search_rank > 2500) continue;
+    if (!isMockEligible(p)) continue;
     mockPool.push({ id, raw: p });
   }
   mockPool.sort((a, b) => rankOf(a.id, a.raw) - rankOf(b.id, b.raw));

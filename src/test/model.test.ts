@@ -8,6 +8,8 @@ import { ownedWeights, redraftWeights, scorePlayer } from '../model/score';
 import { buildUsage, seasonUsage, type Usage } from '../model/usage';
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
+import { isMockEligible } from '../model/mock-pool';
+import type { SleeperPlayer } from '../api/types';
 
 const bundle = makeBundle();
 const market = parseMarket(makeFantasyCalc(bundle.players));
@@ -1112,5 +1114,40 @@ describe('the mock reads the roster you are building in it', () => {
       const after = s1.board.find(y => y.id === mate.id);
       if (after) expect(after.fit).toBeGreaterThan(mate.fit);
     }
+  });
+});
+
+describe('who may reach the mock draft board', () => {
+  const BASE = {
+    player_id: 'x', first_name: 'A', last_name: 'B', position: 'WR',
+    team: 'SEA', age: 27, years_exp: 5, search_rank: 300, active: true,
+    status: 'Active', fantasy_positions: ['WR'],
+  } as unknown as SleeperPlayer;
+  const player = (over: Partial<SleeperPlayer>) => ({ ...BASE, ...over }) as SleeperPlayer;
+
+  it('takes a veteran the rookie board would filter away', () => {
+    expect(isMockEligible(player({}))).toBe(true);
+  });
+
+  it('drops a veteran with no NFL team — the tail where retired names live', () => {
+    // active/status go stale on players who quietly left, so the roster is the
+    // only signal left. This is the case a board-wide assertion could not see:
+    // the fixture happens to contain nobody like him.
+    expect(isMockEligible(player({ team: null }))).toBe(false);
+  });
+
+  it('still allows an undrafted rookie, who has no team yet', () => {
+    expect(isMockEligible(player({ team: null, years_exp: 0, age: 22, search_rank: 700 }))).toBe(true);
+  });
+
+  it('stops before the practice squad', () => {
+    expect(isMockEligible(player({ search_rank: 799 }))).toBe(true);
+    expect(isMockEligible(player({ search_rank: 2400 }))).toBe(false);
+  });
+
+  it('respects the flags Sleeper does keep current', () => {
+    expect(isMockEligible(player({ active: false }))).toBe(false);
+    expect(isMockEligible(player({ status: 'Inactive' }))).toBe(false);
+    expect(isMockEligible(player({ search_rank: null }))).toBe(false);
   });
 });
