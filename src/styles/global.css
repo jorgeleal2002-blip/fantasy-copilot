@@ -641,3 +641,46 @@ button { font-family: inherit; }
     padding-right: max(0px, calc((100% - 1040px) / 2));
   }
 }
+
+/* ── Launch ───────────────────────────────────────────────────────────────
+   The mark, then the app. Fixed rather than inside the column so it covers
+   the whole window on a laptop as well as a phone. The fade out is a
+   transition, not an animation: an animation would have to hold its last
+   keyframe to stay faded, and a retained transform is exactly what softens
+   text on iOS (see the keyframes note above).
+   ──────────────────────────────────────────────────────────────────────── */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: radial-gradient(1200px 600px at 50% -10%, #1c1e30 0%, #0f101a 70%);
+  opacity: 1;
+  transition: opacity 320ms ease;
+}
+.splash.is-leaving { opacity: 0; }
+
+.splash-mark {
+  animation: splashMark 520ms cubic-bezier(.2, .85, .3, 1) backwards;
+}
+.splash-word {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  animation: splashWord 460ms cubic-bezier(.2, .85, .3, 1) 180ms backwards;
+}
+
+@keyframes splashMark {
+  from { transform: scale(0.84); opacity: 0 }
+  to { transform: none; opacity: 1 }
+}
+@keyframes splashWord {
+  from { transform: translateY(7px); opacity: 0 }
+  to { transform: none; opacity: 1 }
+}

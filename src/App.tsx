@@ -1,10 +1,17 @@
+import { useState } from 'react';
 import { AppShell } from './screens/AppShell';
 import { BootScreen, ConnectScreen, LeaguesScreen } from './screens/Onboarding';
+import { Splash } from './screens/Splash';
 import { useApp } from './state/useApp';
 import { Mark } from './ui/Mark';
 
 export default function App() {
   const app = useApp();
+  /* Shown once per launch, and skipped outright for anyone who has asked for
+   * less motion — for them it is a second of held-back app, not a flourish. */
+  const [splash, setSplash] = useState(
+    () => !matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
   // Only the app itself earns the full window on a laptop. Connect and the
   // league picker are one short form each — stretched across 1400px they would
   // read as a broken page, not a spacious one.
@@ -34,6 +41,7 @@ export default function App() {
           </div>
         ) : null}
       </div>
+      {splash ? <Splash onDone={() => setSplash(false)} /> : null}
     </div>
   );
 }
