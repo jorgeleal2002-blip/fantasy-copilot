@@ -3,7 +3,7 @@ import type { LeagueBundle, Pos, SleeperPlayer, SleeperRoster } from '../api/typ
 import {
   BASE_ROUND_VALUE, ELIG, MetricKey, POS, PEAK, SLOT_SORT, STRATS, StratKey,
 } from './constants';
-import { ageCurve, clamp, modelVal, playerName } from './math';
+import { ageCurve, clamp, modelVal, playerName, talentScale } from './math';
 import type { Market } from './market';
 import { ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
@@ -706,7 +706,7 @@ export function buildModel(input: ModelInput): Model {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(myPlayers, p.raw, p.id),
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
       }, w);
-      const el = clamp(talentQ(p.raw, p.id) / (dvMax || 1), 0, 1);
+      const el = talentScale(talentQ(p.raw, p.id), dvMax || 1);
       const cur = ageCurve(p.pos, p.age, el) || 0.5;
       const keep = ageCurve(p.pos, (p.age || 25) + 2, el) / Math.max(cur, 0.05);
       const raw2 = { ...p.raw, age: (p.age || 25) + 2, years_exp: (p.raw.years_exp || 0) + 2 };
@@ -1145,6 +1145,13 @@ export function buildModel(input: ModelInput): Model {
               lens: 'upside', title: 'Highest ceiling', why: 'The highest ceiling still on the board',
             }));
           }
+
+          // Highest Fit first. The three lenses answer different questions —
+          // best on the board, fills a hole, highest ceiling — and the board's
+          // best player is often not the best fit for YOUR roster. Leaving them
+          // in lens order put a lower Fit above a higher one and read as the
+          // app contradicting its own headline number.
+          options.sort((a, b) => b.fit - a.fit);
 
           return {
             slot: seat,

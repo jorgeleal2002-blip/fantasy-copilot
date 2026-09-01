@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ELIG, PRIME, STRATS } from '../model/constants';
-import { ageCurve, ageCurveRedraft, grade, modelVal, rankScore, talentBase } from '../model/math';
+import { ageCurve, ageCurveRedraft, grade, modelVal, rankScore, talentBase, talentScale } from '../model/math';
 import { marketQuery, parseMarket } from '../model/market';
 import { matchMe } from '../api/sleeper';
 import { buildModel } from '../model/model';
@@ -146,9 +146,25 @@ describe('fit score', () => {
 
   it('renormalises weights for players you already own', () => {
     const own = ownedWeights(w);
+    // Neither term has an answer for a player who is already yours: he fills
+    // no hole, and he cannot still be falling past a pick you have made.
     expect(own.need).toBe(0);
+    expect(own.value).toBe(0);
     const total = Object.values(own).reduce((a, b) => a + b, 0);
     expect(total).toBeCloseTo(1, 10);
+  });
+
+  it('puts talent on a log scale so a board is not all twenties', () => {
+    // Value spans orders of magnitude. Divided linearly by the best asset in
+    // scope, a rookie worth a twentieth of a veteran star scored 0.05 on the
+    // heaviest term in the Fit and dragged the whole board into the twenties.
+    expect(talentScale(1, 1)).toBe(1);
+    expect(talentScale(0.05, 1)).toBeGreaterThan(0.05 * 5);
+    expect(talentScale(0.05, 1)).toBeCloseTo(0.567, 2);
+    // Still monotonic, and a thousandth of the best is still the floor.
+    expect(talentScale(0.5, 1)).toBeGreaterThan(talentScale(0.1, 1));
+    expect(talentScale(0.001, 1)).toBe(0);
+    expect(talentScale(0, 1)).toBe(0);
   });
 });
 
@@ -909,9 +925,16 @@ describe('the mock draft room', () => {
 
   it('offers three rated shortcuts, none of them repeated on the board', () => {
     expect(open.options.length).toBe(3);
-    expect(open.options.map(o => o.lens)).toEqual(['best', 'need', 'upside']);
+    // All three lenses, three different names.
+    expect(open.options.map(o => o.lens).slice().sort())
+      .toEqual(['best', 'need', 'upside']);
     expect(new Set(open.options.map(o => o.id)).size).toBe(3);
     for (const o of open.options) expect(o.fit).toBeGreaterThan(0);
+    // Highest Fit first: the board's best player is often not the best fit for
+    // YOUR roster, and showing him above a higher-scoring name read as the app
+    // arguing with its own number.
+    const fits = open.options.map(o => o.fit);
+    expect([...fits].sort((a, b) => b - a)).toEqual(fits);
   });
 
   it('advances one turn when you take somebody', () => {

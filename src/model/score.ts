@@ -1,6 +1,6 @@
 import type { SleeperPlayer } from '../api/types';
 import type { MetricKey, Weights } from './constants';
-import { ageCurve, ageCurveRedraft, clamp, rankScore } from './math';
+import { ageCurve, ageCurveRedraft, clamp, rankScore, talentScale } from './math';
 import type { Usage } from './usage';
 
 export type Metrics = Record<MetricKey, number>;
@@ -50,7 +50,7 @@ export function scorePlayer(
   const rs = rankScore(adp);
   const exp = p.years_exp || 0;
   const age = p.age || 26;
-  const talent = ctx.dv != null ? clamp(ctx.dv / (ctx.dvMax || 1), 0, 1) : rs;
+  const talent = ctx.dv != null ? talentScale(ctx.dv, ctx.dvMax || 1) : rs;
   /** Where this player comes off the board if it runs to consensus from here. */
   const board = Math.max((ctx.now || 1) - 1 + (ctx.idx || 0), 1);
 
@@ -148,16 +148,25 @@ export function scorePlayer(
 }
 
 /**
- * A player already on your roster cannot fill a hole you have — so drop the
- * need term and renormalise the rest, or everyone you own grades a flat C.
+ * Two terms mean nothing for a player you already own, and both were being
+ * charged against him.
+ *
+ * He cannot fill a hole you have — he is already on the roster. And he cannot
+ * be a draft-day bargain: "value" asks whether he is still available later
+ * than the board says he should be, which has no answer once he is yours, so
+ * it sat pinned at its neutral 0.5 and quietly capped every owned player about
+ * five points below what the rest of his metrics earned.
+ *
+ * Dropping both and renormalising leaves the score made only of things that
+ * are actually true of him.
  */
 export function ownedWeights(w: Weights): Weights {
-  const rest = 1 - w.need;
+  const dead: MetricKey[] = ['need', 'value'];
+  const rest = 1 - dead.reduce((a, k) => a + w[k], 0);
   const out = {} as Weights;
   (Object.keys(w) as MetricKey[]).forEach(k => {
-    if (k !== 'need') out[k] = w[k] / rest;
+    out[k] = dead.indexOf(k) >= 0 ? 0 : w[k] / rest;
   });
-  out.need = 0;
   return out;
 }
 

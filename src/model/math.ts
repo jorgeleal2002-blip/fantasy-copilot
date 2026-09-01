@@ -62,6 +62,24 @@ export const pickLabel = (n: number | null | undefined, teams: number) => {
   return (Math.floor((n - 1) / teams) + 1) + '.' + String(((n - 1) % teams) + 1).padStart(2, '0');
 };
 
+/**
+ * Talent from market value, on a log scale.
+ *
+ * Value across a player pool spans two to three orders of magnitude — a first-
+ * round veteran is worth a hundred times a bench body, not five times. Divided
+ * linearly by the most valuable asset in scope, almost everyone lands near
+ * zero: the best rookie on a real board scored 0.056, and since talent carries
+ * the heaviest weight in the Fit, it dragged every rookie into the twenties out
+ * of a hundred. A board where the 1.01 reads 32 is not measuring anything.
+ *
+ * A decade of value is worth a third of the scale, which is the same shape
+ * `rankScore` uses on ranks and the shape the eye already reads value in.
+ */
+export const talentScale = (dv: number, dvMax: number) => {
+  if (!(dv > 0) || !(dvMax > 0)) return 0;
+  return clamp(1 + Math.log10(dv / dvMax) / 3, 0, 1);
+};
+
 export const rankScore = (r: number | null | undefined) =>
   clamp(1 - Math.log10(Math.max(r || 900, 1)) / 3.1, 0.02, 1);
 
