@@ -96,6 +96,63 @@ removed — you cannot fill your own hole, and leaving it in grades your whole
 roster a flat C. Redraft leagues reshape the weights again: what gets paid this
 Sunday goes up, what only pays with time goes down.
 
+## Drafting together
+
+The mock draft can be a room: you send a link, your friends walk in, and
+everybody picks in turn on the same board. Seats nobody claims are drafted by
+the app, and the draft waits at a seat a person is holding rather than picking
+for them.
+
+This is the one feature that needs something the app cannot supply itself. A
+shared turn has to live somewhere both phones can see, and the app is a static
+bundle. **With nothing configured the room simply does not appear** — the older
+invite stays, which sends the same board to each of you to draft alone.
+
+Turning it on takes about two minutes and costs nothing:
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com).
+2. Build → **Realtime Database** → Create database. Any region. Start in
+   **locked mode**.
+3. Under **Rules**, allow reads and writes to rooms only:
+
+   ```json
+   {
+     "rules": {
+       "rooms": {
+         "$room": {
+           ".read": true,
+           ".write": true,
+           ".validate": "newData.hasChildren(['seed','leagueId'])"
+         }
+       }
+     }
+   }
+   ```
+
+   Anyone holding a room code can read and write that room. For a mock draft
+   among friends that is the right trade; it is not a place for anything you
+   would mind a stranger seeing, and there is nothing personal in a room — a
+   seed, a league id, some seat names and a list of player ids.
+4. Copy the database URL from the top of that page. It looks like
+   `https://your-project-default-rtdb.firebaseio.com`.
+5. Locally, put it in `.env`:
+
+   ```
+   VITE_RTDB_URL=https://your-project-default-rtdb.firebaseio.com
+   ```
+
+   For the deployed copy, add it as a repository **variable** (Settings →
+   Secrets and variables → Actions → Variables) named `VITE_RTDB_URL`. A
+   variable rather than a secret because the URL is public by design: it ships
+   to every browser that loads the app. The database rules are what protect it.
+
+There is no SDK. A room is one small JSON document — the seed, who is in which
+seat, and a map of "pick N went to player X" — read and written over plain HTTP
+and streamed with the browser's own `EventSource`, falling back to polling when
+that connection drops. The mock is a pure function of the seed and that map, so
+every phone in the room derives the identical draft, bots included, without any
+of it being sent.
+
 ## Data sources
 
 | Source | What it provides |

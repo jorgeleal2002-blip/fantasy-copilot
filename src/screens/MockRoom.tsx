@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { ACCENT, GOOD, POS, colorOf } from '../model/constants';
+import { ACCENT, BAD, GOOD, POS, colorOf } from '../model/constants';
 import { inviteUrl, shareInvite } from '../model/invite';
 import { pickLabel } from '../model/math';
 import type { Pos } from '../api/types';
@@ -38,7 +38,14 @@ type DockTab = 'suggested' | 'players' | 'team';
  * position and take somebody in response to it without switching views.
  */
 export function MockRoom({ app, m }: { app: App; m: Model }) {
-  const st = m.runMock(app.mockSeed, app.mockChoices, app.mockSlot);
+  /* In a shared room your seat and the seats other people hold both come from
+   * the room, and the sim waits on them rather than botting them. */
+  const st = m.runMock(
+    app.mockSeed,
+    app.mockChoices,
+    app.mySeat ?? app.mockSlot,
+    app.humanSeats ?? undefined,
+  );
   const [shown, setShown] = useState(0);
   const [tab, setTab] = useState<DockTab>('players');
   const [pos, setPos] = useState<'ALL' | Pos>('ALL');
@@ -46,7 +53,11 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
   const [searching, setSearching] = useState(false);
   const [inviting, setInviting] = useState(false);
 
-  const live = app.mockStarted;
+  // In a room the draft begins for everyone at once, so this follows the room
+  // rather than this device: a guest who never pressed anything is still in it.
+  const live = app.room
+    ? !!app.room.started
+    : app.mockStarted || Object.keys(app.mockChoices).length > 0;
   const waiting = live && shown < st.made.length;
 
   // One pick at a time. `shown` only ever grows, so picks already on screen
@@ -66,7 +77,9 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
 
   // Your turn arrives on the Suggested tab, because that is the moment the
   // three rated shortcuts are worth anything.
-  const onClock = live && !waiting ? st.onClock : null;
+  const clock = live && !waiting ? st.onClock : null;
+  /** Only YOUR turn unlocks the Draft buttons. */
+  const onClock = clock && clock.mine ? clock : null;
   useEffect(() => {
     if (onClock) setTab(t => (t === 'team' ? t : 'suggested'));
   }, [onClock?.overall]);
@@ -82,6 +95,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
 
   const status = !live ? 'Claim a seat, then start'
     : st.done ? 'Mock complete'
+      : clock && !clock.mine ? clock.who + ' is on the clock · ' + clock.label
       : onClock ? 'You are on the clock · ' + onClock.label
         : latest ? teamOf(latest) + ' took ' + (latest.player?.name || '')
           : 'Drafting…';
@@ -135,7 +149,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
             onClick={() => { setShown(0); app.startMock(); }}
             style={{ width: '100%', padding: '11px 0', fontSize: 13.5, borderRadius: 11 }}
           >
-            Start mock draft
+            {app.roomId ? 'Start for the room' : 'Start mock draft'}
           </button>
         </div>
       ) : null}
@@ -147,8 +161,13 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
         made={visible}
         seat={st.slot}
         next={live ? nextOverall : 0}
-        claimable={!live}
-        onClaim={n => app.setMockSlot(n === m.mySlot ? null : n)}
+        claimable={!live || !!app.roomId}
+        onClaim={n => {
+          // In a room a seat is a claim other people can see, so it goes to the
+          // database. Alone it is just which chair you are simulating from.
+          if (app.roomId) void app.takeSeat(n);
+          else app.setMockSlot(n === m.mySlot ? null : n);
+        }}
       />
 
       <section className="mock-dock">
@@ -383,14 +402,23 @@ function MyTeam({ st, m }: { st: MockState; m: Model }) {
  */
 function InvitePanel({ app, m, onClose }: { app: App; m: Model; onClose: () => void }) {
   const [done, setDone] = useState('');
-  const link = (seat: number | null) =>
-    inviteUrl({ leagueId: m.league.league_id, seed: app.mockSeed, seat });
+  const [opening, setOpening] = useState(false);
+  const link = (seat: number | null, room?: string | null) =>
+    inviteUrl({ leagueId: m.league.league_id, seed: app.mockSeed, seat, room });
 
-  const send = async (seat: number | null, who: string) => {
-    const how = await shareInvite(link(seat), 'Mock draft · ' + m.league.name);
+  const send = async (seat: number | null, who: string, room?: string | null) => {
+    const how = await shareInvite(link(seat, room), 'Mock draft · ' + m.league.name);
     setDone(how === 'failed'
       ? 'Could not share the link on this device.'
       : how === 'shared' ? 'Sent to ' + who : 'Link copied for ' + who);
+  };
+
+  /** Open a real room, then hand out the link that walks into it. */
+  const openRoom = async () => {
+    setOpening(true);
+    const id = app.roomId || await app.hostRoom(app.mySeat ?? m.mySlot ?? null);
+    setOpening(false);
+    if (id) await send(null, 'the league', id);
   };
 
   // Everyone but you: you are already in the room.
@@ -405,16 +433,58 @@ function InvitePanel({ app, m, onClose }: { app: App; m: Model; onClose: () => v
         </button>
       </div>
       <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.5), marginTop: 6, textWrap: 'pretty' }}>
-        Everyone who opens the link drafts this exact board — same players, same
-        bots, same order — from their own seat. Picks are not shared as they
-        happen: you each draft your own copy, then compare teams.
+        {app.liveOn
+          ? 'Two ways in. A room puts everybody in one draft, picking in turn. '
+            + 'Sharing the board sends the same players and the same bots to '
+            + 'each of you to draft alone, and you compare teams after.'
+          : 'Everyone who opens the link drafts this exact board — same players, '
+            + 'same bots, same order — from their own seat. Picks are not shared '
+            + 'as they happen: you each draft your own copy, then compare teams.'}
       </div>
+
+      {app.liveOn ? (
+        <>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => void openRoom()}
+            disabled={opening}
+            style={{ width: '100%', marginTop: 11, padding: '10px 0', fontSize: 13, borderRadius: 10 }}
+          >
+            {app.roomId ? 'Share room ' + app.roomId : opening ? 'Opening…' : 'Draft together'}
+          </button>
+          <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.45), marginTop: 7, textWrap: 'pretty' }}>
+            {app.roomId
+              ? 'They pick in turn with you, on this board. Seats nobody claims are drafted by the app.'
+              : 'One room, everyone picking in turn. Seats nobody takes are drafted by the app.'}
+          </div>
+          {app.roomError ? (
+            <div style={{ fontSize: 11.5, color: BAD, marginTop: 6 }} role="alert">{app.roomError}</div>
+          ) : null}
+          {app.roomId ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={app.leaveRoom}
+              style={{ width: '100%', marginTop: 8, padding: '8px 0', fontSize: 12, borderRadius: 10 }}
+            >
+              Leave the room
+            </button>
+          ) : null}
+          <div style={{
+            fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase',
+            color: dim(0.35), margin: '14px 0 4px',
+          }}>
+            Or just the same board
+          </div>
+        </>
+      ) : null}
 
       <button
         type="button"
-        className="btn btn-primary"
+        className="btn btn-secondary"
         onClick={() => void send(null, 'the league')}
-        style={{ width: '100%', marginTop: 11, padding: '10px 0', fontSize: 13, borderRadius: 10 }}
+        style={{ width: '100%', marginTop: app.liveOn ? 0 : 11, padding: '10px 0', fontSize: 13, borderRadius: 10 }}
       >
         Share this board
       </button>

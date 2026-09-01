@@ -5,6 +5,10 @@ import {
 } from '../api/sleeper';
 import type { LeagueBundle, SleeperLeague } from '../api/types';
 import { DRAFT_POLL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import {
+  EMPTY_ROOM, claimSeat, createRoom as createRoomAt, liveEnabled, newRoomId,
+  pushPick, readRoom, startRoom, watchRoom, type Room,
+} from '../api/live';
 import { clearInvite, parseInvite, type Invite } from '../model/invite';
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
@@ -98,6 +102,16 @@ export function useApp() {
   /** An invite waiting to be honoured: read once from the address bar, held
    *  until the league it names has actually finished loading. */
   const invite = useRef<Invite | null>(null);
+
+  /* ── The shared room.
+   *
+   * When one is open it OWNS the mock: the seed, the picks and who is sitting
+   * where all come from the database rather than from this device, so every
+   * phone in the room derives the same draft. With no room these stay null and
+   * the mock is the solo one it has always been. */
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const [room, setRoom] = useState<Room | null>(null);
+  const [roomError, setRoomError] = useState('');
   const [tradeView, setTradeView] = useState<'suggested' | 'block' | 'saved'>('suggested');
   const [filter, setFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
@@ -325,6 +339,89 @@ export function useApp() {
     void load(id, username);
   }, [load, username]);
 
+
+
+  /* Follow the room for as long as one is open. Every change re-reads it, so
+   * two phones cannot drift apart over a dropped delta. */
+  useEffect(() => {
+    if (!roomId) { setRoom(null); return undefined; }
+    return watchRoom(roomId, setRoom, () => setRoomError('Lost the room. Still trying.'));
+  }, [roomId]);
+
+  const me = data?.me;
+
+  /** Open a room on this board and sit down in your own seat. */
+  const hostRoom = useCallback(async (seat: number | null): Promise<string | null> => {
+    if (!liveEnabled() || !leagueId || !me) return null;
+    const id = newRoomId();
+    const who = { id: me.user_id, name: me.display_name || username };
+    try {
+      const fresh = EMPTY_ROOM(mockSeed, leagueId, me.user_id);
+      if (seat) fresh.seats[String(seat)] = who;
+      await createRoomAt(id, fresh);
+      setRoomError('');
+      setRoomId(id);
+      return id;
+    } catch {
+      setRoomError('Could not open the room.');
+      return null;
+    }
+  }, [leagueId, me, mockSeed, username]);
+
+  /** Walk into somebody else's room. The seed comes with it — that is what
+   *  makes it the same draft rather than a similar one. */
+  const joinRoom = useCallback(async (id: string, seat: number | null) => {
+    if (!liveEnabled() || !me) return;
+    try {
+      const found = await readRoom(id);
+      if (!found) { setRoomError('No room with that code.'); return; }
+      setMockSeed(found.seed);
+      if (seat) await claimSeat(id, seat, { id: me.user_id, name: me.display_name || username });
+      setRoomError('');
+      setRoomId(id);
+    } catch {
+      setRoomError('Could not reach the room.');
+    }
+  }, [me, username]);
+
+  const takeSeat = useCallback(async (seat: number) => {
+    if (!roomId || !me) return;
+    try {
+      await claimSeat(roomId, seat, { id: me.user_id, name: me.display_name || username });
+    } catch {
+      setRoomError('Could not take that seat.');
+    }
+  }, [roomId, me, username]);
+
+  const leaveRoom = useCallback(() => {
+    setRoomId(null);
+    setRoom(null);
+    setRoomError('');
+    setMockChoices({});
+  }, []);
+
+  /* What the mock actually runs on. In a room these come from the database, so
+   * every phone derives the same draft; alone they are this device's own. */
+  const liveChoices = useMemo(() => {
+    if (!room) return null;
+    const out: Record<number, string> = {};
+    Object.keys(room.picks || {}).forEach(k => { out[Number(k)] = room.picks[k]; });
+    return out;
+  }, [room]);
+
+  /** Seats with a person in them. The mock waits on these instead of botting. */
+  const humanSeats = useMemo(
+    () => (room ? Object.keys(room.seats || {}).map(Number).filter(Boolean) : null),
+    [room],
+  );
+
+  /** Where YOU are sitting in the room, which may not be your league seat. */
+  const mySeat = useMemo(() => {
+    if (!room || !me) return null;
+    const hit = Object.keys(room.seats || {}).find(k => room.seats[k]?.id === me.user_id);
+    return hit ? Number(hit) : null;
+  }, [room, me]);
+
   /**
    * Honour a pending invite, in the two places it can become possible.
    *
@@ -348,9 +445,16 @@ export function useApp() {
       setMockChoices({});
       setMockStarted(false);
       setMockOpen(true);
-      showToast('Same board as the friend who invited you — your own seat.');
+      if (inv.room) {
+        // A real room: walk in and sit down. The seed travels with the room,
+        // so the board is theirs rather than a fresh one of ours.
+        void joinRoom(inv.room, inv.seat ?? null);
+        showToast('Joining room ' + inv.room + ' — take a seat.');
+      } else {
+        showToast('Same board as the friend who invited you — your own seat.');
+      }
     }
-  }, [stage, data, leagueId, pickLeague, showToast]);
+  }, [stage, data, leagueId, pickLeague, showToast, joinRoom]);
 
   /** Change league without signing out — reuses the stored username. */
   const switchLeague = useCallback(async () => {
@@ -532,7 +636,13 @@ export function useApp() {
     stage, username, leagues, authBusy, authError, error,
     data, step, model, syncing, syncedAt,
     usageState, usageSeasons, marketState,
-    tab, teamView, draftView, tradeView, mockSeed, mockChoices, mockSlot, mockOpen, mockStarted,
+    tab, teamView, draftView, tradeView, mockSlot, mockOpen, mockStarted,
+    // A room owns the seed, the picks and the seat once one is open.
+    mockSeed: room ? room.seed : mockSeed,
+    mockChoices: liveChoices ?? mockChoices,
+    liveOn: liveEnabled(),
+    room, roomId, roomError, humanSeats, mySeat,
+    hostRoom, joinRoom, takeSeat, leaveRoom,
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 
@@ -574,7 +684,12 @@ export function useApp() {
     setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
     setTeamView, setDraftView, setTradeView, setFilter,
     rerollMock: () => { setMockSeed(x => x + 1); setMockChoices({}); setMockStarted(false); },
-    startMock: () => setMockStarted(true),
+    /* In a room this begins for everybody. Starting only your own copy would
+     * let the bots take the seats your friends have not sat in yet. */
+    startMock: () => {
+      if (roomId) { void startRoom(roomId).catch(() => setRoomError('Could not start the room.')); }
+      setMockStarted(true);
+    },
     // A different seat is a different draft, so nothing carries over.
     setMockSlot: (n: number | null) => { setMockSlot(n); setMockChoices({}); },
     openMock: () => { setMockChoices({}); setMockStarted(false); setMockOpen(true); },
@@ -584,12 +699,20 @@ export function useApp() {
      * downstream moves, and a later pick you had locked in may be gone. Dropping
      * them is more honest than replaying choices that no longer apply.
      */
-    chooseMock: (overall: number, id: string) => setMockChoices(prev => {
-      const next: Record<number, string> = {};
-      Object.keys(prev).forEach(k => { if (Number(k) < overall) next[Number(k)] = prev[Number(k)]; });
-      next[overall] = id;
-      return next;
-    }),
+    /* In a room the pick goes to the database and comes back through the
+     * watcher, so everyone's board moves at once. It is NOT truncated the way
+     * the solo one is: dropping every pick after yours is the right answer when
+     * the draft is a private what-if you are re-running, and it would delete
+     * other people's picks in a room. A shared draft only goes forward. */
+    chooseMock: (overall: number, id: string) => {
+      if (roomId) { void pushPick(roomId, overall, id).catch(() => setRoomError('Pick did not send.')); return; }
+      setMockChoices(prev => {
+        const next: Record<number, string> = {};
+        Object.keys(prev).forEach(k => { if (Number(k) < overall) next[Number(k)] = prev[Number(k)]; });
+        next[overall] = id;
+        return next;
+      });
+    },
     clearMockChoices: () => setMockChoices({}), setRosterFilter, setRosterSort,
     setBoardMode, setRankMode, setPickSel, setStrat, setDetail,
     setQuery, setTopPos, setTopLens, setTopOpen,

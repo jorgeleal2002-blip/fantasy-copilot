@@ -1095,6 +1095,11 @@ export function buildModel(input: ModelInput): Model {
     seed: number,
     choices?: Record<number, string>,
     fromSlot?: number | null,
+    /* Seats held by other people in a shared room. A bot may not pick for
+     * them: when one of these is on the clock the draft stops and waits, the
+     * same way it stops for you. Empty (the solo case) and every seat but
+     * yours is a bot, which is what a mock has always been. */
+    humanSeats?: number[],
   ): MockState => {
     // Sitting in a different seat is half the reason to mock a draft: every
     // pick in that slot becomes yours and whoever really owns it drafts as a
@@ -1148,7 +1153,13 @@ export function buildModel(input: ModelInput): Model {
     const lastMine = moved
       ? rounds * teamCount
       : (myPickList.length ? myPickList[myPickList.length - 1].overall : nextOverall);
-    const stop = Math.min(lastMine, rounds * teamCount);
+    /* Solo, the sim only has to reach your last pick — nothing after it is
+     * about you. With other people in the room the draft belongs to all of
+     * them, so it runs to the end. */
+    const others = (humanSeats || []).filter(n => n !== (fromSlot ?? mySlot));
+    const stop = others.length
+      ? rounds * teamCount
+      : Math.min(lastMine, rounds * teamCount);
     const snake = !!(d.draft && d.draft.type === 'snake');
 
     const made: MockPick[] = [];
@@ -1205,6 +1216,10 @@ export function buildModel(input: ModelInput): Model {
       const slot = snake && round % 2 === 0 ? teamCount - inRound + 1 : inRound;
       const seatOwner = moved ? (slotToRoster[slot] ?? 0) : (pickOwner[overall] ?? slotToRoster[slot]);
       const mine = moved ? slot === seat : seatOwner === myRow.roster_id;
+      /* Somebody else in the room holds this seat. No bot may pick for them —
+       * the draft stops here until their pick arrives, exactly as it stops for
+       * you. This is the whole difference between a room and a simulation. */
+      const theirs = !mine && others.indexOf(slot) >= 0;
       // Borrowing a seat does not borrow a roster: your holes stay yours.
       const rid = mine ? myRow.roster_id : seatOwner;
       const label = round + '.' + String(inRound).padStart(2, '0');
@@ -1212,9 +1227,24 @@ export function buildModel(input: ModelInput): Model {
       const live = board.filter(x => !gone.has(x.id));
       if (!live.length) break;
 
-      if (mine) {
+      if (mine || theirs) {
         const wanted = choices ? choices[overall] : undefined;
         const taken = wanted ? live.find(x => x.id === wanted) : undefined;
+
+        if (!taken && theirs) {
+          // Waiting on a person. The board is still worth showing — you read it
+          // while they think — but there is nothing for you to take.
+          return {
+            slot: seat,
+            made,
+            onClock: { overall, round, slot, label, mine: false, who: teamName(owner?.owner_id) },
+            options: [],
+            board: live.slice(0, 120).map((x, i) => rate(x, { goes: i + 1 })),
+            myTeam,
+            shape,
+            done: false,
+          };
+        }
 
         if (!taken) {
           // You are on the clock. Everything the room needs, and nothing after.
@@ -1321,7 +1351,7 @@ export function buildModel(input: ModelInput): Model {
           return {
             slot: seat,
             made,
-            onClock: { overall, round, slot, label },
+            onClock: { overall, round, slot, label, mine: true, who: 'you' },
             options,
             // The whole board, rated — a mock room lets you take anybody.
             board: live.slice(0, 120).map((x, i) => rate(x, { goes: i + 1 })),
@@ -1338,9 +1368,15 @@ export function buildModel(input: ModelInput): Model {
         const opt = rate(taken);
         have[rid] = have[rid] || {};
         have[rid][taken.pos] = (have[rid][taken.pos] || 0) + 1;
-        shape[taken.pos] = (shape[taken.pos] || 0) + 1;
-        myTeam.push(opt);
-        made.push({ overall, round, slot, label, team: 'you', mine: true, player: opt });
+        if (mine) {
+          shape[taken.pos] = (shape[taken.pos] || 0) + 1;
+          myTeam.push(opt);
+        }
+        made.push({
+          overall, round, slot, label,
+          team: mine ? 'you' : teamName(owner?.owner_id),
+          mine, player: opt,
+        });
         continue;
       }
 

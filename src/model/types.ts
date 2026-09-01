@@ -242,7 +242,13 @@ export interface MockState {
   /** every selection made so far, oldest first */
   made: MockPick[];
   /** your turn, or null once the mock is over */
-  onClock: { overall: number; round: number; slot: number; label: string } | null;
+  onClock: {
+    overall: number; round: number; slot: number; label: string;
+    /** false while a person in another seat is thinking */
+    mine: boolean;
+    /** who that person is, for the line that says so */
+    who: string;
+  } | null;
   /** the three rated shortcuts for this turn */
   options: MockOption[];
   /** everything still on the board, rated, best first */
@@ -443,6 +449,8 @@ export interface Model {
     seed: number,
     choices?: Record<number, string>,
     fromSlot?: number | null,
+    /** seats other people hold in a shared room; a bot never picks for these */
+    humanSeats?: number[],
   ) => MockState;
   metricKeys: MetricKey[];
 }

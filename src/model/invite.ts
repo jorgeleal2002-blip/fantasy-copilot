@@ -18,11 +18,15 @@ export interface Invite {
   seed: number;
   /** a seat to sit the guest in; omitted means their own seat in the league */
   seat: number | null;
+  /** a shared room to walk into. Without one the link is the older kind: the
+   *  same board, drafted alone. */
+  room?: string | null;
 }
 
 const P_LEAGUE = 'mock';
 const P_SEED = 'seed';
 const P_SEAT = 'seat';
+const P_ROOM = 'room';
 
 /** The link to send. Built off the current document so it survives whatever
  *  path the app is deployed under — the Vite base is relative. */
@@ -32,6 +36,7 @@ export function inviteUrl(inv: Invite, base?: string): string {
   q.set(P_LEAGUE, inv.leagueId);
   q.set(P_SEED, String(inv.seed));
   if (inv.seat != null) q.set(P_SEAT, String(inv.seat));
+  if (inv.room) q.set(P_ROOM, inv.room);
   return href + '?' + q.toString();
 }
 
@@ -50,10 +55,12 @@ export function parseInvite(search: string): Invite | null {
   if (!Number.isFinite(seed) || seed <= 0) return null;
   const rawSeat = q.get(P_SEAT);
   const seat = rawSeat == null ? null : Number(rawSeat);
+  const room = (q.get(P_ROOM) || '').trim().toUpperCase();
   return {
     leagueId,
     seed: Math.floor(seed),
     seat: seat != null && Number.isFinite(seat) && seat >= 1 ? Math.floor(seat) : null,
+    room: /^[A-Z0-9]{4,12}$/.test(room) ? room : null,
   };
 }
 

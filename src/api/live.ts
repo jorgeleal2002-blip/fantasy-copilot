@@ -1,0 +1,158 @@
+/**
+ * The shared draft room.
+ *
+ * A mock draft is already a pure function of three things — the league, the
+ * seed, and the map of "pick N went to player X". Two people who agree on
+ * those three see the same draft down to the bot picks. So a room does not
+ * need to stream a board or a timer or a player list: it needs to hold one
+ * small JSON document and tell everybody the moment it changes.
+ *
+ * That is exactly what Firebase's Realtime Database does over plain HTTP, and
+ * it is why there is no SDK here. The official client is larger than this
+ * entire application; a room is four fetches and an EventSource, and those are
+ * built into the browser. Nothing new ships to the phone.
+ *
+ * With no database configured every export below is inert and the app keeps the
+ * solo mock it has always had — the feature is off, not broken.
+ */
+
+/** The whole of a room, as it sits in the database. */
+export interface Room {
+  /** the mock's seed: everyone drafting the same board agrees on this */
+  seed: number;
+  leagueId: string;
+  /** who opened it, so exactly one client runs the bots */
+  host: string;
+  /** seat number → the person sitting in it */
+  seats: Record<string, { id: string; name: string }>;
+  /** overall pick → player id. This IS the mock's `choices` map. */
+  picks: Record<string, string>;
+  /**
+   * Nobody drafts until this is set.
+   *
+   * Without it the person who opened the room starts drafting alone: the seats
+   * their friends have not claimed yet are still bots, so the bots take the
+   * first picks and the friends arrive to a draft that already left without
+   * them. One shared flag means the room waits for everyone to sit down.
+   */
+  started?: boolean;
+}
+
+export const EMPTY_ROOM = (seed: number, leagueId: string, host: string): Room => ({
+  seed, leagueId, host, seats: {}, picks: {}, started: false,
+});
+
+/**
+ * Where the rooms live. Absent in a normal checkout, which is the point: the
+ * repository is public and carries no database of mine or anyone else's.
+ * See README — "Drafting together" — for the two minutes of setup.
+ */
+export const LIVE_URL: string = (import.meta.env?.VITE_RTDB_URL || '').replace(/\/+$/, '');
+export const liveEnabled = () => !!LIVE_URL;
+
+const roomPath = (id: string) => LIVE_URL + '/rooms/' + encodeURIComponent(id) + '.json';
+
+/** Six characters a person can read down a phone line. No l/1/O/0. */
+export function newRoomId(): string {
+  const ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let out = '';
+  const buf = new Uint32Array(6);
+  (globalThis.crypto || ({} as Crypto)).getRandomValues?.(buf);
+  for (let i = 0; i < 6; i++) {
+    out += ABC[(buf[i] || Math.floor(Math.random() * 1e9)) % ABC.length];
+  }
+  return out;
+}
+
+async function send(url: string, method: string, body?: unknown): Promise<unknown> {
+  const res = await fetch(url, {
+    method,
+    headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error('live ' + res.status);
+  return res.status === 204 ? null : res.json();
+}
+
+export async function createRoom(id: string, room: Room): Promise<void> {
+  await send(roomPath(id), 'PUT', room);
+}
+
+export async function readRoom(id: string): Promise<Room | null> {
+  const r = (await send(roomPath(id), 'GET')) as Room | null;
+  if (!r || typeof r.seed !== 'number') return null;
+  return { ...r, seats: r.seats || {}, picks: r.picks || {} };
+}
+
+/** Sit down. A PATCH so two people claiming different seats never collide. */
+export async function claimSeat(id: string, slot: number, who: { id: string; name: string }) {
+  await send(LIVE_URL + '/rooms/' + encodeURIComponent(id) + '/seats.json', 'PATCH', { [slot]: who });
+}
+
+/**
+ * Make a pick.
+ *
+ * Keyed by the overall pick number rather than appended to a list, so the same
+ * pick sent twice — a flaky connection, a double tap — is one entry and not
+ * two, and the map that comes back is already the shape the mock replays from.
+ */
+export async function pushPick(id: string, overall: number, playerId: string) {
+  await send(LIVE_URL + '/rooms/' + encodeURIComponent(id) + '/picks.json', 'PATCH', {
+    [overall]: playerId,
+  });
+}
+
+/** Let the draft begin, for everyone at once. */
+export async function startRoom(id: string) {
+  await send(LIVE_URL + '/rooms/' + encodeURIComponent(id) + '.json', 'PATCH', { started: true });
+}
+
+/**
+ * Follow a room until you stop.
+ *
+ * The database streams server-sent events: a `put` carrying the whole room on
+ * connect, then a `patch` or `put` per change, each naming the path that moved.
+ * Rather than apply those deltas by hand — where one missed shape is a draft
+ * that quietly disagrees between two phones — this re-reads the room on any
+ * change. A room is a few hundred bytes and a draft is a pick every several
+ * seconds; correctness is worth more than the bytes here.
+ *
+ * Returns the function that stops it.
+ */
+export function watchRoom(id: string, onRoom: (r: Room) => void, onError?: () => void): () => void {
+  if (!LIVE_URL) return () => {};
+  let stopped = false;
+  let es: EventSource | null = null;
+  let timer: number | undefined;
+
+  const pull = async () => {
+    try {
+      const r = await readRoom(id);
+      if (r && !stopped) onRoom(r);
+    } catch {
+      if (!stopped) onError?.();
+    }
+  };
+
+  try {
+    es = new EventSource(roomPath(id));
+    // Every event means "something moved"; the read that follows is the truth.
+    const bump = () => { if (!stopped) void pull(); };
+    es.addEventListener('put', bump);
+    es.addEventListener('patch', bump);
+    es.onerror = () => {
+      // The stream drops on a lock screen or a tunnel. Polling is the floor
+      // under it, so a draft never silently stops updating.
+      if (!stopped && !timer) timer = window.setInterval(pull, 4000);
+    };
+  } catch {
+    timer = window.setInterval(pull, 4000);
+  }
+
+  void pull();
+  return () => {
+    stopped = true;
+    es?.close();
+    if (timer) window.clearInterval(timer);
+  };
+}

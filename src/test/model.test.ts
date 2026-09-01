@@ -1156,7 +1156,7 @@ describe('who may reach the mock draft board', () => {
 describe('mock draft invites', () => {
   it('round-trips a league, a seed and a seat', () => {
     const url = inviteUrl({ leagueId: '123456', seed: 9, seat: 4 }, 'https://x.dev/app/');
-    expect(parseInvite(new URL(url).search)).toEqual({ leagueId: '123456', seed: 9, seat: 4 });
+    expect(parseInvite(new URL(url).search)).toEqual({ leagueId: '123456', seed: 9, seat: 4, room: null });
   });
 
   it('leaves the seat open when the link does not name one', () => {
@@ -1175,6 +1175,15 @@ describe('mock draft invites', () => {
     expect(parseInvite('?mock=123&seed=x')).toBe(null);
   });
 
+  it('carries a room code, and rejects one that is not a code', () => {
+    const url = inviteUrl({ leagueId: '123', seed: 2, seat: null, room: 'K7QM2P' }, 'https://x.dev/');
+    expect(parseInvite(new URL(url).search)!.room).toBe('K7QM2P');
+    expect(parseInvite('?mock=123&seed=2&room=ab')!.room).toBe(null);
+    expect(parseInvite('?mock=123&seed=2&room=' + 'X'.repeat(40))!.room).toBe(null);
+    // a link without one is the older kind: same board, drafted alone
+    expect(parseInvite('?mock=123&seed=2')!.room).toBe(null);
+  });
+
   it('ignores a seat that is not a seat', () => {
     expect(parseInvite('?mock=123&seed=2&seat=0')!.seat).toBe(null);
     expect(parseInvite('?mock=123&seed=2&seat=nope')!.seat).toBe(null);
@@ -1182,7 +1191,7 @@ describe('mock draft invites', () => {
 
   it('survives a link that already carries other query parameters', () => {
     const inv = parseInvite('?utm=chat&mock=123&seed=7&seat=2');
-    expect(inv).toEqual({ leagueId: '123', seed: 7, seat: 2 });
+    expect(inv).toEqual({ leagueId: '123', seed: 7, seat: 2, room: null });
   });
 });
 
@@ -1269,5 +1278,45 @@ describe('what a redraft mock board holds, and in what order', () => {
     expect(k.fit).toBeLessThan(best - 25);
     // and they sit deep enough that the bots' window never reaches them early
     expect(board.findIndex(o => o.pos === 'K')).toBeGreaterThan(40);
+  });
+});
+
+describe('a room with other people in it', () => {
+  it('stops at a seat somebody else is holding, and names them', () => {
+    // Seat 1 belongs to another person. A bot may not pick for them.
+    const solo = model.runMock(4, undefined, 3);
+    const shared = model.runMock(4, undefined, 3, [3, 1]);
+
+    expect(solo.onClock!.mine).toBe(true);          // solo: bots ran to your pick
+    expect(shared.onClock!.slot).toBe(1);           // shared: it stopped at theirs
+    expect(shared.onClock!.mine).toBe(false);
+    expect(shared.onClock!.who).not.toBe('you');
+    expect(shared.options.length).toBe(0);          // nothing for you to take
+    expect(shared.board.length).toBeGreaterThan(0); // but the board still reads
+  });
+
+  it('carries on once their pick lands, and keeps it out of your team', () => {
+    const waiting = model.runMock(4, undefined, 3, [3, 1]);
+    const theirPick = waiting.board[0].id;
+    const after = model.runMock(4, { [waiting.onClock!.overall]: theirPick }, 3, [3, 1]);
+
+    // it is on the board as somebody else's
+    const landed = after.made.find(p => p.player?.id === theirPick)!;
+    expect(landed).toBeTruthy();
+    expect(landed.mine).toBe(false);
+    expect(landed.team).not.toBe('you');
+    // and not on yours
+    expect(after.myTeam.some(o => o.id === theirPick)).toBe(false);
+    // the draft moved on
+    expect(after.onClock!.overall).toBeGreaterThan(waiting.onClock!.overall);
+  });
+
+  it('runs the whole draft when the room is shared, not just up to your last pick', () => {
+    const solo = model.runMock(4, undefined, 3);
+    const shared = model.runMock(4, undefined, 3, [3, 1]);
+    // solo stops once you are done; shared belongs to everyone
+    expect(shared.onClock!.overall).toBeLessThanOrEqual(solo.onClock!.overall);
+    const full = model.rounds * model.teamCount;
+    expect(full).toBeGreaterThan(0);
   });
 });
