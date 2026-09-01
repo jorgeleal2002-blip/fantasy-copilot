@@ -1104,47 +1104,92 @@ export function buildModel(input: ModelInput): Model {
 
         if (!taken) {
           // You are on the clock. Everything the room needs, and nothing after.
-          const shortlist = live.slice(0, 40);
+          //
+          //    Three shortcuts, each the BEST of its lens rather than the best
+          //    of a sub-metric read across forty names. The old set did not
+          //    survive contact:
+          //
+          //      · "Highest ceiling" ranked raw `boom`, which is mostly an age
+          //        bonus, so it happily nominated a 21-year-old nobody over
+          //        every player worth taking.
+          //      · "Fills your hole" fell back to plain market value whenever
+          //        you were short nowhere, which made it "the second best guy"
+          //        wearing a label about holes.
+          //      · Nothing was ever picked by the Fit Score, the number printed
+          //        beside it and the one the whole app is built on.
+          const pool = live.slice(0, 40);
+          const fitCache: Record<string, number> = {};
+          const fitOf = (x: { id: string; raw: SleeperPlayer; pos: Pos }) => {
+            if (fitCache[x.id] == null) fitCache[x.id] = rate(x).fit;
+            return fitCache[x.id];
+          };
           const boom = (x: { id: string; raw: SleeperPlayer }) => scorePlayer(x.raw, {}, {
             dv: talentQ(x.raw, x.id), dvMax, use: uFor(x.id), redraft: !isDynasty,
           }, w).m.boom;
-          const needOf = (x: { pos: Pos; q: number }) => x.q * (1 + shortAt(rid, x.pos) * 0.35);
 
-          // Three DIFFERENT names. Ranking each lens over the whole board
-          // collapsed them onto one whenever the best player also filled the
-          // hole, which is most turns.
-          const best = live[0];
-          const rest = shortlist.filter(x => x.id !== best.id);
-          const need = rest.slice().sort((a, b) => needOf(b) - needOf(a))[0];
-          const upside = rest.filter(x => !need || x.id !== need.id)
-            .sort((a, b) => boom(b) - boom(a))[0];
+          const byFit = pool.slice().sort((a, b) => fitOf(b) - fitOf(a));
+          const byValue = pool.slice().sort((a, b) => b.q - a.q);
+          const holes = POS.filter(p => shortAt(rid, p) > 0);
 
           const where = (x: { id: string }) => live.findIndex(y => y.id === x.id) + 1;
-          const options: MockOption[] = [rate(best, {
-            goes: where(best),
+          const options: MockOption[] = [];
+          const seen: Record<string, 1> = {};
+          const add = (
+            x: { id: string; raw: SleeperPlayer; pos: Pos } | undefined,
+            extra: Partial<MockOption>,
+          ) => {
+            if (!x || seen[x.id]) return;
+            seen[x.id] = 1;
+            options.push(rate(x, { goes: where(x), ...extra }));
+          };
+
+          // 1. The app's own answer: the highest Fit left for YOUR roster.
+          const alsoBPA = !!byFit[0] && !!byValue[0] && byFit[0].id === byValue[0].id;
+          add(byFit[0], {
             lens: 'best',
-            title: 'Best available',
-            why: shortAt(rid, best.pos)
-              ? 'The best player left — and he fills a hole'
-              : 'The best player left, whatever you need',
-          })];
-          if (need) {
-            const short = shortAt(rid, need.pos);
-            options.push(rate(need, {
-              goes: where(need),
-              lens: 'need',
-              title: short ? 'Fills your hole' : 'Deepest position',
-              why: short
-                ? 'You are ' + short + ' short at ' + need.pos
-                : 'No hole left to fill, so this is the best of what you already start',
-            }));
+            title: 'Best fit',
+            why: alsoBPA
+              ? 'The highest Fit Score left — and the most valuable man on the board'
+              : 'The highest Fit Score left, measured against your roster',
+          });
+
+          // 2. A position you cannot field yet — best Fit among those, not
+          //    merely the most expensive name that happens to play there.
+          if (holes.length) {
+            const fill = byFit.find(x => holes.indexOf(x.pos) >= 0 && !seen[x.id]);
+            if (fill) {
+              add(fill, {
+                lens: 'need',
+                title: 'Fills your hole at ' + fill.pos,
+                why: 'You are ' + shortAt(rid, fill.pos) + ' short at ' + fill.pos
+                  + ', and he is the best fit there',
+              });
+            }
           }
-          if (upside) {
-            options.push(rate(upside, {
-              goes: where(upside),
-              lens: 'upside', title: 'Highest ceiling', why: 'The highest ceiling still on the board',
-            }));
+
+          // 3. Best player available, which is a different question from best
+          //    fit and the one a lot of rooms actually draft by.
+          add(byValue[0], {
+            lens: 'value',
+            title: 'Best player available',
+            why: 'The most valuable man left, whatever your roster needs',
+          });
+
+          // A ceiling only counts among players worth taking, so it is picked
+          // from the top of the board rather than from anywhere in forty.
+          // Unlike the two above, this one takes the best name NOT already
+          // suggested: "the biggest upside left to consider" stays true of
+          // whoever it lands on, where "best player available" would not.
+          if (options.length < 3) {
+            add(byValue.slice(0, 15).slice().sort((a, b) => boom(b) - boom(a))
+              .find(x => !seen[x.id]), {
+              lens: 'upside',
+              title: 'Highest ceiling',
+              why: 'The biggest upside among the best still on the board',
+            });
           }
+          // Fewer than three only when two lenses landed on the same man, and
+          // two real answers beat three with a filler among them.
 
           // Highest Fit first. The three lenses answer different questions —
           // best on the board, fills a hole, highest ceiling — and the board's

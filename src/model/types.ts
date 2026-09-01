@@ -221,7 +221,7 @@ export interface MockOption {
   goes?: number | null;
   fit: number;
   /** set only on the three shortcuts offered at your turn */
-  lens?: 'best' | 'need' | 'upside';
+  lens?: 'best' | 'need' | 'value' | 'upside';
   /** the heading, written where the facts are — "fills your hole" is a claim,
    *  and it is only true when the position is actually short */
   title?: string;

@@ -924,12 +924,26 @@ describe('the mock draft room', () => {
   });
 
   it('offers three rated shortcuts, none of them repeated on the board', () => {
-    expect(open.options.length).toBe(3);
-    // All three lenses, three different names.
-    expect(open.options.map(o => o.lens).slice().sort())
-      .toEqual(['best', 'need', 'upside']);
-    expect(new Set(open.options.map(o => o.id)).size).toBe(3);
+    // Two or three, never a repeat: when two lenses land on the same man the
+    // list gets shorter rather than padded with a worse name under a good
+    // label.
+    expect(open.options.length).toBeGreaterThanOrEqual(2);
+    expect(open.options.length).toBeLessThanOrEqual(3);
+    expect(new Set(open.options.map(o => o.id)).size).toBe(open.options.length);
+    expect(new Set(open.options.map(o => o.lens)).size).toBe(open.options.length);
     for (const o of open.options) expect(o.fit).toBeGreaterThan(0);
+
+    // The first is the best Fit on the board, not merely the first name on it:
+    // the whole app is built on that number and nothing used to be chosen by
+    // it. And "best player available" really is the most valuable man left.
+    const bestFit = open.options.find(o => o.lens === 'best')!;
+    expect(bestFit.fit).toBe(Math.max(...open.board.map(o => o.fit)));
+    const bpa = open.options.find(o => o.lens === 'value');
+    if (bpa) {
+      const top = open.board.slice().sort((a, b) =>
+        (model.marketValue(b.id)?.pts || 0) - (model.marketValue(a.id)?.pts || 0))[0];
+      expect(bpa.id).toBe(top.id);
+    }
     // Highest Fit first: the board's best player is often not the best fit for
     // YOUR roster, and showing him above a higher-scoring name read as the app
     // arguing with its own number.
