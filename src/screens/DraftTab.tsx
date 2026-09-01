@@ -142,31 +142,6 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
       {view === 'board' ? (
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* A grid, not a row. A dynasty rookie draft gives you four picks
-                and a row fits; a redraft league gives you thirteen and a row
-                runs off the side of the phone, taking the last nine with it.
-                Wrapping keeps every pick of yours visible and tappable. */}
-            {!done && m.upcoming.length ? (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(58px, 1fr))',
-                gap: 6,
-              }}>
-                {m.upcoming.map((p, i) => (
-                  <button
-                    key={p.overall}
-                    type="button"
-                    onClick={() => app.setPickSel(i)}
-                    style={{
-                      ...segChip(!!m.selPick && m.selPick.overall === p.overall),
-                      font: 'inherit', fontSize: 11.5,
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
             <div style={{ fontSize: 10.5, letterSpacing: '.02em', color: dim(0.38), padding: '0 2px' }}>
               {done
                 ? `Draft complete · ${m.picks.length} picks made · everyone below is still unrostered`
@@ -324,17 +299,6 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
       ) : null}
     </div>
   );
-}
-function segChip(active: boolean) {
-  return {
-    textAlign: 'center' as const,
-    padding: '8px 4px',
-    borderRadius: 9,
-    cursor: 'pointer',
-    border: '1px solid ' + (active ? ACCENT : 'var(--color-divider)'),
-    color: active ? ACCENT : dim(0.6),
-    background: active ? 'rgba(145,132,217,.12)' : 'transparent',
-  };
 }
 
 /** Trade-up / trade-down offers, priced off the same market as everything else. */
