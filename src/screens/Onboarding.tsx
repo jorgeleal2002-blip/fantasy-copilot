@@ -198,13 +198,10 @@ export function BootScreen({ app }: { app: App }) {
         padding: `${topPad(26)} 28px calc(var(--safe-bottom) + 60px)`, gap: 22,
       }}
     >
-      <div
-        style={{
-          width: 44, height: 44, borderRadius: '50%',
-          border: '2px solid rgba(145,132,217,.22)', borderTopColor: 'var(--color-accent)',
-          animation: 'spin 1s linear infinite',
-        }}
-      />
+      {/* The mark, not a spinner. A ring says "something is happening"; he
+          says who it is happening for, and the wait is long enough to be
+          worth filling with the app's own face. */}
+      <Mark size={72} alive />
       <div>
         <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', marginBottom: 6 }}>Reading your league</div>
         <div style={{ fontSize: 13, color: dim(0.5) }}>

@@ -5,12 +5,16 @@ import { useId } from 'react';
  * turns to mud, so the simplified sibling takes over automatically — the same
  * handoff rule the identity sheet documents.
  */
-export function Mark({ size = 44, title }: { size?: number; title?: string }) {
+export function Mark({ size = 44, title, alive }: { size?: number; title?: string; alive?: boolean }) {
   // ids have to be unique per instance or a second <Mark> steals the first's clip
   const uid = useId().replace(/:/g, '');
   const head = 'h-' + uid;
   const tache = 't-' + uid;
   const detailed = size >= 64;
+  // Grouped only when he is meant to move: an extra <g> around every mark in
+  // the app would be noise in the markup for the sake of one screen.
+  const face = alive ? 'mk-alive' : undefined;
+  const eyes = alive ? 'mk-eyes' : undefined;
 
   return (
     <svg
@@ -22,6 +26,7 @@ export function Mark({ size = 44, title }: { size?: number; title?: string }) {
       aria-hidden={title ? undefined : true}
       style={{ display: 'block', flex: 'none' }}
     >
+      <g className={face}>
       {detailed ? (
         <>
           <defs>
@@ -41,8 +46,10 @@ export function Mark({ size = 44, title }: { size?: number; title?: string }) {
           </g>
           <path d="M198 260 L240 254 L240 266 L198 270 Z" fill="#4A2C17" />
           <path d="M314 260 L272 254 L272 266 L314 270 Z" fill="#4A2C17" />
-          <ellipse cx="220" cy="284" rx="13" ry="10" fill="#2B2B33" />
-          <ellipse cx="292" cy="284" rx="13" ry="10" fill="#2B2B33" />
+          <g className={eyes}>
+            <ellipse cx="220" cy="284" rx="13" ry="10" fill="#2B2B33" />
+            <ellipse cx="292" cy="284" rx="13" ry="10" fill="#2B2B33" />
+          </g>
           <g fill="#FFFFFF">
             <use href={`#${tache}`} />
             <use href={`#${tache}`} transform="translate(512,0) scale(-1,1)" />
@@ -62,8 +69,10 @@ export function Mark({ size = 44, title }: { size?: number; title?: string }) {
             <path d="M256 288 C265 304, 273 322, 273 330 C273 335, 239 335, 239 330 C239 322, 247 304, 256 288 Z" fill="#B67846" />
             <path d="M96 110 H416 V236 Q256 268 96 236 Z" fill="#FFFFFF" />
           </g>
-          <ellipse cx="204" cy="280" rx="17" ry="14" fill="#2B2B33" />
-          <ellipse cx="308" cy="280" rx="17" ry="14" fill="#2B2B33" />
+          <g className={eyes ? eyes + ' mk-eyes-sm' : undefined}>
+            <ellipse cx="204" cy="280" rx="17" ry="14" fill="#2B2B33" />
+            <ellipse cx="308" cy="280" rx="17" ry="14" fill="#2B2B33" />
+          </g>
           <g fill="#FFFFFF">
             <use href={`#${tache}`} />
             <use href={`#${tache}`} transform="translate(512,0) scale(-1,1)" />
@@ -71,6 +80,7 @@ export function Mark({ size = 44, title }: { size?: number; title?: string }) {
           <path d="M225 148 H291 V164 L259 226 H231 L263 164 H225 Z" fill="#00205B" />
         </>
       )}
+      </g>
     </svg>
   );
 }

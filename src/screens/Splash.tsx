@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Mark } from '../ui/Mark';
 
-/** In by 420ms, held, then out — the whole thing is under a second and a half. */
-const HOLD_MS = 900;
+/** He lands, nods, blinks twice, and only then does it fade — all of it
+ *  finishing before the fade starts, so no gesture is cut off mid-way. */
+const HOLD_MS = 1150;
 const FADE_MS = 320;
 
 /**
@@ -28,7 +29,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
   return (
     <div className={'splash' + (leaving ? ' is-leaving' : '')} aria-hidden="true">
       <div className="splash-mark">
-        <Mark size={96} />
+        <Mark size={96} alive />
       </div>
       <div className="splash-word">Doctors Fantasy</div>
     </div>
