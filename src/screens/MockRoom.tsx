@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { ACCENT, GOOD, POS, POS_COLOR } from '../model/constants';
+import { inviteUrl, shareInvite } from '../model/invite';
 import { pickLabel } from '../model/math';
 import type { Pos } from '../api/types';
 import type { MockOption, MockPick, MockState, Model } from '../model/types';
@@ -43,6 +44,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
   const [pos, setPos] = useState<'ALL' | Pos>('ALL');
   const [q, setQ] = useState('');
   const [searching, setSearching] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
   const live = app.mockStarted;
   const waiting = live && shown < st.made.length;
@@ -111,19 +113,31 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
         </button>
       </header>
 
-      {/* The lobby's one job: start the thing. It goes away once it has. */}
+      {/* The lobby's job: start the thing, or bring people in first. Both go
+          away once the draft is running — inviting somebody to a board you
+          have already half drafted is not the same board any more. */}
       {!live ? (
-        <div style={{ padding: '10px 15px 0' }}>
+        <div style={{ padding: '10px 15px 0', display: 'flex', gap: 8 }}>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => { setShown(0); app.startMock(); }}
-            style={{ width: '100%', padding: '11px 0', fontSize: 13.5, borderRadius: 11 }}
+            style={{ flex: 1, padding: '11px 0', fontSize: 13.5, borderRadius: 11 }}
           >
             Start mock draft
           </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setInviting(true)}
+            style={{ flex: 'none', padding: '11px 14px', fontSize: 13.5, borderRadius: 11 }}
+          >
+            Invite
+          </button>
         </div>
       ) : null}
+
+      {inviting ? <InvitePanel app={app} m={m} onClose={() => setInviting(false)} /> : null}
 
       <MockBoard
         m={m}
@@ -347,6 +361,88 @@ function MyTeam({ st, m }: { st: MockState; m: Model }) {
         {POS.map(p => (st.shape[p] || 0) + '/' + (m.slots[p] || 0) + ' ' + p).join(' · ')}
         {' — counting what you already own'}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Bringing the league into this mock.
+ *
+ * What the link does and does not do is stated on the panel itself, because
+ * getting it wrong costs somebody a wasted evening: everyone drafts the SAME
+ * board — same pool, same bots, same order — but each in their own copy. Picks
+ * are not shared as they happen. That is not a shortcut taken here; a live
+ * room needs a server, and this app has none. What it buys is the thing that
+ * makes a mock worth arguing about afterwards: the conditions were identical,
+ * so the teams can be compared.
+ */
+function InvitePanel({ app, m, onClose }: { app: App; m: Model; onClose: () => void }) {
+  const [done, setDone] = useState('');
+  const link = (seat: number | null) =>
+    inviteUrl({ leagueId: m.league.league_id, seed: app.mockSeed, seat });
+
+  const send = async (seat: number | null, who: string) => {
+    const how = await shareInvite(link(seat), 'Mock draft · ' + m.league.name);
+    setDone(how === 'failed'
+      ? 'Could not share the link on this device.'
+      : how === 'shared' ? 'Sent to ' + who : 'Link copied for ' + who);
+  };
+
+  // Everyone but you: you are already in the room.
+  const others = m.teams.filter(t => !t.isMe);
+
+  return (
+    <div className="mock-invite" role="dialog" aria-label="Invite the league">
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 500 }}>Invite {m.league.name}</div>
+        <button type="button" className="btn btn-ghost" onClick={onClose} style={{ fontSize: 12, padding: 0 }}>
+          Close
+        </button>
+      </div>
+      <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.5), marginTop: 6, textWrap: 'pretty' }}>
+        Everyone who opens the link drafts this exact board — same players, same
+        bots, same order — from their own seat. Picks are not shared as they
+        happen: you each draft your own copy, then compare teams.
+      </div>
+
+      <button
+        type="button"
+        className="btn btn-primary"
+        onClick={() => void send(null, 'the league')}
+        style={{ width: '100%', marginTop: 11, padding: '10px 0', fontSize: 13, borderRadius: 10 }}
+      >
+        Share this board
+      </button>
+
+      {others.length ? (
+        <>
+          <div style={{
+            fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase',
+            color: dim(0.35), margin: '13px 0 4px',
+          }}>
+            Or seat someone yourself
+          </div>
+          <div className="mock-invite-list">
+            {others.map(t => (
+              <button
+                key={t.id}
+                type="button"
+                className="mock-invite-row"
+                onClick={() => void send(t.slot, t.name)}
+              >
+                <span style={{ ...ellipsis, minWidth: 0, flex: 1, textAlign: 'left' }}>{t.name}</span>
+                <span style={{ fontSize: 11, color: dim(0.4), flex: 'none' }}>
+                  {t.slot ? 'seat ' + t.slot : 'no seat'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      {done ? (
+        <div style={{ fontSize: 11.5, color: GOOD, marginTop: 10 }} role="status">{done}</div>
+      ) : null}
     </div>
   );
 }

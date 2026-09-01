@@ -5,6 +5,7 @@ import {
 } from '../api/sleeper';
 import type { LeagueBundle, SleeperLeague } from '../api/types';
 import { DRAFT_POLL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import { clearInvite, parseInvite, type Invite } from '../model/invite';
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
@@ -94,6 +95,9 @@ export function useApp() {
   /** The room opens in a lobby: an empty board, seats to claim, and a start
    *  button. Nothing is drafted until you say go. */
   const [mockStarted, setMockStarted] = useState(false);
+  /** An invite waiting to be honoured: read once from the address bar, held
+   *  until the league it names has actually finished loading. */
+  const invite = useRef<Invite | null>(null);
   const [tradeView, setTradeView] = useState<'suggested' | 'block' | 'saved'>('suggested');
   const [filter, setFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
@@ -246,11 +250,25 @@ export function useApp() {
     setAccounts(readJson<{ username: string; leagueId: string }[]>(STORAGE_ACCOUNTS, []));
     setBlocks(readJson<Record<string, string[]>>(STORAGE_BLOCK, {}));
     const saved = readJson<{ username?: string; leagueId?: string } | null>(STORAGE_SESSION, null);
+
+    // An invited mock overrides the league you last had open — the link is a
+    // request to be somewhere specific. It is taken out of the address bar
+    // immediately: an installed PWA reloads on its own, and a link that
+    // survives the reload would keep dragging you back into the same room.
+    const inv = parseInvite(window.location.search);
+    if (inv) {
+      invite.current = inv;
+      setMockSeed(inv.seed);
+      setMockSlot(inv.seat);
+      clearInvite();
+    }
+
     if (saved && saved.leagueId && saved.username) {
+      const id = inv ? inv.leagueId : saved.leagueId;
       setUsername(saved.username);
-      setLeagueId(saved.leagueId);
+      setLeagueId(id);
       setStage('app');
-      void load(saved.leagueId, saved.username);
+      void load(id, saved.username);
     } else {
       setStage('connect');
     }
@@ -306,6 +324,33 @@ export function useApp() {
     setTab('team');
     void load(id, username);
   }, [load, username]);
+
+  /**
+   * Honour a pending invite, in the two places it can become possible.
+   *
+   * A guest who has never used the app lands on the sign-in screen; once their
+   * username resolves they would normally be shown a list of their leagues,
+   * but the link already named one, so it is chosen for them. A guest who is
+   * already signed in skips straight past that, and only has to wait for the
+   * league to finish loading before the room can open.
+   */
+  useEffect(() => {
+    const inv = invite.current;
+    if (!inv) return;
+    if (stage === 'leagues') {
+      pickLeague(inv.leagueId);
+      return;
+    }
+    if (stage === 'app' && data && leagueId === inv.leagueId) {
+      invite.current = null;
+      setTab('draft');
+      setDraftView('mock');
+      setMockChoices({});
+      setMockStarted(false);
+      setMockOpen(true);
+      showToast('Same board as the friend who invited you — your own seat.');
+    }
+  }, [stage, data, leagueId, pickLeague, showToast]);
 
   /** Change league without signing out — reuses the stored username. */
   const switchLeague = useCallback(async () => {

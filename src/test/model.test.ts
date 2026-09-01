@@ -3,6 +3,7 @@ import { ELIG, PRIME, STRATS } from '../model/constants';
 import { ageCurve, ageCurveRedraft, grade, modelVal, rankScore, talentBase, talentScale } from '../model/math';
 import { marketQuery, parseMarket } from '../model/market';
 import { matchMe } from '../api/sleeper';
+import { inviteUrl, parseInvite } from '../model/invite';
 import { buildModel } from '../model/model';
 import { ownedWeights, redraftWeights, scorePlayer } from '../model/score';
 import { buildUsage, seasonUsage, type Usage } from '../model/usage';
@@ -1149,5 +1150,62 @@ describe('who may reach the mock draft board', () => {
     expect(isMockEligible(player({ active: false }))).toBe(false);
     expect(isMockEligible(player({ status: 'Inactive' }))).toBe(false);
     expect(isMockEligible(player({ search_rank: null }))).toBe(false);
+  });
+});
+
+describe('mock draft invites', () => {
+  it('round-trips a league, a seed and a seat', () => {
+    const url = inviteUrl({ leagueId: '123456', seed: 9, seat: 4 }, 'https://x.dev/app/');
+    expect(parseInvite(new URL(url).search)).toEqual({ leagueId: '123456', seed: 9, seat: 4 });
+  });
+
+  it('leaves the seat open when the link does not name one', () => {
+    const url = inviteUrl({ leagueId: '123456', seed: 9, seat: null }, 'https://x.dev/app/');
+    expect(url).not.toContain('seat=');
+    // null, not 0 or 1: the guest takes their own seat in the league
+    expect(parseInvite(new URL(url).search)!.seat).toBe(null);
+  });
+
+  it('refuses half an invite, or a junk one', () => {
+    expect(parseInvite('')).toBe(null);
+    expect(parseInvite('?mock=123456')).toBe(null);          // no seed
+    expect(parseInvite('?seed=4')).toBe(null);               // no league
+    expect(parseInvite('?mock=abc&seed=4')).toBe(null);      // league ids are numeric
+    expect(parseInvite('?mock=123&seed=0')).toBe(null);      // seeds start at 1
+    expect(parseInvite('?mock=123&seed=x')).toBe(null);
+  });
+
+  it('ignores a seat that is not a seat', () => {
+    expect(parseInvite('?mock=123&seed=2&seat=0')!.seat).toBe(null);
+    expect(parseInvite('?mock=123&seed=2&seat=nope')!.seat).toBe(null);
+  });
+
+  it('survives a link that already carries other query parameters', () => {
+    const inv = parseInvite('?utm=chat&mock=123&seed=7&seat=2');
+    expect(inv).toEqual({ leagueId: '123', seed: 7, seat: 2 });
+  });
+});
+
+describe('the board an invite promises', () => {
+  /* The whole feature rests on this: an invite sends a league, a seed and a
+     seat, and nothing else. If the same three did not rebuild the same draft,
+     two people comparing their teams afterwards would be comparing nothing. */
+  const picksOf = (seed: number, slot?: number | null) =>
+    model.runMock(seed, undefined, slot ?? undefined).made
+      .map(p => p.overall + ':' + (p.player?.id ?? ''));
+
+  it('rebuilds the same draft from the same seed', () => {
+    expect(picksOf(12)).toEqual(picksOf(12));
+    expect(picksOf(12).length).toBeGreaterThan(0);
+  });
+
+  it('and a different one from a different seed', () => {
+    expect(picksOf(12)).not.toEqual(picksOf(13));
+  });
+
+  it('holds when the guest is seated somewhere else', () => {
+    expect(picksOf(12, 3)).toEqual(picksOf(12, 3));
+    // a different seat is a different draft: you pick at different moments
+    expect(picksOf(12, 3)).not.toEqual(picksOf(12, 1));
   });
 });
