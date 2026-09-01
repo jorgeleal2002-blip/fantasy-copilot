@@ -238,7 +238,7 @@ function TeamPicker({ app, m }: { app: App; m: Model }) {
                 key={a.username}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8,
-                  background: current ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent',
+                  background: current ? 'rgba(145,132,217,.14)' : 'transparent',
                   borderRadius: 9,
                 }}
               >
@@ -292,7 +292,7 @@ function TeamPicker({ app, m }: { app: App; m: Model }) {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
                 font: 'inherit', fontSize: 13, textAlign: 'left', cursor: 'pointer',
-                background: r.isMe ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent',
+                background: r.isMe ? 'rgba(145,132,217,.14)' : 'transparent',
                 border: 0, borderRadius: 9, padding: '9px 10px', color: 'inherit',
               }}
             >

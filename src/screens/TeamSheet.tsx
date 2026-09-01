@@ -60,8 +60,8 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
       </div>
 
       <div style={{
-        border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)', borderRadius: 12, padding: '14px 13px', marginTop: 14,
-        background: 'color-mix(in srgb, var(--color-accent) 6%, transparent)',
+        border: '1px solid rgba(145,132,217,.4)', borderRadius: 12, padding: '14px 13px', marginTop: 14,
+        background: 'rgba(145,132,217,.06)',
       }}>
         <div style={{
           fontSize: 10, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--color-accent)', marginBottom: 8,

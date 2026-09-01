@@ -412,7 +412,7 @@ function Roster({ app, m }: { app: App; m: Model }) {
           <div style={{ height: 4, borderRadius: 3, background: 'rgba(233,233,237,.07)', marginTop: 9, overflow: 'hidden' }}>
             <div style={{
               height: '100%', borderRadius: 3, width: Math.round(p.q / maxQ * 100) + '%',
-              background: m.optIds.indexOf(p.id) >= 0 ? ACCENT : 'color-mix(in srgb, var(--color-accent) 35%, transparent)',
+              background: m.optIds.indexOf(p.id) >= 0 ? ACCENT : 'rgba(145,132,217,.35)',
             }} />
           </div>
         </div>

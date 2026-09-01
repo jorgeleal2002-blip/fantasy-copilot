@@ -116,7 +116,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
             {top ? reasons(top.m, pickLabel(top.goes, m.teamCount), top.pos, top.age).map(r => (
               <span key={r} style={{
                 fontSize: 11, padding: '4px 9px', borderRadius: 7,
-                background: 'color-mix(in srgb, var(--color-accent) 18%, transparent)', color: '#c9c0f0',
+                background: 'rgba(145,132,217,.18)', color: '#c9c0f0',
               }}>
                 {r}
               </span>
@@ -333,7 +333,7 @@ function segChip(active: boolean) {
     cursor: 'pointer',
     border: '1px solid ' + (active ? ACCENT : 'var(--color-divider)'),
     color: active ? ACCENT : dim(0.6),
-    background: active ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'transparent',
+    background: active ? 'rgba(145,132,217,.12)' : 'transparent',
   };
 }
 

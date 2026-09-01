@@ -74,7 +74,7 @@ button { font-family: inherit; }
 @media (hover: hover) {
   .row-tap:hover { background: #2a2c3b !important; }
   .ghost-tap:hover { background: rgba(233, 233, 237, 0.05); }
-  .accent-tap:hover { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+  .accent-tap:hover { background: rgba(145, 132, 217, 0.12); }
   .pick-tap:hover { border-color: var(--color-accent) !important; }
 }
 .row-tap:active, .ghost-tap:active, .accent-tap:active { opacity: 0.75; }
@@ -91,8 +91,8 @@ button { font-family: inherit; }
 @keyframes fadeUp { from { transform: translateY(10px); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes pop { from { transform: scale(0.96); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 35%, transparent) }
-  50% { box-shadow: 0 0 0 10px transparent }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(145, 132, 217, 0.35) }
+  50% { box-shadow: 0 0 0 10px rgba(145, 132, 217, 0) }
 }
 @keyframes spin { to { transform: rotate(360deg) } }
 
@@ -237,7 +237,7 @@ button { font-family: inherit; }
     border-radius: 10px;
   }
   .tab-btn span { font-size: 13.5px; letter-spacing: -0.01em; }
-  .tab-btn[aria-current="page"] { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+  .tab-btn[aria-current="page"] { background: rgba(145, 132, 217, 0.12); }
 }
 
 /* ── Sheets ───────────────────────────────────────────────────────────────
@@ -381,8 +381,8 @@ button { font-family: inherit; }
   border-radius: 999px;
   cursor: pointer;
   color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+  background: rgba(145, 132, 217, 0.12);
+  border: 1px solid rgba(145, 132, 217, 0.35);
 }
 .bd-claim.is-on {
   color: var(--color-bg);
@@ -410,19 +410,19 @@ button { font-family: inherit; }
   border: 1px solid transparent;
 }
 /* The column you are drafting from stays legible even when it is empty. */
-.bd-cell.is-seat { background: color-mix(in srgb, var(--color-accent) 5%, transparent); }
+.bd-cell.is-seat { background: rgba(145, 132, 217, 0.05); }
 /* A filled cell is tinted with its position's hue. The `--pos` fallback keeps
    a player with no listed position looking like a card, not a hole. */
 .bd-cell.is-filled {
   background: color-mix(in srgb, var(--pos, #8073c9) 20%, var(--color-surface));
 }
 .bd-cell.is-mine {
-  border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 20%, transparent);
+  border-color: rgba(145, 132, 217, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(145, 132, 217, 0.2);
 }
 .bd-cell.is-clock {
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  border-color: color-mix(in srgb, var(--color-accent) 50%, transparent);
+  background: rgba(145, 132, 217, 0.12);
+  border-color: rgba(145, 132, 217, 0.5);
 }
 .bd-tag {
   display: flex;
@@ -535,8 +535,8 @@ button { font-family: inherit; }
 }
 .pos-chip.is-on {
   color: var(--color-text);
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  background: rgba(145, 132, 217, 0.18);
+  border-color: rgba(145, 132, 217, 0.45);
 }
 .pos-count {
   font-size: 9px;
@@ -579,8 +579,8 @@ button { font-family: inherit; }
   flex: none;
   cursor: pointer;
   color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
+  background: rgba(145, 132, 217, 0.14);
+  border: 1px solid rgba(145, 132, 217, 0.4);
 }
 /* Off the clock the button stays visible but plainly inert — hiding it would
    move every row the moment your turn came round. */
