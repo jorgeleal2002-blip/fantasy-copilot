@@ -1,4 +1,4 @@
-import { ACCENT, GOOD, MID, POS } from '../model/constants';
+import { ACCENT, GOOD, POS } from '../model/constants';
 import { num, pickLabel } from '../model/math';
 import { reasons } from '../model/score';
 import type { DraftDeal, Model } from '../model/types';
@@ -104,7 +104,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
               </div>
             </div>
             <div style={{ textAlign: 'right', flex: 'none' }}>
-              <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.03em', color: MID }}>
+              <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.03em', color: '#c9c0f0' }}>
                 {top ? top.fit : '—'}
               </div>
               <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
@@ -116,7 +116,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
             {top ? reasons(top.m, pickLabel(top.goes, m.teamCount), top.pos, top.age).map(r => (
               <span key={r} style={{
                 fontSize: 11, padding: '4px 9px', borderRadius: 7,
-                background: 'color-mix(in srgb, var(--color-accent) 18%, transparent)', color: 'var(--color-accent-300)',
+                background: 'color-mix(in srgb, var(--color-accent) 18%, transparent)', color: '#c9c0f0',
               }}>
                 {r}
               </span>

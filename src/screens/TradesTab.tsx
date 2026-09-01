@@ -372,7 +372,7 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
     ? { background: 'rgba(142,201,168,.16)', color: GOOD }
     : o.edge < -0.04
       ? { background: 'rgba(217,160,142,.16)', color: BAD }
-      : { background: 'color-mix(in srgb, var(--color-accent) 18%, transparent)', color: 'var(--color-accent-300)' };
+      : { background: 'color-mix(in srgb, var(--color-accent) 18%, transparent)', color: MID };
 
   return (
     <div style={{

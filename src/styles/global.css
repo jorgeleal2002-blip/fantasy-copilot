@@ -414,7 +414,7 @@ button { font-family: inherit; }
 /* A filled cell is tinted with its position's hue. The `--pos` fallback keeps
    a player with no listed position looking like a card, not a hole. */
 .bd-cell.is-filled {
-  background: color-mix(in srgb, var(--pos, #4770b7) 20%, var(--color-surface));
+  background: color-mix(in srgb, var(--pos, #8073c9) 20%, var(--color-surface));
 }
 .bd-cell.is-mine {
   border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);

@@ -1,4 +1,4 @@
-import { ACCENT, BAD, GOOD, MID, PEAK, POS, POS_COLOR } from '../model/constants';
+import { ACCENT, BAD, GOOD, MID, PEAK, POS } from '../model/constants';
 import { ageCurve, grade, num } from '../model/math';
 import type { Model, RosterPlayer } from '../model/types';
 import type { App, TeamView } from '../state/useApp';
@@ -218,11 +218,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
               >
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 5 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    {/* The position's own hue, not the accent: these four labels
-                        sit stacked down one column, and in the accent they read
-                        as four alerts rather than four headings. Every other
-                        list in the app already prints a position in POS_COLOR. */}
-                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', color: POS_COLOR[p] }}>{p}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', color: ACCENT }}>{p}</span>
                     <span style={{ fontSize: 12, fontWeight: 500, color }}>{mine ? ord(mine) : '—'}</span>
                   </div>
                   <span style={{ fontSize: 10.5, color: dim(0.38) }}>best: {best ? best.name : 'not drafted'}</span>
@@ -533,11 +529,7 @@ function Assets({ app, m }: { app: App; m: Model }) {
               <div key={p}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {/* The position's own hue, not the accent: these four labels
-                        sit stacked down one column, and in the accent they read
-                        as four alerts rather than four headings. Every other
-                        list in the app already prints a position in POS_COLOR. */}
-                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', color: POS_COLOR[p] }}>{p}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', color: ACCENT }}>{p}</span>
                     <span style={{ fontSize: 12, color: dim(0.55) }}>
                       {m.have[p]} on roster · comparing your best {m.slots[p]}
                     </span>

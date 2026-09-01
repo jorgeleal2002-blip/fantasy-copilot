@@ -2,20 +2,12 @@ import type { Pos } from '../api/types';
 
 export const POS: Pos[] = ['QB', 'RB', 'WR', 'TE'];
 
-/** The accent is the mark's red, carried up the lightness scale until it can be
- *  read as type — see src/styles/tokens.css. Good and bad are unchanged. */
-export const ACCENT = '#ee6566';
+/** Palette pulled from the Nocturne accent plus the two status hues the
+ *  prototype uses for good/bad readings. */
+export const ACCENT = '#9184d9';
 export const GOOD = '#8ec9a8';
 export const BAD = '#d9a08e';
-/**
- * The middle of the good/bad scale. It used to be the accent, a pale lavender,
- * which worked only while the accent was violet: as red it would have been the
- * same hue as BAD, and the three appear in one row — a league table paints rank
- * as good, middle or bad down a single column. So the neutral is the mark's
- * OTHER colour, navy, which reads as an absence of verdict and is measurably
- * further from both ends than the lavender was.
- */
-export const MID = '#afc9f4';
+export const MID = '#c9c0f0';
 export const MUTED = 'rgba(233,233,237,.45)';
 
 /**
@@ -56,15 +48,13 @@ export const POS_COLOR: Record<Pos, string> = {
  * dark surface is too dark to be small type on it.
  */
 export const MARK_GOOD = '#3fa877';
-/** Navy, for the same reason MID is — and it measures better than the purple it
- *  replaces: worst adjacent pair ΔE 17.7 to deuteranopes against the old 16.9. */
-export const MARK_MID = '#4770b7';
+export const MARK_MID = '#8073c9';
 export const MARK_BAD = '#cc6a4e';
 
 /** Recessive: the empty part of a meter is context, not data. */
 export const TRACK = 'rgba(233,233,237,.08)';
 /** The surface a mark is painted on — used for the gap that separates marks. */
-export const MARK_GAP = '#1f2632';
+export const MARK_GAP = '#232532';
 
 /**
  * A prime is a window, not a point: inside it a player is at full value and

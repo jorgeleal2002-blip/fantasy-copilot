@@ -66,7 +66,7 @@ export const surface: CSSProperties = {
 export const heroCard: CSSProperties = {
   borderRadius: 14,
   padding: 13,
-  background: 'linear-gradient(150deg,#122f60 0%,#1f2632 62%)',
+  background: 'linear-gradient(150deg,#262a60 0%,#232532 62%)',
   position: 'relative',
   overflow: 'hidden',
 };
