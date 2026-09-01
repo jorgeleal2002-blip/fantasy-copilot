@@ -102,7 +102,7 @@ export function ConnectScreen({ app }: { app: App }) {
                     width: 26, height: 26, flex: 'none', borderRadius: '50%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 10.5, fontWeight: 600, color: 'var(--color-accent)',
-                    background: 'rgba(145,132,217,.16)',
+                    background: 'color-mix(in srgb, var(--color-accent) 16%, transparent)',
                   }}>
                     {a.username.slice(0, 2).toUpperCase()}
                   </span>
@@ -132,7 +132,7 @@ export function ConnectScreen({ app }: { app: App }) {
         disabled={app.authBusy}
         style={{
           width: '100%', minHeight: 50, borderRadius: 12,
-          border: '1px solid var(--color-accent)', background: 'rgba(145,132,217,.1)',
+          border: '1px solid var(--color-accent)', background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
           color: 'var(--color-accent)', font: "500 15px 'Inter', system-ui", cursor: 'pointer',
         }}
       >
@@ -201,7 +201,7 @@ export function BootScreen({ app }: { app: App }) {
       <div
         style={{
           width: 44, height: 44, borderRadius: '50%',
-          border: '2px solid rgba(145,132,217,.22)', borderTopColor: 'var(--color-accent)',
+          border: '2px solid color-mix(in srgb, var(--color-accent) 22%, transparent)', borderTopColor: 'var(--color-accent)',
           animation: 'spin 1s linear infinite',
         }}
       />

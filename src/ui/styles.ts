@@ -34,7 +34,7 @@ export function seg(active: boolean, size: SegSize = 'md'): CSSProperties {
     cursor: 'pointer',
     border: '1px solid ' + (active ? ACCENT : 'var(--color-divider)'),
     color: active ? ACCENT : dim(0.6),
-    background: active ? 'rgba(145,132,217,.12)' : 'transparent',
+    background: active ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'transparent',
     userSelect: 'none',
   };
 }
@@ -52,7 +52,7 @@ export function posBadge(photo: string | null): CSSProperties {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 10, fontWeight: 600, letterSpacing: '.04em',
     color: photo ? 'transparent' : ACCENT,
-    background: 'rgba(145,132,217,.14)' + (photo ? ` url(${photo}) center/cover no-repeat` : ''),
+    background: 'color-mix(in srgb, var(--color-accent) 14%, transparent)' + (photo ? ` url(${photo}) center/cover no-repeat` : ''),
   };
 }
 
@@ -66,7 +66,7 @@ export const surface: CSSProperties = {
 export const heroCard: CSSProperties = {
   borderRadius: 14,
   padding: 13,
-  background: 'linear-gradient(150deg,#262a60 0%,#232532 62%)',
+  background: 'linear-gradient(150deg,#122f60 0%,#1f2632 62%)',
   position: 'relative',
   overflow: 'hidden',
 };
@@ -74,7 +74,7 @@ export const heroCard: CSSProperties = {
 export const heroGlow: CSSProperties = {
   position: 'absolute',
   inset: 0,
-  background: 'radial-gradient(220px 120px at 88% 0%,rgba(145,132,217,.32),transparent 70%)',
+  background: 'radial-gradient(220px 120px at 88% 0%,color-mix(in srgb, var(--color-accent) 32%, transparent),transparent 70%)',
 };
 
 export const kicker: CSSProperties = {

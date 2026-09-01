@@ -1,40 +1,54 @@
-/* Nocturne design system — tokens copied verbatim from
-   project/_ds/nocturne-7f0adc69-8c0b-4834-96da-53458aca2340/styles.css.
-   This file is the source of truth for the look: retune here, never inline a hex. */
+/* Nocturne design system, re-tuned to the club's own colours.
+   Structure (the ramps, the spacing, the shadows) is Nocturne's, copied from
+   project/_ds/nocturne-7f0adc69-8c0b-4834-96da-53458aca2340/styles.css; the
+   hues are the mark's — see brand/README.md.
+   This file is the source of truth for the look: retune here, never inline a hex.
+
+   The mark is field red #C8102E on ring navy #00205B. The red is a FILL colour:
+   measured against the card surface it lands at 2.58:1, which is fine behind
+   white type and fails as type or as a 1px outline — and the accent is used as
+   both all over this app. So the accent is that red carried up the lightness
+   scale to where it can be read (4.84:1, matching the 4.71 of the purple it
+   replaces), and the ramp below is the same hue on Nocturne's own lightness
+   steps. The grounds keep their exact lightness and only change hue, from the
+   old violet 277° to the mark's navy 260°. */
 
 :root {
-  --color-bg: #161826;
-  --color-surface: #232532;
+  --color-bg: #121926;
+  --color-surface: #1f2632;
   --color-text: #e9e9ed;
-  --color-accent: #9184d9;
-  --color-accent-2: #a7a1db;
+  --color-accent: #ee6566;
+  --color-accent-2: #ff918e;
+  /** The mark's red at full strength — for fills only, never type. */
+  --color-brand-red: #c8102e;
+  --color-brand-navy: #00205b;
   --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
 
   /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
      same step of any role matches the others in visual value. */
-  --color-neutral-100: #f3f5fe;
-  --color-neutral-200: #e4e7f5;
-  --color-neutral-300: #cfd3e5;
-  --color-neutral-400: #b2b6ca;
-  --color-neutral-500: #9397ab;
-  --color-neutral-600: #75798c;
-  --color-neutral-700: #595d6c;
-  --color-neutral-800: #3f424d;
-  --color-neutral-900: #292b31;
+  --color-neutral-100: #f1f6fe;
+  --color-neutral-200: #e1e8f5;
+  --color-neutral-300: #cbd5e5;
+  --color-neutral-400: #adb8ca;
+  --color-neutral-500: #8e99ab;
+  --color-neutral-600: #707b8c;
+  --color-neutral-700: #565e6c;
+  --color-neutral-800: #3d434d;
+  --color-neutral-900: #282b31;
 
-  --color-accent-100: #f5f4ff;
-  --color-accent-200: #e7e5fe;
-  --color-accent-300: #d2cefd;
-  --color-accent-400: #b5abfc;
-  --color-accent-500: #968ae0;
-  --color-accent-600: #796cbf;
-  --color-accent-700: #5d5294;
-  --color-accent-800: #423a6a;
-  --color-accent-900: #2b2741;
+  --color-accent-100: #fff1f0;
+  --color-accent-200: #ffdedb;
+  --color-accent-300: #ffc0bc;
+  --color-accent-400: #ff918e;
+  --color-accent-500: #ee6566;
+  --color-accent-600: #cd4248;
+  --color-accent-700: #a12f34;
+  --color-accent-800: #732125;
+  --color-accent-900: #481b1b;
 
-  --color-section: #262a60;
-  --color-section-glow: #353b80;
-  --color-section-ghost: #4c5397;
+  --color-section: #122f60;
+  --color-section-glow: #1d4180;
+  --color-section-ghost: #355997;
 
   --font-heading: 'Inter', system-ui, sans-serif;
   --font-heading-weight: 500;
@@ -51,9 +65,9 @@
   --radius-md: 8px;
   --radius-lg: 14px;
 
-  --shadow-sm: 0 0 0 1px #3f424d;
-  --shadow-md: 0 0 0 1px #595d6c, 0 6px 18px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(0, 0, 0, 0.65);
+  --shadow-sm: 0 0 0 1px #3d434d;
+  --shadow-md: 0 0 0 1px #565e6c, 0 6px 18px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 0 0 1px #8e99ab, 0 16px 40px rgba(0, 0, 0, 0.65);
 }
 
 /* — buttons — the primary is an accent outline, never a fill — */
