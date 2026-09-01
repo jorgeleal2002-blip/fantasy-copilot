@@ -103,36 +103,39 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
             {status}
           </div>
         </div>
+        {/* Always reachable, drafting or not. It used to live in the lobby
+            beside Start, which put it exactly one tap out of reach: the lobby
+            has one obvious button and it is Start, and pressing it took the
+            invite off the screen for good. The reasoning behind hiding it was
+            wrong anyway — a guest opens their own copy from the same seed, so
+            what you have taken in yours never touched their board. */}
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => setInviting(v => !v)}
+          style={{ fontSize: 12, padding: 0, flex: 'none' }}
+        >
+          Invite
+        </button>
         <button
           type="button"
           className="btn btn-ghost"
           onClick={() => { setShown(0); app.rerollMock(); }}
-          style={{ fontSize: 12, padding: 0 }}
+          style={{ fontSize: 12, padding: 0, flex: 'none' }}
         >
           {live ? 'Restart' : 'Reshuffle'}
         </button>
       </header>
 
-      {/* The lobby's job: start the thing, or bring people in first. Both go
-          away once the draft is running — inviting somebody to a board you
-          have already half drafted is not the same board any more. */}
       {!live ? (
-        <div style={{ padding: '10px 15px 0', display: 'flex', gap: 8 }}>
+        <div style={{ padding: '10px 15px 0' }}>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => { setShown(0); app.startMock(); }}
-            style={{ flex: 1, padding: '11px 0', fontSize: 13.5, borderRadius: 11 }}
+            style={{ width: '100%', padding: '11px 0', fontSize: 13.5, borderRadius: 11 }}
           >
             Start mock draft
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setInviting(true)}
-            style={{ flex: 'none', padding: '11px 14px', fontSize: 13.5, borderRadius: 11 }}
-          >
-            Invite
           </button>
         </div>
       ) : null}
