@@ -415,6 +415,15 @@ button { font-family: inherit; }
    a player with no listed position looking like a card, not a hole. */
 .bd-cell.is-filled {
   background: color-mix(in srgb, var(--pos, #8073c9) 20%, var(--color-surface));
+  /* The class arrives the moment the pick does, one square at a time, so this
+     fires per pick and a run down a position reads as it happens rather than
+     appearing between glances. `backwards` and an end at `none` keep it off
+     the retained-transform trap the keyframes note above describes. */
+  animation: pickLand 320ms cubic-bezier(.2, .9, .3, 1) backwards;
+}
+@keyframes pickLand {
+  from { transform: scale(0.88); opacity: 0 }
+  to { transform: none; opacity: 1 }
 }
 .bd-cell.is-mine {
   border-color: rgba(145, 132, 217, 0.55);
@@ -423,6 +432,19 @@ button { font-family: inherit; }
 .bd-cell.is-clock {
   background: rgba(145, 132, 217, 0.12);
   border-color: rgba(145, 132, 217, 0.5);
+  /* Nothing else on the board moves between picks, and a still board reads as
+     a finished one. Opacity only — a breathing box-shadow would repaint the
+     whole grid every frame on a phone. */
+  animation: clockBreathe 1500ms ease-in-out infinite;
+}
+@keyframes clockBreathe {
+  0%, 100% { border-color: rgba(145, 132, 217, 0.5) }
+  50% { border-color: rgba(145, 132, 217, 0.95) }
+}
+.bd-live { animation: livePulse 1100ms ease-in-out infinite; }
+@keyframes livePulse {
+  0%, 100% { opacity: 1 }
+  50% { opacity: 0.2 }
 }
 .bd-tag {
   display: flex;
