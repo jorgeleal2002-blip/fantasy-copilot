@@ -5,6 +5,9 @@ import type { Usage } from './usage';
 
 export type Metrics = Record<MetricKey, number>;
 
+/** How much of a ceiling we credit to a player nobody has seen produce yet. */
+const UNSEEN = 0.6;
+
 export interface ScoreContext {
   /** 1-based index of the player among what is STILL AVAILABLE */
   idx?: number;
@@ -54,6 +57,13 @@ export function scorePlayer(
   /** Where this player comes off the board if it runs to consensus from here. */
   const board = Math.max((ctx.now || 1) - 1 + (ctx.idx || 0), 1);
 
+  // Explosiveness before any evidence: what his rank implies, plus what his age
+  // and inexperience suggest. The second half is a guess about a ceiling, not a
+  // measurement of one, and it is discounted below where nobody has seen him
+  // play — see UNSEEN.
+  const boomBase = rs * 0.45;
+  const boomGuess = (age <= 24 ? 0.42 : age <= 26 ? 0.26 : 0.08) + (exp <= 2 ? 0.12 : 0);
+
   const m: Metrics = {
     need: needScore[p.position || ''] || 0,
     talent,
@@ -70,7 +80,7 @@ export function scorePlayer(
       ? clamp(0.5 + ((ctx.pick || 0) - board) / ((ctx.pick || 0) + board) * 0.5, 0, 1)
       : 0.5,
     floor: clamp(rs * 0.7 + (exp >= 3 ? 0.3 : exp >= 1 ? 0.18 : 0.05), 0, 1),
-    boom: clamp(rs * 0.45 + (age <= 24 ? 0.42 : age <= 26 ? 0.26 : 0.08) + (exp <= 2 ? 0.12 : 0), 0, 1),
+    boom: clamp(boomBase + boomGuess, 0, 1),
     combo: 0,
     age: ctx.redraft
       ? ageCurveRedraft(p.position, p.age, talent)
@@ -83,6 +93,7 @@ export function scorePlayer(
   // NaN != null is true — one of them would poison this player's Fit app-wide.
   const fin = Number.isFinite;
   const u = ctx.use;
+  let seenBoom = false;
   if (u) {
     // Floor = the certainty they will produce: being on the field (snaps) and
     // the ball reaching them (volume). Volume lives here, not in explosiveness —
@@ -99,9 +110,10 @@ export function scorePlayer(
       const ef = fin(u.effPct) ? (u.effPct as number) : null;
       const lt = fin(u.ltrPct) ? (u.ltrPct as number) : null;
       const real = ef != null && lt != null ? ef * 0.70 + lt * 0.30 : (ef ?? lt);
-      if (real != null) m.boom = clamp(m.boom * 0.35 + real * 0.65, 0, 1);
+      if (real != null) { m.boom = clamp(m.boom * 0.35 + real * 0.65, 0, 1); seenBoom = true; }
     } else if (fin(u.tgt) && (u.tgt as number) > 0) {
       m.boom = clamp(m.boom * 0.45 + clamp((u.tgt as number) * 4, 0, 1) * 0.55, 0, 1);
+      seenBoom = true;
     }
     // Red zone: share of the chances near the goal line plus EXPECTED
     // touchdowns per game. Scored ones carry the luck with them and luck does
@@ -114,6 +126,13 @@ export function scorePlayer(
       if (fin(blend)) m.rz = blend as number;
     }
   }
+
+  // Nobody has watched this one play. The age-and-inexperience half of the
+  // ceiling is speculation, and at full strength it beat men whose ceiling had
+  // actually been measured: a rookie with no snaps scored .67 where a proven
+  // veteran's real explosiveness came back .25. Evidence should not lose to its
+  // own absence, so the guess is discounted until there is some.
+  if (!seenBoom) m.boom = clamp(boomBase + boomGuess * UNSEEN, 0, 1);
 
   // Availability and role, straight out of Sleeper's own catalog — no new data
   // to fetch. These go against the FLOOR, which is where they live: an injured

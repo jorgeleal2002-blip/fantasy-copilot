@@ -136,6 +136,26 @@ describe('fit score', () => {
       .toBe(scorePlayer(base, {}, {}, w).m.talent);
   });
 
+  it('does not let a ceiling nobody has seen beat one that was measured', () => {
+    // A 22-year-old with no snaps gets a big youth bonus on explosiveness.
+    // At full strength that guess outscored veterans whose real explosiveness
+    // had been observed and come back modest — the model rewarding the absence
+    // of evidence.
+    const rookie = { position: 'WR', age: 22, years_exp: 0, search_rank: 60 };
+    const unseen = scorePlayer(rookie, {}, {}, w).m.boom;
+    const withProof = scorePlayer(rookie, {}, { use: usageStub(0.7, 0.05) }, w).m.boom;
+    // The same player, once somebody has watched him, is judged on that.
+    expect(unseen).not.toBeCloseTo(withProof, 3);
+    // And the guess is discounted: a rank-60 rookie no longer clears .6 on
+    // speculation alone.
+    expect(unseen).toBeLessThan(0.6);
+
+    // A proven veteran with a genuinely high measured ceiling still wins.
+    const vet = { position: 'WR', age: 28, years_exp: 6, search_rank: 60 };
+    expect(scorePlayer(vet, {}, { use: usageStub(0.9, 0.9) }, w).m.boom)
+      .toBeGreaterThan(unseen);
+  });
+
   it('reshapes the weights for redraft without changing their sum', () => {
     const r = redraftWeights(w);
     const total = Object.values(r).reduce((a, b) => a + b, 0);

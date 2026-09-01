@@ -1351,6 +1351,13 @@ export function buildModel(input: ModelInput): Model {
   const scoreAny = (id: string): BoardPlayer | null => {
     const pl = players[id];
     if (!pl || POS.indexOf(pl.position as Pos) < 0) return null;
+    // One player, one number. The board scores with the draft-slot discount
+    // and this did not, so the same man came out three points apart depending
+    // on whether you were reading a list or the card you opened from it —
+    // thirty-six of the top forty disagreed. Whoever is already on the board
+    // keeps the board's score everywhere.
+    const onBoard = scored.find(x => x.id === id);
+    if (onBoard) return onBoard;
     const s = scorePlayer(pl, needScore, {
       dv: talentQ(pl, id), dvMax, stack: stackFor(pl), use: uFor(id), redraft: !isDynasty,
       rank: rankOf(id, pl),
