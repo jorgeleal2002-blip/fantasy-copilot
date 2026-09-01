@@ -340,12 +340,49 @@ export function buildModel(input: ModelInput): Model {
   const nTeams = Math.max(allStrength.length, 1);
   const posRank = {} as Record<Pos, number>;
   const posPct = {} as Record<Pos, number>;
-  const needScore = {} as Record<Pos, number>;
   POS.forEach(p => {
     posRank[p] = allStrength.filter(t => t.s[p] > myStrength[p]).length + 1;
     posPct[p] = nTeams > 1 ? (nTeams - posRank[p]) / (nTeams - 1) : 0.5;
-    needScore[p] = clamp(1 - posPct[p], 0, 1);
   });
+
+  /**
+   * Positional need, given how many at each position you already hold.
+   *
+   * Need used to be one question — "am I weak here compared to the league" —
+   * and that misses the part a draft is actually governed by. You start ONE
+   * quarterback. Once he is on the roster the second one cannot play, however
+   * badly the first ranks against the league, and ranking alone kept need at
+   * QB pinned high and kept recommending one.
+   *
+   * So the structural question comes first: how many of your starting spots at
+   * this position are still empty. The league comparison only shades what is
+   * left of it. When every spot is covered, what remains is a bench body, worth
+   * a fraction — a smaller one in redraft, where a backup plays no part in the
+   * season, than in dynasty, where he is an asset you can hold or trade.
+   */
+  const BENCH = isDynasty ? 0.5 : 0.25;
+  const needFrom = (counts: Partial<Record<Pos, number>>): Record<Pos, number> => {
+    const out = {} as Record<Pos, number>;
+    POS.forEach(p => {
+      const weak = clamp(1 - posPct[p], 0, 1);
+      const need = slots[p] || 1;
+      const open = Math.max(0, need - (counts[p] || 0));
+      out[p] = open > 0
+        ? clamp((open / need) * 0.65 + weak * 0.35, 0, 1)
+        : clamp(weak * BENCH, 0, 1);
+    });
+    return out;
+  };
+  const countPos = (ids: string[]): Record<Pos, number> => {
+    const c = {} as Record<Pos, number>;
+    POS.forEach(p => { c[p] = 0; });
+    ids.forEach(id => {
+      const pl = players[id];
+      if (pl && POS.indexOf(pl.position as Pos) >= 0) c[pl.position as Pos] += 1;
+    });
+    return c;
+  };
+  const needScore = needFrom(countPos(myIds));
 
   // ── Your roster.
   const starterIds = myRow.starters || [];
@@ -451,8 +488,12 @@ export function buildModel(input: ModelInput): Model {
     const mates = roster.filter(x => x.team === pl.team && x.id !== exclude);
     let v = 0.5;
     const isCatcher = pl.position === 'WR' || pl.position === 'TE';
-    if (isCatcher && mates.some(x => x.pos === 'QB')) v += 0.25;
-    if (pl.position === 'QB' && mates.some(x => x.pos === 'WR' || x.pos === 'TE')) v += 0.25;
+    // Owning the quarterback who throws him the ball is the strongest positive
+    // correlation this metric can express, so it reaches the top of the range
+    // rather than stopping halfway. At the old +0.25 a completed stack moved the
+    // Fit by a single point, which is not a reason to do anything.
+    if (isCatcher && mates.some(x => x.pos === 'QB')) v += 0.42;
+    if (pl.position === 'QB' && mates.some(x => x.pos === 'WR' || x.pos === 'TE')) v += 0.42;
     if (pl.position === 'RB' && mates.some(x => x.pos === 'RB')) v -= 0.22;
     if (pl.position === 'WR' && mates.filter(x => x.pos === 'WR').length >= 1) v -= 0.12;
     if (pl.position === 'TE' && mates.some(x => x.pos === 'TE')) v -= 0.12;
@@ -1094,8 +1135,16 @@ export function buildModel(input: ModelInput): Model {
       x: { id: string; raw: SleeperPlayer; pos: Pos },
       extra?: Partial<MockOption>,
     ): MockOption => {
-      const sc = scorePlayer(x.raw, needScore, {
-        dv: talentQ(x.raw, x.id), dvMax, stack: stackFor(x.raw), use: uFor(x.id), redraft: !isDynasty,
+      // What you have taken in THIS mock counts. Every player used to be scored
+      // against the roster you walked in with, so the quarterback you took in
+      // round one did not reduce the need for one in round two — the room kept
+      // offering a second — and the receiver who shares an offence with him got
+      // no credit for the pairing you had just made.
+      const mineNow = myPlayers.map(p => ({ id: p.id, pos: p.pos, team: p.team }))
+        .concat(myTeam.map(o => ({ id: o.id, pos: o.pos, team: o.team || 'FA' })));
+      const sc = scorePlayer(x.raw, needFrom(shape), {
+        dv: talentQ(x.raw, x.id), dvMax, stack: stackIn(mineNow, x.raw), use: uFor(x.id),
+        redraft: !isDynasty,
       }, w);
       return {
         id: x.id, name: playerName(x.raw), pos: x.pos, team: x.raw.team,
@@ -1236,10 +1285,13 @@ export function buildModel(input: ModelInput): Model {
         }
 
         gone.add(taken.id);
+        // Rated against the roster as it stood when you took him: now that the
+        // score reads your mock roster, counting him before rating him would
+        // have him filling his own hole and stacking with himself.
+        const opt = rate(taken);
         have[rid] = have[rid] || {};
         have[rid][taken.pos] = (have[rid][taken.pos] || 0) + 1;
         shape[taken.pos] = (shape[taken.pos] || 0) + 1;
-        const opt = rate(taken);
         myTeam.push(opt);
         made.push({ overall, round, slot, label, team: 'you', mine: true, player: opt });
         continue;

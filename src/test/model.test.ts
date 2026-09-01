@@ -1020,3 +1020,97 @@ describe('the mock draft room', () => {
     expect(one.onClock!.slot).toBe(1);
   });
 });
+
+describe('positional need is structural, not only relative', () => {
+  /** A redraft league that starts exactly one quarterback. */
+  const oneQb = (mine?: string[]) => {
+    const b = makeBundle();
+    b.league = {
+      ...b.league,
+      roster_positions: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX',
+        'BN', 'BN', 'BN', 'BN', 'BN', 'BN'],
+      settings: { ...b.league.settings, type: 0 },
+    };
+    if (mine) b.rosters = b.rosters.map(r => (r.roster_id === 1 ? { ...r, players: mine } : r));
+    return buildModel({
+      data: b,
+      usage: buildUsage(makeStats(b.players), b.players),
+      market: parseMarket(makeFantasyCalc(b.players)),
+      strat: 'balanced', boardMode: 'fa', pickSel: 0,
+    });
+  };
+
+  it('stops wanting a quarterback once the one starting spot is filled', () => {
+    const empty = oneQb([]);
+    expect(empty.slots.QB).toBe(1);
+    expect(empty.needScore.QB).toBeGreaterThan(0.9);
+
+    /* A WEAK quarterback on purpose. Signing a good one also lifts where you
+       rank at the position, which the old score already noticed — so a strong
+       one cannot tell the two ideas apart. This one leaves you last at QB and
+       still fills the only spot, which is the whole claim. */
+    const qbs = empty.scored.filter(p => p.pos === 'QB');
+    const worst = qbs[qbs.length - 1];
+    const held = oneQb([worst.id]);
+    expect(held.posPct.QB).toBeLessThan(0.35);        // still nearly last at QB
+    expect(held.needScore.QB).toBeLessThan(0.4);      // and still does not want another
+    expect(held.needScore.RB).toBeGreaterThan(0.9);   // a position short is untouched
+  });
+
+  it('drops the Fit of a second quarterback in a one-QB league', () => {
+    const empty = oneQb([]);
+    const qbs = empty.scored.filter(p => p.pos === 'QB');
+    const held = oneQb([qbs[qbs.length - 1].id]);
+    const best = qbs[0];
+    const after = held.scored.find(p => p.id === best.id)!;
+    expect(after.fit).toBeLessThan(best.fit - 5);
+  });
+});
+
+describe('the mock reads the roster you are building in it', () => {
+  /* A redraft league starting one QB, and an empty roster, so taking a
+     quarterback in the mock genuinely closes the only spot there is. In the
+     default fixture — dynasty superflex, two QB spots already covered — the
+     score correctly does not move, which is why this needs its own league. */
+  const oneQbEmpty = () => {
+    const b = makeBundle();
+    b.league = {
+      ...b.league,
+      roster_positions: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX',
+        'BN', 'BN', 'BN', 'BN', 'BN', 'BN'],
+      settings: { ...b.league.settings, type: 0 },
+    };
+    b.rosters = b.rosters.map(r => (r.roster_id === 1 ? { ...r, players: [] } : r));
+    return buildModel({
+      data: b,
+      usage: buildUsage(makeStats(b.players), b.players),
+      market: parseMarket(makeFantasyCalc(b.players)),
+      strat: 'balanced', boardMode: 'fa', pickSel: 0,
+    });
+  };
+
+  it('stops offering a position you just filled, and credits a stack', () => {
+    const model = oneQbEmpty();
+    const s0 = model.runMock(7);
+    const first = s0.onClock!.overall;
+    const qb = s0.board.find(o => o.pos === 'QB')!;
+    expect(qb).toBeTruthy();
+
+    const s1 = model.runMock(7, { [first]: qb.id });
+
+    // A quarterback still on both boards is worth less once you hold one.
+    const both = s0.board.filter(o => o.pos === 'QB' && o.id !== qb.id)
+      .find(o => s1.board.some(y => y.id === o.id));
+    if (both) {
+      const after = s1.board.find(y => y.id === both.id)!;
+      expect(after.fit).toBeLessThan(both.fit);
+    }
+
+    // A pass catcher who shares his NFL team is worth more.
+    const mate = s0.board.find(o => (o.pos === 'WR' || o.pos === 'TE') && o.team === qb.team);
+    if (mate) {
+      const after = s1.board.find(y => y.id === mate.id);
+      if (after) expect(after.fit).toBeGreaterThan(mate.fit);
+    }
+  });
+});
