@@ -87,6 +87,25 @@ async function send(url: string, method: string, body?: unknown): Promise<unknow
  * the console's editor and never published. Shared with the connection check
  * so the two can never disagree about what a refusal means.
  */
+/**
+ * The rules the database needs, kept here so the app can hand them over.
+ *
+ * They live in the README too, and a person stuck on this is on a phone,
+ * inside a console, three taps from anywhere they could read a README. Put
+ * them where the failure is and the fix is a paste away.
+ */
+export const ROOM_RULES = `{
+  "rules": {
+    "rooms": {
+      "$room": {
+        ".read": true,
+        ".write": true,
+        ".validate": "newData.hasChildren(['seed','leagueId'])"
+      }
+    }
+  }
+}`;
+
 export function liveReason(e: unknown, what: string): string {
   const msg = String((e as Error)?.message || e);
   if (/40[13]/.test(msg)) {

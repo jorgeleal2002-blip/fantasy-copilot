@@ -1,4 +1,4 @@
-import { checkLive, liveEnabled, type LiveCheck } from '../api/live';
+import { ROOM_RULES, checkLive, liveEnabled, type LiveCheck } from '../api/live';
 import { lastSound, setSoundOn, soundDetail, soundOn, stopBootSound, testSound } from '../ui/boot-sound';
 import { armSfx, hasClip, loadSfxClips, playSfx, reloadSfxClips, setSfxOn, sfxOn, sfxState, type SfxName } from '../ui/sfx';
 import { MAX_CLIP, dropClip, putClip } from '../ui/sfx-clips';
@@ -644,6 +644,41 @@ function RoomCheck() {
           ) : result.detail}
         </div>
       ) : null}
+
+      {/* The fix itself, at the moment it is needed. Anyone reading this is on
+          a phone inside a console, several taps from anywhere they could go and
+          look the rules up — so the rules come to them. */}
+      {result && !result.ok && result.why === 'rules' ? <RulesToCopy /> : null}
+    </div>
+  );
+}
+
+/** The rules, ready to paste, with the one button that matters after it. */
+function RulesToCopy() {
+  const [copied, setCopied] = useState('');
+  return (
+    <div style={{ marginTop: 9 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ fontSize: 11, color: dim(0.5) }}>Paste these, then press Publish.</div>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => {
+            navigator.clipboard?.writeText(ROOM_RULES)
+              .then(() => setCopied('Copied.'))
+              .catch(() => setCopied('Could not copy — select the text below.'));
+          }}
+          style={{ flex: 'none', borderRadius: 9, padding: '5px 10px', fontSize: 11.5 }}
+        >
+          Copy
+        </button>
+      </div>
+      <pre style={{
+        margin: '7px 0 0', padding: '9px 10px', borderRadius: 9, overflowX: 'auto',
+        background: 'rgba(242,253,254,.05)', border: '1px solid var(--color-divider)',
+        fontSize: 10.5, lineHeight: 1.45, color: dim(0.7),
+      }}>{ROOM_RULES}</pre>
+      {copied ? <div style={{ fontSize: 11, color: dim(0.5), marginTop: 5 }}>{copied}</div> : null}
     </div>
   );
 }
