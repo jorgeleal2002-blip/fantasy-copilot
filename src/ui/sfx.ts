@@ -68,7 +68,15 @@ function audio(): { c: AudioContext; out: GainNode } | null {
       return null;
     }
     bus = ctx.createGain();
-    bus.gain.value = 0.55;
+    /* Measured, not turned up by feel. Rendering a room at real speed with the
+     * loud ones deliberately next to each other: at 0.55 the whole run peaked
+     * at 0.66 and left a third of the scale unused, which on a phone speaker in
+     * a room with other people in it is a sound you have to be listening for.
+     * At 0.8 it peaks at 0.885 with nothing clipped and the limiter shaving
+     * under a decibel off the single loudest moment — which is the one job a
+     * limiter has. Past that it starts doing real work and the loud sounds stop
+     * being louder than the quiet ones, so this is where it stops. */
+    bus.gain.value = 0.8;
     /* Insurance, not an effect. Measured one at a time nothing here comes near
      * full scale — the loudest single sample in the set is 0.57 — and a pick
      * lands every 420ms, by which point a boom has decayed to almost nothing.
