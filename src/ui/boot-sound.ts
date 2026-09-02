@@ -110,6 +110,44 @@ export function lastSound(): { outcome: SoundOutcome; at: number } | null {
 const why = (e: DOMException | undefined): SoundOutcome =>
   (e?.name === 'NotAllowedError' ? 'blocked' : 'nofile');
 
+/** Detail behind a failure, kept for the line in Settings. */
+let failNote = '';
+export const soundDetail = () => failNote;
+
+/**
+ * The audio, fetched once and held in memory.
+ *
+ * Handing a URL to an <audio> element makes it fetch on its own terms: byte
+ * ranges, its own cache rules, its own path through the service worker. That
+ * is three ways for 25 KB to not arrive, and the element reports every one of
+ * them as the same useless "cannot play".
+ *
+ * A plain fetch has none of that. The file comes back as one ordinary
+ * response, becomes a blob URL, and the element is handed something local that
+ * cannot fail to load. It also fails LOUDLY: a status code is a real answer,
+ * where a media element only ever shrugs.
+ */
+let srcReady: Promise<string> | null = null;
+
+function source(): Promise<string> {
+  if (srcReady) return srcReady;
+  srcReady = fetch(bootUrl)
+    .then(res => {
+      if (!res.ok) throw new Error('http ' + res.status);
+      return res.blob();
+    })
+    .then(blob => {
+      if (!blob.size) throw new Error('empty');
+      return URL.createObjectURL(blob);
+    })
+    .catch(e => {
+      // Fall back to letting the element try for itself rather than giving up.
+      failNote = 'fetch: ' + (e as Error).message;
+      return bootUrl;
+    });
+  return srcReady;
+}
+
 /** Try it, and if the browser says no, wait for the first touch and try then. */
 function start(): void {
   if (starting || typeof Audio === 'undefined') return;
@@ -122,7 +160,7 @@ function start(): void {
   setTimeout(() => { starting = false; }, 0);
   askToBeHeard();
 
-  const el = playing ?? new Audio(bootUrl);
+  const el = playing ?? new Audio();
   el.preload = 'auto';
   playing = el;
   try { el.currentTime = 0; } catch { /* nothing loaded yet */ }
@@ -130,7 +168,12 @@ function start(): void {
   const disarm = () => EVENTS.forEach(e => window.removeEventListener(e, onGesture));
   const onGesture = () => {
     disarm();
-    void el.play().then(() => note('played')).catch((e: DOMException) => note(why(e)));
+    void source().then(url => { if (!el.src) el.src = url; return el.play(); })
+      .then(() => note('played'))
+      .catch((e: DOMException) => {
+        note(why(e));
+        if (e?.name !== 'NotAllowedError') failNote = failNote || ('play: ' + (e?.name || e));
+      });
   };
 
   /* Armed BEFORE the attempt, not after it fails.
@@ -141,9 +184,13 @@ function start(): void {
    * session. Arming first costs nothing — a successful play disarms it. */
   EVENTS.forEach(ev => window.addEventListener(ev, onGesture, { once: true, passive: true }));
 
-  void el.play().then(() => { disarm(); note('played'); }).catch((e: DOMException) => {
+  void source().then(url => {
+    if (!el.src) el.src = url;
+    return el.play();
+  }).then(() => { disarm(); note('played'); }).catch((e: DOMException) => {
     // Held back, not lost: the first touch of any kind plays it.
     note(e?.name === 'NotAllowedError' ? 'waiting' : why(e));
+    if (e?.name !== 'NotAllowedError') failNote = failNote || ('play: ' + (e?.name || e));
   });
 }
 
@@ -189,11 +236,14 @@ export type SoundResult = 'ok' | 'blocked' | 'nofile';
 
 export function testSound(): Promise<SoundResult> {
   askToBeHeard();
-  const el = playing ?? new Audio(bootUrl);
+  const el = playing ?? new Audio();
   playing = el;
   try { el.currentTime = 0; } catch { /* nothing loaded yet */ }
-  return el.play().then(() => { note('played'); return 'ok' as const; }).catch((e: DOMException) => {
+  return source().then(url => { if (!el.src) el.src = url; return el.play(); })
+    .then(() => { note('played'); return 'ok' as const; })
+    .catch((e: DOMException) => {
     note(why(e));
+    if (e?.name !== 'NotAllowedError') failNote = failNote || ('play: ' + (e?.name || e));
     /* The reason matters, and collapsing every rejection into "blocked" sent
      * me hunting the wrong fault for an hour. A browser refusing autoplay
      * throws NotAllowedError; a file that never arrived throws

@@ -1,5 +1,5 @@
 import { liveEnabled } from '../api/live';
-import { lastSound, setSoundOn, soundOn, stopBootSound, testSound } from '../ui/boot-sound';
+import { lastSound, setSoundOn, soundDetail, soundOn, stopBootSound, testSound } from '../ui/boot-sound';
 import { ACCENT, BAD, GOOD, METRIC_LABEL, MID, STRATS, StratKey } from '../model/constants';
 import { clamp } from '../model/math';
 import type { Model } from '../model/types';
@@ -419,7 +419,10 @@ function SoundToggle() {
             : l.outcome === 'off' ? 'skipped, the switch above is off'
               : l.outcome === 'blocked' ? 'the browser refused it'
                 : 'the sound file did not load';
-        return 'Last attempt: ' + text + '.';
+        // The raw reason, when there is one — a status code or an error name
+        // is the difference between fixing this and guessing at it again.
+        const d = soundDetail();
+        return 'Last attempt: ' + text + '.' + (d && l.outcome === 'nofile' ? ' (' + d + ')' : '');
       })()}
     </div>
     </div>
