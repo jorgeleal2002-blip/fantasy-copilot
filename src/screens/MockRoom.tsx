@@ -195,7 +195,9 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
         </div>
       ) : null}
 
-      {inviting ? <InvitePanel app={app} m={m} onClose={() => setInviting(false)} /> : null}
+      {inviting ? (
+        <InvitePanel app={app} m={m} finished={live && st.done && !waiting} onClose={() => setInviting(false)} />
+      ) : null}
 
       <MockBoard
         m={m}
@@ -442,7 +444,12 @@ function MyTeam({ st, m }: { st: MockState; m: Model }) {
  * makes a mock worth arguing about afterwards: the conditions were identical,
  * so the teams can be compared.
  */
-function InvitePanel({ app, m, onClose }: { app: App; m: Model; onClose: () => void }) {
+function InvitePanel({ app, m, finished, onClose }: {
+  app: App; m: Model;
+  /** the board has been drafted all the way out — see the share button below */
+  finished: boolean;
+  onClose: () => void;
+}) {
   const [done, setDone] = useState('');
   const [opening, setOpening] = useState(false);
   /* No seat in the link any more. It used to be able to name one — the panel
@@ -480,9 +487,9 @@ function InvitePanel({ app, m, onClose }: { app: App; m: Model; onClose: () => v
           ? 'Two ways in. A room puts everybody in one draft, picking in turn. '
             + 'Sharing the board sends the same players and the same bots to '
             + 'each of you to draft alone, and you compare teams after.'
-          : 'Everyone who opens the link drafts this exact board — same players, '
-            + 'same bots, same order — from their own seat. Picks are not shared '
-            + 'as they happen: you each draft your own copy, then compare teams.'}
+          : 'When this board is drafted out you can send it on. Whoever opens the '
+            + 'link gets the same players, the same bots and the same order, drafts '
+            + 'it from their own seat, and then the two teams can be compared.'}
       </div>
 
       {app.liveOn ? (
@@ -523,14 +530,28 @@ function InvitePanel({ app, m, onClose }: { app: App; m: Model; onClose: () => v
         </>
       ) : null}
 
-      <button
-        type="button"
-        className="btn btn-secondary"
-        onClick={() => void send('the league')}
-        style={{ width: '100%', marginTop: app.liveOn ? 0 : 11, padding: '10px 0', fontSize: 13, borderRadius: 10 }}
-      >
-        Share this board
-      </button>
+      {/* Only once it is drafted.
+          Handing the board out beforehand is an invitation to go and draft
+          alone, which is the thing a room replaced. Handing it out at the end
+          is the other thing entirely: here is what I did, do it yourself off
+          the same players and the same bots, and let us compare. That is worth
+          a button, and it is worth it THEN. */}
+      {finished ? (
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => void send('the league')}
+          style={{ width: '100%', marginTop: app.liveOn ? 0 : 11, padding: '10px 0', fontSize: 13, borderRadius: 10 }}
+        >
+          Share this board
+        </button>
+      ) : (
+        <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.4), marginTop: app.liveOn ? 0 : 11, textWrap: 'pretty' }}>
+          Once the board is drafted out, this is where you send it — the same
+          players and the same bots, for somebody else to draft against, and a
+          team to hold yours up next to.
+        </div>
+      )}
 
       {done ? (
         <div style={{ fontSize: 11.5, color: GOOD, marginTop: 10 }} role="status">{done}</div>

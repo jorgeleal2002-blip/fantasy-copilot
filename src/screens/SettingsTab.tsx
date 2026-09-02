@@ -1,5 +1,4 @@
 import { ROOM_RULES, checkLive, liveEnabled, type LiveCheck } from '../api/live';
-import { lastSound, setSoundOn, soundDetail, soundOn, stopBootSound, testSound } from '../ui/boot-sound';
 import { armSfx, hasClip, loadSfxClips, playSfx, reloadSfxClips, setSfxOn, sfxOn, sfxState, type SfxName } from '../ui/sfx';
 import { MAX_CLIP, dropClip, putClip } from '../ui/sfx-clips';
 import { ACCENT, BAD, GOOD, METRIC_LABEL, MID, STRATS, StratKey } from '../model/constants';
@@ -74,8 +73,6 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           Sign out
         </button>
       </div>
-
-      <SoundToggle />
 
       <DraftSoundToggle />
 
@@ -340,96 +337,6 @@ function Row({ label, value, bad }: { label: string; value: string; bad?: boolea
   );
 }
 
-
-/**
- * The opening sound, and the way out of it.
- *
- * Thirteen seconds on every launch is a lot to hand somebody with no way to
- * stop it, and the person who asked for the sound is not necessarily everyone
- * who opens the app. Turning it off silences whatever is playing right now as
- * well as every launch after — a switch that only takes effect next time reads
- * as a broken switch.
- */
-function SoundToggle() {
-  const [on, setOn] = useState(soundOn);
-  const [tried, setTried] = useState('');
-  return (
-    <div>
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13 }}>Sound on open</div>
-        <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 2 }}>
-          Plays when the app loads, or at your first tap if the browser holds it back.
-        </div>
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        aria-label="Sound on open"
-        onClick={() => {
-          const next = !on;
-          setOn(next);
-          setSoundOn(next);
-          if (!next) stopBootSound();
-        }}
-        className={'btn ' + (on ? 'btn-primary' : 'btn-secondary')}
-        style={{ flex: 'none', borderRadius: 10, minWidth: 62, minHeight: 34 }}
-      >
-        {on ? 'On' : 'Off'}
-      </button>
-    </div>
-
-    {/* A tap is a gesture, so this cannot be refused by the autoplay rules.
-        Silence here means the phone or the file, not the browser. */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 9 }}>
-      <button
-        type="button"
-        className="btn btn-secondary"
-        onClick={() => {
-          setTried('…');
-          void testSound().then(r => setTried(
-            r !== 'ok'
-              ? (r === 'blocked'
-                ? 'The browser held it back. Reload and tap anywhere.'
-                : 'The sound file did not load. Close the app fully and reopen it.')
-              // The test ignores the switch, so it plays while the app stays
-              // quiet on open — which is a confusing pair unless it is said.
-              : on
-                ? 'Playing. If you hear nothing, check the side switch and the volume.'
-                : 'Playing — but "Sound on open" is Off, so it stays quiet at launch.',
-          ));
-        }}
-        style={{ flex: 'none', borderRadius: 10, minHeight: 34, fontSize: 12 }}
-      >
-        Test sound
-      </button>
-      {tried ? (
-        <div style={{ fontSize: 11.5, color: dim(0.5), minWidth: 0 }}>{tried}</div>
-      ) : null}
-    </div>
-
-    {/* What happened the last time it tried, on its own, without anybody
-        watching. This is the line that ends an argument about why it is
-        silent — it is the app's own account rather than a guess. */}
-    <div style={{ fontSize: 11, color: dim(0.38), marginTop: 7 }}>
-      {(() => {
-        const l = lastSound();
-        if (!l) return 'Last attempt: none recorded yet.';
-        const text = l.outcome === 'played' ? 'it played'
-          : l.outcome === 'waiting' ? 'held back, waiting for a tap'
-            : l.outcome === 'off' ? 'skipped, the switch above is off'
-              : l.outcome === 'blocked' ? 'the browser refused it'
-                : 'the sound file did not load';
-        // The raw reason, when there is one — a status code or an error name
-        // is the difference between fixing this and guessing at it again.
-        const d = soundDetail();
-        return 'Last attempt: ' + text + '.' + (d && l.outcome === 'nofile' ? ' (' + d + ')' : '');
-      })()}
-    </div>
-    </div>
-  );
-}
 
 /**
  * The draft room's own noises, which are a different question.
