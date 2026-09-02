@@ -375,6 +375,9 @@ export interface Model {
   me: { id: string; name: string; teamName: string; avatar: string | null; initials: string };
 
   isDynasty: boolean;
+  /** what the roster on screen is called — empty when there is no team here.
+   *  Taken from that roster's owner, never from the signed-in account. */
+  myTeamName: string;
   sflx: boolean;
   teamCount: number;
   rounds: number;

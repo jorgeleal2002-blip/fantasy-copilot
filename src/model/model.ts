@@ -105,6 +105,18 @@ export function buildModel(input: ModelInput): Model {
   const myIds = (myRow.players || []).slice();
   /** True when the account is in this league at all. */
   const foundMyTeam = !!myRow.roster_id;
+  /**
+   * What the team on screen is called.
+   *
+   * Off the ROSTER being shown, not off the signed-in account. Those are the
+   * same manager most of the time and deliberately are not always: this league
+   * can be told by hand which roster is yours, because plenty of people are in
+   * one under a different handle than the one they signed in with — and a team
+   * shared with a co-owner is named after neither of you in particular. Reading
+   * the account's own metadata would put one person's team name over another
+   * person's players.
+   */
+  const myTeamName = foundMyTeam ? teamName(myRow.owner_id) : '';
   const pickRound: Record<string, number> = {};
   // By roster, not by who clicked the button: a co-owner's picks are stamped
   // with their own id, and either of you might have made any of them.
@@ -1564,7 +1576,7 @@ export function buildModel(input: ModelInput): Model {
     pickAssets, myPickList, upcoming, selPick,
     nextOverall, myRound, myPickInRound, myNextOverall, mySlot,
     offers, blockOffers,
-    bestDeals, leagueRows, leagueHasRosters, foundMyTeam, multInfo,
+    bestDeals, leagueRows, leagueHasRosters, foundMyTeam, myTeamName, multInfo,
     allFits, searchIndex, qDiverge, wUsed: w,
     marketCount: mk ? Object.keys(mk.players).length : 0,
     snake: !!(d.draft && d.draft.type === 'snake'),

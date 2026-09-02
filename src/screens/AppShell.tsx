@@ -11,12 +11,16 @@ import { TeamSheet } from './TeamSheet';
 import { TeamTab } from './TeamTab';
 import { TradesTab } from './TradesTab';
 
-const HEADER: Record<Tab, { kicker: (m: Model) => string; title: string }> = {
-  team: { kicker: m => m.league.name, title: 'Your team' },
-  trades: { kicker: () => 'Trade engine', title: 'Suggested trades' },
-  draft: { kicker: m => m.league.name, title: 'Draft AI' },
-  league: { kicker: m => m.league.name, title: 'The league' },
-  settings: { kicker: () => 'Account', title: 'Settings' },
+const HEADER: Record<Tab, { kicker: (m: Model) => string; title: (m: Model) => string }> = {
+  /* Your own team is called something, and it is the one screen in here where
+     the generic word was standing in for a name you chose. The league keeps the
+     line above it, so nothing is lost. It falls back where there is nothing to
+     fall forward to: an account that is not in this league has no team to name. */
+  team: { kicker: m => m.league.name, title: m => m.myTeamName || 'Your team' },
+  trades: { kicker: () => 'Trade engine', title: () => 'Suggested trades' },
+  draft: { kicker: m => m.league.name, title: () => 'Draft AI' },
+  league: { kicker: m => m.league.name, title: () => 'The league' },
+  settings: { kicker: () => 'Account', title: () => 'Settings' },
 };
 
 const ICONS: Record<Tab, JSX.Element> = {
@@ -74,7 +78,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
             {HEADER[app.tab].kicker(model)}
           </div>
           <div style={{ fontSize: 19, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 2, ...ellipsis }}>
-            {HEADER[app.tab].title}
+            {HEADER[app.tab].title(model)}
           </div>
         </div>
         <button

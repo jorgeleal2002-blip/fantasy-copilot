@@ -1455,3 +1455,38 @@ describe('what the draft room shouts, and how often', () => {
     expect(count('tick') / made.length).toBeGreaterThan(0.5);
   });
 });
+
+describe('naming the team on screen', () => {
+  const build = (myRosterId?: number, bundle = makeBundle()) => buildModel({
+    data: bundle,
+    usage: buildUsage(makeStats(bundle.players), bundle.players),
+    market: parseMarket(makeFantasyCalc(bundle.players)),
+    strat: 'balanced', boardMode: 'rookies', pickSel: 0, myRosterId,
+  });
+
+  it('is the name the manager gave the team, not the account handle', () => {
+    const m = build();
+    expect(m.myTeamName).toBe('Sam Presti');
+    expect(m.foundMyTeam).toBe(true);
+  });
+
+  /* The point of taking it off the ROSTER rather than off the signed-in
+   * account. Plenty of people are in a league under a different handle than
+   * the one they signed in with, and this league can be told which roster is
+   * theirs by hand — reading the account's own metadata would print one
+   * person's team name over another person's players. */
+  it('follows a roster chosen by hand, and does not follow the account', () => {
+    const m = build(4);
+    expect(m.myTeamName).toBe('Rocket');
+    expect(m.me.teamName).toBe('Sam Presti');
+    expect(m.myTeamName).not.toBe(m.me.teamName);
+  });
+
+  it('is empty when the account has no team here, so the screen keeps its own word', () => {
+    const b = makeBundle();
+    b.rosters = b.rosters.map(r => ({ ...r, owner_id: 'nobody-' + r.roster_id, co_owners: [] }));
+    const m = build(undefined, b);
+    expect(m.foundMyTeam).toBe(false);
+    expect(m.myTeamName).toBe('');
+  });
+});
