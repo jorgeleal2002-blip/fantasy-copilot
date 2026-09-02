@@ -389,7 +389,9 @@ function SoundToggle() {
           void testSound().then(r => setTried(
             r === 'ok'
               ? 'Playing. If you hear nothing, check the side switch and the volume.'
-              : 'The browser refused it. Reload and tap anywhere.',
+              : r === 'blocked'
+                ? 'The browser held it back. Reload and tap anywhere.'
+                : 'The sound file did not load. Close the app fully and reopen it.',
           ));
         }}
         style={{ flex: 'none', borderRadius: 10, minHeight: 34, fontSize: 12 }}

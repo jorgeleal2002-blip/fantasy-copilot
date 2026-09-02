@@ -62,6 +62,23 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  /* Media asks for byte ranges, and this cache cannot serve them.
+   *
+   * An <audio> element does not fetch a file, it asks for a slice of one, and
+   * two things then go wrong here. `caches.match` ignores the Range header, so
+   * a cached whole file comes back as a 200 to a request that asked for part
+   * of one — which Safari refuses for media. And `cache.put` THROWS on a 206,
+   * so storing the network's reply rejects, the rejection escapes into
+   * respondWith, and the request fails outright rather than falling back.
+   *
+   * That is what silenced the opening sound: the file never loaded, so play()
+   * was rejected for an unsupported source, which looks from the outside
+   * exactly like a browser blocking autoplay.
+   *
+   * A range request is small, it only happens while something is playing, and
+   * it is not what this cache exists for. It goes straight to the network. */
+  if (request.headers.has('range')) return;
+
   // Hashed filenames can never go stale, so serving them from the cache is
   // safe and keeps the shell rendering when the network is gone.
   const url = new URL(request.url);
@@ -70,9 +87,15 @@ self.addEventListener('fetch', event => {
       const hit = await caches.match(request);
       if (hit) return hit;
       const res = await fetch(request);
-      if (res.ok) {
-        const cache = await caches.open(CACHE);
-        await cache.put(request, res.clone());
+      // Only a complete reply may be stored: `cache.put` rejects a 206, and an
+      // unhandled rejection in here fails the request instead of the cache.
+      if (res.ok && res.status === 200) {
+        try {
+          const cache = await caches.open(CACHE);
+          await cache.put(request, res.clone());
+        } catch {
+          /* out of quota, or a response that cannot be stored — serve it anyway */
+        }
       }
       return res;
     })());

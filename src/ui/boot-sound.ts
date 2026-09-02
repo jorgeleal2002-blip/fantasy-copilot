@@ -97,10 +97,18 @@ export function stopBootSound(): void {
  * gesture — so if this is silent too the problem is the device or the file, and
  * if it plays, the answer is that the launch attempt was refused.
  */
-export function testSound(): Promise<'ok' | 'blocked'> {
+export type SoundResult = 'ok' | 'blocked' | 'nofile';
+
+export function testSound(): Promise<SoundResult> {
   askToBeHeard();
   const el = playing ?? new Audio(bootUrl);
   playing = el;
-  el.currentTime = 0;
-  return el.play().then(() => 'ok' as const).catch(() => 'blocked' as const);
+  try { el.currentTime = 0; } catch { /* nothing loaded yet */ }
+  return el.play().then(() => 'ok' as const).catch((e: DOMException) => {
+    /* The reason matters, and collapsing every rejection into "blocked" sent
+     * me hunting the wrong fault for an hour. A browser refusing autoplay
+     * throws NotAllowedError; a file that never arrived throws
+     * NotSupportedError, and reads identically from the outside. */
+    return e?.name === 'NotAllowedError' ? ('blocked' as const) : ('nofile' as const);
+  });
 }
