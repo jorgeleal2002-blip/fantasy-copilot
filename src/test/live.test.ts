@@ -127,6 +127,28 @@ describe('what the client sends', () => {
     expect(calls[0].body).toEqual({ 4: { id: 'u2', name: 'Konoha' } });
   });
 
+  /**
+   * Restart is a local button everywhere else — a new seed, no picks, back to
+   * the lobby — and in a room all three of those live in the database. Setting
+   * the local three did nothing at all: measured in the browser, eleven picks
+   * became zero on your own and stayed a draft in progress in a room.
+   */
+  it('un-decides everything the room had decided', async () => {
+    const live = await load();
+    await live.restartRoom('ABC123', 4242);
+    expect(calls[0].method).toBe('PATCH');
+    expect(calls[0].url).toContain('/rooms/ABC123.json');
+    expect(calls[0].body).toEqual({ seed: 4242, picks: null, started: false });
+  });
+
+  /* The seats stay. Restarting is re-running this draft with these people, not
+   * emptying the room and asking everybody to sit down again. */
+  it('and leaves everybody in their chairs', async () => {
+    const live = await load();
+    await live.restartRoom('ABC123', 9);
+    expect(Object.keys(calls[0].body as object)).not.toContain('seats');
+  });
+
   it('addresses a pick by its overall number, so a resend is idempotent', async () => {
     const live = await load();
     await live.pushPick('ABC123', 17, 'p99');

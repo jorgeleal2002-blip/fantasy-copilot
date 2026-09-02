@@ -148,6 +148,25 @@ export async function startRoom(id: string) {
 }
 
 /**
+ * Start it over, for everyone.
+ *
+ * Restart is a local button everywhere else — a new seed, no picks, back to
+ * the lobby — and in a room all three of those live in the database, so
+ * pressing it did nothing at all and the draft you were stuck in stayed stuck.
+ * Everything the room decides has to be un-decided here.
+ *
+ * The SEATS stay. Restarting is re-running this draft with these people, not
+ * emptying the room and asking everybody to sit down again.
+ */
+export async function restartRoom(id: string, seed: number) {
+  await send(LIVE_URL + '/rooms/' + encodeURIComponent(id) + '.json', 'PATCH', {
+    seed,
+    picks: null,
+    started: false,
+  });
+}
+
+/**
  * Follow a room until you stop.
  *
  * The database streams server-sent events: a `put` carrying the whole room on

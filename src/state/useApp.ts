@@ -7,7 +7,7 @@ import type { LeagueBundle, PosFilter, SleeperLeague } from '../api/types';
 import { DRAFT_POLL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
   EMPTY_ROOM, claimSeat, createRoom as createRoomAt, liveEnabled, liveReason, newRoomId,
-  pushPick, readRoom, startRoom, watchRoom, type Room,
+  pushPick, readRoom, restartRoom, startRoom, watchRoom, type Room,
 } from '../api/live';
 import {
   ROOM_LEN, cleanRoomCode, clearInvite, isRoomCode, parseInvite, roomCodeProblem, type Invite,
@@ -760,7 +760,28 @@ export function useApp() {
     connectUser, pickLeague, switchLeague, logout, refreshAll, refreshPicks, retry,
     setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
     setTeamView, setDraftView, setTradeView, setFilter,
-    rerollMock: () => { setMockSeed(x => x + 1); setMockChoices({}); setMockStarted(false); },
+    /**
+     * Start over.
+     *
+     * In a room the seed, the picks and whether it has begun all live in the
+     * database, so setting the local three did nothing — measured: eleven
+     * picks became zero on your own and stayed a draft in progress in a room,
+     * while the reveal replayed from the top, which is what it looked like
+     * when it "glitched". A room is restarted for everybody or not at all.
+     */
+    rerollMock: () => {
+      if (roomId) {
+        void restartRoom(roomId, Math.floor(Math.random() * 1e9) + 1)
+          .catch(e => {
+            setRoomError(liveReason(e, 'restart the room'));
+            showToast('Could not restart the room. Leave it and the mock is yours again.');
+          });
+        return;
+      }
+      setMockSeed(x => x + 1);
+      setMockChoices({});
+      setMockStarted(false);
+    },
     /* In a room this begins for everybody. Starting only your own copy would
      * let the bots take the seats your friends have not sat in yet. */
     startMock: () => {
