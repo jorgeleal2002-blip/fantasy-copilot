@@ -25,14 +25,21 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      # The shared draft room's database, if one is configured. It is a repo
-      # VARIABLE and not a secret on purpose: a Realtime Database URL is public
-      # by design — it goes to every browser that loads the app — and the rules
-      # in the database, not the secrecy of the URL, are what protect it. With
-      # the variable unset the build simply omits the feature.
+      # The shared draft room's database, if one is configured.
+      #
+      # A repo VARIABLE by preference, not a secret: a Realtime Database URL is
+      # public by design — it goes to every browser that loads the app — and
+      # the rules in the database, not the secrecy of the URL, are what protect
+      # it. With neither set the build simply omits the feature.
+      #
+      # But it reads BOTH, because "Secrets and variables → Actions" puts the
+      # two tabs side by side with Secrets open first, and a URL saved one tab
+      # to the left produces a build with no room in it and no error anywhere
+      # to say why. Nothing is lost by accepting either: a secret holding a
+      # public URL is just a variable with the logs masked.
       - run: npm run build
         env:
-          VITE_RTDB_URL: ${{ vars.VITE_RTDB_URL }}
+          VITE_RTDB_URL: ${{ vars.VITE_RTDB_URL || secrets.VITE_RTDB_URL }}
       # enablement: true turns Pages on for the repo the first time this runs,
       # instead of failing with "Get Pages site failed / Not Found".
       - uses: actions/configure-pages@v5
