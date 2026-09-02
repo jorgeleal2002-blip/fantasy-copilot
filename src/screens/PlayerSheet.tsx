@@ -8,12 +8,16 @@ import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
 import { Meter, SERIES } from '../ui/charts';
 import { Card, Overlay } from '../ui/primitives';
+import { ALLOWED_SEASON, OPPONENTS, PLAYOFF_WEEKS, SCHEDULE_SEASON } from '../model/schedule';
+import { byeOf, sosFor } from '../model/sos';
 import { TradePackages } from '../ui/TradePackages';
 import { dim, fitColor } from '../ui/styles';
 
 const DATA_NOTE =
   'Live from Sleeper: league, managers, draft order, picks and the NFL catalog (position, age, team, experience). ' +
-  'Market values come from FantasyCalc, priced for this league\'s format. The Fit Score, floor and upside are the app\'s own model on top of those.';
+  'Market values come from FantasyCalc, priced for this league\'s format. ' +
+  'Fixtures and last season\'s points allowed by each defence ship with the app, from nflverse. ' +
+  'The Fit Score, floor and upside are the app\'s own model on top of those.';
 
 interface Sheet {
   id: string;
@@ -201,7 +205,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: 25, fontWeight: 500, letterSpacing: '-0.025em' }}>{p.name}</div>
           <div style={{ fontSize: 12.5, color: dim(0.5), marginTop: 4 }}>
-            {[p.pos, p.team].concat(p.age ? [p.age + ' yrs'] : []).concat([p.ownerLabel]).join(' · ')}
+            {[p.pos, p.team]
+              .concat(p.age ? [p.age + ' yrs'] : [])
+              // The bye is a draft-room fact — you count them as you go — and it
+              // is sitting in the schedule table already.
+              .concat(byeOf(p.team) ? ['bye ' + byeOf(p.team)] : [])
+              .concat([p.ownerLabel]).join(' · ')}
           </div>
           {custom ? (
             <button
@@ -286,6 +295,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       </div>
       )}
 
+      {fill || m.isDynasty ? null : <Schedule pos={p.pos} team={p.team} />}
+
       {fill ? null : <WhatHeCosts app={app} m={m} sheet={p} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
@@ -301,6 +312,40 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
 
       <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), marginTop: 14, textWrap: 'pretty' }}>{DATA_NOTE}</div>
     </Overlay>
+  );
+}
+
+/**
+ * Who he actually has to play.
+ *
+ * The breakdown above already scores the schedule, but a percentile does not
+ * tell you anything you can argue with. This is the measurement under it: where
+ * his run of opponents ranks AT HIS POSITION among the 32, what those defences
+ * gave up per game last year, and the three weeks that decide most leagues,
+ * named — because "a hard finish" means nothing until you see who it is against.
+ *
+ * Redraft only. A dynasty roster outlives this table.
+ */
+function Schedule({ pos, team }: { pos: string; team: string | null | undefined }) {
+  const s = sosFor(team, pos);
+  const sched = team ? OPPONENTS[team] : null;
+  if (!s || !sched) return null;
+  const soft = s.rank <= 10 ? 'One of the easiest runs'
+    : s.rank >= 23 ? 'One of the hardest runs' : 'A middling run';
+  return (
+    <Card style={{ marginTop: 12 }}>
+      <div style={{ fontSize: 12, color: dim(0.45), marginBottom: 10 }}>
+        Schedule — {SCHEDULE_SEASON}, for a {pos}
+      </div>
+      <div style={{ fontSize: 14, lineHeight: 1.5, textWrap: 'pretty' }}>
+        {ord(s.rank)} easiest of 32. {soft} of opponents in the league for a {pos}:
+        they gave up {s.perGame} points a game to {pos}s in {ALLOWED_SEASON}.
+      </div>
+      <div style={{ fontSize: 12, color: dim(0.5), lineHeight: 1.55, marginTop: 8 }}>
+        Weeks {PLAYOFF_WEEKS.join(', ')}:{' '}
+        {PLAYOFF_WEEKS.map(w => sched[w - 1] || 'bye').join(' · ')}
+      </div>
+    </Card>
   );
 }
 

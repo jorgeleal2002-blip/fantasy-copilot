@@ -14,7 +14,7 @@ export type Metrics = Record<MetricKey, number>;
  */
 export const EMPTY_METRICS: Metrics = {
   talent: 0, need: 0, value: 0, floor: 0, boom: 0, combo: 0, age: 0, stack: 0, rz: 0,
-  scarce: 0,
+  scarce: 0, sos: 0,
 };
 
 /** How much of a ceiling we credit to a player nobody has seen produce yet. */
@@ -42,6 +42,9 @@ export interface ScoreContext {
   /** 0..1 edge over the man who would still be starting at his position if you
    *  never drafted him — see `scarce` below. */
   vor?: number;
+  /** 0..1 softness of the run of opponents his team has AT HIS POSITION, 1
+   *  being the easiest in the league — see `sos` below. */
+  sos?: number;
 }
 
 export interface ScoreResult {
@@ -117,6 +120,14 @@ export function scorePlayer(
     // Neutral where nothing was passed, so a score taken outside a league —
     // the sheet reached from search — is unchanged rather than penalised.
     scarce: ctx.vor != null ? clamp(ctx.vor, 0, 1) : 0.5,
+    // Who he actually has to play, at his own position — the defence that
+    // cannot cover a tight end is often the one that stops the run, so a back
+    // and a receiver on the same team do not have the same season ahead of
+    // them. Worth a few points of Fit and no more: last season's defensive
+    // record is a lagged proxy for this season's, and it is the weakest of the
+    // real things here. It is worth nothing at all outside redraft, and the
+    // weights say so — see `redraftWeights`.
+    sos: ctx.sos != null ? clamp(ctx.sos, 0, 1) : 0.5,
   };
 
   // Number.isFinite rather than != null: a missing value can arrive as NaN, and
@@ -243,6 +254,10 @@ export function redraftWeights(w: Weights): Weights {
     // board. In dynasty the same player is also an asset you can trade at his
     // market price, which is why it stays lighter there.
     scarce: w.scarce * 2.0,
+    // A schedule is a one-season fact, so it is worth nothing in dynasty and is
+    // set to zero in every strategy's own weights. It only exists here. Small
+    // on purpose: it is real, and it is the least certain thing in the sum.
+    sos: 0.05,
   };
   const total = (Object.keys(r) as MetricKey[]).reduce((a, k) => a + r[k], 0);
   (Object.keys(r) as MetricKey[]).forEach(k => { r[k] = r[k] / total; });

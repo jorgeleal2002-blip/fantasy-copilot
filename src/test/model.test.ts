@@ -12,6 +12,8 @@ import { blendSeasons, buildUsage, seasonUsage, type Usage } from '../model/usag
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
 import { isMockEligible } from '../model/mock-pool';
+import { ALLOWED, OPPONENTS, SEASON_WEEKS } from '../model/schedule';
+import { byeOf, sosFor, sosScore } from '../model/sos';
 import type { SleeperPlayer } from '../api/types';
 
 const bundle = makeBundle();
@@ -1676,17 +1678,16 @@ describe('positional replaceability', () => {
     expect(qb.m.scarce).toBeLessThan(rb.m.scarce);
     expect(qb.fit).toBeLessThan(rb.fit);
 
-    /* And it is the term doing it, not a coincidence of the other eight. The
-     * same two breakdowns, summed with the weight and then without it: the
-     * distance between the best back and the best quarterback goes from under
-     * two points of Fit to nearly five. */
+    /* And it is this term doing it, not a coincidence of the other nine. What
+     * each metric contributes to the distance between them, in points of Fit:
+     * replaceability alone opens nearly three, where before it opened none,
+     * and it is the largest single reason the back is ahead. */
     const w = redraftWeights(STRATS.balanced.w);
-    const sum = (mm: typeof qb.m, ww: typeof w) =>
-      (Object.keys(ww) as (keyof typeof w)[]).reduce((a, k) => a + ww[k] * mm[k], 0) * 100;
-    const withIt = sum(rb.m, w) - sum(qb.m, w);
-    const without = sum(rb.m, { ...w, scarce: 0 }) - sum(qb.m, { ...w, scarce: 0 });
-    expect(without).toBeLessThan(2);
-    expect(withIt).toBeGreaterThan(without * 2);
+    const gap = (k: keyof typeof w) => (rb.m[k] - qb.m[k]) * w[k] * 100;
+    expect(gap('scarce')).toBeGreaterThan(2);
+    const biggest = (Object.keys(w) as (keyof typeof w)[])
+      .sort((a, b) => gap(b) - gap(a))[0];
+    expect(biggest).toBe('scarce');
   });
 
   /* The same player, the same prices — only the league's own slots change. Ten
@@ -1739,5 +1740,82 @@ describe('positional replaceability', () => {
   it('weighs replaceability harder in redraft than in dynasty', () => {
     const w = STRATS.balanced.w;
     expect(redraftWeights(w).scarce).toBeGreaterThan(w.scarce);
+  });
+});
+
+/**
+ * The schedule tables are generated (`scripts/build-schedule.mjs`), so what is
+ * worth testing is that they are WHOLE — a half-written table would quietly
+ * score every player on a partial season rather than fail.
+ */
+describe('strength of schedule', () => {
+  const teams = Object.keys(OPPONENTS);
+
+  it('is a complete season for all 32 teams', () => {
+    expect(teams).toHaveLength(32);
+    teams.forEach(t => {
+      expect(OPPONENTS[t], t).toHaveLength(SEASON_WEEKS);
+      expect(ALLOWED[t], t + ' has no defensive record').toHaveLength(4);
+      // Exactly one week off, and every other week against one of the 32.
+      const byes = OPPONENTS[t].filter(o => !o);
+      expect(byes, t + ' byes').toHaveLength(1);
+      OPPONENTS[t].filter(Boolean).forEach(o => {
+        expect(teams, t + ' plays unknown team ' + o).toContain(o);
+      });
+    });
+  });
+
+  it('and the fixtures agree with each other', () => {
+    teams.forEach(t => OPPONENTS[t].forEach((o, i) => {
+      if (o) expect(OPPONENTS[o][i], t + ' week ' + (i + 1) + ' vs ' + o).toBe(t);
+    }));
+  });
+
+  it('reads a bye off the table', () => {
+    teams.forEach(t => {
+      const w = byeOf(t);
+      expect(w, t).toBeGreaterThan(0);
+      expect(OPPONENTS[t][w - 1]).toBe('');
+    });
+    expect(byeOf('NOT_A_TEAM')).toBe(0);
+    expect(byeOf(null)).toBe(0);
+  });
+
+  /* One schedule, four answers. The defence that cannot cover a tight end is
+   * often the one that stops the run, so a back and a receiver on the same
+   * team do not have the same season ahead of them — and a single "points
+   * allowed to everybody" number says they do. */
+  it('is measured per position, not per team', () => {
+    const differs = teams.filter(t => {
+      const vals = (['QB', 'RB', 'WR', 'TE'] as const).map(p => sosFor(t, p)!.rank);
+      return Math.max(...vals) - Math.min(...vals) >= 8;
+    });
+    expect(differs.length).toBeGreaterThan(10);
+  });
+
+  it('ranks 1 softest and 32 hardest, once each', () => {
+    (['QB', 'RB', 'WR', 'TE'] as const).forEach(p => {
+      const ranks = teams.map(t => sosFor(t, p)!.rank).sort((a, b) => a - b);
+      expect(ranks).toEqual(teams.map((_, i) => i + 1));
+      const soft = teams.find(t => sosFor(t, p)!.rank === 1)!;
+      const hard = teams.find(t => sosFor(t, p)!.rank === 32)!;
+      expect(sosFor(soft, p)!.perGame).toBeGreaterThan(sosFor(hard, p)!.perGame);
+      expect(sosFor(soft, p)!.season).toBe(1);
+      expect(sosFor(hard, p)!.season).toBe(0);
+    });
+  });
+
+  it('costs nothing outside redraft and a few points inside it', () => {
+    const w = STRATS.balanced.w;
+    expect(w.sos).toBe(0);                       // dynasty never prices it
+    expect(redraftWeights(w).sos).toBeGreaterThan(0.03);
+    expect(redraftWeights(w).sos).toBeLessThan(0.07);
+  });
+
+  it('is neutral for a player with no team', () => {
+    expect(sosFor(null, 'WR')).toBe(null);
+    expect(sosScore(null)).toBe(undefined);
+    const p = { player_id: '1', position: 'WR', search_rank: 20 } as SleeperPlayer;
+    expect(scorePlayer(p, {}, {}, STRATS.balanced.w).m.sos).toBe(0.5);
   });
 });

@@ -159,7 +159,7 @@ export const USAGE_WEIGHTS: [number, number, number] = [0.5, 0.3, 0.2];
 
 export type MetricKey =
   | 'talent' | 'need' | 'value' | 'floor' | 'boom' | 'combo' | 'age' | 'stack' | 'rz'
-  | 'scarce';
+  | 'scarce' | 'sos';
 export type Weights = Record<MetricKey, number>;
 export type StratKey = 'balanced' | 'floor' | 'upside';
 
@@ -174,17 +174,17 @@ export interface Strategy {
 export const STRATS: Record<StratKey, Strategy> = {
   balanced: {
     label: 'Balanced',
-    w: { talent: 0.22, need: 0.12, value: 0.08, floor: 0.06, boom: 0.06, combo: 0.18, age: 0.05, stack: 0.05, rz: 0.08, scarce: 0.10 },
+    w: { talent: 0.22, need: 0.12, value: 0.08, floor: 0.06, boom: 0.06, combo: 0.18, age: 0.05, stack: 0.05, rz: 0.08, scarce: 0.10, sos: 0 },
     copy: 'Real balance: it demands floor AND ceiling in the same player, not one or the other. The geometric mean punishes the lopsided — out goes the one who gives you 4 points one Sunday and 22 the next.',
   },
   floor: {
     label: 'Safe floor',
-    w: { talent: 0.20, need: 0.13, value: 0.08, floor: 0.26, boom: 0.03, combo: 0, age: 0.07, stack: 0.05, rz: 0.10, scarce: 0.08 },
+    w: { talent: 0.20, need: 0.13, value: 0.08, floor: 0.26, boom: 0.03, combo: 0, age: 0.07, stack: 0.05, rz: 0.10, scarce: 0.08, sos: 0 },
     copy: 'I prioritise an established role, volume and red-zone presence. Less variance, less ceiling.',
   },
   upside: {
     label: 'Upside',
-    w: { talent: 0.19, need: 0.11, value: 0.07, floor: 0.03, boom: 0.30, combo: 0, age: 0.09, stack: 0.06, rz: 0.08, scarce: 0.07 },
+    w: { talent: 0.19, need: 0.11, value: 0.07, floor: 0.03, boom: 0.30, combo: 0, age: 0.09, stack: 0.06, rz: 0.08, scarce: 0.07, sos: 0 },
     copy: 'Chasing ceiling: youth, likely breakouts, stacks with your QB and whoever lives in the red zone.',
   },
 };
@@ -200,6 +200,7 @@ export const METRIC_LABEL: Record<MetricKey, string> = {
   stack: 'NFL team correlation',
   rz: 'Red zone and TDs',
   scarce: 'Edge over a replacement at his position',
+  sos: 'Strength of schedule',
 };
 
 /** Which positions may fill each roster slot the league defines. */

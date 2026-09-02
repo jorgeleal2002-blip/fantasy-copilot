@@ -5,6 +5,7 @@ import {
 } from './constants';
 import { ageCurve, clamp, modelVal, playerName, rankScore, talentScale } from './math';
 import type { Market } from './market';
+import { sosFor, sosScore } from './sos';
 import { EMPTY_METRICS, ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
@@ -452,6 +453,15 @@ export function buildModel(input: ModelInput): Model {
   const vorOf = (pl: SleeperPlayer, pid: string) =>
     talentScale(Math.max(0, talentQ(pl, pid) - (replValue[pl.position as Pos] ?? 0)), surplusMax);
 
+  /**
+   * Strength of schedule, at his own position — see `sos.ts`.
+   *
+   * Read straight off the season's fixtures, so it costs nothing to ask and is
+   * the same for every league. What it is WORTH differs: the weights price it
+   * in redraft and at zero in dynasty, where a hold outlives the schedule.
+   */
+  const sosOf = (pl: SleeperPlayer) => sosScore(sosFor(pl.team, pl.position));
+
   // ── Your roster.
   const starterIds = myRow.starters || [];
   const myPlayers: RosterPlayer[] = myIds.map(id => {
@@ -633,7 +643,7 @@ export function buildModel(input: ModelInput): Model {
     const s = scorePlayer(p, needScore, {
       idx: i + 1, pick: pickForValue, now: nextOverall, dv: talentQ(p, x.id), dvMax,
       stack: stackFor(p), use: uFor(x.id), redraft: !isDynasty, rank: rankOf(x.id, p),
-      vor: vorOf(p, x.id),
+      vor: vorOf(p, x.id), sos: sosOf(p),
     }, w);
     return {
       id: x.id, name: playerName(p), pos: p.position as DraftPos, team: p.team,
@@ -649,7 +659,7 @@ export function buildModel(input: ModelInput): Model {
   myPlayers.forEach(p => {
     const s = scorePlayer(p.raw, {}, {
       dv: talentQ(p.raw, p.id), dvMax, stack: stackFor(p.raw, p.id), use: uFor(p.id),
-      redraft: !isDynasty, rank: rankOf(p.id, p.raw), vor: vorOf(p.raw, p.id),
+      redraft: !isDynasty, rank: rankOf(p.id, p.raw), vor: vorOf(p.raw, p.id), sos: sosOf(p.raw),
     }, wOwn);
     p.use = uFor(p.id);
     p.m = s.m;
@@ -718,7 +728,7 @@ export function buildModel(input: ModelInput): Model {
     const sum = starters.reduce((a, x) => a + scorePlayer(x.raw, {}, {
       dv: talentQ(x.raw, x.p.id), dvMax, stack: stackIn(list, x.raw, x.p.id),
       use: uFor(x.p.id), redraft: !isDynasty, rank: rankOf(x.p.id, x.raw),
-      vor: vorOf(x.raw, x.p.id),
+      vor: vorOf(x.raw, x.p.id), sos: sosOf(x.raw),
     }, wOwn).fit, 0);
     return sum / starters.length;
   };
@@ -864,13 +874,13 @@ export function buildModel(input: ModelInput): Model {
       const neutral = scorePlayer(p.raw, {}, {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(list, p.raw, p.id),
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
-        vor: vorOf(p.raw, p.id),
+        vor: vorOf(p.raw, p.id), sos: sosOf(p.raw),
       }, wOwn);
       if (!Number.isFinite(neutral.fit)) return;
       const forMe = scorePlayer(p.raw, needScore, {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(myPlayers, p.raw, p.id),
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
-        vor: vorOf(p.raw, p.id),
+        vor: vorOf(p.raw, p.id), sos: sosOf(p.raw),
       }, w);
       const el = talentScale(talentQ(p.raw, p.id), dvMax || 1);
       const cur = ageCurve(p.pos, p.age, el) || 0.5;
@@ -881,7 +891,7 @@ export function buildModel(input: ModelInput): Model {
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
         // How deep his position runs in two years is not knowable, so this is
         // today's line — the age discount above already prices the decline.
-        vor: vorOf(p.raw, p.id),
+        vor: vorOf(p.raw, p.id), sos: sosOf(p.raw),
       }, wOwn);
       allFits.push({
         id: p.id, name: p.name, pos: p.pos, team: p.team, age: p.age,
@@ -1330,7 +1340,7 @@ export function buildModel(input: ModelInput): Model {
           .map(o => ({ id: o.id, pos: o.pos as Pos, team: o.team || 'FA' })));
       const sc = scorePlayer(x.raw, needFrom(shape), {
         dv: talentQ(x.raw, x.id), dvMax, stack: stackIn(mineNow, x.raw), use: uFor(x.id),
-        redraft: !isDynasty, vor: vorOf(x.raw, x.id),
+        redraft: !isDynasty, vor: vorOf(x.raw, x.id), sos: sosOf(x.raw),
       }, w);
       return { ...row, fit: sc.fit, ...extra };
     };
@@ -1662,7 +1672,7 @@ export function buildModel(input: ModelInput): Model {
     if (onBoard) return onBoard;
     const s = scorePlayer(pl, needScore, {
       dv: talentQ(pl, id), dvMax, stack: stackFor(pl), use: uFor(id), redraft: !isDynasty,
-      rank: rankOf(id, pl), vor: vorOf(pl, id),
+      rank: rankOf(id, pl), vor: vorOf(pl, id), sos: sosOf(pl),
     }, w);
     const ownerRow = (d.rosters || []).find(r => (r.players || []).indexOf(id) >= 0);
     return {
