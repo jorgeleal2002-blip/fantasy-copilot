@@ -385,15 +385,21 @@ button { font-family: inherit; }
   flex: 0 1 auto;
   max-height: 52vh;
   min-height: 110px;
-  /* Hidden, not `auto`: the board is driven, never dragged.
-     A grid this size scrolls in both directions at once, so a thumb aimed at
-     the dock underneath took the board sideways instead, and the draft you were
-     following ended up somewhere off screen with nothing to say it had moved.
-     `hidden` still scrolls programmatically — it only stops the hands — so the
-     follow keeps working and is now the ONLY thing that moves it. */
+  /* Hidden, not `auto`: while the draft is running the board is driven, never
+     dragged. A grid this size scrolls in both directions at once, so a thumb
+     aimed at the dock underneath took the board sideways instead, and the draft
+     you were following ended up somewhere off screen with nothing to say it had
+     moved. `hidden` still scrolls programmatically — it only stops the hands —
+     so the follow keeps working and is the only thing that moves it. */
   overflow: hidden;
   padding: 8px 0 12px;
 }
+/* Except on your own clock, when it goes back to being yours.
+   Nothing lands while you are deciding: no pick arrives, so the follow has
+   nothing to chase and there is nothing to fight your thumb for the board. The
+   mess that closed this was the board moving UNDER a stream of picks, which is
+   exactly the state this is not. It locks again the moment you draft. */
+.bd-scroll.is-yours { overflow: auto; }
 .bd {
   display: grid;
   gap: 3px;

@@ -197,6 +197,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
         made={visible}
         seat={st.slot}
         next={live ? nextOverall : 0}
+        yours={!!onClock}
         claimable={!live || !!app.roomId}
         onClaim={n => {
           // In a room a seat is a claim other people can see, so it goes to the
@@ -564,8 +565,10 @@ function InvitePanel({ app, m, onClose }: { app: App; m: Model; onClose: () => v
  * arrow to the next one, so an empty board still reads as a draft order
  * rather than as a blank grid.
  */
-function MockBoard({ m, made, seat, next, claimable, onClaim }: {
+function MockBoard({ m, made, seat, next, yours, claimable, onClaim }: {
   m: Model; made: MockPick[]; seat: number; next: number;
+  /** your own clock — the one moment the board is yours to move */
+  yours: boolean;
   claimable: boolean; onClaim: (n: number) => void;
 }) {
   const cols = Array.from({ length: m.teamCount }, (_, i) => i + 1);
@@ -657,7 +660,18 @@ function MockBoard({ m, made, seat, next, claimable, onClaim }: {
   }, [lastKey]);
 
   return (
-    <div ref={scroller} className="bd-scroll">
+    <div
+      ref={scroller}
+      className={'bd-scroll' + (yours ? ' is-yours' : '')}
+      /* While it is yours, where you leave it IS where it is. The follow aims
+       * from its own last target rather than from the live position, so without
+       * this it would measure your turn's move from wherever it last put the
+       * board and jump somewhere neither of you asked for on the next pick. */
+      onScroll={yours ? (e => {
+        const el = e.currentTarget;
+        aim.current = { x: el.scrollLeft, y: el.scrollTop };
+      }) : undefined}
+    >
       <div
         className="bd"
         style={{
