@@ -24,42 +24,49 @@ export const MID = '#6783ec';
 export const MUTED = 'rgba(242,253,254,.45)';
 
 /**
- * One hue per position, for the draft board.
+ * One hue per position, taken from the app this look comes from.
  *
  * A board cell on a phone is about 32px wide — too small for a position label
  * to carry any weight, and the thing you want to read off a board is a run:
- * five backs in a row. Colour is what makes that visible at that size, so the
- * position gets a hue and the cell gets tinted with it.
+ * five backs in a row. Colour is what makes that visible at that size.
  *
- * Position is nominal, so these are four distinct hues, not a ramp. Measured
- * against the card surface they clear the dark lightness band (L .48–.67), the
- * chroma floor, ΔE 15.8 to normal vision and ΔE 8.4 under simulated protan /
- * deuteranopia across every pair — not just adjacent ones, because any two
- * cells on a board can end up side by side. The letters stay printed in every
- * cell regardless: colour is the fast read, never the only one.
+ * These four are sampled from the reference and measured against this surface:
+ * ΔE 16.5 to normal vision and 10.1 under simulated protan / deuteranopia
+ * across EVERY pair, not just adjacent ones, because any two cells on a board
+ * can end up side by side. They sit brighter than the set they replace, which
+ * is the reference's character and the reason for the change.
  */
 export const POS_COLOR: Record<Pos, string> = {
-  QB: '#ad8d28',
-  RB: '#2c8a5f',
-  WR: '#4b7fd0',
-  TE: '#c26e9a',
+  QB: '#f63273',
+  RB: '#38ccbb',
+  WR: '#59a7ff',
+  TE: '#f8b36c',
 };
 
 /**
- * Kickers and defences get no hue.
+ * Kickers and defences, which now get a hue too.
  *
- * The four above are hues because the thing you read off a board is a run —
- * five backs going in a row — and colour is what makes that visible at 32px.
- * Nobody has ever scanned a board for a run on kickers. Forcing two more hues
- * into a palette that already clears its separation floors by a small margin
- * would cost the four that carry meaning, so these stay a muted neutral, which
- * also says what they are: the slots you fill at the end.
+ * They were a flat grey here on the argument that nobody scans a board for a
+ * run on kickers. The reference gives them colours and this is meant to look
+ * like the reference, so they have them — but NOT the reference's own two.
+ * Measured against the four above, its kicker purple lands ΔE 1.8 from the
+ * receiver blue under deuteranopia: the same colour, for anyone with the
+ * commonest form of colour blindness. Its defence red sat 14.3 from the
+ * quarterback pink.
+ *
+ * These are the nearest pair that survives the company of the other four —
+ * with them the six-colour set still measures 16.5 and 10.1, exactly what the
+ * four managed alone, so neither of them costs the positions that matter.
  */
-export const FILL_COLOR = 'rgba(242,253,254,.42)';
+export const FILL_COLOR: Record<FillPos, string> = {
+  K: '#7163b2',
+  DEF: '#a8592a',
+};
 export const FILL: FillPos[] = ['K', 'DEF'];
-/** The colour for anything a draft board can hold, hue or not. */
+/** The colour for anything a draft board can hold. */
 export const colorOf = (pos: DraftPos): string =>
-  POS_COLOR[pos as Pos] || FILL_COLOR;
+  POS_COLOR[pos as Pos] || FILL_COLOR[pos as FillPos] || 'rgba(242,253,254,.42)';
+
 /** What Sleeper may call the team-defence slot. */
 export const DEF_SLOTS = ['DEF', 'DST', 'D/ST'];
 
