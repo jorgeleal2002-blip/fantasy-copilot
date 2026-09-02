@@ -1,26 +1,48 @@
 /**
  * The noises the draft room makes.
  *
- * Every one of them is SYNTHESISED — oscillators, a noise buffer and envelopes,
- * built at the moment it plays. Nothing is downloaded and nothing ships. Three
- * reasons, in order:
+ * Two kinds, and the split is deliberate.
  *
- *  1. The obvious way to get these sounds is to take the files, and those files
- *     belong to somebody. The app already has one borrowed clip sitting in a
- *     public repository and does not need six more.
- *  2. A pick has to be heard the instant it lands. A fetched clip is a network
- *     request, a service worker, a decode and a range request — this session
- *     has already lost hours to exactly that path with a single 25 KB file.
- *     There is no path here: the sound is made in the moment.
- *  3. Six clips is a few hundred kilobytes on a phone. This is a few hundred
- *     bytes of code and weighs nothing.
+ * THE MOMENTS ARE CLIPS. Five of them, cut from files handed over for this
+ * app: the shout when you take somebody, the one that says it is your turn,
+ * the one for a player being taken out from under you, for a reach, and for a
+ * run on a position. They are 1.4 seconds each and about ten kilobytes each,
+ * fetched once and decoded once, then played from memory — so nothing touches
+ * the network at the moment a pick lands, which is the only thing that ever
+ * made a sound arrive late.
  *
- * They are close cousins of the sounds they are named after rather than
- * copies, which is what you get for free when you build the thing out of the
- * physics instead of sampling it.
+ * THE METRONOME IS SYNTHESISED. An ordinary pick reveals every 850ms and a
+ * kicker comes off the board twenty times in the last rounds; a second and a
+ * half of music on each of those is not a draft room, it is a wall. Those two
+ * stay oscillators and envelopes, built in the moment, weighing nothing.
+ *
+ * The synth is also the safety net: a clip that has not finished decoding, or
+ * never arrived because the first launch was offline, falls back to the voice
+ * it replaced rather than to silence.
  */
 
+import ballerinaUrl from '../assets/ballerina.mp3';
+import brainrotUrl from '../assets/brainrot.mp3';
+import chimpanziniUrl from '../assets/chimpanzini.mp3';
+import patapimUrl from '../assets/patapim.mp3';
+import siuUrl from '../assets/siu.mp3';
+
 export type SfxName = 'tick' | 'coin' | 'boom' | 'horn' | 'pipe' | 'womp' | 'tung';
+
+/**
+ * Which moment gets which clip.
+ *
+ * `tick` and `pipe` are deliberately absent — those are the two that fire over
+ * and over, and they stay short. Everything here happens a handful of times in
+ * a draft, which is what earns a second and a half.
+ */
+const CLIPS: Partial<Record<SfxName, string>> = {
+  coin: siuUrl,          // you took somebody
+  horn: patapimUrl,      // you are on the clock
+  womp: brainrotUrl,     // they took the one you were told to take
+  boom: chimpanziniUrl,  // a reach, from well down the board
+  tung: ballerinaUrl,    // three of a position in a row
+};
 
 
 
@@ -113,11 +135,42 @@ let unlocked = false;
  * through it, so this plays one silent frame. It costs nothing and it is the
  * only version of this that works.
  */
+/**
+ * The decoded clips, and the one attempt to get them.
+ *
+ * Loading is hung off arming rather than off module load, because a context is
+ * needed to decode into and the context is not allowed to exist until somebody
+ * has touched the screen. It runs once; a clip that fails simply stays absent
+ * and its synthesised voice covers for it.
+ */
+const clips: Partial<Record<SfxName, AudioBuffer>> = {};
+let loading = false;
+
+function loadClips(c: BaseAudioContext): void {
+  if (loading) return;
+  loading = true;
+  (Object.keys(CLIPS) as SfxName[]).forEach(name => {
+    const url = CLIPS[name];
+    if (!url) return;
+    void fetch(url)
+      .then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('http ' + r.status))))
+      // The callback form as well as the promise: older WebKit rejects the
+      // promise-only call, and this is the browser that matters here.
+      .then(buf => new Promise<AudioBuffer>((ok, no) => {
+        const p = c.decodeAudioData(buf, ok, no);
+        if (p && typeof p.then === 'function') void p.then(ok, no);
+      }))
+      .then(b => { clips[name] = b; })
+      .catch(() => { /* the voice it replaced still plays */ });
+  });
+}
+
 export function armSfx(): void {
   askToBeHeard();
   const a = audio();
   if (!a) return;
   void a.c.resume().catch(() => undefined);
+  loadClips(a.c);
   try {
     const src = a.c.createBufferSource();
     src.buffer = a.c.createBuffer(1, 1, a.c.sampleRate);
@@ -435,6 +488,15 @@ export function renderSfx(name: SfxName, c: BaseAudioContext, out: AudioNode, t:
 const FLOOR_MS = 90;
 let lastAt = 0;
 
+/**
+ * The clip that is playing, so the next one can cut it off.
+ *
+ * A second and a half is long enough that two of them can overlap, and two
+ * pieces of music at once is noise rather than two events. The newest thing
+ * that happened is the one worth hearing, so it takes the channel.
+ */
+let playing: AudioBufferSourceNode | null = null;
+
 export function playSfx(name: SfxName): void {
   const now = Date.now();
   if (name === 'tick' && now - lastAt < FLOOR_MS) return;
@@ -442,6 +504,18 @@ export function playSfx(name: SfxName): void {
   if (!a) return;
   lastAt = now;
   try {
+    const buf = clips[name];
+    if (buf) {
+      try { playing?.stop(); } catch { /* already finished */ }
+      const src = a.c.createBufferSource();
+      src.buffer = buf;
+      src.connect(a.out);
+      src.onended = () => { if (playing === src) playing = null; };
+      src.start(0);
+      playing = src;
+      return;
+    }
+    // Not decoded yet, or never arrived: the voice it replaced covers for it.
     VOICES[name](a.c, a.out, a.c.currentTime);
   } catch {
     /* a context that died with the tab. The room does not stop for it. */
