@@ -4,8 +4,9 @@ import type { Model, RosterPlayer } from '../model/types';
 import type { App, TeamView } from '../state/useApp';
 import { ord, pct } from '../ui/format';
 import { Meter, SERIES, markFor } from '../ui/charts';
-import { Card, CardHead, DividedRow, Screen, Segmented, type SegOption } from '../ui/primitives';
-import { capsule, cardNote, cardTitle, dim, ellipsis, heroCard, heroGlow, kicker, posBadge } from '../ui/styles';
+import type { IconName } from '../ui/icons';
+import { Banner, Card, CardHead, DividedRow, Screen, Segmented, Stat, type SegOption } from '../ui/primitives';
+import { capsule, cardNote, cardTitle, dim, ellipsis, kicker, posBadge } from '../ui/styles';
 
 const POS_FILTERS: SegOption<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>[] =
   [{ key: 'ALL', label: 'All' }, ...POS.map(p => ({ key: p, label: p }))];
@@ -60,12 +61,12 @@ function Summary({ app, m }: { app: App; m: Model }) {
   })();
 
   // Raw sums are shown at scale; the Fit columns are already 0..100.
-  const heroRanks = [
-    { label: 'strength today', rank: me?.rankNow || 0, value: num((me?.now || 0) * 100), color: ACCENT },
-    { label: 'quality today', rank: me?.rankFit || 0, value: 'Fit ' + Math.round(me?.fit || 0), color: MID },
+  const heroRanks: { label: string; rank: number; value: string; color: string; icon: IconName }[] = [
+    { label: 'strength today', rank: me?.rankNow || 0, value: num((me?.now || 0) * 100), color: ACCENT, icon: 'rank' },
+    { label: 'quality today', rank: me?.rankFit || 0, value: 'Fit ' + Math.round(me?.fit || 0), color: MID, icon: 'fit' },
     ...(m.isDynasty ? [
-      { label: 'future value', rank: me?.rankFut || 0, value: num((me?.future || 0) * 100), color: GOOD },
-      { label: 'quality in 2 yrs', rank: me?.rankFitFut || 0, value: 'Fit ' + Math.round(me?.fitFut || 0), color: '#bfe0cd' },
+      { label: 'future value', rank: me?.rankFut || 0, value: num((me?.future || 0) * 100), color: GOOD, icon: 'future' as IconName },
+      { label: 'quality in 2 yrs', rank: me?.rankFitFut || 0, value: 'Fit ' + Math.round(me?.fitFut || 0), color: '#bfe0cd', icon: 'ahead' as IconName },
     ] : []),
   ];
 
@@ -127,35 +128,36 @@ function Summary({ app, m }: { app: App; m: Model }) {
       ) : null}
 
       {empty ? (
-        <div style={heroCard}>
-          <div style={heroGlow} />
-          <div style={{ position: 'relative' }}>
-            <div style={kicker}>
-              {m.foundMyTeam ? 'Nothing on your roster yet' : 'We could not find your team'}
-            </div>
-            <div style={{ fontSize: 13, lineHeight: 1.55, color: dim(0.62), marginTop: 9, textWrap: 'pretty' }}>
-              {!m.foundMyTeam
-                ? 'No roster in ' + m.league.name + ' is registered to this Sleeper account, as owner or '
-                  + 'co-owner, so there is no team to read. The rest of the league is on the League tab.'
-                : m.draft?.status === 'drafting'
-                  ? 'The draft is running and none of your picks have landed. Strength, holes and lineup quality all come from players you own, so they stay empty until one does.'
-                  : 'This league has not drafted. Strength, holes and lineup quality are all measured off players you own, so there is nothing to rank until the picks are in.'}
-            </div>
-            <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.45), marginTop: 8, textWrap: 'pretty' }}>
-              {m.foundMyTeam
-                ? 'The board is already rated and ready — every available player carries a Fit score for the roster you are about to build.'
-                : 'If you are in this league under a different username, name your team by hand from the You tab — it is remembered for this league.'}
-            </div>
-            <button
-              type="button"
-              onClick={() => app.setTab(m.foundMyTeam ? 'draft' : 'settings')}
-              className="btn btn-primary"
-              style={{ marginTop: 14, borderRadius: 9, padding: '9px 14px' }}
-            >
-              {m.foundMyTeam ? 'Open the draft board' : 'Pick your team'}
-            </button>
+        <Banner
+          icon="alert"
+          title={m.foundMyTeam ? 'Nothing on your roster yet' : 'We could not find your team'}
+          note={m.foundMyTeam
+            ? 'strength and lineup quality start at your first pick'
+            : 'no roster here is registered to this account'}
+        >
+          <div style={{ fontSize: 12.5, lineHeight: 1.55, color: dim(0.5), marginTop: 11, textAlign: 'center', textWrap: 'pretty' }}>
+            {!m.foundMyTeam
+              ? 'No roster in ' + m.league.name + ' is registered to this Sleeper account, as owner or '
+                + 'co-owner, so there is no team to read. The rest of the league is on the League tab. '
+                + 'If you are in it under a different username, name your team by hand from the You tab — '
+                + 'it is remembered for this league.'
+              : m.draft?.status === 'drafting'
+                ? 'The draft is running and none of your picks have landed. Strength, holes and lineup quality '
+                  + 'all come from players you own, so they stay empty until one does — but the board is already '
+                  + 'rated, and every available player carries a Fit score for the roster you are about to build.'
+                : 'This league has not drafted. Strength, holes and lineup quality are all measured off players '
+                  + 'you own, so there is nothing to rank until the picks are in. The board is already rated and '
+                  + 'ready all the same.'}
           </div>
-        </div>
+          <button
+            type="button"
+            onClick={() => app.setTab(m.foundMyTeam ? 'draft' : 'settings')}
+            className="btn btn-primary"
+            style={{ marginTop: 13, width: '100%', borderRadius: 9, padding: '9px 14px' }}
+          >
+            {m.foundMyTeam ? 'Open the draft board' : 'Pick your team'}
+          </button>
+        </Banner>
       ) : null}
 
       {/* Four places, not one. "Future value" is a raw sum — the whole roster
@@ -164,32 +166,31 @@ function Summary({ app, m }: { app: App; m: Model }) {
           mid-table. The quality columns beside it measure only the optimal
           starters, which is the honest read. Shown together, the gap between
           them is itself the information. */}
-      {empty ? null : <div style={heroCard}>
-        <div style={heroGlow} />
-        <div style={{ position: 'relative' }}>
-          <div style={kicker}>Your place in the league</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', marginTop: 10 }}>
+      {empty ? null : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <div style={{ ...kicker, paddingLeft: 2 }}>Your place in the league</div>
+          {/* One card per figure. Four numbers sharing one filled block read as
+              a paragraph of digits; four outlines read as four instruments, and
+              the eye lands on whichever one it came for. */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
             {heroRanks.map(h => (
-              <div key={h.label}>
-                <div style={{
-                  fontSize: 26, fontWeight: 500, letterSpacing: '-0.035em', lineHeight: 1,
-                  fontVariantNumeric: 'tabular-nums',
-                  color: m.leagueHasRosters && me ? h.color : dim(0.3),
-                }}>
-                  {m.leagueHasRosters && me ? ord(h.rank) : '—'}
-                </div>
-                <div style={{ fontSize: 10.5, color: dim(0.5), marginTop: 3 }}>{h.label}</div>
-                <div style={{ fontSize: 10.5, color: dim(0.35), marginTop: 1 }}>{h.value}</div>
-              </div>
+              <Stat
+                key={h.label}
+                icon={h.icon}
+                value={m.leagueHasRosters && me ? ord(h.rank) : '—'}
+                label={h.label}
+                note={h.value}
+                color={m.leagueHasRosters && me ? h.color : dim(0.3)}
+              />
             ))}
           </div>
           {m.isDynasty && m.leagueHasRosters ? (
-            <div style={{ fontSize: 11.5, lineHeight: 1.45, color: dim(0.5), marginTop: 11, textWrap: 'pretty' }}>
+            <div style={{ fontSize: 11.5, lineHeight: 1.45, color: dim(0.5), padding: '0 2px', textWrap: 'pretty' }}>
               {heroNote}
             </div>
           ) : null}
         </div>
-      </div>}
+      )}
 
       {/* A ranking of nothing against nine other teams is four empty bars. */}
       {empty ? null : <Card>
