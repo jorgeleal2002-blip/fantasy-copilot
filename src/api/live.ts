@@ -215,6 +215,25 @@ export async function checkLive(): Promise<LiveCheck> {
   const id = '_check_' + newRoomId();
   const seed = Math.floor(Math.random() * 1e9);
   const started = Date.now();
+
+  /* Read BEFORE writing, on a room that does not exist.
+   *
+   * A refused write is not one answer, it is three, and the console counts
+   * them all the same: rules never published, a write rule that is missing,
+   * or a validate that the data fails. Reading first splits them. A read of a
+   * missing room is free, changes nothing, and answers "is `.read` in force
+   * at all" — and if reading is refused too, then no rule of ours is live and
+   * the ones in the database are still the deny-everything pair the console
+   * starts you on. That is a different sentence to a person than "the write
+   * was refused", and it is the true one. */
+  let canRead = false;
+  try {
+    await send(roomPath(id), 'GET');
+    canRead = true;
+  } catch {
+    canRead = false;
+  }
+
   try {
     /* A whole room, not the two fields the README's rule happens to ask for.
      * A probe that writes less than the real thing passes rules the real thing
@@ -248,9 +267,17 @@ export async function checkLive(): Promise<LiveCheck> {
       return {
         ok: false,
         why: 'rules',
-        detail: 'The database refused the write. It is still in locked mode — open '
-          + 'Realtime Database → Rules in the Firebase console and paste the rules '
-          + 'from the README, then Publish.',
+        detail: canRead
+          ? 'Reading is allowed but writing was refused. The read rule is live, so '
+            + 'the rules DID publish — it is the write half. Check that .write is '
+            + 'true under "rooms/$room", and that the .validate line is exactly the '
+            + 'one in the README: a validate that never passes refuses every write '
+            + 'just as flatly as .write false does.'
+          : 'Refused to read AND to write, which means none of your rules are in '
+            + 'force — the database still has the deny-everything pair it starts '
+            + 'you on. Writing them in the editor does not apply them: open Realtime '
+            + 'Database → Rules, paste the ones from the README, and press PUBLISH. '
+            + 'The Firebase console shows this as rejections with no authorisations.',
       };
     }
     return {
