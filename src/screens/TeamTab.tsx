@@ -343,15 +343,41 @@ function Lineup({ app, m }: { app: App; m: Model }) {
 
 /* ── Roster ──────────────────────────────────────────────────────────────── */
 
+/**
+ * How much of his team's work is his — a share, not a snap count.
+ *
+ * It used to print the snap share, which says he was on the field and nothing
+ * about whether the ball came his way. Two receivers can both play 85% of the
+ * snaps while one sees a quarter of the targets and the other sees a twentieth,
+ * and that difference is the whole of what a receiver is worth. So the number
+ * is now the share of his team's targets, of its carries for a back, and
+ * attempts per game for a quarterback, who competes with nobody for the ball.
+ */
 function rosterMeta(p: RosterPlayer): string {
   return [
     p.pos, p.team || 'FA', (p.age ?? '?') + ' yrs',
     p.starter ? 'starter' : null,
     p.injury || null,
-    p.use && p.use.snap != null ? Math.round(p.use.snap * 100) + '% snaps' : null,
+    p.use?.shareShort || null,
     p.raw.active === false ? 'inactive' : null,
   ].filter(Boolean).join(' · ');
 }
+
+/**
+ * How the list orders itself under "Usage".
+ *
+ * By the PERCENTILE within his own position, not by the share itself. A share
+ * cannot be compared across positions — a receiver commanding a quarter of his
+ * team's targets is a star, a back with a quarter of the carries is a
+ * committee man, and a quarterback has no share at all — so ranking them on
+ * one axis put both quarterbacks above every receiver on the roster purely
+ * because a snap share is a bigger number than a target share. The percentile
+ * asks the only question that survives the comparison: how heavily is he used,
+ * for what he is. It falls back to the raw share where a position is too thin
+ * to rank.
+ */
+const usageOf = (p: RosterPlayer): number =>
+  p.use?.volPct ?? p.use?.tgt ?? p.use?.snap ?? 0;
 
 function Roster({ app, m }: { app: App; m: Model }) {
   const maxQ = Math.max(...m.myPlayers.map(x => x.q), 1);
@@ -360,7 +386,7 @@ function Roster({ app, m }: { app: App; m: Model }) {
     .slice()
     .sort((a, b) => {
       if (app.rosterSort === 'age') return (a.age || 99) - (b.age || 99);
-      if (app.rosterSort === 'snap') return ((b.use?.snap) || 0) - ((a.use?.snap) || 0);
+      if (app.rosterSort === 'snap') return usageOf(b) - usageOf(a);
       return b.q - a.q;
     });
 

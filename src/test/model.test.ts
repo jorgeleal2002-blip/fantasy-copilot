@@ -8,7 +8,7 @@ import { buildModel } from '../model/model';
 import { REACH, sfxFor } from '../model/sfx-map';
 import type { MockPick } from '../model/types';
 import { ownedWeights, redraftWeights, scorePlayer } from '../model/score';
-import { buildUsage, seasonUsage, type Usage } from '../model/usage';
+import { blendSeasons, buildUsage, seasonUsage, type Usage } from '../model/usage';
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
 import { isMockEligible } from '../model/mock-pool';
@@ -635,6 +635,7 @@ function usageStub(snap: number, tgt: number): Usage {
   return {
     snap, tgt, vol: tgt, gp: 16,
     shareLabel: 'Target share', shareText: (tgt * 100).toFixed(1) + '%',
+    shareShort: Math.round(tgt * 100) + '% targets',
     eff: 8, effLabel: 'Yards per touch', ltr: 0.02, longTd: 2,
     xtd: 5, xtdPerGame: 0.31, tdLuck: 1,
     ppg: 12, rz: 10, rzShare: 0.1, rzPerGame: 0.6,
@@ -1488,5 +1489,70 @@ describe('naming the team on screen', () => {
     const m = build(undefined, b);
     expect(m.foundMyTeam).toBe(false);
     expect(m.myTeamName).toBe('');
+  });
+});
+
+describe('what "usage" means on a roster row', () => {
+  const bundle = makeBundle();
+  const st = makeStats(bundle.players);
+  const base = buildUsage(makeStats(bundle.players), bundle.players);
+  /** The receiver the seasons will disagree about. */
+  const WR = Object.keys(bundle.players).find(k =>
+    bundle.players[k].position === 'WR' && base[k] && (base[k].tgt || 0) > 0.05)!;
+
+  /* One player's targets, not everybody's. Scaling the whole league leaves
+   * every SHARE exactly where it was — the team total moves with him — so a
+   * fixture built that way cannot tell a blended share from an unblended one.
+   * This is a receiver who had a big year and two quiet ones. */
+  const season = (tgtScale: number) => {
+    const o: Record<string, Record<string, number>> = {};
+    Object.keys(st).forEach(id => {
+      const r = { ...st[id] } as unknown as Record<string, number>;
+      if (id === WR && typeof r.rec_tgt === 'number') r.rec_tgt = r.rec_tgt * tgtScale;
+      o[id] = r;
+    });
+    return o as never;
+  };
+
+  const wr = () => {
+    const u = blendSeasons([
+      { year: 2025, usage: seasonUsage(season(1), bundle.players) },
+      { year: 2024, usage: seasonUsage(season(0.2), bundle.players) },
+      { year: 2023, usage: seasonUsage(season(0.2), bundle.players) },
+    ], bundle.players);
+    return { u: u[WR], one: seasonUsage(season(1), bundle.players)[WR] };
+  };
+
+  it('is the share of his team\'s targets, written short enough for the line', () => {
+    const { u } = wr();
+    expect(u.shareLabel).toBe('Target share');
+    expect(u.shareShort).toMatch(/^\d+% targets$/);
+  });
+
+  /* It is the number the row prints, so it has to be the same three-year blend
+   * the app's own banner promises. It was not: `tgt` was left out of the blend
+   * and came through as the most recent season alone, which no one noticed
+   * while the row printed the snap share — that one WAS blended. */
+  it('is blended across the seasons, not taken from the last one', () => {
+    const { u, one } = wr();
+    expect(one.tgt).toBeGreaterThan(0);
+    expect(u.tgt).toBeLessThan(one.tgt! * 0.95);
+    // and the text is rewritten from the blend, not left describing one season
+    expect(u.shareText).not.toBe(one.shareText);
+    expect(u.shareText).toBe((u.tgt! * 100).toFixed(1) + '%');
+  });
+
+  it('changes unit with the position, because the ball does', () => {
+    const u = buildUsage(makeStats(bundle.players), bundle.players);
+    const of = (pos: string) => {
+      const id = Object.keys(bundle.players).find(k =>
+        bundle.players[k].position === pos && u[k])!;
+      return u[id];
+    };
+    expect(of('RB').shareLabel).toBe('Rush share');
+    expect(of('RB').shareShort).toMatch(/carries$/);
+    // A quarterback competes with nobody for the ball, so a share says nothing.
+    expect(of('QB').shareLabel).toBe('Attempts per game');
+    expect(of('QB').tgt).toBe(null);
   });
 });

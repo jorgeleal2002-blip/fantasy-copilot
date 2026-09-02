@@ -12,6 +12,9 @@ export interface Usage {
   shareLabel: string;
   /** the share already formatted, since its unit changes by position */
   shareText: string | null;
+  /** the same share as one short phrase — "22% targets" — for a line with no
+   *  room to put a label and a value in separate columns */
+  shareShort: string | null;
 
   /** yards per ball actually in their hands */
   eff: number | null;
@@ -50,7 +53,45 @@ export type UsageMap = Record<string, Usage>;
 /** Metrics that are the player's own rate, so they can be averaged across
  *  seasons. Shares are deliberately excluded: they are computed against this
  *  season's offence and do not travel backwards. */
-const BLEND: (keyof Usage)[] = ['snap', 'eff', 'ltr', 'xtdPerGame', 'ppg', 'tdPerGame', 'rzPerGame'];
+/**
+ * Blended across seasons, weighted by recency.
+ *
+ * `tgt` and `vol` were missing from this, which did not show while the screens
+ * printed the snap share: that one WAS blended, so the app's own banner —
+ * "real usage connected (2025 · 2024 · 2023)" — was true of the number on the
+ * page. A share taken from the most recent season alone under that banner is
+ * not, and one bad or injured year would have swung it. They are the same
+ * number as each other for everyone but a quarterback, so blending one without
+ * the other would only have made them disagree.
+ */
+const BLEND: (keyof Usage)[] = [
+  'snap', 'tgt', 'vol', 'eff', 'ltr', 'xtdPerGame', 'ppg', 'tdPerGame', 'rzPerGame',
+];
+
+/**
+ * The share, written out. Its unit changes by position, so it is formatted
+ * where the position is known — once, rather than at each of the four places
+ * that show it, and again after blending, where the value it describes moves.
+ */
+function shareTexts(pos: string | undefined, share: number | null, vol: number | null) {
+  const isQB = pos === 'QB';
+  const isRun = pos === 'RB';
+  return {
+    shareLabel: isQB ? 'Attempts per game' : isRun ? 'Rush share' : 'Target share',
+    /* Zero is not printed. A feed with no passing column and a quarterback who
+     * genuinely never throws both arrive here as 0, and only one of them is
+     * worth a line — "0 att/gm" beside a starter reads as a broken app, which
+     * is what it was. Nothing to say is better said by saying nothing. */
+    shareText: isQB
+      ? (vol ? (vol as number).toFixed(1) : null)
+      : (share ? ((share as number) * 100).toFixed(1) + '%' : null),
+    shareShort: isQB
+      ? (vol ? Math.round(vol as number) + ' att/gm' : null)
+      : (share
+        ? Math.round((share as number) * 100) + (isRun ? '% carries' : '% targets')
+        : null),
+  };
+}
 
 /**
  * Expected touchdowns, by least squares over real opportunities:
@@ -170,10 +211,7 @@ export function seasonUsage(
 
     usage[id] = {
       snap, tgt: share, vol, gp,
-      shareLabel: isQB ? 'Attempts per game' : isRun ? 'Rush share' : 'Target share',
-      shareText: isQB
-        ? (Number.isFinite(vol) ? (vol as number).toFixed(1) : null)
-        : (Number.isFinite(share) ? ((share as number) * 100).toFixed(1) + '%' : null),
+      ...shareTexts(pl.position, share, vol),
       eff, effLabel: 'Yards per touch',
       ltr, longTd,
       xtd, xtdPerGame: xtd != null && gp ? xtd / gp : null,
@@ -230,6 +268,9 @@ export function blendSeasons(
       // weights renormalised over whatever was actually available
       if (sw > 0) (usage[id] as unknown as Record<string, number>)[k as string] = sv / sw;
     }
+    // The formatted forms were written from ONE season's numbers. They describe
+    // a value that has just moved, so they are written again from the blend.
+    Object.assign(usage[id], shareTexts(pl?.position, usage[id].tgt, usage[id].vol));
   }
 
   // Percentiles AFTER blending, so a player is ranked against a three-year
