@@ -3,13 +3,13 @@
  *
  * Two kinds, and the split is deliberate.
  *
- * THE MOMENTS ARE CLIPS. Five of them, cut from files handed over for this
- * app: the shout when you take somebody, the one that says it is your turn,
- * the one for a player being taken out from under you, for a reach, and for a
- * run on a position. They are 1.4 seconds each and about ten kilobytes each,
- * fetched once and decoded once, then played from memory — so nothing touches
- * the network at the moment a pick lands, which is the only thing that ever
- * made a sound arrive late.
+ * THE MOMENTS ARE CLIPS. Six of them, cut from files handed over for this app:
+ * the shout when you take somebody, the one that says it is your turn, the one
+ * for a player taken out from under you, for a reach, for a run on a position,
+ * and the line that closes a finished draft. Under two seconds and around ten
+ * kilobytes each, fetched once and decoded once, then played from memory — so
+ * nothing touches the network at the moment a pick lands, which is the only
+ * thing that ever made a sound arrive late.
  *
  * THE METRONOME IS SYNTHESISED. An ordinary pick reveals every 850ms and a
  * kicker comes off the board twenty times in the last rounds; a second and a
@@ -24,10 +24,11 @@
 import ballerinaUrl from '../assets/ballerina.mp3';
 import brainrotUrl from '../assets/brainrot.mp3';
 import chimpanziniUrl from '../assets/chimpanzini.mp3';
+import gotthisUrl from '../assets/gotthis.mp3';
 import patapimUrl from '../assets/patapim.mp3';
 import siuUrl from '../assets/siu.mp3';
 
-export type SfxName = 'tick' | 'coin' | 'boom' | 'horn' | 'pipe' | 'womp' | 'tung';
+export type SfxName = 'tick' | 'coin' | 'boom' | 'horn' | 'pipe' | 'womp' | 'tung' | 'done';
 
 /**
  * Which moment gets which clip.
@@ -42,6 +43,7 @@ const CLIPS: Partial<Record<SfxName, string>> = {
   womp: brainrotUrl,     // they took the one you were told to take
   boom: chimpanziniUrl,  // a reach, from well down the board
   tung: ballerinaUrl,    // three of a position in a row
+  done: gotthisUrl,      // the board is drafted out and that is your team
 };
 
 
@@ -461,7 +463,9 @@ function tung(c: BaseAudioContext, out: AudioNode, t: number) {
 
 type Voice = (c: BaseAudioContext, out: AudioNode, t: number) => void;
 
-const VOICES: Record<SfxName, Voice> = { tick, coin, boom, horn, pipe, womp, tung };
+/* `done` has no voice of its own: before it had a clip it WAS the womp, which
+ * is also what covers for it if the clip never decodes. */
+const VOICES: Record<SfxName, Voice> = { tick, coin, boom, horn, pipe, womp, tung, done: womp };
 
 /**
  * Draw one sound into any context at any time.

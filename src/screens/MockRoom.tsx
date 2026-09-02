@@ -107,7 +107,9 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
     if (!live || waiting || !st.done) return;
     if (ended.current) return;
     ended.current = true;
-    playSfx('womp');
+    /* The end of a draft is not the same event as somebody taking the player
+       you were told to take, and it used to share a sound with it. */
+    playSfx('done');
   }, [live, waiting, st.done]);
   useEffect(() => { if (!live) ended.current = false; }, [live]);
 
