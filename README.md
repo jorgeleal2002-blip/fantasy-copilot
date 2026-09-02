@@ -218,6 +218,13 @@ Tell those apart without the console: press **Test** in the app. "Refused to
 read AND to write" means the database is alive and only the rules are missing.
 "Could not reach the database at all" means it is disabled or gone.
 
+On an iPhone, before anything else: Safari's **ᴀA** button (left of the address
+bar) → **Request Desktop Website**, then turn the handset sideways and pinch
+out. The Firebase console is a desktop application squeezed into a phone, and
+in its mobile layout the tab strip runs off the edge and the publish bar is not
+drawn at all. Asking for the desktop site gives it back — this is the single
+thing that unsticks most of the setup on a phone, and it costs one tap.
+
 There is also a way round the button entirely. A database can be created with
 the open rules already in place:
 
