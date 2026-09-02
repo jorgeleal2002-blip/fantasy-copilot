@@ -211,6 +211,11 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
               // warning, which is how the top of the board ended up showing no
               // information at all.
               const gone = !!p.goes && p.goes <= before;
+              /* The other half of the same question, and the one that decides
+                 what a round is worth: a man who will still be sitting there
+                 when you pick again is not a reason to spend this pick. */
+              const lasts = !gone && m.pickAgain && p.goes && p.goes >= m.pickAgain
+                ? pickLabel(m.pickAgain, m.teamCount) : null;
               return (
                 <div
                   key={p.id}
@@ -231,7 +236,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                       {/* A team defence has no age, and "? yrs" is not a fact. */}
                       {[p.pos, p.team || 'no team yet']
                         .concat(p.age ? [p.age + ' yrs'] : []).join(' · ')}
-                      {gone ? ' · unlikely to last' : ''}
+                      {gone ? ' · unlikely to last' : lasts ? ' · still there at ' + lasts : ''}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flex: 'none' }}>

@@ -7,7 +7,7 @@ import { inviteUrl, parseInvite } from '../model/invite';
 import { buildModel } from '../model/model';
 import { REACH, sfxFor } from '../model/sfx-map';
 import type { MockPick } from '../model/types';
-import { ownedWeights, redraftWeights, scorePlayer } from '../model/score';
+import { ownedWeights, pickValue, redraftWeights, scorePlayer } from '../model/score';
 import { blendSeasons, buildUsage, seasonUsage, type Usage } from '../model/usage';
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
@@ -2090,5 +2090,84 @@ describe('the board reads the format', () => {
     const dyn = build(ONE_QB, 2, true, false).runMock(5).board.filter(o => POS.indexOf(o.pos as Pos) >= 0);
     const moved = rd.filter((o, i) => dyn[i] && dyn[i].id !== o.id);
     expect(moved.length).toBeGreaterThan(rd.length / 3);
+  });
+});
+
+/**
+ * What a round is worth.
+ *
+ * A draft is not a sequence of independent purchases. You hold another pick,
+ * and the only thing this one buys that the next one cannot is a player who
+ * will be GONE by then — which the model had no idea about, so a sixth-rounder
+ * spent on a man certain to last still read as a fine selection.
+ */
+describe('the value of the round', () => {
+  it('keeps a man the board takes before you pick again', () => {
+    // Picking at 60, next real selection at 80. He goes at 62: you lose him.
+    expect(pickValue(62, 60, 80)).toBeGreaterThan(pickValue(62, 60, 63));
+  });
+
+  it('and discounts one who will still be sitting there', () => {
+    const soon = pickValue(62, 60, 80);      // gone well before you return
+    const late = pickValue(95, 60, 80);      // still on the board at 80
+    expect(late).toBeLessThan(soon);
+    // Discounted, not erased — he is still a player worth having, just not a
+    // reason to hurry.
+    expect(late).toBeGreaterThan(0);
+  });
+
+  it('leaves your last pick alone, where there is no waiting to do', () => {
+    const noNext = pickValue(95, 60);
+    expect(noNext).toBe(pickValue(95, 60, 60));
+    expect(noNext).toBeGreaterThan(pickValue(95, 60, 80));
+  });
+
+  /**
+   * A turn is one window, not two rounds.
+   *
+   * At 6.10 and 7.1 there is no pick in between, so whoever you pass on at
+   * 6.10 is still sitting there one pick later — and taking "the next pick you
+   * hold" literally discounted the whole board equally and flattened it. The
+   * horizon is the first pick that is NOT back-to-back with the run.
+   */
+  it('treats back-to-back picks as one window', () => {
+    const base = makeBundle();
+    const m = buildModel({
+      data: {
+        ...base,
+        league: { ...base.league,
+          roster_positions: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF',
+            'BN', 'BN', 'BN', 'BN', 'BN', 'BN'],
+          settings: { ...base.league.settings, type: 0, draft_rounds: 15 } },
+        rosters: base.rosters.map(r => ({ ...r, players: [], starters: [] })),
+        draft: { ...base.draft!, type: 'snake', settings: { rounds: 15 } },
+      },
+      usage: buildUsage(makeStats(base.players), base.players),
+      market: parseMarket(makeFantasyCalc(base.players)),
+      strat: 'balanced', boardMode: 'fa', pickSel: 0,
+    });
+    // Seat 1 in a ten-team snake holds 60 and 61 back to back, then 80.
+    const choices: Record<number, string> = {};
+    let st = m.runMock(1, choices, 1);
+    for (let i = 0; i < 5 && st.onClock?.mine; i++) {
+      choices[st.onClock.overall] = st.board[0].id;
+      st = m.runMock(1, choices, 1);
+    }
+    expect(st.onClock!.overall).toBe(60);
+    // The horizon is 8.10, not 7.01 — so the twenty names in between are the
+    // ones at risk, and nothing beyond them is.
+    const risky = st.board.filter(o => o.goneBy);
+    expect(risky).toHaveLength(20);
+    risky.forEach(o => expect(o.goneBy).toBe('8.10'));
+    st.board.slice(20).forEach(o => expect(o.goneBy).toBe(null));
+  });
+
+  /* And it has to reach the order, not only the numbers. */
+  it('puts a man you are about to lose above one you are not', () => {
+    const w = redraftWeights(STRATS.balanced.w);
+    // Two players, identical but for where the board takes them, at pick 60
+    // with the next real selection at 80.
+    const at = (board: number) => pickValue(board, 60, 80) * w.value * 100;
+    expect(at(65) - at(95)).toBeGreaterThan(1.5);
   });
 });

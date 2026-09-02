@@ -348,6 +348,10 @@ function PlayerList({ st, m, tab, pos, q, canTake, onTake }: {
   canTake: boolean; onTake: (id: string) => void;
 }) {
   const needle = q.trim().toLowerCase();
+  /* Only while the clock is yours: "still there when you pick again" is a
+     statement about YOUR next selection, and there is no such thing to say
+     while somebody else is on the clock. */
+  const again = st.onClock?.mine ? st.pickAgain : null;
   const rows = tab === 'suggested' && st.options.length
     ? st.options
     : st.board
@@ -365,15 +369,17 @@ function PlayerList({ st, m, tab, pos, q, canTake, onTake }: {
   return (
     <>
       {rows.map(o => (
-        <PlayerRow key={o.id} o={o} teams={m.teamCount} canTake={canTake} onTake={onTake} />
+        <PlayerRow key={o.id} o={o} teams={m.teamCount} canTake={canTake} onTake={onTake} again={again} />
       ))}
     </>
   );
 }
 
 /** One name, with the button that drafts him. */
-function PlayerRow({ o, teams, canTake, onTake }: {
+function PlayerRow({ o, teams, canTake, onTake, again }: {
   o: MockOption; teams: number; canTake: boolean; onTake: (id: string) => void;
+  /** when this seat really picks again, so the row can say what waiting costs */
+  again?: string | null;
 }) {
   const at = pickLabel(o.goes, teams);
   return (
@@ -399,6 +405,14 @@ function PlayerRow({ o, teams, canTake, onTake }: {
               number is missing rather than inapplicable. */}
           {' · ' + (o.team || 'no team yet') + (o.age != null ? ' · ' + o.age + ' yrs' : '')}
         </div>
+        {/* The one thing that decides a draft, and the room never said it: this
+            pick only buys what your next one cannot. A man who is still going
+            to be sitting there is not a reason to spend the round. */}
+        {again ? (
+          <div className="pl-meta" style={{ color: o.goneBy ? BAD : dim(0.38) }}>
+            {o.goneBy ? 'gone before your ' + o.goneBy : 'still there at your ' + again}
+          </div>
+        ) : null}
       </div>
       <div className="pl-stat">
         <div className="pl-stat-k">goes</div>

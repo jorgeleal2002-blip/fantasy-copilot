@@ -227,6 +227,15 @@ export interface MockOption {
   rank: number | null;
   /** his place among what is still on the mock's board. */
   goes?: number | null;
+  /**
+   * Whether the board takes him before you pick again, written as the pick you
+   * would lose him by — "7.01" — or null where he lasts.
+   *
+   * The whole reason a round is worth anything: this selection only buys what
+   * the next one cannot, and until the screen says which is which you are
+   * guessing at the one thing that decides a draft.
+   */
+  goneBy?: string | null;
   fit: number;
   /** set only on the three shortcuts offered at your turn */
   lens?: 'best' | 'need' | 'value' | 'upside';
@@ -264,6 +273,9 @@ export interface MockState {
   myTeam: MockOption[];
   /** your roster shape including what you already own */
   shape: Record<DraftPos, number>;
+  /** When you really pick again — "8.10" — or null on your last selection.
+   *  What this pick is worth is what it buys that THAT one cannot. */
+  pickAgain: string | null;
   done: boolean;
 }
 
@@ -425,6 +437,12 @@ export interface Model {
   /** What comes back for the players you put up for trade, best first. */
   blockOffers: BlockReturn[];
   bestDeals: DraftDeal[];
+  /**
+   * When you really pick again after the one you are looking at — the first
+   * pick you hold that is NOT back-to-back with it. What this selection is
+   * worth is what it buys that this one cannot; null on your last pick.
+   */
+  pickAgain: number | null;
   leagueRows: LeagueRow[];
   leagueHasRosters: boolean;
   /** false when this account matches no roster in the league — as an owner or

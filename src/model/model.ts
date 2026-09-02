@@ -3,7 +3,7 @@ import type { DraftPos, FillPos, LeagueBundle, Pos, SleeperPlayer, SleeperRoster
 import {
   BASE_ROUND_VALUE, DEF_SLOTS, ELIG, FILL, MetricKey, POS, PEAK, SLOT_SORT, STRATS, StratKey,
 } from './constants';
-import { ageCurve, clamp, modelVal, playerName, rankScore, talentScale } from './math';
+import { ageCurve, clamp, modelVal, pickLabel, playerName, rankScore, talentScale } from './math';
 import type { Market } from './market';
 import { sosFor, sosScore } from './sos';
 import { EMPTY_METRICS, ownedWeights, redraftWeights, scorePlayer } from './score';
@@ -593,6 +593,30 @@ export function buildModel(input: ModelInput): Model {
   const myRound = myNextOverall ? Math.floor((myNextOverall - 1) / teamCount) + 1 : nextRound;
   const myPickInRound = myNextOverall ? ((myNextOverall - 1) % teamCount) + 1 : nextSlot;
   const pickForValue = myNextOverall || nextOverall;
+  /**
+   * When you really pick again — what makes a round worth something.
+   *
+   * The only thing this selection buys that the next one cannot is a player
+   * who will be gone by then, so the board has to know when "then" is. It is
+   * not simply the next pick you hold: at a turn you hold 6.10 and 7.1 with
+   * nothing in between, and whoever you pass on at 6.10 is still sitting there
+   * one pick later. Two selections with no draft between them are one window,
+   * and the horizon is the first pick AFTER that run. Treating them as two
+   * separate rounds discounted the entire board equally and flattened it.
+   *
+   * Null on your last pick, where there is no waiting left to do.
+   */
+  const horizonAfter = (owned: number[], from: number): number | null => {
+    let run = from;
+    for (const o of owned) {
+      if (o <= from) continue;
+      if (o === run + 1) { run = o; continue; }
+      return o;
+    }
+    return null;
+  };
+  const myOveralls = myPickList.map(p => p.overall);
+  const afterSelected = horizonAfter(myOveralls, pickForValue);
 
   // ── The board. This league's draft is rookies only, so that is the default;
   //    the free-agent switch is there for waiver work.
@@ -715,7 +739,8 @@ export function buildModel(input: ModelInput): Model {
       };
     }
     const s = scorePlayer(p, needScore, {
-      idx: i + 1, pick: pickForValue, now: nextOverall, dv: talentQ(p, x.id), dvMax,
+      idx: i + 1, pick: pickForValue, next: afterSelected ?? undefined, now: nextOverall,
+      dv: talentQ(p, x.id), dvMax,
       stack: stackFor(p), use: uFor(x.id), redraft: !isDynasty, rank: rankOf(x.id, p),
       vor: vorOf(p, x.id), sos: sosOf(p),
     }, w);
@@ -1397,6 +1422,7 @@ export function buildModel(input: ModelInput): Model {
       extra?: Partial<MockOption>,
       at?: number,
       now?: number,
+      next?: number | null,
     ): MockOption => {
       const row = {
         id: x.id, name: playerName(x.raw), pos: x.pos, team: x.raw.team,
@@ -1435,10 +1461,28 @@ export function buildModel(input: ModelInput): Model {
         // `idx` counts survivors and `now` puts them back on the draft's own
         // scale, so `at` — already a pick number — is handed over as the first
         // survivor of a draft that has reached it.
-        ...(at && now ? { idx: at - now + 1, now, pick: now } : {}),
+        ...(at && now ? { idx: at - now + 1, now, pick: now, next: next ?? undefined } : {}),
       }, w);
       return { ...row, fit: sc.fit, ...extra };
     };
+
+    /**
+     * When this seat really picks again — see `horizonAfter`.
+     *
+     * Read off the SEAT rather than off your roster, because borrowing a seat
+     * borrows its picks, which is the whole point of sitting somewhere else.
+     * Where the seat was not borrowed it still honours a pick you traded for,
+     * by asking the same ownership question the loop below asks.
+     */
+    const seatOveralls: number[] = [];
+    for (let o = 1; o <= rounds * teamCount; o++) {
+      const r = Math.floor((o - 1) / teamCount) + 1;
+      const ir = ((o - 1) % teamCount) + 1;
+      const sl = snake && r % 2 === 0 ? teamCount - ir + 1 : ir;
+      const owner = moved ? (slotToRoster[sl] ?? 0) : (pickOwner[o] ?? slotToRoster[sl]);
+      if (moved ? sl === seat : owner === myRow.roster_id) seatOveralls.push(o);
+    }
+    const nextForMe = (from: number) => horizonAfter(seatOveralls, from);
 
     for (let overall = nextOverall; overall <= stop; overall++) {
       const round = Math.floor((overall - 1) / teamCount) + 1;
@@ -1472,12 +1516,17 @@ export function buildModel(input: ModelInput): Model {
             board: live.slice(0, 120).map((x, i) => rate(x, { goes: overall + i }, overall + i, overall)),
             myTeam,
             shape,
+            pickAgain: null,
             done: false,
           };
         }
 
         if (!taken) {
           // You are on the clock. Everything the room needs, and nothing after.
+          //
+          // What this pick is worth is what it buys that the NEXT one cannot,
+          // so every rating below is measured against your own next selection.
+          const mineNext = nextForMe(overall);
           //
           //    Three shortcuts, each the BEST of its lens rather than the best
           //    of a sub-metric read across forty names. The old set did not
@@ -1502,7 +1551,7 @@ export function buildModel(input: ModelInput): Model {
           const pool = live.slice(0, 40);
           const fitCache: Record<string, number> = {};
           const fitOf = (x: { id: string; raw: SleeperPlayer; pos: Pos }) => {
-            if (fitCache[x.id] == null) fitCache[x.id] = rate(x, undefined, where(x), overall).fit;
+            if (fitCache[x.id] == null) fitCache[x.id] = rate(x, undefined, where(x), overall, mineNext).fit;
             return fitCache[x.id];
           };
           const boom = (x: { id: string; raw: SleeperPlayer }) => scorePlayer(x.raw, {}, {
@@ -1568,7 +1617,16 @@ export function buildModel(input: ModelInput): Model {
             if (!x || seen[x.id]) return;
             seen[x.id] = 1;
             room[x.pos] = (room[x.pos] || 0) - 1;
-            options.push(rate(x, { goes: where(x), ...extra }, where(x), overall));
+            const at = where(x);
+            options.push(rate(
+              x,
+              {
+                goes: at,
+                goneBy: mineNext && at < mineNext ? (pickLabel(mineNext, teamCount) || null) : null,
+                ...extra,
+              },
+              at, overall, mineNext,
+            ));
           };
 
           // 1. The app's own answer: the highest Rating left for YOUR roster.
@@ -1643,9 +1701,17 @@ export function buildModel(input: ModelInput): Model {
             onClock: { overall, round, slot, label, mine: true, who: 'you' },
             options,
             // The whole board, rated — a mock room lets you take anybody.
-            board: live.slice(0, 120).map((x, i) => rate(x, { goes: overall + i }, overall + i, overall)),
+            board: live.slice(0, 120).map((x, i) => rate(
+              x,
+              {
+                goes: overall + i,
+                goneBy: mineNext && overall + i < mineNext ? (pickLabel(mineNext, teamCount) || null) : null,
+              },
+              overall + i, overall, mineNext,
+            )),
             myTeam,
             shape,
+            pickAgain: mineNext ? (pickLabel(mineNext, teamCount) || null) : null,
             done: false,
           };
         }
@@ -1702,7 +1768,7 @@ export function buildModel(input: ModelInput): Model {
     return {
       slot: seat, made, onClock: null, options: [],
       board: board.filter(x => !gone.has(x.id)).slice(0, 40).map(x => rate(x)),
-      myTeam, shape, done: true,
+      myTeam, shape, pickAgain: null, done: true,
     };
   };
 
@@ -1814,7 +1880,7 @@ export function buildModel(input: ModelInput): Model {
     scored, optimal, swaps, optIds, benchQ, starterQ, totalQ, myBase,
     explosive, fading, buried, stacks, conflicts, concentration,
     pickAssets, myPickList, upcoming, selPick,
-    nextOverall, myRound, myPickInRound, myNextOverall, mySlot,
+    nextOverall, myRound, myPickInRound, myNextOverall, mySlot, pickAgain: afterSelected,
     offers, blockOffers,
     bestDeals, leagueRows, leagueHasRosters, foundMyTeam, myTeamName, multInfo,
     allFits, searchIndex, qDiverge, wUsed: w,

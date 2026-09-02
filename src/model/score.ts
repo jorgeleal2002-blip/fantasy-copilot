@@ -25,6 +25,9 @@ export interface ScoreContext {
   idx?: number;
   /** the pick number we are scoring for — value depends on where you select */
   pick?: number;
+  /** the NEXT pick you hold after that one. A man who will still be sitting
+   *  there when you come round again is not a reason to spend this one. */
+  next?: number;
   /** the overall pick the draft has actually reached, which is what turns an
    *  index among survivors back into a position in the whole draft */
   now?: number;
@@ -51,6 +54,35 @@ export interface ScoreResult {
   m: Metrics;
   fit: number;
   adp: number | null | undefined;
+}
+
+/**
+ * How much of him you keep by taking him HERE.
+ *
+ * Two halves. The first is the old comparison and it still holds: he is cheap
+ * if the board takes him after your pick, dear if before.
+ *
+ * The second is what a round is actually worth, and the app had no idea. A
+ * draft is not a sequence of independent purchases — you hold another pick,
+ * and the only thing this one buys that the next one cannot is a player who
+ * will be GONE by then. A man sitting fortieth on the board when you pick
+ * again in eleven is going to be sitting there when you pick again; spending
+ * a sixth-rounder on him spends the round on nothing. At a turn — 6.10 and 7.1
+ * back to back, no pick in between — almost nobody is at risk, and the model
+ * now prices the two selections as the one window they are.
+ *
+ * `WAIT_KEEP` is what survives the discount: a man certain to last still
+ * scores, because he is still a player worth having. He is just not a reason
+ * to hurry.
+ */
+const WAIT_KEEP = 0.45;
+export function pickValue(board: number, pick: number, next?: number): number {
+  const base = clamp(0.5 + (pick - board) / (pick + board) * 0.5, 0, 1);
+  // No next pick, or none left: this is the only chance and nothing is
+  // discounted, which is also the honest answer on your last selection.
+  if (!next || next <= pick) return base;
+  const gone = clamp((next - board) / (next - pick), 0, 1);
+  return clamp(base * (WAIT_KEEP + (1 - WAIT_KEEP) * gone), 0, 1);
 }
 
 /**
@@ -94,9 +126,10 @@ export function scorePlayer(
     // The comparison used to run the other way, which scored the deepest name
     // on the board as the biggest bargain at an early pick and hung a "falling"
     // chip on what was actually a ten-spot reach.
-    value: ctx.idx
-      ? clamp(0.5 + ((ctx.pick || 0) - board) / ((ctx.pick || 0) + board) * 0.5, 0, 1)
-      : 0.5,
+    //
+    // And a slide is only worth something if somebody else would take him —
+    // see `pickValue`, where the round gets its price.
+    value: ctx.idx ? pickValue(board, ctx.pick || 0, ctx.next) : 0.5,
     floor: clamp(rs * 0.7 + (exp >= 3 ? 0.3 : exp >= 1 ? 0.18 : 0.05), 0, 1),
     boom: clamp(boomBase + boomGuess, 0, 1),
     combo: 0,
