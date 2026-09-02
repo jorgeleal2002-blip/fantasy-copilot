@@ -3,11 +3,11 @@
  *
  * Two kinds, and the split is deliberate.
  *
- * THE MOMENTS ARE CLIPS. Six of them, cut from files handed over for this app:
- * the two that take turns when you take somebody, the one that says it is your
- * turn, the one for a player taken out from under you, for a reach, for a run
- * on a position, and the closing line — which is also one of the two your own
- * picks alternate between, because it is worth hearing more than once a draft. Under two seconds and around ten
+ * THE MOMENTS ARE CLIPS. Eight of them, cut from files handed over for this
+ * app, across six moments: taking somebody, being on the clock, being sniped,
+ * a reach, a run on a position, and the end of the draft. The first three
+ * happen often enough to hold two apiece and alternate; the closing line is
+ * also half of your own pick, because it is worth more than once a draft. Under two seconds and around ten
  * kilobytes each, fetched once and decoded once, then played from memory — so
  * nothing touches the network at the moment a pick lands, which is the only
  * thing that ever made a sound arrive late.
@@ -23,7 +23,9 @@
  */
 
 import ballerinaUrl from '../assets/ballerina.mp3';
+import bombardinoUrl from '../assets/bombardino.mp3';
 import brainrotUrl from '../assets/brainrot.mp3';
+import chillguyUrl from '../assets/chillguy.mp3';
 import chimpanziniUrl from '../assets/chimpanzini.mp3';
 import gotthisUrl from '../assets/gotthis.mp3';
 import patapimUrl from '../assets/patapim.mp3';
@@ -38,18 +40,18 @@ export type SfxName = 'tick' | 'coin' | 'boom' | 'horn' | 'pipe' | 'womp' | 'tun
  * and over, and they stay short. Everything here happens a handful of times in
  * a draft, which is what earns a second and a half.
  *
- * A moment can have MORE THAN ONE, and takes them in turn. Your own pick is the
- * good thing that happens in here and it happens fifteen times: one line said
- * fifteen times stops being a celebration somewhere around the fourth, and two
- * taking turns is the cheapest fix there is.
+ * A moment can have MORE THAN ONE, and takes them in turn. The three that
+ * repeat — your pick, your turn, and being sniped — each hold two, because one
+ * line said fifteen times stops being a celebration somewhere around the
+ * fourth, and two taking turns is the cheapest fix there is.
  */
 const CLIPS: Partial<Record<SfxName, string[]>> = {
-  coin: [siuUrl, gotthisUrl],  // you took somebody, alternating
-  horn: [patapimUrl],          // you are on the clock
-  womp: [brainrotUrl],         // they took the one you were told to take
-  boom: [chimpanziniUrl],      // a reach, from well down the board
-  tung: [ballerinaUrl],        // three of a position in a row
-  done: [gotthisUrl],          // the board is drafted out and that is your team
+  coin: [siuUrl, gotthisUrl],           // you took somebody
+  horn: [patapimUrl, bombardinoUrl],    // you are on the clock
+  womp: [brainrotUrl, chillguyUrl],     // they took the one you were told to take
+  boom: [chimpanziniUrl],               // a reach, from well down the board
+  tung: [ballerinaUrl],                 // three of a position in a row
+  done: [gotthisUrl],                   // the board is drafted out, and that is your team
 };
 
 
