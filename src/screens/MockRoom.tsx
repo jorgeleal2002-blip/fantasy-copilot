@@ -536,14 +536,70 @@ function MockBoard({ m, made, seat, next, claimable, onClaim }: {
   const rows = Array.from({ length: m.rounds }, (_, i) => i + 1);
   const at = (round: number, col: number) => made.find(p => p.round === round && p.slot === col);
   const scroller = useRef<HTMLDivElement>(null);
+  /** Where the board was last told to go, so a second pick arriving mid-glide
+   *  measures against the destination rather than against the animation. */
+  const aim = useRef<{ x: number; y: number } | null>(null);
 
   // Your seat is the one you came to see, and it is rarely on screen at this
-  // cell size. Centre it once, on open; scrolling afterwards is the reader's.
+  // cell size. Centre it once, on open.
   useEffect(() => {
     const el = scroller.current;
     if (!el || el.scrollWidth <= el.clientWidth) return;
     el.scrollLeft = Math.max(0, AXIS + (seat - 0.5) * (CELL + GAP) - el.clientWidth / 2);
   }, [seat]);
+
+  /**
+   * Follow the draft to wherever it goes.
+   *
+   * Only four or five seats fit at this cell size, so most picks land off the
+   * side of the screen: the header would announce a name while the board sat
+   * still on somebody else's column, and the pick you were told about was the
+   * one thing you could not see. The same is true downward once the rounds
+   * outrun the board's height.
+   *
+   * It moves only when the square is actually outside the view, so a board
+   * already showing the action stays where the reader put it, and it stops
+   * short of the sticky round numbers rather than sliding underneath them.
+   */
+  const newest = made.length ? made[made.length - 1] : null;
+  const lastKey = newest ? newest.round + '-' + newest.slot : null;
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || !lastKey) return;
+    const cell = el.querySelector<HTMLElement>('[data-cell="' + lastKey + '"]');
+    if (!cell) return;
+    /* Absolute targets, not `scrollBy`.
+     *
+     * A relative scroll is relative to where the board is AT THAT INSTANT, and
+     * during a smooth animation that is a moving number — so a pick landing
+     * while the previous one is still gliding compounds two offsets and stops
+     * short. The far column never quite arrived, every round.
+     *
+     * The cell's position in CONTENT coordinates does not move while the board
+     * does: the rect and the scroll offset shift together, so their sum is
+     * stable mid-animation. Aim at that instead, and compare against where the
+     * board was last told to go rather than where it currently is. */
+    const c = cell.getBoundingClientRect();
+    const box = el.getBoundingClientRect();
+    const PAD = 14;
+    const cx = c.left - box.left + el.scrollLeft;
+    const cy = c.top - box.top + el.scrollTop;
+    const from = aim.current ?? { x: el.scrollLeft, y: el.scrollTop };
+
+    let x = from.x;
+    if (cx - AXIS - PAD < x) x = cx - AXIS - PAD;
+    else if (cx + c.width + PAD > x + el.clientWidth) x = cx + c.width + PAD - el.clientWidth;
+    let y = from.y;
+    if (cy - PAD < y) y = cy - PAD;
+    else if (cy + c.height + PAD > y + el.clientHeight) y = cy + c.height + PAD - el.clientHeight;
+
+    x = Math.max(0, Math.min(x, el.scrollWidth - el.clientWidth));
+    y = Math.max(0, Math.min(y, el.scrollHeight - el.clientHeight));
+    if (x === from.x && y === from.y) return;
+    aim.current = { x, y };
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollTo({ left: x, top: y, behavior: still ? 'auto' : 'smooth' });
+  }, [lastKey]);
 
   return (
     <div ref={scroller} className="bd-scroll">
@@ -589,6 +645,7 @@ function MockBoard({ m, made, seat, next, claimable, onClaim }: {
             return (
               <div
                 key={r + '-' + c}
+                data-cell={r + '-' + c}
                 className={'bd-cell' + (p ? ' is-filled' : '') + (p?.mine ? ' is-mine' : '')
                   + (onClock ? ' is-clock' : '') + (c === seat ? ' is-seat' : '')}
                 style={pos ? ({ '--pos': colorOf(pos) } as CSSProperties) : undefined}
