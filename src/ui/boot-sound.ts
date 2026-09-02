@@ -53,32 +53,69 @@ export const setSoundOn = (on: boolean): void => {
   }
 };
 
-/** Once per page load, not once per mount: React runs effects twice in dev. */
-let already = false;
+/**
+ * How long away counts as having left.
+ *
+ * Coming back after glancing at a message is not opening the app, and a song
+ * clip every time you flick between two apps would be unbearable. Coming back
+ * after a while is opening it, and that is when this was asked to play.
+ */
+const AWAY_MS = 5 * 60 * 1000;
+
 /** Held so it can be silenced later. `new Audio()` is never in the document,
  *  so looking for it with a DOM query finds nothing — which is how the Off
  *  switch came to do nothing at all the first time it was written. */
 let playing: HTMLAudioElement | null = null;
+/** Guards a double call in the same instant — React runs effects twice in dev. */
+let starting = false;
+let leftAt = 0;
+let watching = false;
 
-export function playBootSound(): void {
-  if (already || !soundOn() || typeof Audio === 'undefined') return;
-  already = true;
+const EVENTS: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart'];
+
+/** Try it, and if the browser says no, wait for the first touch and try then. */
+function start(): void {
+  if (starting || !soundOn() || typeof Audio === 'undefined') return;
+  starting = true;
+  setTimeout(() => { starting = false; }, 0);
   askToBeHeard();
 
-  const el = new Audio(bootUrl);
+  const el = playing ?? new Audio(bootUrl);
   el.preload = 'auto';
   playing = el;
-  const EVENTS: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart'];
+  try { el.currentTime = 0; } catch { /* nothing loaded yet */ }
 
   const disarm = () => EVENTS.forEach(e => window.removeEventListener(e, onGesture));
   const onGesture = () => {
     disarm();
-    // Muted between the refusal and here would be a silent "success".
     void el.play().catch(() => {});
   };
 
   void el.play().then(disarm).catch(() => {
     EVENTS.forEach(e => window.addEventListener(e, onGesture, { once: true, passive: true }));
+  });
+}
+
+/**
+ * Play it when the app opens — including the times it opens without loading.
+ *
+ * An installed app is not reloaded when you come back to it, it is resumed:
+ * the page is the one you left, React never mounts again, and a flag saying
+ * "already played" is still set from the first time. So it played once and
+ * then never again, which is exactly what it looked like from the outside.
+ * Returning after a real absence counts as opening it.
+ */
+export function playBootSound(): void {
+  start();
+  if (watching || typeof document === 'undefined') return;
+  watching = true;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      leftAt = Date.now();
+      return;
+    }
+    if (leftAt && Date.now() - leftAt >= AWAY_MS) start();
+    leftAt = 0;
   });
 }
 
