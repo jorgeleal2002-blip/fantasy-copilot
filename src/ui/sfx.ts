@@ -48,6 +48,25 @@ let ctx: AudioContext | null = null;
 let bus: GainNode | null = null;
 
 /**
+ * Tell iOS this is playback, not a UI blip.
+ *
+ * Safari 16.4 added a way to say what audio is FOR. Without it an installed
+ * copy obeys the ringer switch, which most people leave on — no error, no
+ * event, the sound simply does not happen. The opening clip has said this
+ * since the day it was written; the draft room never did, which is one of the
+ * two reasons a home-screen copy was silent while the same page in Safari was
+ * not. Where the API does not exist this does nothing.
+ */
+function askToBeHeard(): void {
+  try {
+    const s = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+    if (s) s.type = 'playback';
+  } catch {
+    /* not supported — the ringer switch wins, and nothing else breaks */
+  }
+}
+
+/**
  * The context, made on first use and kept.
  *
  * A context created before the page has been touched starts suspended, so
@@ -83,8 +102,99 @@ function audio(): { c: AudioContext; out: GainNode } | null {
     bus.connect(lim);
     lim.connect(ctx.destination);
   }
-  if (ctx.state === 'suspended') void ctx.resume();
+  if (ctx.state !== 'running') void ctx.resume().catch(() => undefined);
   return bus ? { c: ctx, out: bus } : null;
+}
+
+/** Whether the unlock below has actually run and taken. */
+let unlocked = false;
+
+/**
+ * Wake the audio up, from inside a real tap.
+ *
+ * This is the other reason a home-screen copy was silent. In a browser tab the
+ * page's own activation carries: touch anything and a context created later
+ * will run. Installed on the home screen it does not — the context has to be
+ * resumed DURING a gesture, and a resume from a React effect four hundred
+ * milliseconds after a pick landed is not during anything.
+ *
+ * Resuming is also not sufficient on its own. iOS will report the context
+ * "running" and still produce nothing until something has actually been played
+ * through it, so this plays one silent frame. It costs nothing and it is the
+ * only version of this that works.
+ */
+export function armSfx(): void {
+  askToBeHeard();
+  const a = audio();
+  if (!a) return;
+  void a.c.resume().catch(() => undefined);
+  try {
+    const src = a.c.createBufferSource();
+    src.buffer = a.c.createBuffer(1, 1, a.c.sampleRate);
+    src.connect(a.c.destination);
+    src.start(0);
+    unlocked = true;
+  } catch {
+    /* it will be tried again on the next tap */
+  }
+}
+
+/* Any of these counts as a tap somewhere. `touchstart` also begins a scroll,
+ * which does not always count as activation, so the ones that always do are
+ * listened for too and the first to arrive wins. */
+const GESTURES: (keyof WindowEventMap)[] = [
+  'pointerdown', 'pointerup', 'touchend', 'click', 'keydown',
+];
+
+/**
+ * Arm on the first tap anywhere, and again whenever the app comes back.
+ *
+ * Resuming an installed app does not reload it: React never mounts again, and
+ * the context it left behind comes back interrupted. Re-arming on the way in
+ * costs one silent frame.
+ */
+export function readySfx(): void {
+  if (typeof window === 'undefined') return;
+  const once = () => {
+    armSfx();
+    if (unlocked) GESTURES.forEach(e => removeEventListener(e, once));
+  };
+  GESTURES.forEach(e => addEventListener(e, once, { passive: true }));
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    askToBeHeard();
+    void ctx?.resume().catch(() => undefined);
+    // and let the next tap re-arm, in case the resume was refused
+    unlocked = false;
+    GESTURES.forEach(e => addEventListener(e, once, { passive: true }));
+  });
+}
+
+/**
+ * What the audio is actually doing.
+ *
+ * Three wrong diagnoses of the opening clip were made in a row by reasoning
+ * from the outside, and the thing that ended it was making the app report its
+ * own state instead. Same here: when a phone stays silent this says which of
+ * "never created", "suspended", "the switch is off" and "it is running and you
+ * heard nothing" it is, and only one of those is a bug in this file.
+ */
+export function sfxState(): {
+  state: string; unlocked: boolean; standalone: boolean; on: boolean; session: string;
+} {
+  let session = 'not supported';
+  try {
+    const s = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+    if (s) session = s.type;
+  } catch { /* leave it */ }
+  return {
+    state: ctx ? ctx.state : 'not created',
+    unlocked,
+    standalone: !!(window.matchMedia?.('(display-mode: standalone)').matches
+      || (navigator as unknown as { standalone?: boolean }).standalone),
+    on: sfxOn(),
+    session,
+  };
 }
 
 /** One second of white noise, made once and re-read by every voice that wants

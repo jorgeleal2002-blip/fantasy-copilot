@@ -6,7 +6,7 @@ import { sfxFor } from '../model/sfx-map';
 import type { Pos } from '../api/types';
 import type { MockOption, MockPick, MockState, Model } from '../model/types';
 import type { App } from '../state/useApp';
-import { loadSfxClips, playSfx } from '../ui/sfx';
+import { armSfx, loadSfxClips, playSfx } from '../ui/sfx';
 import { dim, ellipsis, fitColor } from '../ui/styles';
 
 /** How long each bot pick sits on screen before the next one lands. */
@@ -77,7 +77,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
   /* Decoded before the room needs them. Decoding an mp3 takes longer than the
    * 420ms between picks, so a clip decoded at play time would arrive after the
    * pick it belongs to. Opening the room is a screen's worth of time earlier. */
-  useEffect(() => { void loadSfxClips(); }, []);
+  useEffect(() => { armSfx(); void loadSfxClips(); }, []);
 
   const suggested = useRef<string[]>([]);
   if (st.onClock?.mine && st.options.length) suggested.current = st.options.map(o => o.id);
@@ -187,7 +187,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => { setShown(0); app.startMock(); }}
+            onClick={() => { armSfx(); setShown(0); app.startMock(); }}
             style={{ width: '100%', padding: '11px 0', fontSize: 13.5, borderRadius: 11 }}
           >
             {app.roomId ? 'Start for the room' : 'Start mock draft'}

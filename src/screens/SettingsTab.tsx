@@ -1,6 +1,6 @@
 import { checkLive, liveEnabled, type LiveCheck } from '../api/live';
 import { lastSound, setSoundOn, soundDetail, soundOn, stopBootSound, testSound } from '../ui/boot-sound';
-import { hasClip, loadSfxClips, playSfx, reloadSfxClips, setSfxOn, sfxOn, type SfxName } from '../ui/sfx';
+import { armSfx, hasClip, loadSfxClips, playSfx, reloadSfxClips, setSfxOn, sfxOn, sfxState, type SfxName } from '../ui/sfx';
 import { MAX_CLIP, dropClip, putClip } from '../ui/sfx-clips';
 import { ACCENT, BAD, GOOD, METRIC_LABEL, MID, STRATS, StratKey } from '../model/constants';
 import { clamp } from '../model/math';
@@ -494,7 +494,7 @@ function DraftSoundToggle() {
             setSfxOn(next);
             // Turning it on should make a sound. The tap is the gesture the
             // browser wants, so this is also what unlocks audio for the room.
-            if (next) playSfx('coin');
+            if (next) { armSfx(); playSfx('coin'); }
           }}
           className={'btn ' + (on ? 'btn-primary' : 'btn-secondary')}
           style={{ flex: 'none', borderRadius: 10, minWidth: 62, minHeight: 34 }}
@@ -567,6 +567,19 @@ function DraftSoundToggle() {
             Your clips stay on this device — in this browser's own storage. They are
             not uploaded, not shared with the room, and not part of the app. Clearing
             the site's data removes them.
+          </div>
+
+          {/* The app's own account of itself. Silence has four causes that look
+              identical from outside, and only one of them is a bug in the code —
+              three wrong guesses at the opening clip were what taught that. */}
+          <div style={{ fontSize: 10.5, color: dim(0.3), marginTop: 7, lineHeight: 1.5 }}>
+            {(() => {
+              const st = sfxState();
+              return 'Audio: ' + st.state
+                + (st.unlocked ? ', woken' : ', not yet woken by a tap')
+                + ' · ' + (st.standalone ? 'home-screen app' : 'browser tab')
+                + ' · session ' + st.session;
+            })()}
           </div>
         </div>
       ) : null}
