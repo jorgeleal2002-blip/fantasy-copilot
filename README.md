@@ -214,6 +214,11 @@ Publishing rules is free — it is not a Blaze feature, and if the console is
 telling you otherwise you are either on the rules PLAYGROUND, which only
 simulates and has no publish button, or the database has been disabled.
 
+Before either of those, the ordinary reason: **the button is not drawn until
+there is something to publish.** Looking for it before editing finds nothing,
+because nothing has changed. Tap into the editor, clear what is there, paste —
+and a bar appears saying there are unpublished changes, with Publish on it.
+
 Tell those apart without the console: press **Test** in the app. "Refused to
 read AND to write" means the database is alive and only the rules are missing.
 "Could not reach the database at all" means it is disabled or gone.
