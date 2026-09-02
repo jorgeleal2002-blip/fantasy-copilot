@@ -1,5 +1,6 @@
 import { liveEnabled } from '../api/live';
 import { lastSound, setSoundOn, soundDetail, soundOn, stopBootSound, testSound } from '../ui/boot-sound';
+import { playSfx, setSfxOn, sfxOn, type SfxName } from '../ui/sfx';
 import { ACCENT, BAD, GOOD, METRIC_LABEL, MID, STRATS, StratKey } from '../model/constants';
 import { clamp } from '../model/math';
 import type { Model } from '../model/types';
@@ -74,6 +75,8 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
       </div>
 
       <SoundToggle />
+
+      <DraftSoundToggle />
 
       <div>
         <div style={{
@@ -425,6 +428,78 @@ function SoundToggle() {
         return 'Last attempt: ' + text + '.' + (d && l.outcome === 'nofile' ? ' (' + d + ')' : '');
       })()}
     </div>
+    </div>
+  );
+}
+
+/**
+ * The draft room's own noises, which are a different question.
+ *
+ * They are not the opening clip and they are not on the same switch: somebody
+ * who does not want thirteen seconds of music every launch may well want to
+ * hear a pick land, and somebody drafting on a bus wants neither. They are also
+ * made rather than loaded, so nothing here can fail the way the clip can — the
+ * only reasons for silence are this switch and the phone's own.
+ */
+const DEMO: { key: SfxName; label: string; when: string }[] = [
+  { key: 'coin', label: 'Coin', when: 'you draft somebody' },
+  { key: 'horn', label: 'Horn', when: 'your turn' },
+  { key: 'boom', label: 'Boom', when: 'a reach' },
+  { key: 'pipe', label: 'Pipe', when: 'a kicker or a defence' },
+  { key: 'womp', label: 'Womp', when: 'they took your man' },
+  { key: 'tick', label: 'Tick', when: 'every other pick' },
+];
+
+function DraftSoundToggle() {
+  const [on, setOn] = useState(sfxOn);
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13 }}>Draft room sounds</div>
+          <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 2 }}>
+            A noise per pick in the mock, louder the more surprising the pick.
+          </div>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label="Draft room sounds"
+          onClick={() => {
+            const next = !on;
+            setOn(next);
+            setSfxOn(next);
+            // Turning it on should make a sound. The tap is the gesture the
+            // browser wants, so this is also what unlocks audio for the room.
+            if (next) playSfx('coin');
+          }}
+          className={'btn ' + (on ? 'btn-primary' : 'btn-secondary')}
+          style={{ flex: 'none', borderRadius: 10, minWidth: 62, minHeight: 34 }}
+        >
+          {on ? 'On' : 'Off'}
+        </button>
+      </div>
+
+      {/* Every one of them, playable, with what sets it off. A list of sounds
+          you cannot hear is a list of words. */}
+      {on ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+          {DEMO.map(d => (
+            <button
+              key={d.key}
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => playSfx(d.key)}
+              title={d.when}
+              style={{ borderRadius: 9, padding: '5px 10px', fontSize: 11.5 }}
+            >
+              {d.label}
+              <span style={{ color: dim(0.35), fontSize: 10.5, marginLeft: 5 }}>{d.when}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

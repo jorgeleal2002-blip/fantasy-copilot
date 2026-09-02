@@ -5,6 +5,8 @@ import { marketQuery, parseMarket } from '../model/market';
 import { matchMe } from '../api/sleeper';
 import { inviteUrl, parseInvite } from '../model/invite';
 import { buildModel } from '../model/model';
+import { REACH, sfxFor } from '../model/sfx-map';
+import type { MockPick } from '../model/types';
 import { ownedWeights, redraftWeights, scorePlayer } from '../model/score';
 import { buildUsage, seasonUsage, type Usage } from '../model/usage';
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
@@ -1376,5 +1378,80 @@ describe('where the mock says a player goes', () => {
       const seat = st.board.findIndex(o => o.id === top.id);
       if (seat >= 0) expect(top.goes).toBe(st.onClock.overall + seat);
     }
+  });
+});
+
+describe('what the draft room shouts, and how often', () => {
+  const REDRAFT = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF',
+    'BN', 'BN', 'BN', 'BN'];
+  const redraft = () => {
+    const b = makeBundle();
+    b.league = {
+      ...b.league, roster_positions: REDRAFT,
+      settings: { ...b.league.settings, type: 0, draft_rounds: 12 },
+    };
+    b.rosters = b.rosters.map(r => (r.roster_id === 1 ? { ...r, players: [] } : r));
+    return buildModel({
+      data: b,
+      usage: buildUsage(makeStats(b.players), b.players),
+      market: parseMarket(makeFantasyCalc(b.players)),
+      strat: 'balanced', boardMode: 'fa', pickSel: 0,
+    });
+  };
+
+  const pick = (over: Partial<MockPick>): MockPick => ({
+    overall: 5, round: 1, slot: 5, label: '1.05', team: 'Someone',
+    mine: false, boardAt: 1,
+    player: { id: 'x', name: 'X', pos: 'WR', team: 'MIA', age: 24, rank: 1, fit: 60 },
+    ...over,
+  });
+
+  it('puts your own pick above everything else that is true of it', () => {
+    // A reach that is also your pick is your pick. You do not boo yourself.
+    expect(sfxFor(pick({ mine: true, boardAt: 40 }), [])).toBe('coin');
+  });
+
+  it('answers a kicker with the pipe, whatever else he was', () => {
+    const k = { id: 'k', name: 'K', pos: 'K' as const, team: 'CIN', age: 27, rank: null, fit: 20 };
+    expect(sfxFor(pick({ player: k, boardAt: 30 }), [])).toBe('pipe');
+    expect(sfxFor(pick({ player: { ...k, pos: 'DEF' as const } }), [])).toBe('pipe');
+  });
+
+  it('is a womp when they take the man the app just told you to take', () => {
+    expect(sfxFor(pick({}), ['x'])).toBe('womp');
+    expect(sfxFor(pick({}), ['someone-else'])).toBe('tick');
+  });
+
+  it('booms on a reach and only on a reach', () => {
+    expect(sfxFor(pick({ boardAt: REACH }), [])).toBe('boom');
+    expect(sfxFor(pick({ boardAt: REACH - 1 }), [])).toBe('tick');
+  });
+
+  /**
+   * The threshold, measured against a real draft rather than chosen by taste.
+   *
+   * A sound that fires on most picks is not a sound, it is a metronome — and
+   * the vine boom is the loudest thing in the set, three and a half times the
+   * energy of anything else. If the bots reach often enough for this to land on
+   * a third of the board the room becomes unlistenable, and the number to move
+   * is REACH, not the volume.
+   */
+  it('leaves the loud one rare across a whole draft', () => {
+    const m = redraft();
+    // Drive it to the end: the mock stops at your turn, so it has to be played.
+    const choices: Record<number, string> = {};
+    let st = m.runMock(7, choices);
+    for (let i = 0; i < 200 && st.onClock; i++) {
+      choices[st.onClock.overall] = st.options[0]?.id || st.board[0].id;
+      st = m.runMock(7, choices);
+    }
+    const made = st.made;
+    expect(made.length).toBeGreaterThan(20);
+    const count = (n: string) => made.filter(p => sfxFor(p, []) === n).length;
+    const booms = count('boom');
+    expect(booms / made.length).toBeLessThan(0.12);
+    // and not silent either — a rule that never fires is a rule nobody wrote
+    expect(booms).toBeGreaterThan(0);
+    expect(count('tick') / made.length).toBeGreaterThan(0.5);
   });
 });

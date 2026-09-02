@@ -2,9 +2,11 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { ACCENT, BAD, GOOD, POS, cellOf, colorOf } from '../model/constants';
 import { inviteUrl, shareInvite } from '../model/invite';
 import { pickLabel } from '../model/math';
+import { sfxFor } from '../model/sfx-map';
 import type { Pos } from '../api/types';
 import type { MockOption, MockPick, MockState, Model } from '../model/types';
 import type { App } from '../state/useApp';
+import { playSfx } from '../ui/sfx';
 import { dim, ellipsis, fitColor } from '../ui/styles';
 
 /** How long each bot pick sits on screen before the next one lands. */
@@ -68,6 +70,37 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
     return () => window.clearTimeout(t);
   }, [waiting, shown, st.made.length]);
 
+  /* What the app was recommending the last time you were on the clock, kept so
+   * the room can tell the difference between a pick and a robbery. `options`
+   * only exists while it is your turn, and the moment worth reacting to is the
+   * one after that — when somebody else takes one of them. */
+  const suggested = useRef<string[]>([]);
+  if (st.onClock?.mine && st.options.length) suggested.current = st.options.map(o => o.id);
+
+  /* One sound per pick, as it appears — driven off `shown` rather than off the
+   * mock, because the mock computes every pick up to your turn at once and the
+   * room reveals them one at a time. Playing them when they are COMPUTED would
+   * fire eight sounds in one frame and then leave eight silent picks. */
+  useEffect(() => {
+    if (!live || !shown) return;
+    const pick = st.made[shown - 1];
+    if (pick) playSfx(sfxFor(pick, suggested.current));
+    // `st.made` is rebuilt every render and `shown` is what actually moves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown, live]);
+
+  /* The mock ending, once. `done` stays true for every render after it, and an
+   * effect on a value that never changes back still re-runs whenever anything
+   * beside it does. */
+  const ended = useRef(false);
+  useEffect(() => {
+    if (!live || waiting || !st.done) return;
+    if (ended.current) return;
+    ended.current = true;
+    playSfx('womp');
+  }, [live, waiting, st.done]);
+  useEffect(() => { if (!live) ended.current = false; }, [live]);
+
   // Escape leaves the room, like every other sheet in the app.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') app.closeMock(); };
@@ -81,7 +114,10 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
   /** Only YOUR turn unlocks the Draft buttons. */
   const onClock = clock && clock.mine ? clock : null;
   useEffect(() => {
-    if (onClock) setTab(t => (t === 'team' ? t : 'suggested'));
+    if (!onClock) return;
+    setTab(t => (t === 'team' ? t : 'suggested'));
+    // Your turn is the one thing in here you might miss while looking away.
+    playSfx('horn');
   }, [onClock?.overall]);
 
   const visible = live ? st.made.slice(0, shown) : [];

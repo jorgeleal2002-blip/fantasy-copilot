@@ -205,6 +205,11 @@ export interface MockPick {
   round: number;
   slot: number;
   label: string;
+  /** Where he stood among everyone STILL on the board when he came off it:
+   *  1 is the consensus best available, and a big number is a reach. It is the
+   *  difference between a pick and a surprise, which is the only thing the room
+   *  can react to without being told. */
+  boardAt: number;
   /** the manager on the clock */
   team: string;
   mine: boolean;

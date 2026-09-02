@@ -1398,6 +1398,7 @@ export function buildModel(input: ModelInput): Model {
           };
         }
 
+        const at = live.indexOf(taken);
         gone.add(taken.id);
         // Rated against the roster as it stood when you took him: now that the
         // score reads your mock roster, counting him before rating him would
@@ -1412,7 +1413,7 @@ export function buildModel(input: ModelInput): Model {
         made.push({
           overall, round, slot, label,
           team: mine ? 'you' : teamName(owner?.owner_id),
-          mine, player: opt,
+          mine, player: opt, boardAt: at + 1,
         });
         continue;
       }
@@ -1429,6 +1430,7 @@ export function buildModel(input: ModelInput): Model {
       let choice = top[0].x;
       for (const c of top) { r -= c.s; if (r <= 0) { choice = c.x; break; } }
 
+      const choiceAt = live.indexOf(choice);
       gone.add(choice.id);
       if (rid) {
         have[rid] = have[rid] || {};
@@ -1436,6 +1438,7 @@ export function buildModel(input: ModelInput): Model {
       }
       made.push({
         overall, round, slot, label, team: teamName(owner?.owner_id), mine: false,
+        boardAt: choiceAt + 1,
         player: {
           id: choice.id, name: playerName(choice.raw), pos: choice.pos, team: choice.raw.team,
           age: choice.raw.age, rank: marketOrder[choice.id] || null, fit: 0,
