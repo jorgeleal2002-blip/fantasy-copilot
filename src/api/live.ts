@@ -50,6 +50,9 @@ export const EMPTY_ROOM = (seed: number, leagueId: string, host: string): Room =
 export const LIVE_URL: string = (import.meta.env?.VITE_RTDB_URL || '').replace(/\/+$/, '');
 export const liveEnabled = () => !!LIVE_URL;
 
+/** How often to re-read when the stream is not available. */
+const POLL_MS = 4000;
+
 const roomPath = (id: string) => LIVE_URL + '/rooms/' + encodeURIComponent(id) + '.json';
 
 /** Six characters a person can read down a phone line. No l/1/O/0. */
@@ -134,25 +137,45 @@ export function watchRoom(id: string, onRoom: (r: Room) => void, onError?: () =>
     }
   };
 
-  try {
-    es = new EventSource(roomPath(id));
-    // Every event means "something moved"; the read that follows is the truth.
-    const bump = () => { if (!stopped) void pull(); };
-    es.addEventListener('put', bump);
-    es.addEventListener('patch', bump);
-    es.onerror = () => {
-      // The stream drops on a lock screen or a tunnel. Polling is the floor
-      // under it, so a draft never silently stops updating.
-      if (!stopped && !timer) timer = window.setInterval(pull, 4000);
-    };
-  } catch {
-    timer = window.setInterval(pull, 4000);
-  }
+  const poll = (on: boolean) => {
+    if (on && !timer && !stopped) timer = window.setInterval(() => void pull(), POLL_MS);
+    if (!on && timer) { window.clearInterval(timer); timer = undefined; }
+  };
 
+  const open = () => {
+    if (stopped || es || typeof EventSource === 'undefined') { poll(!stopped); return; }
+    try {
+      es = new EventSource(roomPath(id));
+      const bump = () => { if (!stopped) void pull(); };
+      es.addEventListener('put', bump);
+      es.addEventListener('patch', bump);
+      // A working stream makes the poll redundant. Without this line one
+      // dropped packet started a timer that then ran beside the recovered
+      // stream for the rest of the session, doubling the traffic for nothing.
+      es.onopen = () => poll(false);
+      es.onerror = () => poll(true);
+    } catch {
+      poll(true);
+    }
+  };
+
+  const close = () => { es?.close(); es = null; poll(false); };
+
+  /* A phone in a pocket does not need the draft. A room left open overnight
+   * would otherwise poll around twenty thousand times with nobody watching,
+   * which is somebody's free quota spent on a locked screen. */
+  const onVisible = () => {
+    if (typeof document === 'undefined') return;
+    if (document.visibilityState === 'hidden') close();
+    else { open(); void pull(); }
+  };
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisible);
+
+  open();
   void pull();
   return () => {
     stopped = true;
-    es?.close();
-    if (timer) window.clearInterval(timer);
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisible);
+    close();
   };
 }

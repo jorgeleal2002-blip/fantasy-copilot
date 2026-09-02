@@ -146,6 +146,33 @@ Turning it on takes about two minutes and costs nothing:
    variable rather than a secret because the URL is public by design: it ships
    to every browser that loads the app. The database rules are what protect it.
 
+### What it costs
+
+Nothing, by a wide margin, and the design is what keeps it that way.
+
+Measured against the shape the app actually writes — a 12-team, 16-round draft
+with all twelve people in the room:
+
+| | used | free allowance |
+| --- | --- | --- |
+| A room at its biggest | 3.2 KB | 1 GB stored |
+| One whole draft, all twelve clients | 3.7 MB | 10 GB downloaded a month |
+| People connected at once | 12 | 100 |
+
+That is roughly **2,800 complete drafts a month** before the download allowance
+is in sight. Two things in the client protect it: a working stream cancels the
+polling fallback rather than running beside it, and a backgrounded phone stops
+asking entirely — a room left open overnight used to poll about twenty thousand
+times with nobody looking.
+
+Stay on the **Spark** plan, which is the default and asks for no card. Do not
+upgrade to Blaze: pay-as-you-go is the only way this could ever bill you, and
+nothing here needs it.
+
+(The allowances above are Firebase's published Spark limits as I know them;
+they are not something this repository can check for you, so glance at the
+console's usage tab once if you want to be sure.)
+
 There is no SDK. A room is one small JSON document — the seed, who is in which
 seat, and a map of "pick N went to player X" — read and written over plain HTTP
 and streamed with the browser's own `EventSource`, falling back to polling when
