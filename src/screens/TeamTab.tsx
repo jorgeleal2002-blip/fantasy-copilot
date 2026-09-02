@@ -4,8 +4,8 @@ import type { Model, RosterPlayer } from '../model/types';
 import type { App, TeamView } from '../state/useApp';
 import { ord, pct } from '../ui/format';
 import { Meter, SERIES, markFor } from '../ui/charts';
-import { Card, CardHead, DividedRow, Screen, Segmented, type SegOption } from '../ui/primitives';
-import { capsule, cardNote, cardTitle, dim, ellipsis, heroCard, kicker, posBadge } from '../ui/styles';
+import { Card, CardHead, DividedRow, Screen, Segmented, type SegOption, Face } from '../ui/primitives';
+import { capsule, cardNote, cardTitle, dim, ellipsis, heroCard, kicker } from '../ui/styles';
 
 const POS_FILTERS: SegOption<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>[] =
   [{ key: 'ALL', label: 'All' }, ...POS.map(p => ({ key: p, label: p }))];
@@ -420,7 +420,7 @@ function Roster({ app, m }: { app: App; m: Model }) {
           style={{ background: 'var(--color-surface)', borderRadius: 11, padding: '11px 12px', cursor: 'pointer' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-            <div style={posBadge(app.photoFor(p.id))}>{p.pos}</div>
+            <Face photo={app.photoFor(p.id)} pos={p.pos} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{

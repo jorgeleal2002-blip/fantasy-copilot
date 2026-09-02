@@ -908,3 +908,15 @@ button { font-family: inherit; }
   60%  { transform: translateY(10px) rotate(4deg) scale(1.06); opacity: 1 }
   to   { transform: none }
 }
+
+/* The line between what the app is arguing for and what is merely left.
+   Without it the three suggestions read as the top of the board, which is a
+   different claim and usually a different name. */
+.pl-split {
+  padding: 9px 15px 5px;
+  font-size: 9.5px;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  color: rgba(242, 253, 254, .32);
+  border-top: 1px solid var(--color-divider);
+}

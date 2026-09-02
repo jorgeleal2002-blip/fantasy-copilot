@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { cardNote, cardTitle, seg, SegSize, surface } from './styles';
 
 export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
@@ -132,6 +132,52 @@ export function Screen({ children, animation = 'fadeUp .3s ease backwards' }: { 
   return (
     <div style={{ animation, display: 'flex', flexDirection: 'column', gap: 9 }}>
       {children}
+    </div>
+  );
+}
+
+/**
+ * A player's face, with his position behind it.
+ *
+ * `photoFor` always hands back a URL — Sleeper's portrait address, whether or
+ * not there is a portrait at it — so a badge that hides its label whenever a
+ * url exists shows an empty square for everybody the CDN has no picture of,
+ * which is every kicker, every defence and a long tail of the rest. The letters
+ * only give way once the image has actually loaded, and come back if it fails.
+ */
+export function Face({ photo, pos, size = 34 }: {
+  photo?: string | null;
+  pos: string;
+  size?: number;
+}) {
+  const [ok, setOk] = useState(false);
+  // A new url is a new question: forget whether the last one worked.
+  useEffect(() => { setOk(false); }, [photo]);
+  return (
+    <div
+      style={{
+        width: size, height: size, flex: 'none', borderRadius: size * 0.27,
+        position: 'relative', overflow: 'hidden',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: size * 0.3, fontWeight: 600, letterSpacing: '.04em',
+        color: 'var(--color-accent)',
+        background: 'color-mix(in srgb, var(--color-accent) 14%, transparent)',
+      }}
+    >
+      {pos}
+      {photo ? (
+        <img
+          src={photo}
+          alt=""
+          loading="lazy"
+          onLoad={() => setOk(true)}
+          onError={() => setOk(false)}
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'cover', opacity: ok ? 1 : 0,
+          }}
+        />
+      ) : null}
     </div>
   );
 }

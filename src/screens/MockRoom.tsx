@@ -8,6 +8,7 @@ import type { MockOption, MockPick, MockState, Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { Brainrot } from '../ui/brainrot';
 import { armSfx, playSfx, type ClipName } from '../ui/sfx';
+import { Face } from '../ui/primitives';
 import { dim, ellipsis, fitColor } from '../ui/styles';
 
 /**
@@ -37,7 +38,12 @@ const STICKY: CSSProperties = {
   position: 'sticky', left: 0, zIndex: 2, background: 'var(--color-bg)',
 };
 
-type DockTab = 'suggested' | 'players' | 'team';
+/* Two, not three. The suggestions used to live behind their own tab, which
+   put the three names the app is actually recommending one tap away from the
+   list you are reading — and made you choose between "what should I take" and
+   "who is left", which is one question. They are pinned to the top of the
+   players now. */
+type DockTab = 'players' | 'team';
 
 /**
  * The draft room.
@@ -138,7 +144,8 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
   const onClock = clock && clock.mine ? clock : null;
   useEffect(() => {
     if (!onClock) return;
-    setTab(t => (t === 'team' ? t : 'suggested'));
+    // Your turn brings the list back if you had wandered off to your roster.
+    setTab('players');
     // Your turn is the one thing in here you might miss while looking away.
     shoutOut(playSfx('horn'));
   }, [onClock?.overall]);
@@ -237,8 +244,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
       <section className="mock-dock">
         <div className="dock-tabs" role="tablist">
           {([
-            ['suggested', onClock ? 'Take one' : 'Suggested'],
-            ['players', 'Players'],
+            ['players', onClock ? 'Take one' : 'Players'],
             ['team', 'My team'],
           ] as [DockTab, string][]).map(([k, label]) => (
             <button
@@ -255,29 +261,24 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
         </div>
 
         {tab === 'team' ? (
-          <MyTeam st={st} m={m} />
+          <MyTeam st={st} m={m} app={app} />
         ) : (
           <>
-            {/* Only over the full board. On Take one the list is three fixed
-                names, so a position chip had nothing to filter and did
-                nothing when tapped. */}
-            {tab === 'players' ? (
-              <PosFilter
-                m={m}
-                st={st}
-                pos={pos}
-                setPos={setPos}
-                q={q}
-                setQ={setQ}
-                searching={searching}
-                setSearching={setSearching}
-              />
-            ) : null}
+            <PosFilter
+              m={m}
+              st={st}
+              pos={pos}
+              setPos={setPos}
+              q={q}
+              setQ={setQ}
+              searching={searching}
+              setSearching={setSearching}
+            />
             <div className="dock-list">
               <PlayerList
                 st={st}
                 m={m}
-                tab={tab}
+                app={app}
                 pos={pos}
                 q={q}
                 canTake={!!onClock}
@@ -358,8 +359,16 @@ function PosFilter({ m, st, pos, setPos, q, setQ, searching, setSearching }: {
   );
 }
 
-function PlayerList({ st, m, tab, pos, q, canTake, onTake }: {
-  st: MockState; m: Model; tab: DockTab; pos: 'ALL' | Pos; q: string;
+/**
+ * Who is left, with what the app would take pinned to the top of it.
+ *
+ * The suggestions are three of these players, so they belong in the list of
+ * them rather than behind a tab of their own — and they obey the position
+ * chips and the search box for the same reason. Filter to receivers and a
+ * recommended quarterback is not an answer to what you asked.
+ */
+function PlayerList({ st, m, app, pos, q, canTake, onTake }: {
+  st: MockState; m: Model; app: App; pos: 'ALL' | Pos; q: string;
   canTake: boolean; onTake: (id: string) => void;
 }) {
   const needle = q.trim().toLowerCase();
@@ -367,38 +376,59 @@ function PlayerList({ st, m, tab, pos, q, canTake, onTake }: {
      statement about YOUR next selection, and there is no such thing to say
      while somebody else is on the clock. */
   const again = st.onClock?.mine ? st.pickAgain : null;
-  const rows = tab === 'suggested' && st.options.length
-    ? st.options
-    : st.board
-      .filter(o => pos === 'ALL' || o.pos === pos)
-      .filter(o => !needle || o.name.toLowerCase().includes(needle))
-      .slice(0, 100);
+  const keep = (o: MockOption) =>
+    (pos === 'ALL' || o.pos === pos) && (!needle || o.name.toLowerCase().includes(needle));
 
-  if (!rows.length) {
+  const picks = st.options.filter(keep);
+  const on: Record<string, 1> = {};
+  picks.forEach(o => { on[o.id] = 1; });
+  // Nobody twice: a suggested player is still on the board underneath.
+  const rest = st.board.filter(o => !on[o.id]).filter(keep).slice(0, 100);
+
+  if (!picks.length && !rest.length) {
     return (
       <div style={{ fontSize: 12.5, color: dim(0.45), padding: '14px 15px' }}>
-        {tab === 'suggested' ? 'Nothing to suggest until you are on the clock.' : 'Nobody left matching that.'}
+        Nobody left matching that.
       </div>
     );
   }
+  const row = (o: MockOption) => (
+    <PlayerRow
+      key={o.id}
+      o={o}
+      teams={m.teamCount}
+      photo={app.photoFor(o.id)}
+      canTake={canTake}
+      onTake={onTake}
+      again={again}
+    />
+  );
   return (
     <>
-      {rows.map(o => (
-        <PlayerRow key={o.id} o={o} teams={m.teamCount} canTake={canTake} onTake={onTake} again={again} />
-      ))}
+      {picks.map(row)}
+      {/* A line, so the three the app is arguing for do not read as the top of
+          the board — which is a different claim and often a different name. */}
+      {picks.length && rest.length ? <div className="pl-split">Everybody else</div> : null}
+      {rest.map(row)}
     </>
   );
 }
 
-/** One name, with the button that drafts him. */
-function PlayerRow({ o, teams, canTake, onTake, again }: {
+/** One name, with his face and the button that drafts him. */
+function PlayerRow({ o, teams, photo, canTake, onTake, again }: {
   o: MockOption; teams: number; canTake: boolean; onTake: (id: string) => void;
+  /** his portrait, or null — the badge falls back to his position */
+  photo?: string | null;
   /** when this seat really picks again, so the row can say what waiting costs */
   again?: string | null;
 }) {
   const at = pickLabel(o.goes, teams);
   return (
     <div className="pl-row">
+      {/* A face reads faster than a name in a list you are scanning under a
+          clock, and where there is no portrait the badge says the position
+          instead — never an empty square. */}
+      <Face photo={photo} pos={o.pos} />
       <button
         type="button"
         className="pl-draft"
@@ -441,14 +471,15 @@ function PlayerRow({ o, teams, canTake, onTake, again }: {
   );
 }
 
-function MyTeam({ st, m }: { st: MockState; m: Model }) {
+function MyTeam({ st, m, app }: { st: MockState; m: Model; app: App }) {
   return (
     <div className="dock-list" style={{ padding: '4px 15px 16px' }}>
       {st.myTeam.length ? st.myTeam.map((o, i) => (
         <div key={o.id} style={{
-          display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 13,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 13,
           padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
         }}>
+          <Face photo={app.photoFor(o.id)} pos={o.pos} size={28} />
           <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{o.name}</span>
           <span style={{ color: dim(0.42), flex: 'none' }}>
             <span style={{ color: colorOf(o.pos) }}>{o.pos}</span>{' · rating ' + o.fit}

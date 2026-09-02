@@ -7,8 +7,8 @@ import { reasons } from '../model/score';
 import type { DraftDeal, Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { PlayerSearch, type SearchScope } from '../ui/PlayerSearch';
-import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
-import { capsule, cardTitle, dim, ellipsis, fitColor, fitStyle, heroCard, kicker, posBadge } from '../ui/styles';
+import { Card, Face, Screen, Segmented, type SegOption } from '../ui/primitives';
+import { capsule, cardTitle, dim, ellipsis, fitColor, fitStyle, heroCard, kicker } from '../ui/styles';
 
 const STATUS_TEXT: Record<string, string> = {
   pre_draft: 'Draft not started',
@@ -231,7 +231,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                     background: 'var(--color-surface)', borderRadius: 11, padding: '11px 12px', cursor: 'pointer',
                   }}
                 >
-                  <div style={posBadge(app.photoFor(p.id))}>{p.pos}</div>
+                  <Face photo={app.photoFor(p.id)} pos={p.pos} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{p.name}</div>
                     <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 2 }}>

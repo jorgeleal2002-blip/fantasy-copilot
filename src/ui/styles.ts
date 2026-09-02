@@ -57,16 +57,6 @@ export function tabStyle(on: boolean): CSSProperties {
   return { color: on ? ACCENT : dim(0.4) };
 }
 
-/** Position chip that doubles as the player's portrait once one is available. */
-export function posBadge(photo: string | null): CSSProperties {
-  return {
-    width: 34, height: 34, flex: 'none', borderRadius: 9,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 10, fontWeight: 600, letterSpacing: '.04em',
-    color: photo ? 'transparent' : ACCENT,
-    background: 'color-mix(in srgb, var(--color-accent) 14%, transparent)' + (photo ? ` url(${photo}) center/cover no-repeat` : ''),
-  };
-}
 
 export const surface: CSSProperties = {
   background: 'var(--color-surface)',
