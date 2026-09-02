@@ -1,4 +1,5 @@
 import bootUrl from '../assets/boot.mp3';
+import { armSfx, decodeUrl, playBuffer } from './sfx';
 
 /**
  * The sound the app opens with.
@@ -128,6 +129,18 @@ export const soundDetail = () => failNote;
  * where a media element only ever shrugs.
  */
 let srcReady: Promise<string> | null = null;
+/**
+ * The blob URL once it has arrived, so a gesture handler can use it WITHOUT
+ * waiting.
+ *
+ * Waiting is what lost the sound on an installed copy. `play()` was called
+ * inside a `.then()` — after the fetch resolved, which is after the tap that
+ * triggered it has finished — and a home-screen app does not carry the page's
+ * activation the way a browser tab does. The same mistake the draft room's
+ * audio was making, in the other engine. Fetched up front, the tap can play it
+ * on the spot.
+ */
+let srcUrl = '';
 
 function source(): Promise<string> {
   if (srcReady) return srcReady;
@@ -138,7 +151,8 @@ function source(): Promise<string> {
     })
     .then(blob => {
       if (!blob.size) throw new Error('empty');
-      return URL.createObjectURL(blob);
+      srcUrl = URL.createObjectURL(blob);
+      return srcUrl;
     })
     .catch(e => {
       // Fall back to letting the element try for itself rather than giving up.
@@ -146,6 +160,57 @@ function source(): Promise<string> {
       return bootUrl;
     });
   return srcReady;
+}
+
+/**
+ * Told when the clip actually starts, and how long it runs.
+ *
+ * The launch screen listens, so the picture can stay up for as long as the
+ * sound does. They were on separate clocks before — a screen held for 1.15s
+ * over a clip of 3.5s, which is most of the sound playing to an app that has
+ * already moved on.
+ */
+type Heard = (seconds: number) => void;
+const listeners: Heard[] = [];
+
+export function onBootSound(fn: Heard): () => void {
+  listeners.push(fn);
+  return () => { const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1); };
+}
+
+function announce(el: HTMLAudioElement): void {
+  const secs = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : 0;
+  listeners.slice().forEach(fn => { try { fn(secs); } catch { /* not our problem */ } });
+}
+
+/**
+ * The clip, decoded for the engine that actually works on a phone.
+ *
+ * An installed copy has been silent all session with this playing through its
+ * own `<audio>` element. That engine was never shown to work there; the draft
+ * room's was — measured against a browser that refuses to resume audio outside
+ * a tap, it put twelve sounds through the speakers where nothing else managed
+ * one. So the opening clip goes through it now, and `<audio>` stays as the
+ * fallback for anywhere Web Audio is missing.
+ */
+let decoded: AudioBuffer | null = null;
+let decoding: Promise<void> | null = null;
+
+function prepare(): Promise<void> {
+  if (decoding) return decoding;
+  decoding = decodeUrl(bootUrl).then(b => { decoded = b; });
+  return decoding;
+}
+
+/** Play it through the draft room's engine. Returns false if it stayed silent,
+ *  which is the case that has to wait for a tap. */
+function playHere(): boolean {
+  armSfx();
+  const secs = playBuffer(decoded);
+  if (!secs) return false;
+  note('played');
+  listeners.slice().forEach(fn => { try { fn(secs); } catch { /* not our problem */ } });
+  return true;
 }
 
 /** Try it, and if the browser says no, wait for the first touch and try then. */
@@ -159,6 +224,8 @@ function start(): void {
   starting = true;
   setTimeout(() => { starting = false; }, 0);
   askToBeHeard();
+  // Started here so a tap arriving later never has to wait for it.
+  void source();
 
   const el = playing ?? new Audio();
   el.preload = 'auto';
@@ -168,12 +235,24 @@ function start(): void {
   const disarm = () => EVENTS.forEach(e => window.removeEventListener(e, onGesture));
   const onGesture = () => {
     disarm();
+    askToBeHeard();
+    // The tap is the unlock, so this is the moment the good engine can work.
+    if (playHere()) return;
+    const bad = (e: DOMException) => {
+      note(why(e));
+      if (e?.name !== 'NotAllowedError') failNote = failNote || ('play: ' + (e?.name || e));
+    };
+    /* Synchronously, inside the tap, whenever the file is already here — which
+     * it is by now, because the fetch was started at launch. Everything below
+     * is the fallback for the case where it is somehow not. */
+    if (srcUrl) {
+      if (!el.src) el.src = srcUrl;
+      el.play().then(() => { note('played'); announce(el); }).catch(bad);
+      return;
+    }
     void source().then(url => { if (!el.src) el.src = url; return el.play(); })
-      .then(() => note('played'))
-      .catch((e: DOMException) => {
-        note(why(e));
-        if (e?.name !== 'NotAllowedError') failNote = failNote || ('play: ' + (e?.name || e));
-      });
+      .then(() => { note('played'); announce(el); })
+      .catch(bad);
   };
 
   /* Armed BEFORE the attempt, not after it fails.
@@ -184,10 +263,17 @@ function start(): void {
    * session. Arming first costs nothing — a successful play disarms it. */
   EVENTS.forEach(ev => window.addEventListener(ev, onGesture, { once: true, passive: true }));
 
+  /* Decode up front. A tap has to be able to play it on the spot: decoding an
+   * mp3 takes longer than the tap lasts, and a sound decoded afterwards is a
+   * sound that arrives after the moment it belonged to. */
+  void prepare().then(() => {
+    if (playHere()) disarm();
+  });
+
   void source().then(url => {
     if (!el.src) el.src = url;
     return el.play();
-  }).then(() => { disarm(); note('played'); }).catch((e: DOMException) => {
+  }).then(() => { disarm(); note('played'); announce(el); }).catch((e: DOMException) => {
     // Held back, not lost: the first touch of any kind plays it.
     note(e?.name === 'NotAllowedError' ? 'waiting' : why(e));
     if (e?.name !== 'NotAllowedError') failNote = failNote || ('play: ' + (e?.name || e));

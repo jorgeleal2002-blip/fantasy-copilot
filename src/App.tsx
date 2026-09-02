@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppShell } from './screens/AppShell';
 import { BootScreen, ConnectScreen, LeaguesScreen } from './screens/Onboarding';
 import { Splash } from './screens/Splash';
@@ -16,6 +16,11 @@ export default function App() {
   const [splash, setSplash] = useState(
     () => !matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
+  /* Stable, because the splash times itself off this and an inline arrow is a
+   * new function every render — which restarted its clock on every render the
+   * loading app happened to do, so how long the launch screen lasted depended
+   * on how busy the app was behind it. */
+  const closeSplash = useCallback(() => setSplash(false), []);
   // Only the app itself earns the full window on a laptop. Connect and the
   // league picker are one short form each — stretched across 1400px they would
   // read as a broken page, not a spacious one.
@@ -45,7 +50,7 @@ export default function App() {
           </div>
         ) : null}
       </div>
-      {splash ? <Splash onDone={() => setSplash(false)} /> : null}
+      {splash ? <Splash onDone={closeSplash} /> : null}
     </div>
   );
 }

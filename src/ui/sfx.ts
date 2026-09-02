@@ -510,6 +510,46 @@ export function reloadSfxClips(): Promise<void> {
 
 export const hasClip = (name: SfxName): boolean => !!clips[name];
 
+/**
+ * Decode any file into a buffer this engine can play.
+ *
+ * Offered so the opening clip can come through here too. It has been silent on
+ * an installed copy all session while running on its own `<audio>` element,
+ * and this is the path that was actually PROVEN to survive a browser that
+ * refuses to resume audio outside a tap — twelve sounds through the speakers
+ * where the other engine managed none. Same file, same bus, one unlock.
+ */
+export function decodeUrl(url: string): Promise<AudioBuffer | null> {
+  const a = audio();
+  if (!a) return Promise.resolve(null);
+  return fetch(url)
+    .then(res => (res.ok ? res.arrayBuffer() : Promise.reject(new Error('http ' + res.status))))
+    .then(buf => a.c.decodeAudioData(buf))
+    .catch(() => null);
+}
+
+/**
+ * Play one, and say how long it will last — 0 meaning it did not play.
+ *
+ * A suspended context accepts `start()` and makes no sound, so silence has to
+ * be reported rather than assumed away: the caller decides whether to wait for
+ * a tap, and the launch screen decides how long to stay up.
+ */
+export function playBuffer(buf: AudioBuffer | null): number {
+  if (!buf) return 0;
+  const a = audio();
+  if (!a || a.c.state !== 'running') return 0;
+  try {
+    const src = a.c.createBufferSource();
+    src.buffer = buf;
+    src.connect(a.out);
+    src.start();
+    return buf.duration;
+  } catch {
+    return 0;
+  }
+}
+
 export function playSfx(name: SfxName): void {
   if (!sfxOn()) return;
   const now = Date.now();
