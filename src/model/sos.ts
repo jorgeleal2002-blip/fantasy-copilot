@@ -1,4 +1,4 @@
-import type { Pos } from '../api/types';
+import type { Pos, SleeperLeague } from '../api/types';
 import { ALLOWED, ALLOWED_POS, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from './schedule';
 
 /**
@@ -12,9 +12,15 @@ import { ALLOWED, ALLOWED_POS, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from './
 export interface Sos {
   /** 0..1 across the 32 teams, 1 being the softest run in the league. */
   season: number;
-  /** The same over the three weeks most leagues are decided in. A season that
-   *  averages out fine can still end against the two best defences left. */
+  /** The same over THIS league's own playoff weeks. A season that averages out
+   *  fine can still end against the two best defences left. */
   playoff: number;
+  /** 1 = the softest run of playoff weeks in the league at this position. */
+  playoffRank: number;
+  /** Points per game his opponents gave up over those weeks. */
+  playoffPerGame: number;
+  /** The weeks that were measured, so the screen can name them. */
+  weeks: number[];
   /** Points per game his opponents gave up at this position last year — the
    *  measurement the two figures above are percentiles of. */
   perGame: number;
@@ -54,11 +60,38 @@ const ALL_WEEKS: number[] = [];
 for (let w = 1; w <= SEASON_WEEKS; w++) ALL_WEEKS.push(w);
 
 /**
- * The whole table, built once.
+ * Which weeks THIS league is decided in.
  *
- * It is a pure function of two constants that are fixed for the season, so it
- * is computed at module load rather than per league: nothing about your roster,
- * your scoring or your format changes who Dallas plays in week 12.
+ * Everybody says "weeks 15 to 17" and Sleeper knows better: a league carries
+ * its own `playoff_week_start`, and leagues that finish in week 16 or run a
+ * fourth round are common enough that guessing gets a lot of people the wrong
+ * three weeks. How many weeks it runs comes from how many teams make it — four
+ * teams is two rounds, six is three because of the byes, twelve is four.
+ *
+ * The old default stays for a league that has not said, or has said something
+ * the calendar cannot hold.
+ */
+export function playoffWeeks(league?: SleeperLeague | null): number[] {
+  const st = league?.settings || {};
+  const start = Number(st.playoff_week_start);
+  if (!Number.isFinite(start) || start < 2 || start > SEASON_WEEKS) return PLAYOFF_WEEKS;
+  const teams = Number(st.playoff_teams);
+  const rounds = Number.isFinite(teams) && teams >= 2
+    ? Math.max(1, Math.ceil(Math.log2(teams)))
+    : PLAYOFF_WEEKS.length;
+  const out: number[] = [];
+  for (let w = start; w < start + rounds && w <= SEASON_WEEKS; w++) out.push(w);
+  return out.length ? out : PLAYOFF_WEEKS;
+}
+
+/**
+ * The whole table, for one set of playoff weeks.
+ *
+ * The season half is a pure function of two constants fixed for the year —
+ * nothing about your roster, your scoring or your format changes who Dallas
+ * plays in week 12 — but the playoff half is not: it depends on which weeks
+ * your league calls the playoffs. So the table is built per set of weeks and
+ * kept, which in practice means once or twice a session.
  *
  * The percentiles are over PPR points allowed, and a league that pays half a
  * point a catch orders defences very slightly differently. Slightly: the gap
@@ -66,12 +99,12 @@ for (let w = 1; w <= SEASON_WEEKS; w++) ALL_WEEKS.push(w);
  * re-deriving 32 defensive seasons under each league's own scoring to move a
  * couple of teams one place is not worth what it costs to be that precise.
  */
-function build(): SosTable {
+function build(weeks: number[]): SosTable {
   const out: SosTable = {};
   TEAMS.forEach(t => { out[t] = {}; });
   ALLOWED_POS.forEach(pos => {
     const season = TEAMS.map(t => ({ t, v: faced(t, pos, ALL_WEEKS) }));
-    const playoff = TEAMS.map(t => ({ t, v: faced(t, pos, PLAYOFF_WEEKS) }));
+    const playoff = TEAMS.map(t => ({ t, v: faced(t, pos, weeks) }));
     const pct = (rows: { t: string; v: number }[]) => {
       const sorted = rows.slice().sort((a, b) => a.v - b.v);
       const at: Record<string, number> = {};
@@ -82,29 +115,55 @@ function build(): SosTable {
     const pPct = pct(playoff);
     // Rank 1 is the softest, so the hardest schedule is 32nd — the direction
     // everyone already reads a strength-of-schedule table in.
-    const order = season.slice().sort((a, b) => b.v - a.v);
-    const rank: Record<string, number> = {};
-    order.forEach((r, i) => { rank[r.t] = i + 1; });
+    const ranked = (rows: { t: string; v: number }[]) => {
+      const at: Record<string, number> = {};
+      rows.slice().sort((a, b) => b.v - a.v).forEach((r, i) => { at[r.t] = i + 1; });
+      return at;
+    };
+    const sRank = ranked(season);
+    const pRank = ranked(playoff);
+    const pVal: Record<string, number> = {};
+    playoff.forEach(r => { pVal[r.t] = r.v; });
     season.forEach(r => {
       out[r.t][pos] = {
-        season: sPct[r.t], playoff: pPct[r.t], perGame: Math.round(r.v * 10) / 10, rank: rank[r.t],
+        season: sPct[r.t], playoff: pPct[r.t],
+        perGame: Math.round(r.v * 10) / 10, rank: sRank[r.t],
+        playoffRank: pRank[r.t], playoffPerGame: Math.round(pVal[r.t] * 10) / 10,
+        weeks,
       };
     });
   });
   return out;
 }
 
-export const SOS: SosTable = build();
+const cache: Record<string, SosTable> = {};
 
-export const sosFor = (team: string | null | undefined, pos: string | null | undefined): Sos | null =>
-  (team && pos && SOS[team] ? SOS[team][pos as Pos] || null : null);
+/** The table for a league — its own playoff weeks, built once and kept. */
+export function sosTable(league?: SleeperLeague | null): SosTable {
+  const weeks = playoffWeeks(league);
+  const key = weeks.join(',');
+  if (!cache[key]) cache[key] = build(weeks);
+  return cache[key];
+}
+
+/** The table under the season's default weeks, for anything with no league. */
+export const SOS: SosTable = sosTable(null);
+
+export const sosFor = (
+  team: string | null | undefined,
+  pos: string | null | undefined,
+  league?: SleeperLeague | null,
+): Sos | null => {
+  const t = league === undefined ? SOS : sosTable(league);
+  return team && pos && t[team] ? t[team][pos as Pos] || null : null;
+};
 
 /**
  * The one number the Fit takes, 0..1.
  *
  * Weighted toward the whole season, because that is where most of your points
- * come from, but not entirely: the three weeks that decide the league are worth
- * a large share of a season that is only seventeen games long.
+ * come from, but not entirely: the weeks that decide the league are worth a
+ * large share of a season that is only seventeen games long.
  */
 export const sosScore = (s: Sos | null): number | undefined =>
   s ? s.season * 0.6 + s.playoff * 0.4 : undefined;

@@ -87,31 +87,12 @@ async function send(url: string, method: string, body?: unknown): Promise<unknow
  * the console's editor and never published. Shared with the connection check
  * so the two can never disagree about what a refusal means.
  */
-/**
- * The rules the database needs, kept here so the app can hand them over.
- *
- * They live in the README too, and a person stuck on this is on a phone,
- * inside a console, three taps from anywhere they could read a README. Put
- * them where the failure is and the fix is a paste away.
- */
-export const ROOM_RULES = `{
-  "rules": {
-    "rooms": {
-      "$room": {
-        ".read": true,
-        ".write": true,
-        ".validate": "newData.hasChildren(['seed','leagueId'])"
-      }
-    }
-  }
-}`;
-
 export function liveReason(e: unknown, what: string): string {
   const msg = String((e as Error)?.message || e);
   if (/40[13]/.test(msg)) {
     return 'The database refused it — your rules are not published. Firebase '
       + 'console → Realtime Database → Rules → Publish (the rules playground '
-      + 'only simulates, it does not publish). You tab → Test says more.';
+      + 'only simulates, it does not publish). The README has the rules to paste.';
   }
   return 'Could not ' + what + '. The database did not answer (' + msg + ').';
 }
@@ -234,138 +215,4 @@ export function watchRoom(id: string, onRoom: (r: Room) => void, onError?: () =>
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisible);
     close();
   };
-}
-
-/**
- * Prove the database is really there, from the phone that will use it.
- *
- * Setting this up has three steps that can each fail silently and look
- * identical from the outside — the app just has no room button, or has one
- * that does nothing:
- *
- *  · the URL never reached the build, because a repository variable is read
- *    when the site is COMPILED and adding one does not rebuild anything;
- *  · the URL is there but wrong, or the database was deleted;
- *  · the database is there but still in locked mode, so every write is
- *    refused — the commonest of the three by a distance, because "locked" is
- *    what the console tells you to start with.
- *
- * A real round trip separates them: write a room, read it back, delete it.
- * Nothing else can tell them apart, and guessing between them is how an
- * evening disappears.
- */
-export type LiveCheck =
-  | { ok: true; ms: number; streamed: boolean }
-  | { ok: false; why: 'unset' | 'rules' | 'unreachable' | 'mismatch'; detail: string };
-
-export async function checkLive(): Promise<LiveCheck> {
-  if (!LIVE_URL) {
-    return {
-      ok: false,
-      why: 'unset',
-      /* Named by SITE, because the two halves of this setup live in two
-       * different places and the whole confusion is which one you are in. The
-       * rules are a Firebase thing; this one is entirely a GitHub thing and
-       * there is nothing to do in Firebase about it. */
-      detail: 'This one is on GITHUB, not Firebase. The database URL never reached '
-        + 'the build: a repository variable is read when the site is compiled, so '
-        + 'adding one rebuilds nothing. GitHub → your repo → Actions → Deploy to '
-        + 'GitHub Pages → Run workflow. Then reload this and test again.',
-    };
-  }
-  const id = '_check_' + newRoomId();
-  const seed = Math.floor(Math.random() * 1e9);
-  const started = Date.now();
-
-  /* Read BEFORE writing, on a room that does not exist.
-   *
-   * A refused write is not one answer, it is three, and the console counts
-   * them all the same: rules never published, a write rule that is missing,
-   * or a validate that the data fails. Reading first splits them. A read of a
-   * missing room is free, changes nothing, and answers "is `.read` in force
-   * at all" — and if reading is refused too, then no rule of ours is live and
-   * the ones in the database are still the deny-everything pair the console
-   * starts you on. That is a different sentence to a person than "the write
-   * was refused", and it is the true one. */
-  let canRead = false;
-  try {
-    await send(roomPath(id), 'GET');
-    canRead = true;
-  } catch {
-    canRead = false;
-  }
-
-  try {
-    /* A whole room, not the two fields the README's rule happens to ask for.
-     * A probe that writes less than the real thing passes rules the real thing
-     * would fail — which is the one way a connection check can lie, and the
-     * worst way, because it lies in the reassuring direction. */
-    const probe: Room = {
-      seed,
-      leagueId: 'connection-check',
-      host: 'check',
-      seats: { 1: { id: 'check', name: 'check' } },
-      picks: { 1: 'check' },
-      started: false,
-    };
-    await send(roomPath(id), 'PUT', probe);
-    const back = (await send(roomPath(id), 'GET')) as { seed?: number } | null;
-    await send(roomPath(id), 'DELETE').catch(() => undefined);
-    if (!back || back.seed !== seed) {
-      return {
-        ok: false,
-        why: 'mismatch',
-        detail: 'The database accepted a write and then handed back something else. '
-          + 'Check that the URL points at YOUR database and not another project.',
-      };
-    }
-    return { ok: true, ms: Date.now() - started, streamed: await canStream(id) };
-  } catch (e) {
-    const msg = String((e as Error).message || e);
-    /* 401 is the rules, and it is worth saying so outright: it is the one
-     * failure whose fix is a paste into a box the person has already seen. */
-    if (/40[13]/.test(msg)) {
-      return {
-        ok: false,
-        why: 'rules',
-        detail: canRead
-          ? 'Reading is allowed but writing was refused. The read rule is live, so '
-            + 'the rules DID publish — it is the write half. Check that .write is '
-            + 'true under "rooms/$room", and that the .validate line is exactly the '
-            + 'one in the README: a validate that never passes refuses every write '
-            + 'just as flatly as .write false does.'
-          : 'This one is on FIREBASE, not GitHub. Refused to read AND to write, '
-            + 'which means none of your rules are in '
-            + 'force — the database still has the deny-everything pair it starts '
-            + 'you on. Writing them in the editor does not apply them: open Realtime '
-            + 'Database → Rules, paste the ones below, and press PUBLISH. '
-            + 'The Firebase console shows this as rejections with no authorisations.',
-      };
-    }
-    return {
-      ok: false,
-      why: 'unreachable',
-      detail: 'Could not reach the database at all (' + msg + '). Check the URL, and '
-        + 'that the database has not been deleted.',
-    };
-  }
-}
-
-/** Whether the live stream opens, as opposed to falling back to polling. It
- *  still works either way — this is the difference between instant and every
- *  four seconds, and between a little traffic and twenty times as much. */
-function canStream(id: string): Promise<boolean> {
-  return new Promise(resolve => {
-    if (typeof EventSource === 'undefined') { resolve(false); return; }
-    let es: EventSource | null = null;
-    const done = (v: boolean) => { es?.close(); clearTimeout(t); resolve(v); };
-    const t = setTimeout(() => done(false), 4000);
-    try {
-      es = new EventSource(roomPath(id));
-      es.onopen = () => done(true);
-      es.onerror = () => done(false);
-    } catch {
-      done(false);
-    }
-  });
 }

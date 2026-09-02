@@ -148,9 +148,10 @@ Turning it on takes about two minutes and costs nothing:
 
 6. **Run the deploy again.** A repository variable is read when the site is
    COMPILED, so adding one does not rebuild anything: Actions → Deploy to
-   GitHub Pages → Run workflow. Then open the app, **You → Shared draft rooms
-   → Test**. It writes a room, reads it back and deletes it, and names whatever
-   went wrong.
+   GitHub Pages → Run workflow. Then open the app and go to Draft → Mock →
+   Invite. **Draft together** appears only when a database made it into the
+   build, so the button being there is the first half of the answer and
+   creating a room is the second.
 
 ### If it asks you to upgrade to a paid plan
 
@@ -219,9 +220,9 @@ there is something to publish.** Looking for it before editing finds nothing,
 because nothing has changed. Tap into the editor, clear what is there, paste —
 and a bar appears saying there are unpublished changes, with Publish on it.
 
-Tell those apart without the console: press **Test** in the app. "Refused to
-read AND to write" means the database is alive and only the rules are missing.
-"Could not reach the database at all" means it is disabled or gone.
+Tell those apart without the console: try to create a room. A refusal that
+names the rules means the database is alive and only the rules are missing;
+"the database did not answer" means it is disabled or gone.
 
 On an iPhone, before anything else: Safari's **ᴀA** button (left of the address
 bar) → **Request Desktop Website**, then turn the handset sideways and pinch

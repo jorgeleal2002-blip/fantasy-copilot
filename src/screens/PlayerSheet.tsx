@@ -1,14 +1,14 @@
 import { ACCENT, METRIC_LABEL, PEAK, POS, type Weights } from '../model/constants';
 import { num } from '../model/math';
 import type { Metrics } from '../model/score';
-import type { SleeperPlayer } from '../api/types';
+import type { SleeperLeague, SleeperPlayer } from '../api/types';
 import type { Model } from '../model/types';
 import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
 import { Meter, SERIES } from '../ui/charts';
 import { Card, Overlay } from '../ui/primitives';
-import { ALLOWED_SEASON, OPPONENTS, PLAYOFF_WEEKS, SCHEDULE_SEASON } from '../model/schedule';
+import { ALLOWED_SEASON, OPPONENTS, SCHEDULE_SEASON } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { TradePackages } from '../ui/TradePackages';
 import { dim, fitColor } from '../ui/styles';
@@ -295,7 +295,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       </div>
       )}
 
-      {fill || m.isDynasty ? null : <Schedule pos={p.pos} team={p.team} />}
+      {fill || m.isDynasty ? null : <Schedule pos={p.pos} team={p.team} league={m.league} />}
 
       {fill ? null : <WhatHeCosts app={app} m={m} sheet={p} />}
 
@@ -326,24 +326,33 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
  *
  * Redraft only. A dynasty roster outlives this table.
  */
-function Schedule({ pos, team }: { pos: string; team: string | null | undefined }) {
-  const s = sosFor(team, pos);
+function Schedule(
+  { pos, team, league }: { pos: string; team: string | null | undefined; league: SleeperLeague },
+) {
+  const s = sosFor(team, pos, league);
   const sched = team ? OPPONENTS[team] : null;
   if (!s || !sched) return null;
-  const soft = s.rank <= 10 ? 'One of the easiest runs'
-    : s.rank >= 23 ? 'One of the hardest runs' : 'A middling run';
+  const say = (rank: number) => (rank <= 10 ? 'One of the easiest runs'
+    : rank >= 23 ? 'One of the hardest runs' : 'A middling run');
   return (
     <Card style={{ marginTop: 12 }}>
       <div style={{ fontSize: 12, color: dim(0.45), marginBottom: 10 }}>
         Schedule — {SCHEDULE_SEASON}, for a {pos}
       </div>
       <div style={{ fontSize: 14, lineHeight: 1.5, textWrap: 'pretty' }}>
-        {ord(s.rank)} easiest of 32. {soft} of opponents in the league for a {pos}:
+        {ord(s.rank)} easiest of 32. {say(s.rank)} of opponents in the league for a {pos}:
         they gave up {s.perGame} points a game to {pos}s in {ALLOWED_SEASON}.
       </div>
-      <div style={{ fontSize: 12, color: dim(0.5), lineHeight: 1.55, marginTop: 8 }}>
-        Weeks {PLAYOFF_WEEKS.join(', ')}:{' '}
-        {PLAYOFF_WEEKS.map(w => sched[w - 1] || 'bye').join(' · ')}
+      {/* The weeks the league is actually decided in, off its own settings —
+          a season that averages out fine can still end against the two best
+          defences left, and that is the half of a schedule people check. */}
+      <div style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 10, textWrap: 'pretty' }}>
+        <span style={{ color: dim(0.55) }}>
+          Your playoffs, week{s.weeks.length > 1 ? 's ' : ' '}
+          {s.weeks.length > 1 ? s.weeks[0] + '–' + s.weeks[s.weeks.length - 1] : s.weeks[0]}:
+        </span>{' '}
+        {s.weeks.map(w => sched[w - 1] || 'bye').join(' · ')} — {ord(s.playoffRank)} easiest
+        of 32 ({s.playoffPerGame} a game allowed).
       </div>
     </Card>
   );

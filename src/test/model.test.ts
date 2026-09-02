@@ -12,8 +12,8 @@ import { blendSeasons, buildUsage, seasonUsage, type Usage } from '../model/usag
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
 import { isMockEligible } from '../model/mock-pool';
-import { ALLOWED, OPPONENTS, SEASON_WEEKS } from '../model/schedule';
-import { byeOf, sosFor, sosScore } from '../model/sos';
+import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedule';
+import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { SleeperPlayer } from '../api/types';
 
 const bundle = makeBundle();
@@ -1817,5 +1817,54 @@ describe('strength of schedule', () => {
     expect(sosScore(null)).toBe(undefined);
     const p = { player_id: '1', position: 'WR', search_rank: 20 } as SleeperPlayer;
     expect(scorePlayer(p, {}, {}, STRATS.balanced.w).m.sos).toBe(0.5);
+  });
+});
+
+/**
+ * Which weeks a league is actually decided in.
+ *
+ * Everybody says "15 to 17" and Sleeper knows better: a league carries its own
+ * `playoff_week_start`, and scoring a schedule against the wrong three weeks is
+ * worse than not scoring it at all.
+ */
+describe('the playoff weeks are the league\'s own', () => {
+  const lg = (settings: Record<string, number>) =>
+    ({ ...makeLeague(), settings: { ...makeLeague().settings, ...settings } });
+
+  it('reads them off the league, not off a guess', () => {
+    expect(playoffWeeks(lg({ playoff_week_start: 15, playoff_teams: 6 }))).toEqual([15, 16, 17]);
+    expect(playoffWeeks(lg({ playoff_week_start: 14, playoff_teams: 6 }))).toEqual([14, 15, 16]);
+    // Four teams is two rounds, not three.
+    expect(playoffWeeks(lg({ playoff_week_start: 16, playoff_teams: 4 }))).toEqual([16, 17]);
+    // Twelve needs a fourth.
+    expect(playoffWeeks(lg({ playoff_week_start: 15, playoff_teams: 12 }))).toEqual([15, 16, 17, 18]);
+  });
+
+  it('never runs off the end of the calendar', () => {
+    playoffWeeks(lg({ playoff_week_start: 17, playoff_teams: 12 }))
+      .forEach(w => expect(w).toBeLessThanOrEqual(SEASON_WEEKS));
+    expect(playoffWeeks(lg({ playoff_week_start: 18, playoff_teams: 8 }))).toEqual([18]);
+  });
+
+  it('falls back where the league has not said', () => {
+    expect(playoffWeeks(lg({}))).toEqual(PLAYOFF_WEEKS);
+    expect(playoffWeeks(lg({ playoff_week_start: 0 }))).toEqual(PLAYOFF_WEEKS);
+    expect(playoffWeeks(lg({ playoff_week_start: 99 }))).toEqual(PLAYOFF_WEEKS);
+    expect(playoffWeeks(null)).toEqual(PLAYOFF_WEEKS);
+  });
+
+  /* And it has to reach the score, not just the screen: a team whose week-14
+   * to 16 run is soft and whose 15 to 17 is brutal must come out differently
+   * in the two leagues. */
+  it('changes what the schedule is worth', () => {
+    const early = sosTable(lg({ playoff_week_start: 14, playoff_teams: 6 }));
+    const late = sosTable(lg({ playoff_week_start: 16, playoff_teams: 4 }));
+    const moved = Object.keys(OPPONENTS).filter(t =>
+      early[t].RB!.playoffRank !== late[t].RB!.playoffRank);
+    expect(moved.length).toBeGreaterThan(15);
+    Object.keys(OPPONENTS).forEach(t => {
+      expect(early[t].RB!.weeks).toEqual([14, 15, 16]);
+      expect(late[t].RB!.weeks).toEqual([16, 17]);
+    });
   });
 });

@@ -9,8 +9,15 @@ import type { App } from '../state/useApp';
 import { armSfx, playSfx } from '../ui/sfx';
 import { dim, ellipsis, fitColor } from '../ui/styles';
 
-/** How long each bot pick sits on screen before the next one lands. */
-const TICK_MS = 420;
+/**
+ * How long each bot pick sits on screen before the next one lands.
+ *
+ * At 420ms a run of nine picks between your turns was over in under four
+ * seconds — the names went past faster than you could read who had gone, which
+ * is the one thing the reveal exists to show you. Each pick also fires its own
+ * sound, and at that spacing they ran into each other.
+ */
+const TICK_MS = 850;
 
 /**
  * Board geometry.

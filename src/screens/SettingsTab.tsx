@@ -1,4 +1,3 @@
-import { ROOM_RULES, checkLive, liveEnabled, type LiveCheck } from '../api/live';
 import { ACCENT, BAD, GOOD, METRIC_LABEL, MID, STRATS, StratKey } from '../model/constants';
 import { clamp } from '../model/math';
 import type { Model } from '../model/types';
@@ -167,11 +166,6 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           it to. When "your team" comes up empty this is the one fact that
           separates a broken match from a genuinely empty roster, and it saves
           a round trip to find out. */}
-      {/* Whether shared drafting is switched on at all. Without it the room
-          button simply is not there, which looks identical to a broken feature
-          from the outside — this is the one line that tells the two apart. */}
-      <RoomCheck />
-
       <div style={{ ...cardNote, textAlign: 'center', fontSize: 10.5 }}>
         Build {__BUILD__} UTC
       </div>
@@ -329,103 +323,6 @@ function Row({ label, value, bad }: { label: string; value: string; bad?: boolea
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
       <span style={{ color: dim(0.5) }}>{label}</span>
       <span style={{ textAlign: 'right', color: bad ? BAD : undefined }}>{value}</span>
-    </div>
-  );
-}
-
-
-/**
- * Is the shared room actually working.
- *
- * The line used to say only whether a URL made it into the build, which is one
- * of three things that have to be true and the least likely to be the one that
- * is wrong. A database still in locked mode reads as "on" and then refuses
- * every write; a URL pointing at a deleted project reads as "on" too. Only a
- * round trip can tell those apart, and it has to be made from the phone,
- * because that is the machine the rules will be judging.
- */
-function RoomCheck() {
-  const [state, setState] = useState<'idle' | 'going' | LiveCheck>('idle');
-  const on = liveEnabled();
-  const result = typeof state === 'object' ? state : null;
-
-  return (
-    <div style={{ marginTop: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 13 }}>Shared draft rooms</div>
-          <div style={{ fontSize: 11.5, color: on ? dim(0.45) : BAD, marginTop: 2 }}>
-            {on ? 'A database is configured in this build.' : 'No database in this build.'}
-          </div>
-        </div>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          disabled={state === 'going'}
-          onClick={() => {
-            setState('going');
-            void checkLive().then(setState).catch(() =>
-              setState({ ok: false, why: 'unreachable', detail: 'The check itself failed.' }));
-          }}
-          style={{ flex: 'none', borderRadius: 10, minHeight: 34, fontSize: 12 }}
-        >
-          {state === 'going' ? 'Testing…' : 'Test'}
-        </button>
-      </div>
-
-      {result ? (
-        <div style={{
-          marginTop: 9, padding: '9px 11px', borderRadius: 10, fontSize: 11.5, lineHeight: 1.5,
-          background: 'color-mix(in srgb, ' + (result.ok ? 'var(--color-accent)' : '#d9a08e') + ' 10%, transparent)',
-          border: '1px solid color-mix(in srgb, ' + (result.ok ? 'var(--color-accent)' : '#d9a08e') + ' 35%, transparent)',
-          color: result.ok ? 'var(--color-accent-200)' : '#f0cfc3',
-        }}>
-          {result.ok ? (
-            <>
-              Working. Wrote a room, read it back and deleted it in {result.ms}ms.
-              {result.streamed
-                ? ' Picks will arrive the moment they happen.'
-                : ' The live stream did not open, so picks will arrive within four seconds'
-                  + ' instead of instantly — the room still works.'}
-            </>
-          ) : result.detail}
-        </div>
-      ) : null}
-
-      {/* The fix itself, at the moment it is needed. Anyone reading this is on
-          a phone inside a console, several taps from anywhere they could go and
-          look the rules up — so the rules come to them. */}
-      {result && !result.ok && result.why === 'rules' ? <RulesToCopy /> : null}
-    </div>
-  );
-}
-
-/** The rules, ready to paste, with the one button that matters after it. */
-function RulesToCopy() {
-  const [copied, setCopied] = useState('');
-  return (
-    <div style={{ marginTop: 9 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-        <div style={{ fontSize: 11, color: dim(0.5) }}>Paste these, then press Publish.</div>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={() => {
-            navigator.clipboard?.writeText(ROOM_RULES)
-              .then(() => setCopied('Copied.'))
-              .catch(() => setCopied('Could not copy — select the text below.'));
-          }}
-          style={{ flex: 'none', borderRadius: 9, padding: '5px 10px', fontSize: 11.5 }}
-        >
-          Copy
-        </button>
-      </div>
-      <pre style={{
-        margin: '7px 0 0', padding: '9px 10px', borderRadius: 9, overflowX: 'auto',
-        background: 'rgba(242,253,254,.05)', border: '1px solid var(--color-divider)',
-        fontSize: 10.5, lineHeight: 1.45, color: dim(0.7),
-      }}>{ROOM_RULES}</pre>
-      {copied ? <div style={{ fontSize: 11, color: dim(0.5), marginTop: 5 }}>{copied}</div> : null}
     </div>
   );
 }

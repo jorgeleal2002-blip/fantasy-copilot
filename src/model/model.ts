@@ -456,11 +456,14 @@ export function buildModel(input: ModelInput): Model {
   /**
    * Strength of schedule, at his own position — see `sos.ts`.
    *
-   * Read straight off the season's fixtures, so it costs nothing to ask and is
-   * the same for every league. What it is WORTH differs: the weights price it
-   * in redraft and at zero in dynasty, where a hold outlives the schedule.
+   * Read straight off the season's fixtures, so it costs nothing to ask. The
+   * playoff half is read off THIS league's own `playoff_week_start` rather than
+   * the 15 everybody assumes — a league that finishes in week 16 is decided by
+   * a different three weeks, and scoring it against the wrong ones is worse
+   * than not scoring it at all. What it is WORTH differs too: the weights price
+   * it in redraft and at zero in dynasty, where a hold outlives the schedule.
    */
-  const sosOf = (pl: SleeperPlayer) => sosScore(sosFor(pl.team, pl.position));
+  const sosOf = (pl: SleeperPlayer) => sosScore(sosFor(pl.team, pl.position, league));
 
   // ── Your roster.
   const starterIds = myRow.starters || [];

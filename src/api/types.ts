@@ -74,6 +74,11 @@ export interface SleeperLeague {
     max_keepers?: number;
     draft_rounds?: number;
     waiver_budget?: number;
+    /** First week of THIS league's playoffs — the weeks it is actually decided
+     *  in, which is not always the 15 everybody assumes. */
+    playoff_week_start?: number;
+    /** How many teams make them, which is how many weeks they run. */
+    playoff_teams?: number;
     [k: string]: number | undefined;
   };
 }
