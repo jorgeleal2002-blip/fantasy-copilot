@@ -175,9 +175,18 @@ that catch people:
   tab is free.
 - **The wrong product.** Cloud Firestore, Storage, Functions and Hosting all
   have their own gates. This app uses **Realtime Database** and nothing else.
-- **A different region.** Creating the database somewhere other than the
-  default can want a paid plan. The default region is fine; the app does not
-  care where it lives.
+- **A different region.** Realtime Database lives in a handful of places —
+  Iowa, Belgium, Singapore — and that is the whole list. There is no picking
+  one near you unless you happen to live near one of them, and reaching for a
+  region outside the default is one of the things that can want a paid plan.
+
+  Take the default. The app builds every request by pasting paths onto whatever
+  URL it is handed, so it does not know or care where the database is, and the
+  two URL shapes the console hands out — `<name>.firebaseio.com` for the
+  default region and `<name>.<region>.firebasedatabase.app` for the others —
+  both work unchanged. What the distance costs is tens of milliseconds on a
+  pick, against the 420ms the room already leaves between one pick and the
+  next. It is not a thing anybody can feel.
 
 Publishing rules never asks for a plan. Reading and writing never asks for a
 plan. If you are being asked, you are not on the path this app needs.
