@@ -173,6 +173,23 @@ that catch people:
 
   Everything the room needs is on the **Rules** tab of that page, and the Rules
   tab is free.
+
+### Finding the Rules tab on a phone
+
+The console's tab strip — Data, Rules, Backups, Usage — scrolls sideways on a
+narrow screen, and the page lands with Rules already off the edge. What you are
+left looking at is the Data tab, which on a fresh database is a large empty box
+that says nothing about where to go next.
+
+Skip the navigation. This goes straight there:
+
+```
+https://console.firebase.google.com/project/<project-id>/database/<project-id>-default-rtdb/rules
+```
+
+The project id is the part of your database URL before `-default-rtdb`. Paste,
+edit, **Publish** — the button is at the top of the editor, and on a phone it
+is worth turning the handset sideways to be sure you can see it.
 - **The wrong product.** Cloud Firestore, Storage, Functions and Hosting all
   have their own gates. This app uses **Realtime Database** and nothing else.
 - **A different region.** Realtime Database lives in a handful of places —
