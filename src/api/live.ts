@@ -246,9 +246,14 @@ export async function checkLive(): Promise<LiveCheck> {
     return {
       ok: false,
       why: 'unset',
-      detail: 'No database URL in this build. A repository variable is read when the '
-        + 'site is compiled, so adding one does not rebuild it — run the deploy again '
-        + '(Actions → Deploy to GitHub Pages → Run workflow).',
+      /* Named by SITE, because the two halves of this setup live in two
+       * different places and the whole confusion is which one you are in. The
+       * rules are a Firebase thing; this one is entirely a GitHub thing and
+       * there is nothing to do in Firebase about it. */
+      detail: 'This one is on GITHUB, not Firebase. The database URL never reached '
+        + 'the build: a repository variable is read when the site is compiled, so '
+        + 'adding one rebuilds nothing. GitHub → your repo → Actions → Deploy to '
+        + 'GitHub Pages → Run workflow. Then reload this and test again.',
     };
   }
   const id = '_check_' + newRoomId();
@@ -312,10 +317,11 @@ export async function checkLive(): Promise<LiveCheck> {
             + 'true under "rooms/$room", and that the .validate line is exactly the '
             + 'one in the README: a validate that never passes refuses every write '
             + 'just as flatly as .write false does.'
-          : 'Refused to read AND to write, which means none of your rules are in '
+          : 'This one is on FIREBASE, not GitHub. Refused to read AND to write, '
+            + 'which means none of your rules are in '
             + 'force — the database still has the deny-everything pair it starts '
             + 'you on. Writing them in the editor does not apply them: open Realtime '
-            + 'Database → Rules, paste the ones from the README, and press PUBLISH. '
+            + 'Database → Rules, paste the ones below, and press PUBLISH. '
             + 'The Firebase console shows this as rejections with no authorisations.',
       };
     }
