@@ -216,8 +216,19 @@ export async function checkLive(): Promise<LiveCheck> {
   const seed = Math.floor(Math.random() * 1e9);
   const started = Date.now();
   try {
-    // Shaped to satisfy the rule in the README, which requires both of these.
-    await send(roomPath(id), 'PUT', { seed, leagueId: 'connection-check' });
+    /* A whole room, not the two fields the README's rule happens to ask for.
+     * A probe that writes less than the real thing passes rules the real thing
+     * would fail — which is the one way a connection check can lie, and the
+     * worst way, because it lies in the reassuring direction. */
+    const probe: Room = {
+      seed,
+      leagueId: 'connection-check',
+      host: 'check',
+      seats: { 1: { id: 'check', name: 'check' } },
+      picks: { 1: 'check' },
+      started: false,
+    };
+    await send(roomPath(id), 'PUT', probe);
     const back = (await send(roomPath(id), 'GET')) as { seed?: number } | null;
     await send(roomPath(id), 'DELETE').catch(() => undefined);
     if (!back || back.seed !== seed) {
