@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import type { FillPos, Pos, PosFilter } from '../api/types';
-import { ACCENT, GOOD, POS } from '../model/constants';
+import { ACCENT, BAD, GOOD, POS } from '../model/constants';
 import { num, pickLabel } from '../model/math';
+import { cleanRoomCode, isRoomCode, roomCodeProblem } from '../model/invite';
 import { reasons } from '../model/score';
 import type { DraftDeal, Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -262,6 +264,70 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
   );
 }
 
+/** Six characters, read out loud and typed in. */
+function JoinByCode({ app }: { app: App }) {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const clean = cleanRoomCode(code);
+  const problem = roomCodeProblem(clean);
+  const ready = isRoomCode(clean);
+
+  const go = async () => {
+    if (!ready || busy) return;
+    setBusy(true);
+    await app.joinByCode(clean);
+    setBusy(false);
+  };
+
+  return (
+    <Card>
+      <div style={{ ...cardTitle, marginBottom: 4 }}>Join a room</div>
+      <div style={{ fontSize: 11.5, color: dim(0.45), lineHeight: 1.5, marginBottom: 10 }}>
+        Six characters from whoever opened it. You end up in the same draft,
+        picking in turn.
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          id="room-code"
+          value={clean}
+          onChange={e => setCode(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') void go(); }}
+          placeholder="ABC123"
+          inputMode="text"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="go"
+          aria-label="Room code"
+          style={{
+            flex: 1, minWidth: 0, background: 'var(--color-surface)',
+            border: '1px solid var(--color-divider)', borderRadius: 10,
+            padding: '11px 12px', outline: 'none', color: 'var(--color-text)',
+            // Monospaced and spaced out, because this is read one character at
+            // a time off somebody else's screen.
+            font: "500 16px ui-monospace, SFMono-Regular, Menlo, monospace",
+            letterSpacing: '.18em', textTransform: 'uppercase',
+          }}
+        />
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={!ready || busy}
+          onClick={() => void go()}
+          style={{ flex: 'none', borderRadius: 10, padding: '0 18px', fontSize: 13 }}
+        >
+          {busy ? '…' : 'Join'}
+        </button>
+      </div>
+      {problem || app.roomError ? (
+        <div role="alert" style={{ fontSize: 11.5, lineHeight: 1.45, color: BAD, marginTop: 8 }}>
+          {problem || app.roomError}
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
 /**
  * The way into the mock — a seat, then a door.
  *
@@ -305,6 +371,12 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
           ) : null}
         </div>
       </div>
+
+      {/* Somebody read you six characters. This is where they go.
+          The link works too, but a link means leaving the app — out to a
+          browser, back in, and on a phone that is a different window with a
+          different session. The code never leaves the screen. */}
+      {app.liveOn ? <JoinByCode app={app} /> : null}
 
       {/* Only worth a card once there is something in it. The seat is claimed
           on the board inside the room, where you can see what you are claiming. */}

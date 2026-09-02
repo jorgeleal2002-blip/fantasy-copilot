@@ -13,6 +13,41 @@
  * offered: same board, separate rooms — not a live draft.
  */
 
+/**
+ * The alphabet a room code is drawn from, and how long one is.
+ *
+ * Every character that can be misread as another is left out — no I, L or 1,
+ * no O or 0 — because a code's whole job is to survive being read out loud
+ * across a room. `newRoomId` draws from exactly this set.
+ */
+export const ROOM_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+export const ROOM_LEN = 6;
+
+/** What somebody types, cleaned up: case, spaces and dashes are not the code. */
+export const cleanRoomCode = (raw: string): string =>
+  (raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, ROOM_LEN);
+
+/**
+ * Why what they typed cannot be a code, in a sentence they can act on.
+ *
+ * The look-alike characters are the whole point of the alphabet, so a typed I
+ * or O is almost always a misread rather than a typo — and saying which
+ * character is wrong is the difference between fixing it and giving up. Null
+ * while the code is still being typed, and null when it is fine.
+ */
+export function roomCodeProblem(code: string): string | null {
+  const bad = Array.from(new Set(code.split('').filter(c => ROOM_ABC.indexOf(c) < 0)));
+  if (bad.length) {
+    return 'No ' + bad.join(' or ') + ' in a room code — the characters that look '
+      + 'like each other are left out. Try the one it resembles.';
+  }
+  return null;
+}
+
+/** Whether it is a whole, usable code rather than half of one. */
+export const isRoomCode = (code: string): boolean =>
+  code.length === ROOM_LEN && !roomCodeProblem(code);
+
 export interface Invite {
   leagueId: string;
   seed: number;

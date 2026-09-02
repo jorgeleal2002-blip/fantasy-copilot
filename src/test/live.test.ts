@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_ROOM, newRoomId } from '../api/live';
+import { cleanRoomCode, isRoomCode, roomCodeProblem } from '../model/invite';
 
 describe('a room id', () => {
   it('is six readable characters, with the ambiguous ones left out', () => {
@@ -14,6 +15,46 @@ describe('a room id', () => {
   it('does not repeat itself in any run you would notice', () => {
     const seen = new Set(Array.from({ length: 500 }, newRoomId));
     expect(seen.size).toBeGreaterThan(495);
+  });
+
+  /* Every generated code has to be one somebody can type back in, or the
+   * join box is a door with no key. */
+  it('is always a code the join box will accept', () => {
+    for (let i = 0; i < 40; i++) expect(isRoomCode(newRoomId())).toBe(true);
+  });
+});
+
+/**
+ * Typing the code instead of opening the link.
+ *
+ * A link means leaving the app — out to a browser, back in, and on a phone
+ * that is a different window with a different session. Six characters read out
+ * loud never leave the screen, which is the whole reason the alphabet has no
+ * look-alikes in it.
+ */
+describe('a room code somebody types', () => {
+  it('does not care about case, spaces or dashes', () => {
+    expect(cleanRoomCode(' ab-cd ef ')).toBe('ABCDEF');
+    expect(cleanRoomCode('abcdef')).toBe('ABCDEF');
+    expect(cleanRoomCode('ABCDEFGH')).toBe('ABCDEF');   // never longer than one
+  });
+
+  /* The look-alikes are excluded on purpose, so a typed O is a misread rather
+   * than a typo — and naming the character is the difference between fixing it
+   * and giving up. */
+  it('says which character cannot be in one', () => {
+    expect(roomCodeProblem('AB0DEF')).toMatch(/No 0 in a room code/);
+    expect(roomCodeProblem('ABIDEF')).toMatch(/No I in a room code/);
+    expect(roomCodeProblem('A0I1LO')).toMatch(/No 0 or I or 1 or L or O/);
+    expect(roomCodeProblem('ABCDEF')).toBe(null);
+    expect(roomCodeProblem('')).toBe(null);
+  });
+
+  it('is only whole at six', () => {
+    expect(isRoomCode('ABCDE')).toBe(false);
+    expect(isRoomCode('ABCDEF')).toBe(true);
+    expect(isRoomCode('ABCDE0')).toBe(false);
+    expect(isRoomCode('')).toBe(false);
   });
 });
 

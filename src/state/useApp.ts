@@ -9,7 +9,9 @@ import {
   EMPTY_ROOM, claimSeat, createRoom as createRoomAt, liveEnabled, liveReason, newRoomId,
   pushPick, readRoom, startRoom, watchRoom, type Room,
 } from '../api/live';
-import { clearInvite, parseInvite, type Invite } from '../model/invite';
+import {
+  ROOM_LEN, cleanRoomCode, clearInvite, isRoomCode, parseInvite, roomCodeProblem, type Invite,
+} from '../model/invite';
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
@@ -386,6 +388,58 @@ export function useApp() {
     }
   }, [me, username]);
 
+  /**
+   * Walk into a room from the code alone.
+   *
+   * A link means leaving the app — out to a browser, back in, and on a phone
+   * that is a different window with a different session. The code is six
+   * characters chosen so they survive being read out loud, so typing them is
+   * the shorter path and the one that never leaves the screen.
+   *
+   * The one thing a code cannot carry that a link can is WHICH LEAGUE the room
+   * is drafting, and that matters: the promise is the same board, and a room
+   * opened on another league is a different board entirely. So the room is
+   * read first and its league is honoured — switched to when this account is
+   * in it, and said plainly when it is not, rather than silently running their
+   * seed against your players.
+   */
+  const joinByCode = useCallback(async (raw: string) => {
+    const code = cleanRoomCode(raw);
+    if (!liveEnabled()) { setRoomError('Shared rooms are not switched on in this build.'); return; }
+    const problem = roomCodeProblem(code);
+    if (problem) { setRoomError(problem); return; }
+    if (!isRoomCode(code)) { setRoomError('A room code is ' + ROOM_LEN + ' characters.'); return; }
+    if (!me) { setRoomError('Sign in first.'); return; }
+    try {
+      const found = await readRoom(code);
+      if (!found) { setRoomError('No room with that code. Codes are case-insensitive.'); return; }
+      if (found.leagueId && leagueId && found.leagueId !== leagueId) {
+        const other = leagues.find(l => l.league_id === found.leagueId);
+        if (!other) {
+          setRoomError('That room is drafting a league this account is not in. '
+            + 'Whoever opened it can send you the link instead.');
+          return;
+        }
+        // The league has to load before the room means anything, and there is
+        // already a mechanism that waits for exactly that.
+        invite.current = { leagueId: found.leagueId, seed: found.seed, seat: null, room: code };
+        setRoomError('');
+        showToast('Switching to ' + other.name + ' for room ' + code + '.');
+        pickLeague(found.leagueId);
+        return;
+      }
+      setMockSeed(found.seed);
+      setMockChoices({});
+      setMockStarted(false);
+      setRoomError('');
+      setRoomId(code);
+      setDraftView('mock');
+      setMockOpen(true);
+    } catch (e) {
+      setRoomError(liveReason(e, 'reach the room'));
+    }
+  }, [me, leagueId, leagues, pickLeague, showToast]);
+
   const takeSeat = useCallback(async (seat: number) => {
     if (!roomId || !me) return;
     try {
@@ -663,7 +717,7 @@ export function useApp() {
     mockChoices: liveChoices ?? mockChoices,
     liveOn: liveEnabled(),
     room, roomId, roomError, humanSeats, mySeat,
-    hostRoom, joinRoom, takeSeat, leaveRoom,
+    hostRoom, joinRoom, joinByCode, takeSeat, leaveRoom,
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 

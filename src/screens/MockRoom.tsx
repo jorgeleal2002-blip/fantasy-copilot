@@ -522,9 +522,31 @@ function InvitePanel({ app, m, finished, onClose }: {
           >
             {app.roomId ? 'Share room ' + app.roomId : opening ? 'Opening…' : 'Draft together'}
           </button>
+          {/* The code, big enough to read across a room.
+              A link is the fast path when everyone is on a phone with a chat
+              open; when they are sitting next to you it is the slow one — send,
+              open a browser, come back — and six characters said out loud beat
+              it. They go into Draft → Mock → Join a room. Which is why the
+              alphabet has no I, L, O, 0 or 1 in it. */}
+          {app.roomId ? (
+            <div style={{
+              display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 9,
+              marginTop: 10, padding: '9px 10px', borderRadius: 10,
+              background: 'rgba(242,253,254,.05)', border: '1px solid var(--color-divider)',
+            }}>
+              <span style={{ fontSize: 10.5, color: dim(0.42) }}>or read them</span>
+              <span style={{
+                font: "600 20px ui-monospace, SFMono-Regular, Menlo, monospace",
+                letterSpacing: '.22em', color: ACCENT,
+              }}>
+                {app.roomId}
+              </span>
+            </div>
+          ) : null}
           <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.45), marginTop: 7, textWrap: 'pretty' }}>
             {app.roomId
-              ? 'They pick in turn with you, on this board. Seats nobody claims are drafted by the app.'
+              ? 'They pick in turn with you, on this board — from the link, or by '
+                + 'typing that code under Draft → Mock. Seats nobody claims are drafted by the app.'
               : 'One room, everyone picking in turn. Seats nobody takes are drafted by the app.'}
           </div>
           {app.roomError ? (

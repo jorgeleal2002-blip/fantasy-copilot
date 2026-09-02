@@ -15,6 +15,7 @@
  * With no database configured every export below is inert and the app keeps the
  * solo mock it has always had — the feature is off, not broken.
  */
+import { ROOM_ABC, ROOM_LEN } from '../model/invite';
 
 /** The whole of a room, as it sits in the database. */
 export interface Room {
@@ -57,12 +58,11 @@ const roomPath = (id: string) => LIVE_URL + '/rooms/' + encodeURIComponent(id) +
 
 /** Six characters a person can read down a phone line. No l/1/O/0. */
 export function newRoomId(): string {
-  const ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   let out = '';
-  const buf = new Uint32Array(6);
+  const buf = new Uint32Array(ROOM_LEN);
   (globalThis.crypto || ({} as Crypto)).getRandomValues?.(buf);
-  for (let i = 0; i < 6; i++) {
-    out += ABC[(buf[i] || Math.floor(Math.random() * 1e9)) % ABC.length];
+  for (let i = 0; i < ROOM_LEN; i++) {
+    out += ROOM_ABC[(buf[i] || Math.floor(Math.random() * 1e9)) % ROOM_ABC.length];
   }
   return out;
 }
