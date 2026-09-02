@@ -162,9 +162,17 @@ If the console asks anyway, you are somewhere you do not need to be. The three
 that catch people:
 
 - **"Create database" a second time.** A project gets one Realtime Database
-  free; a second instance is a Blaze feature. If you already have one — you do,
-  if the URL in step 4 exists — do not create another. Open the one that is
-  there.
+  free; a second instance is a Blaze feature. The ⋮ menu on the database page
+  lists it greyed out, worded as though the database has to be created before
+  anything can happen — but yours already exists, and its URL is printed on
+  that same screen. Nothing below it needs doing.
+
+  Two items above it in that menu is **Disable database**, which is the one
+  destructive thing on the page and sits one thumb-width from the one that
+  looks like the way forward. It is not.
+
+  Everything the room needs is on the **Rules** tab of that page, and the Rules
+  tab is free.
 - **The wrong product.** Cloud Firestore, Storage, Functions and Hosting all
   have their own gates. This app uses **Realtime Database** and nothing else.
 - **A different region.** Creating the database somewhere other than the
