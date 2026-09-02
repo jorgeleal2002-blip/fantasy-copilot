@@ -6,7 +6,8 @@ import { sfxFor } from '../model/sfx-map';
 import type { Pos } from '../api/types';
 import type { MockOption, MockPick, MockState, Model } from '../model/types';
 import type { App } from '../state/useApp';
-import { armSfx, playSfx } from '../ui/sfx';
+import { Brainrot } from '../ui/brainrot';
+import { armSfx, playSfx, type ClipName } from '../ui/sfx';
 import { dim, ellipsis, fitColor } from '../ui/styles';
 
 /**
@@ -61,6 +62,16 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
   const [q, setQ] = useState('');
   const [searching, setSearching] = useState(false);
   const [inviting, setInviting] = useState(false);
+  /* Whatever the room last shouted, and a counter beside it: the same
+     character can land twice in a row, and a key that has not changed is an
+     element React reuses without ever replaying its entrance. */
+  const [shout, setShout] = useState<{ clip: ClipName | null; at: number }>({ clip: null, at: 0 });
+  const shoutRef = useRef(0);
+  const shoutOut = (clip: ClipName | null) => {
+    if (!clip) return;
+    shoutRef.current += 1;
+    setShout({ clip, at: shoutRef.current });
+  };
 
   // In a room the draft begins for everyone at once, so this follows the room
   // rather than this device: a guest who never pressed anything is still in it.
@@ -94,7 +105,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
   useEffect(() => {
     if (!live || !shown) return;
     const pick = st.made[shown - 1];
-    if (pick) playSfx(sfxFor(pick, suggested.current, st.made.slice(0, shown - 1)));
+    if (pick) shoutOut(playSfx(sfxFor(pick, suggested.current, st.made.slice(0, shown - 1))));
     // `st.made` is rebuilt every render and `shown` is what actually moves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shown, live]);
@@ -109,7 +120,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
     ended.current = true;
     /* The end of a draft is not the same event as somebody taking the player
        you were told to take, and it used to share a sound with it. */
-    playSfx('done');
+    shoutOut(playSfx('done'));
   }, [live, waiting, st.done]);
   useEffect(() => { if (!live) ended.current = false; }, [live]);
 
@@ -129,7 +140,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
     if (!onClock) return;
     setTab(t => (t === 'team' ? t : 'suggested'));
     // Your turn is the one thing in here you might miss while looking away.
-    playSfx('horn');
+    shoutOut(playSfx('horn'));
   }, [onClock?.overall]);
 
   const visible = live ? st.made.slice(0, shown) : [];
@@ -150,6 +161,8 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
 
   return (
     <div className="mock-room">
+      {/* Over the board, under nothing, intercepting nothing. */}
+      <Brainrot clip={shout.clip} at={shout.at} />
       <header className="mock-head">
         <button type="button" className="btn btn-ghost" onClick={app.closeMock} style={{ fontSize: 13, padding: 0 }}>
           ‹ Leave

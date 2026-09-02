@@ -45,13 +45,28 @@ export type SfxName = 'tick' | 'coin' | 'boom' | 'horn' | 'pipe' | 'womp' | 'tun
  * line said fifteen times stops being a celebration somewhere around the
  * fourth, and two taking turns is the cheapest fix there is.
  */
-const CLIPS: Partial<Record<SfxName, string[]>> = {
-  coin: [siuUrl, gotthisUrl],           // you took somebody
-  horn: [patapimUrl, bombardinoUrl],    // you are on the clock
-  womp: [brainrotUrl, chillguyUrl],     // they took the one you were told to take
-  boom: [chimpanziniUrl],               // a reach, from well down the board
-  tung: [ballerinaUrl],                 // three of a position in a row
-  done: [gotthisUrl],                   // the board is drafted out, and that is your team
+export type ClipName =
+  | 'siu' | 'gotthis' | 'patapim' | 'bombardino'
+  | 'brainrot' | 'chillguy' | 'chimpanzini' | 'ballerina';
+
+const CLIP_URL: Record<ClipName, string> = {
+  siu: siuUrl,
+  gotthis: gotthisUrl,
+  patapim: patapimUrl,
+  bombardino: bombardinoUrl,
+  brainrot: brainrotUrl,
+  chillguy: chillguyUrl,
+  chimpanzini: chimpanziniUrl,
+  ballerina: ballerinaUrl,
+};
+
+const CLIPS: Partial<Record<SfxName, ClipName[]>> = {
+  coin: ['siu', 'gotthis'],             // you took somebody
+  horn: ['patapim', 'bombardino'],      // you are on the clock
+  womp: ['brainrot', 'chillguy'],       // they took the one you were told to take
+  boom: ['chimpanzini'],                // a reach, from well down the board
+  tung: ['ballerina'],                  // three of a position in a row
+  done: ['gotthis'],                    // the board is drafted out, and that is your team
 };
 
 
@@ -153,15 +168,16 @@ let unlocked = false;
  * has touched the screen. It runs once; a clip that fails simply stays absent
  * and its synthesised voice covers for it.
  */
-const clips: Record<string, AudioBuffer> = {};
+const clips: Partial<Record<ClipName, AudioBuffer>> = {};
 let loading = false;
 
 function loadClips(c: BaseAudioContext): void {
   if (loading) return;
   loading = true;
-  // A url can appear under two moments; decode it once and share the buffer.
-  const urls = Array.from(new Set(Object.values(CLIPS).flat()));
-  urls.forEach(url => {
+  // A clip can appear under two moments; decode it once and share the buffer.
+  const names = Array.from(new Set(Object.values(CLIPS).flat())) as ClipName[];
+  names.forEach(name => {
+    const url = CLIP_URL[name];
     void fetch(url)
       .then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('http ' + r.status))))
       // The callback form as well as the promise: older WebKit rejects the
@@ -170,7 +186,7 @@ function loadClips(c: BaseAudioContext): void {
         const p = c.decodeAudioData(buf, ok, no);
         if (p && typeof p.then === 'function') void p.then(ok, no);
       }))
-      .then(b => { clips[url] = b; })
+      .then(b => { clips[name] = b; })
       .catch(() => { /* the voice it replaced still plays */ });
   });
 }
@@ -179,16 +195,16 @@ function loadClips(c: BaseAudioContext): void {
 const turn: Partial<Record<SfxName, number>> = {};
 
 /** The next clip for this moment, or null while none of them has decoded. */
-function nextClip(name: SfxName): AudioBuffer | null {
-  const urls = CLIPS[name];
-  if (!urls || !urls.length) return null;
+function nextClip(name: SfxName): ClipName | null {
+  const list = CLIPS[name];
+  if (!list || !list.length) return null;
   // Only the ones that arrived are in the rotation, so a slow decode shifts
   // nothing: it simply joins once it is ready.
-  const ready = urls.filter(u => clips[u]);
+  const ready = list.filter(n => clips[n]);
   if (!ready.length) return null;
   const n = turn[name] || 0;
   turn[name] = n + 1;
-  return clips[ready[n % ready.length]];
+  return ready[n % ready.length];
 }
 
 export function armSfx(): void {
@@ -525,14 +541,23 @@ let lastAt = 0;
  */
 let playing: AudioBufferSourceNode | null = null;
 
-export function playSfx(name: SfxName): void {
+/**
+ * Make the noise, and say which one it was.
+ *
+ * The screen has to agree with the speaker — a card that names one character
+ * over the sound of another is worse than no card — so the choice of clip is
+ * made here, once, and handed back rather than guessed at by the caller.
+ * Null when what played was a synthesised voice, which has nothing to draw.
+ */
+export function playSfx(name: SfxName): ClipName | null {
   const now = Date.now();
-  if (name === 'tick' && now - lastAt < FLOOR_MS) return;
+  if (name === 'tick' && now - lastAt < FLOOR_MS) return null;
   const a = audio();
-  if (!a) return;
+  if (!a) return null;
   lastAt = now;
   try {
-    const buf = nextClip(name);
+    const clip = nextClip(name);
+    const buf = clip ? clips[clip] : null;
     if (buf) {
       try { playing?.stop(); } catch { /* already finished */ }
       const src = a.c.createBufferSource();
@@ -541,11 +566,12 @@ export function playSfx(name: SfxName): void {
       src.onended = () => { if (playing === src) playing = null; };
       src.start(0);
       playing = src;
-      return;
+      return clip;
     }
     // Not decoded yet, or never arrived: the voice it replaced covers for it.
     VOICES[name](a.c, a.out, a.c.currentTime);
   } catch {
     /* a context that died with the tab. The room does not stop for it. */
   }
+  return null;
 }

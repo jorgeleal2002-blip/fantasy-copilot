@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_ROOM, newRoomId } from '../api/live';
 import { caretAfterClean, cleanRoomCode, isRoomCode, roomCodeProblem } from '../model/invite';
+import { LOOKS } from '../ui/brainrot';
+import type { ClipName } from '../ui/sfx';
+
+const CLIP_NAMES = Object.keys(LOOKS) as ClipName[];
 
 describe('a room id', () => {
   it('is six readable characters, with the ambiguous ones left out', () => {
@@ -153,5 +157,37 @@ describe('with no database configured', () => {
     expect(typeof stop).toBe('function');
     stop();
     vi.unstubAllEnvs();
+  });
+});
+
+/**
+ * Every clip has a card.
+ *
+ * The screen has to agree with the speaker, and the way that breaks is a clip
+ * added to the rotation with nothing drawn for it — the room would shout and
+ * show nothing, or worse, show the last character while playing a new one.
+ */
+describe('the brainrot cards', () => {
+  it('covers every clip the room can play', () => {
+    CLIP_NAMES.forEach(name => {
+      const look = LOOKS[name];
+      expect(look, name + ' has no card').toBeTruthy();
+      expect(look.label.length, name + ' has no name on it').toBeGreaterThan(2);
+      expect(look.mark.length, name + ' has no mark').toBeGreaterThan(0);
+      expect(look.tint).toMatch(/^#[0-9a-f]{6}$/i);
+    });
+  });
+
+  it('gives each one its own colour, or they all read the same', () => {
+    const tints = CLIP_NAMES.map(n => LOOKS[n].tint.toLowerCase());
+    expect(new Set(tints).size).toBe(tints.length);
+  });
+
+  /* Two clips can land back to back — both of your picks at a turn — and an
+   * entrance nobody sees is a card that appears out of nowhere. */
+  it('names an entrance for each', () => {
+    const moves = new Set(CLIP_NAMES.map(n => LOOKS[n].move));
+    CLIP_NAMES.forEach(n => expect(LOOKS[n].move).toBeTruthy());
+    expect(moves.size).toBeGreaterThan(3);
   });
 });

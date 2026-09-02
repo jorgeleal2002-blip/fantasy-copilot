@@ -772,3 +772,139 @@ button { font-family: inherit; }
   0%, 8%, 12%, 17%, 21%, 100% { transform: none }
   10%, 19% { transform: translate(0, 280px) scaleY(0.08) translate(0, -280px) }
 }
+
+/* ── The brainrot card ──────────────────────────────────────────────────────
+   Bursts over the board when a clip plays. It sits above everything in the
+   room and intercepts nothing: the board keeps scrolling and the Draft buttons
+   keep working underneath it, which they have to, because one of these lands
+   on roughly a third of all picks and the room does not stop for them.
+
+   It covers the BOARD, not the dock — the dock is where the buttons and the
+   names are, and hiding those for a second and a half would be the one way to
+   make a decoration cost something. */
+.br-stage {
+  position: absolute;
+  left: 0; right: 0;
+  top: 0; bottom: 40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 6;
+  overflow: hidden;
+}
+/* A card with a body, not a sticker.
+   The first version was a bare emoji and a word floating on the board, and
+   over a grid of bright cells that reads as something gone wrong with the
+   page rather than as a thing the room is doing on purpose. A panel with its
+   own edge and its own shadow is the difference, and it is also what makes
+   the name legible: coloured type over a dark panel instead of over whatever
+   cell happens to be behind it. */
+.br-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 13px 24px 11px;
+  border-radius: 20px;
+  max-width: 78vw;
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(7px);
+  backdrop-filter: blur(7px);
+  border: 2px solid color-mix(in srgb, var(--br) 70%, transparent);
+  box-shadow:
+    0 14px 44px rgba(0, 0, 0, .6),
+    0 0 40px color-mix(in srgb, var(--br) 28%, transparent);
+  /* The card fades on its own after the entrance, so the sound and the picture
+     stop together rather than the picture hanging on into the next pick. */
+  animation: brOut 380ms ease 1050ms both;
+}
+/* The colour, thrown behind the mark. This is what the eye actually reads at
+   arm's length — the name is confirmation, not identification. */
+.br-burst {
+  position: absolute;
+  z-index: -1;
+  width: 300px; height: 300px;
+  top: 50%; left: 50%;
+  margin: -150px 0 0 -150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--br) 55%, transparent) 0%,
+                                     color-mix(in srgb, var(--br) 14%, transparent) 45%,
+                                     transparent 70%);
+  animation: brBurst 620ms cubic-bezier(.2,.9,.3,1) both;
+}
+.br-mark {
+  font-size: 66px;
+  line-height: 1.05;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .55));
+}
+.br-art {
+  width: 128px; height: 128px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,.55));
+}
+.br-name {
+  font-size: 19px;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--br);
+  text-align: center;
+  text-wrap: balance;
+  text-shadow: 0 0 20px color-mix(in srgb, var(--br) 40%, transparent);
+  animation: brName 420ms cubic-bezier(.2,.9,.3,1) 90ms backwards;
+}
+
+@keyframes brBurst {
+  from { transform: scale(0.2); opacity: 0 }
+  60%  { opacity: 1 }
+  to   { transform: scale(1.25); opacity: .75 }
+}
+@keyframes brName {
+  from { transform: translateY(14px) scale(.8); opacity: 0 }
+  to   { transform: none; opacity: 1 }
+}
+@keyframes brOut {
+  from { transform: none; opacity: 1 }
+  to   { transform: scale(1.12) translateY(-16px); opacity: 0 }
+}
+
+/* One entrance per character. A shark does not arrive like a ballerina. */
+.br-slam  .br-mark { animation: brSlam 520ms cubic-bezier(.2,1.4,.4,1) both; }
+.br-spin  .br-mark { animation: brSpin 620ms cubic-bezier(.2,.9,.3,1) both; }
+.br-swim  .br-mark { animation: brSwim 760ms cubic-bezier(.3,.7,.3,1) both; }
+.br-twirl .br-mark { animation: brTwirl 760ms cubic-bezier(.25,.8,.3,1) both; }
+.br-strut .br-mark { animation: brStrut 640ms cubic-bezier(.3,.8,.3,1) both; }
+.br-drop  .br-mark { animation: brDrop 560ms cubic-bezier(.35,1.5,.5,1) both; }
+
+@keyframes brSlam {
+  from { transform: scale(2.6); opacity: 0 }
+  55%  { transform: scale(.86); opacity: 1 }
+  to   { transform: scale(1) }
+}
+@keyframes brSpin {
+  from { transform: scale(.3) rotate(-220deg); opacity: 0 }
+  to   { transform: scale(1) rotate(0); opacity: 1 }
+}
+@keyframes brSwim {
+  from { transform: translateX(-58vw) rotate(-14deg); opacity: 0 }
+  45%  { transform: translateX(8px) rotate(6deg); opacity: 1 }
+  70%  { transform: translateX(-6px) rotate(-4deg) }
+  to   { transform: none }
+}
+@keyframes brTwirl {
+  from { transform: scale(.5) rotate(0); opacity: 0 }
+  to   { transform: scale(1) rotate(720deg); opacity: 1 }
+}
+@keyframes brStrut {
+  from { transform: translateX(46vw) rotate(9deg); opacity: 0 }
+  60%  { transform: translateX(-8px) rotate(-3deg); opacity: 1 }
+  to   { transform: none }
+}
+@keyframes brDrop {
+  from { transform: translateY(-46vh) rotate(-30deg) scale(.7); opacity: 0 }
+  60%  { transform: translateY(10px) rotate(4deg) scale(1.06); opacity: 1 }
+  to   { transform: none }
+}
