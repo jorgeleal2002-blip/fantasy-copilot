@@ -14,7 +14,7 @@ import { nextDetailStack, topDetail } from '../state/detail-stack';
 import { isMockEligible } from '../model/mock-pool';
 import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedule';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
-import type { SleeperPlayer } from '../api/types';
+import type { Pos, SleeperPlayer } from '../api/types';
 
 const bundle = makeBundle();
 const market = parseMarket(makeFantasyCalc(bundle.players));
@@ -968,9 +968,15 @@ describe('the mock draft room', () => {
     expect(bestFit.fit).toBe(Math.max(...open.board.map(o => o.fit)));
     const bpa = open.options.find(o => o.lens === 'value');
     if (bpa) {
-      const top = open.board.slice().sort((a, b) =>
-        (model.marketValue(b.id)?.pts || 0) - (model.marketValue(a.id)?.pts || 0))[0];
-      expect(bpa.id).toBe(top.id);
+      /* The most valuable man left — past a one-slot position you have already
+       * filled, where the next man cannot play at all and the card would be
+       * spent on somebody you would bench for the season. So: the best of what
+       * is left once those are set aside. */
+      const byValue = open.board.slice().sort((a, b) =>
+        (model.marketValue(b.id)?.pts || 0) - (model.marketValue(a.id)?.pts || 0));
+      const slotsAt = (p: string) => model.slots[p as Pos] || 1;
+      const usable = byValue.filter(o => slotsAt(o.pos) > 1 || (open.shape[o.pos] || 0) < slotsAt(o.pos));
+      expect(bpa.id).toBe((usable[0] || byValue[0]).id);
     }
     // Highest Rating first: the board's best player is often not the best fit for
     // YOUR roster, and showing him above a higher-scoring name read as the app
@@ -1866,5 +1872,92 @@ describe('the playoff weeks are the league\'s own', () => {
       expect(early[t].RB!.weeks).toEqual([14, 15, 16]);
       expect(late[t].RB!.weeks).toEqual([16, 17]);
     });
+  });
+});
+
+/**
+ * The draft room's own rating, which was not the same number the rest of the
+ * app computes.
+ *
+ * Reported from a real draft: at 6.10, holding Josh Allen already, the room's
+ * BEST card was a 38-year-old quarterback going at 9.07, rated above a receiver
+ * and a back going within a pick of the selection being made.
+ */
+describe('what the room offers you', () => {
+  const base = makeBundle();
+  const ONE_QB = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF',
+    'BN', 'BN', 'BN', 'BN', 'BN', 'BN'];
+  const data = {
+    ...base,
+    league: { ...base.league, roster_positions: ONE_QB,
+      settings: { ...base.league.settings, type: 0, draft_rounds: 15 } },
+    rosters: base.rosters.map(r => ({ ...r, players: [], starters: [] })),
+    draft: { ...base.draft!, type: 'snake', settings: { rounds: 15 } },
+  };
+  const mk = parseMarket(makeFantasyCalc(base.players).map(r => {
+    const v = r.value || 0;
+    return (r.player || {}).position === 'QB'
+      ? { ...r, value: Math.round(v * 0.45 * (0.55 + 0.45 * (v / 9000))) } : r;
+  }));
+  const build = () => buildModel({
+    data, usage: buildUsage(makeStats(base.players), base.players), market: mk,
+    strat: 'balanced', boardMode: 'fa', pickSel: 0,
+  });
+
+  /** Draft the shape from the report — RB, WR, QB, TE, RB — and stop on 6.10. */
+  const atSixTen = (m: ReturnType<typeof build>) => {
+    const want = ['RB', 'WR', 'QB', 'TE', 'RB'];
+    const choices: Record<number, string> = {};
+    for (let i = 0; i < 6; i++) {
+      const st = m.runMock(1, choices, 1);
+      if (!st.onClock || !st.onClock.mine) throw new Error('never got the clock');
+      if (i === want.length) return st;
+      choices[st.onClock.overall] = st.board.find(o => o.pos === want[i])!.id;
+    }
+    throw new Error('never reached 6.10');
+  };
+
+  /* With one quarterback slot and Josh Allen in it, the man behind him cannot
+   * play. "Best player available: a quarterback" is a true sentence about
+   * somebody you would bench for the season, and it cost a card that could
+   * have named a starter. Deeper positions are deliberately left alone — a
+   * fourth receiver plays, on byes, on injuries and in the flex. */
+  it('never spends a card on a one-slot position you have already filled', () => {
+    const st = atSixTen(build());
+    expect(st.shape.QB).toBe(1);
+    expect(st.options.map(o => o.pos)).not.toContain('QB');
+  });
+
+  it('and still offers three', () => {
+    expect(atSixTen(build()).options).toHaveLength(3);
+  });
+
+  /**
+   * The room could not tell a reach from a bargain.
+   *
+   * Every rating in it was computed without the player's place on the board,
+   * so `value` sat pinned at its neutral for all 120 names — while the card
+   * beside the number printed exactly where he goes. A man 95 picks away and
+   * the same man 55 picks away scored identically.
+   */
+  it('knows how far away a man is, which it did not', () => {
+    const m = build();
+    const choices: Record<number, string> = {};
+    let watched = '';
+    const seen: number[] = [];
+    for (let turn = 0; turn < 5; turn++) {
+      const st = m.runMock(1, choices, 1);
+      if (!st.onClock || !st.onClock.mine) break;
+      // Somebody deep enough that no bot reaches him, so his rating moves for
+      // one reason only: your pick is getting closer to his slot.
+      if (!watched) watched = st.board[95].id;
+      const him = st.board.find(o => o.id === watched);
+      if (him) seen.push(him.fit);
+      choices[st.onClock.overall] = st.board.find(o => o.pos === 'RB')!.id;
+    }
+    expect(seen.length).toBeGreaterThan(3);
+    // Flat before: 51 at every turn. Now it climbs as the pick closes on him.
+    expect(new Set(seen).size).toBeGreaterThan(1);
+    expect(seen[seen.length - 1]).toBeGreaterThan(seen[0]);
   });
 });

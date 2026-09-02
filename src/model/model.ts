@@ -1307,9 +1307,25 @@ export function buildModel(input: ModelInput): Model {
       shape[p] = (have[myRow.roster_id] || {})[p as Pos] || 0;
     });
 
+    /**
+     * `at` is where he comes off the board — the overall pick this man goes at
+     * if the room runs to consensus from here, which is the same number the
+     * card prints as "goes".
+     *
+     * It was not being passed, and two things followed. `value` fell back to
+     * its neutral for every player in the room, so the mock could not tell a
+     * bargain from a reach WHILE PRINTING THE REACH on the same row: a
+     * quarterback going at 9.07 was rated flat at a pick of 6.10, twenty-seven
+     * spots early, and nothing in the number knew. And the consensus rank never
+     * reached the score either, so floor and explosiveness were built on
+     * Sleeper's search index here and on the market's order everywhere else —
+     * the same player, two ratings, depending on which screen you opened.
+     */
     const rate = (
       x: { id: string; raw: SleeperPlayer; pos: DraftPos },
       extra?: Partial<MockOption>,
+      at?: number,
+      now?: number,
     ): MockOption => {
       const row = {
         id: x.id, name: playerName(x.raw), pos: x.pos, team: x.raw.team,
@@ -1344,6 +1360,11 @@ export function buildModel(input: ModelInput): Model {
       const sc = scorePlayer(x.raw, needFrom(shape), {
         dv: talentQ(x.raw, x.id), dvMax, stack: stackIn(mineNow, x.raw), use: uFor(x.id),
         redraft: !isDynasty, vor: vorOf(x.raw, x.id), sos: sosOf(x.raw),
+        rank: rankOf(x.id, x.raw),
+        // `idx` counts survivors and `now` puts them back on the draft's own
+        // scale, so `at` — already a pick number — is handed over as the first
+        // survivor of a draft that has reached it.
+        ...(at && now ? { idx: at - now + 1, now, pick: now } : {}),
       }, w);
       return { ...row, fit: sc.fit, ...extra };
     };
@@ -1377,7 +1398,7 @@ export function buildModel(input: ModelInput): Model {
             made,
             onClock: { overall, round, slot, label, mine: false, who: teamName(owner?.owner_id) },
             options: [],
-            board: live.slice(0, 120).map((x, i) => rate(x, { goes: overall + i })),
+            board: live.slice(0, 120).map((x, i) => rate(x, { goes: overall + i }, overall + i, overall)),
             myTeam,
             shape,
             done: false,
@@ -1399,10 +1420,18 @@ export function buildModel(input: ModelInput): Model {
           //        wearing a label about holes.
           //      · Nothing was ever picked by the Rating, the number printed
           //        beside it and the one the whole app is built on.
+          /* Where he comes off the board, as a pick of this draft.
+           *
+           * `live` is what SURVIVES, so a position in it is not a pick number:
+           * the best man left is first in that list at every moment of the
+           * draft, and printed raw he read "1.01" in the fourth round. With
+           * `overall - 1` picks already spent, the player sitting i-th in the
+           * queue goes at `overall + i`. */
+          const where = (x: { id: string }) => overall + live.findIndex(y => y.id === x.id);
           const pool = live.slice(0, 40);
           const fitCache: Record<string, number> = {};
           const fitOf = (x: { id: string; raw: SleeperPlayer; pos: Pos }) => {
-            if (fitCache[x.id] == null) fitCache[x.id] = rate(x).fit;
+            if (fitCache[x.id] == null) fitCache[x.id] = rate(x, undefined, where(x), overall).fit;
             return fitCache[x.id];
           };
           const boom = (x: { id: string; raw: SleeperPlayer }) => scorePlayer(x.raw, {}, {
@@ -1418,14 +1447,6 @@ export function buildModel(input: ModelInput): Model {
           const valueOf = (x: { id: string; q: number }) => marketValue(x.id)?.pts ?? x.q;
           const byValue = pool.slice().sort((a, b) => valueOf(b) - valueOf(a));
 
-          /* Where he comes off the board, as a pick of this draft.
-           *
-           * `live` is what SURVIVES, so a position in it is not a pick number:
-           * the best man left is first in that list at every moment of the
-           * draft, and printed raw he read "1.01" in the fourth round. With
-           * `overall - 1` picks already spent, the player sitting i-th in the
-           * queue goes at `overall + i`. */
-          const where = (x: { id: string }) => overall + live.findIndex(y => y.id === x.id);
           const options: MockOption[] = [];
           const seen: Record<string, 1> = {};
 
@@ -1448,8 +1469,26 @@ export function buildModel(input: ModelInput): Model {
            */
           const room = {} as Record<Pos, number>;
           POS.forEach(p => { room[p] = shortAt(rid, p); });
-          const blocked = (x: { pos: Pos } | undefined) =>
-            !!x && room[x.pos] <= 0 && options.some(o => o.pos === x.pos);
+          /**
+           * A card nobody can use.
+           *
+           * Two ways that happens. Another card already covers the position and
+           * there is no room left at it — two of three cards spent on one slot.
+           * Or the position has ONE slot, it is full, and the man behind him
+           * cannot play at all: with Josh Allen on the roster in a
+           * one-quarterback league, "best player available: a quarterback" is
+           * a true sentence about a player you would be benching for the
+           * season. That is what put a 38-year-old going twenty-seven picks
+           * later on the screen at a pick worth a starter.
+           *
+           * Deeper positions are left alone on purpose. A fourth receiver is
+           * not a wasted pick — byes, injuries and the flex all play him — so
+           * only a position with a single slot is closed once it is filled.
+           */
+          const blocked = (x: { pos: Pos } | undefined) => {
+            if (!x || room[x.pos] > 0) return false;
+            return (slots[x.pos] || 1) <= 1 || options.some(o => o.pos === x.pos);
+          };
 
           const add = (
             x: { id: string; raw: SleeperPlayer; pos: Pos } | undefined,
@@ -1458,7 +1497,7 @@ export function buildModel(input: ModelInput): Model {
             if (!x || seen[x.id]) return;
             seen[x.id] = 1;
             room[x.pos] = (room[x.pos] || 0) - 1;
-            options.push(rate(x, { goes: where(x), ...extra }));
+            options.push(rate(x, { goes: where(x), ...extra }, where(x), overall));
           };
 
           // 1. The app's own answer: the highest Rating left for YOUR roster.
@@ -1493,7 +1532,7 @@ export function buildModel(input: ModelInput): Model {
           //    fit and the one a lot of rooms actually draft by. Past a position
           //    another card already covers and you have no room left at, since
           //    a card you cannot use is not an option.
-          const bpa = byValue.find(x => !blocked(x));
+          const bpa = byValue.find(x => !blocked(x)) || byValue[0];
           add(bpa, {
             lens: 'value',
             title: 'Best player available',
@@ -1508,8 +1547,10 @@ export function buildModel(input: ModelInput): Model {
           // suggested: "the biggest upside left to consider" stays true of
           // whoever it lands on, where "best player available" would not.
           if (options.length < 3) {
-            add(byValue.slice(0, 15).slice().sort((a, b) => boom(b) - boom(a))
-              .find(x => !seen[x.id] && !blocked(x)), {
+            /* Usable first, but a third card beats no third card: deep into a
+             * draft every slot is full and the whole pool can be blocked. */
+            const byBoom = byValue.slice(0, 15).slice().sort((a, b) => boom(b) - boom(a));
+            add(byBoom.find(x => !seen[x.id] && !blocked(x)) || byBoom.find(x => !seen[x.id]), {
               lens: 'upside',
               title: 'Highest ceiling',
               why: 'The biggest upside among the best still on the board',
@@ -1531,7 +1572,7 @@ export function buildModel(input: ModelInput): Model {
             onClock: { overall, round, slot, label, mine: true, who: 'you' },
             options,
             // The whole board, rated — a mock room lets you take anybody.
-            board: live.slice(0, 120).map((x, i) => rate(x, { goes: overall + i })),
+            board: live.slice(0, 120).map((x, i) => rate(x, { goes: overall + i }, overall + i, overall)),
             myTeam,
             shape,
             done: false,
