@@ -63,6 +63,29 @@ export const FILL_COLOR: Record<FillPos, string> = {
   DEF: '#a8592a',
 };
 export const FILL: FillPos[] = ['K', 'DEF'];
+
+/**
+ * The same six as a filled square, with dark type on top.
+ *
+ * A drafted cell in the reference is a solid block of its position's colour,
+ * not a hint of one, and that is what makes a run down a position readable at
+ * arm's length — a 20% tint of six different hues all read as "dark card".
+ *
+ * The hues above are too saturated to carry type, so these lift to L .86 and
+ * pull the chroma back to .12. Dark ink on every one of them measures between
+ * 10.9 and 13.0, so the name stays the most legible thing in the cell.
+ */
+export const POS_CELL: Record<DraftPos, string> = {
+  QB: '#ffafc2',
+  RB: '#65ebd9',
+  WR: '#98d5ff',
+  TE: '#ffc17a',
+  K: '#d0c4ff',
+  DEF: '#ffb98a',
+};
+/** The type that sits on one. */
+export const CELL_INK = '#0a1024';
+export const cellOf = (pos: DraftPos): string => POS_CELL[pos] || '#8ea3c8';
 /** The colour for anything a draft board can hold. */
 export const colorOf = (pos: DraftPos): string =>
   POS_COLOR[pos as Pos] || FILL_COLOR[pos as FillPos] || 'rgba(242,253,254,.42)';

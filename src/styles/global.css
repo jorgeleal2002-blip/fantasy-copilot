@@ -449,10 +449,12 @@ button { font-family: inherit; }
 }
 /* The column you are drafting from stays legible even when it is empty. */
 .bd-cell.is-seat { background: color-mix(in srgb, var(--color-accent) 5%, transparent); }
-/* A filled cell is tinted with its position's hue. The `--pos` fallback keeps
-   a player with no listed position looking like a card, not a hole. */
+/* A filled cell is a SOLID block of its position's colour, the way the app this
+   follows draws one. A tint of six hues over one dark card reads as six dark
+   cards; a fill reads as a run on a position from across the room. */
 .bd-cell.is-filled {
-  background: color-mix(in srgb, var(--pos, #5671d8) 20%, var(--color-surface));
+  background: var(--pos-fill, #8ea3c8);
+  color: var(--cell-ink, #0a1024);
   /* The class arrives the moment the pick does, one square at a time, so this
      fires per pick and a run down a position reads as it happens rather than
      appearing between glances. `backwards` and an end at `none` keep it off
@@ -511,6 +513,12 @@ button { font-family: inherit; }
   margin-top: 1px;
   color: var(--pos, rgba(242, 253, 254, 0.4));
 }
+/* Everything inside a filled cell reads against the fill, not against the
+   board. The position keeps its own weight by going quieter, not by staying
+   its own colour — at 9px on a pastel it would be the one unreadable thing. */
+.bd-cell.is-filled .bd-tag { color: rgba(10, 16, 36, 0.55); }
+.bd-cell.is-filled .bd-name { color: var(--cell-ink, #0a1024); font-weight: 600; }
+.bd-cell.is-filled .bd-pos { color: rgba(10, 16, 36, 0.62); font-weight: 600; }
 /* The arrow points at wherever the next pick lands, which is how a snake
    reads as a snake rather than as ten unrelated columns. */
 .bd-arrow {

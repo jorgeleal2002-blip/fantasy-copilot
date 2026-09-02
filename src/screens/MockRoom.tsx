@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { ACCENT, BAD, GOOD, POS, colorOf } from '../model/constants';
+import { ACCENT, BAD, GOOD, POS, cellOf, colorOf } from '../model/constants';
 import { inviteUrl, shareInvite } from '../model/invite';
 import { pickLabel } from '../model/math';
 import type { Pos } from '../api/types';
@@ -648,7 +648,10 @@ function MockBoard({ m, made, seat, next, claimable, onClaim }: {
                 data-cell={r + '-' + c}
                 className={'bd-cell' + (p ? ' is-filled' : '') + (p?.mine ? ' is-mine' : '')
                   + (onClock ? ' is-clock' : '') + (c === seat ? ' is-seat' : '')}
-                style={pos ? ({ '--pos': colorOf(pos) } as CSSProperties) : undefined}
+                style={pos ? ({
+                  '--pos': colorOf(pos),
+                  '--pos-fill': cellOf(pos),
+                } as CSSProperties) : undefined}
                 title={p?.player?.name}
               >
                 <div className="bd-tag">
