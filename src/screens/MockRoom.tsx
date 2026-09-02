@@ -445,11 +445,15 @@ function MyTeam({ st, m }: { st: MockState; m: Model }) {
 function InvitePanel({ app, m, onClose }: { app: App; m: Model; onClose: () => void }) {
   const [done, setDone] = useState('');
   const [opening, setOpening] = useState(false);
-  const link = (seat: number | null, room?: string | null) =>
-    inviteUrl({ leagueId: m.league.league_id, seed: app.mockSeed, seat, room });
+  /* No seat in the link any more. It used to be able to name one — the panel
+   * listed every manager so you could hand each of them a particular chair —
+   * and the seats are on the board, one tap away, where they can be seen next
+   * to who is already in them. */
+  const link = (room?: string | null) =>
+    inviteUrl({ leagueId: m.league.league_id, seed: app.mockSeed, seat: null, room });
 
-  const send = async (seat: number | null, who: string, room?: string | null) => {
-    const how = await shareInvite(link(seat, room), 'Mock draft · ' + m.league.name);
+  const send = async (who: string, room?: string | null) => {
+    const how = await shareInvite(link(room), 'Mock draft · ' + m.league.name);
     setDone(how === 'failed'
       ? 'Could not share the link on this device.'
       : how === 'shared' ? 'Sent to ' + who : 'Link copied for ' + who);
@@ -460,11 +464,8 @@ function InvitePanel({ app, m, onClose }: { app: App; m: Model; onClose: () => v
     setOpening(true);
     const id = app.roomId || await app.hostRoom(app.mySeat ?? m.mySlot ?? null);
     setOpening(false);
-    if (id) await send(null, 'the league', id);
+    if (id) await send('the league', id);
   };
-
-  // Everyone but you: you are already in the room.
-  const others = m.teams.filter(t => !t.isMe);
 
   return (
     <div className="mock-invite" role="dialog" aria-label="Invite the league">
@@ -525,37 +526,11 @@ function InvitePanel({ app, m, onClose }: { app: App; m: Model; onClose: () => v
       <button
         type="button"
         className="btn btn-secondary"
-        onClick={() => void send(null, 'the league')}
+        onClick={() => void send('the league')}
         style={{ width: '100%', marginTop: app.liveOn ? 0 : 11, padding: '10px 0', fontSize: 13, borderRadius: 10 }}
       >
         Share this board
       </button>
-
-      {others.length ? (
-        <>
-          <div style={{
-            fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase',
-            color: dim(0.35), margin: '13px 0 4px',
-          }}>
-            Or seat someone yourself
-          </div>
-          <div className="mock-invite-list">
-            {others.map(t => (
-              <button
-                key={t.id}
-                type="button"
-                className="mock-invite-row"
-                onClick={() => void send(t.slot, t.name)}
-              >
-                <span style={{ ...ellipsis, minWidth: 0, flex: 1, textAlign: 'left' }}>{t.name}</span>
-                <span style={{ fontSize: 11, color: dim(0.4), flex: 'none' }}>
-                  {t.slot ? 'seat ' + t.slot : 'no seat'}
-                </span>
-              </button>
-            ))}
-          </div>
-        </>
-      ) : null}
 
       {done ? (
         <div style={{ fontSize: 11.5, color: GOOD, marginTop: 10 }} role="status">{done}</div>
