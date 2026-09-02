@@ -1,3 +1,4 @@
+import { liveEnabled } from '../api/live';
 import { ACCENT, BAD, GOOD, METRIC_LABEL, MID, STRATS, StratKey } from '../model/constants';
 import { clamp } from '../model/math';
 import type { Model } from '../model/types';
@@ -166,8 +167,15 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           it to. When "your team" comes up empty this is the one fact that
           separates a broken match from a genuinely empty roster, and it saves
           a round trip to find out. */}
+      {/* Whether shared drafting is switched on at all. Without it the room
+          button simply is not there, which looks identical to a broken feature
+          from the outside — this is the one line that tells the two apart. */}
       <div style={{ ...cardNote, textAlign: 'center', fontSize: 10.5 }}>
         Build {__BUILD__} UTC
+        <br />
+        {liveEnabled()
+          ? 'Shared draft rooms: on'
+          : 'Shared draft rooms: off — set VITE_RTDB_URL (see README)'}
       </div>
 
       <div style={{ height: 8 }} />
