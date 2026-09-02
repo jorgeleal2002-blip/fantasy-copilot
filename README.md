@@ -208,6 +208,32 @@ is worth turning the handset sideways to be sure you can see it.
 Publishing rules never asks for a plan. Reading and writing never asks for a
 plan. If you are being asked, you are not on the path this app needs.
 
+### If the Rules tab will not let you publish
+
+Publishing rules is free — it is not a Blaze feature, and if the console is
+telling you otherwise you are either on the rules PLAYGROUND, which only
+simulates and has no publish button, or the database has been disabled.
+
+Tell those apart without the console: press **Test** in the app. "Refused to
+read AND to write" means the database is alive and only the rules are missing.
+"Could not reach the database at all" means it is disabled or gone.
+
+There is also a way round the button entirely. A database can be created with
+the open rules already in place:
+
+1. A **new project** — a second database inside an existing project is the
+   Blaze feature, a new project is not.
+2. Realtime Database → Create database → choose **test mode** rather than
+   locked mode. That writes read-and-write-allowed rules for you, and there is
+   nothing to publish.
+3. Copy the new URL into the `VITE_RTDB_URL` variable and run the deploy again.
+
+Test mode expires after thirty days, and when it does the room stops until real
+rules are published — so this is a way to get drafting tonight, not a way to
+avoid the Rules tab forever. It is worth knowing that it proves the whole chain
+works, which makes whatever is wrong with the first project a smaller problem
+to go back to.
+
 ### What it costs
 
 Nothing, by a wide margin, and the design is what keeps it that way.
