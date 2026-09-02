@@ -972,10 +972,20 @@ describe('the mock draft room', () => {
        * filled, where the next man cannot play at all and the card would be
        * spent on somebody you would bench for the season. So: the best of what
        * is left once those are set aside. */
-      const byValue = open.board.slice().sort((a, b) =>
+      /* The room considers the next forty names in BOARD order and picks the
+       * most valuable of those — not the most valuable of everything left,
+       * which since the board stopped running in price order is a different
+       * man and one it never looked at. */
+      const byValue = open.board.slice(0, 40).sort((a, b) =>
         (model.marketValue(b.id)?.pts || 0) - (model.marketValue(a.id)?.pts || 0));
       const slotsAt = (p: string) => model.slots[p as Pos] || 1;
-      const usable = byValue.filter(o => slotsAt(o.pos) > 1 || (open.shape[o.pos] || 0) < slotsAt(o.pos));
+      const room = (p: string) => Math.max(slotsAt(p) - (open.shape[p as Pos] || 0), 0);
+      /* A card is skipped when its position has no room left AND either only
+       * one of it ever starts — the man behind him cannot play — or another
+       * card already covers it, which would spend two of three on one slot. */
+      const usable = byValue.filter(o =>
+        room(o.pos) > 0
+        || (slotsAt(o.pos) > 1 && !open.options.some(x => x.lens !== 'value' && x.pos === o.pos)));
       expect(bpa.id).toBe((usable[0] || byValue[0]).id);
     }
     // Highest Rating first: the board's best player is often not the best fit for
@@ -1262,12 +1272,34 @@ describe('what a redraft mock board holds, and in what order', () => {
    * In REDRAFT there is no future to price, so the two collapse into one — and
    * only the market knows how many quarterbacks this league starts. Sleeper
    * ships one list to every league on the site. */
-  it('runs in the market\'s order in redraft', () => {
+  /* Each source is asked what it knows. Sleeper's board is reliable WITHIN a
+   * position and cannot see the format BETWEEN them; the market is the other
+   * way round. So the order inside a position stays Sleeper's, and how high
+   * that position sits against the others is the market's call. */
+  it('keeps Sleeper\'s order inside a position in redraft', () => {
+    const { m, players } = league(REDRAFT, 0);
+    const board = m.runMock(5).board.slice(0, 60);
+    const sr = (id: string) => players[id]?.search_rank ?? 9999;
+    (['QB', 'RB', 'WR', 'TE'] as const).forEach(pos => {
+      const mine = board.filter(o => o.pos === pos);
+      for (let i = 1; i < mine.length; i++) {
+        expect(sr(mine[i].id), pos + ' is out of order').toBeGreaterThan(sr(mine[i - 1].id));
+      }
+    });
+  });
+
+  it('and lets the market decide how the positions interleave', () => {
     const { m } = league(REDRAFT, 0);
     const board = m.runMock(5).board.slice(0, 40).filter(o => POS.indexOf(o.pos as Pos) >= 0);
+    // The best of each position comes off in the market's order of them.
+    const firsts = (['QB', 'RB', 'WR', 'TE'] as const)
+      .map(pos => board.find(o => o.pos === pos))
+      .filter(Boolean) as typeof board;
     const mv = (id: string) => m.marketValue(id)?.pts ?? 0;
-    for (let i = 1; i < board.length; i++) {
-      expect(mv(board[i].id)).toBeLessThanOrEqual(mv(board[i - 1].id));
+    for (let i = 1; i < firsts.length; i++) {
+      const a = board.indexOf(firsts[i - 1]);
+      const b = board.indexOf(firsts[i]);
+      if (a < b) expect(mv(firsts[i - 1].id)).toBeGreaterThanOrEqual(mv(firsts[i].id));
     }
   });
 
@@ -2169,5 +2201,82 @@ describe('the value of the round', () => {
     // with the next real selection at 80.
     const at = (board: number) => pickValue(board, 60, 80) * w.value * 100;
     expect(at(65) - at(95)).toBeGreaterThan(1.5);
+  });
+});
+
+/**
+ * How closely the room follows its own board.
+ *
+ * Reported: the order looks nothing like a real mock — good players fall a long
+ * way past where they go. Measured on the old bot, which re-sorted the next
+ * TWENTY-FIVE names by need-weighted trade value and then drew almost evenly
+ * from the top five of that: the average pick came from 7.6 places down the
+ * board, one bot took the 24th-best name available inside the first round, and
+ * the consensus number two fell to the sixth pick.
+ */
+describe('a room that follows the board', () => {
+  const base = makeBundle();
+  const m = buildModel({
+    data: {
+      ...base,
+      league: { ...base.league,
+        roster_positions: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF',
+          'BN', 'BN', 'BN', 'BN', 'BN', 'BN'],
+        settings: { ...base.league.settings, type: 0, draft_rounds: 15 } },
+      rosters: base.rosters.map(r => ({ ...r, players: [], starters: [] })),
+      draft: { ...base.draft!, type: 'snake', settings: { rounds: 15 } },
+    },
+    usage: buildUsage(makeStats(base.players), base.players),
+    market: parseMarket(makeFantasyCalc(base.players)),
+    strat: 'balanced', boardMode: 'fa', pickSel: 0,
+  });
+
+  /** A whole draft, taking the top of the board at every one of your turns. */
+  const played = (seed: number) => {
+    const choices: Record<number, string> = {};
+    let st = m.runMock(seed, choices, 1);
+    for (let i = 0; i < 20 && st.onClock?.mine; i++) {
+      choices[st.onClock.overall] = st.board[0].id;
+      st = m.runMock(seed, choices, 1);
+    }
+    return st;
+  };
+
+  it('strays a place or two, not eight', () => {
+    const bots = played(1).made.filter(p => p.player && !p.mine).map(p => p.boardAt);
+    expect(bots.length).toBeGreaterThan(80);
+    const mean = bots.reduce((a, b) => a + Math.abs(b - 1), 0) / bots.length;
+    expect(mean).toBeLessThan(2);            // 7.6 before
+    expect(Math.max(...bots)).toBeLessThanOrEqual(6);
+  });
+
+  it('takes the best man left more often than anything else', () => {
+    const bots = played(1).made.filter(p => p.player && !p.mine).map(p => p.boardAt);
+    const first = bots.filter(a => a === 1).length / bots.length;
+    expect(first).toBeGreaterThan(0.35);
+    // But not always, or it is a sorted list rather than a draft.
+    expect(first).toBeLessThan(0.75);
+  });
+
+  /* The complaint in the form it was made: the names at the top of the board
+   * have to come off near the top of the draft. */
+  it('does not let the top of the board fall out of the first round', () => {
+    const board = m.runMock(1, {}, 1).board;
+    const st = played(1);
+    const at: Record<string, number> = {};
+    st.made.forEach(p => { if (p.player) at[p.player.id] = p.overall; });
+    board.slice(0, 10).forEach(o => {
+      expect(at[o.id], o.name + ' never came off the board').toBeTruthy();
+      expect(at[o.id], o.name + ' fell to ' + at[o.id]).toBeLessThanOrEqual(m.teamCount + 5);
+    });
+  });
+
+  /* Need is a tiebreak inside the window, not a licence to jump the board:
+   * it used to run to 1.9x where a position was three starters short. */
+  it('never lets a hole outrank the board by more than the window', () => {
+    [1, 7, 42].forEach(seed => {
+      played(seed).made.filter(p => p.player && !p.mine)
+        .forEach(p => expect(p.boardAt).toBeLessThanOrEqual(6));
+    });
   });
 });

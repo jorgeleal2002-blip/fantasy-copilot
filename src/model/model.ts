@@ -39,6 +39,16 @@ export interface ModelInput {
  * refreshed market re-runs the whole thing, which is what keeps the trade
  * offers and the board honest.
  */
+/**
+ * How far down the board a room will reach, and how hard it follows it.
+ *
+ * A geometric draw over the next few names: the best man left goes 46% of the
+ * time, the second 25%, the sixth 2%. Together these are the difference
+ * between a forecast and a shuffle — see the bot in `runMock`.
+ */
+const BOT_WINDOW = 6;
+const BOT_FOLLOW = 0.55;
+
 export function buildModel(input: ModelInput): Model {
   const { data: d, usage, market: mk, strat, boardMode, pickSel, myRosterId, block } = input;
   const players = d.players;
@@ -306,13 +316,42 @@ export function buildModel(input: ModelInput): Model {
    * Sleeper gave him and lands exactly where he always did.
    */
   const srForMarketRank: number[] = [];
+  /**
+   * Draft order among the priced players, in redraft.
+   *
+   * Straight market order was too blunt. A trade value is not an ADP even
+   * without a future to price, so ordering by it alone reshuffled players
+   * WITHIN a position — and Sleeper's board is reliable there. What Sleeper
+   * cannot get right is the balance BETWEEN positions, which is the only thing
+   * that changes when a league starts one quarterback instead of two.
+   *
+   * So each is asked what it knows. Inside a position the order is Sleeper's;
+   * the market's values for that position are handed out down that order, best
+   * to worst. Then everybody sorts by the value they were handed. The best
+   * receiver by ADP is the best receiver, and how high the receivers sit
+   * against the backs and the quarterbacks is the market's call.
+   */
+  const boardOrder: Record<string, number> = {};
   if (!isDynasty) {
+    const byPos: Partial<Record<Pos, { id: string; sr: number; v: number }[]>> = {};
     for (const pid in players) {
       const pl = players[pid];
       if (!pl || !marketOrder[pid]) continue;
-      srForMarketRank.push(pl.search_rank && pl.search_rank < 9999 ? pl.search_rank : 9999);
+      const sr = pl.search_rank && pl.search_rank < 9999 ? pl.search_rank : 9999;
+      srForMarketRank.push(sr);
+      const p = pl.position as Pos;
+      (byPos[p] = byPos[p] || []).push({ id: pid, sr, v: mval(pl) ?? 0 });
     }
     srForMarketRank.sort((a2, b2) => a2 - b2);
+
+    const adjusted: { id: string; v: number }[] = [];
+    POS.forEach(p => {
+      const list = byPos[p] || [];
+      const vals = list.map(x => x.v).sort((a2, b2) => b2 - a2);
+      list.slice().sort((a2, b2) => a2.sr - b2.sr)
+        .forEach((x, i) => adjusted.push({ id: x.id, v: vals[i] }));
+    });
+    adjusted.sort((a2, b2) => b2.v - a2.v).forEach((x, i) => { boardOrder[x.id] = i + 1; });
   }
   /**
    * Draft order.
@@ -334,11 +373,11 @@ export function buildModel(input: ModelInput): Model {
    */
   const rankOf = (id: string, pl: SleeperPlayer) => {
     const sr = pl.search_rank && pl.search_rank < 9999 ? pl.search_rank : null;
-    const mo = marketOrder[id];
-    if (!isDynasty && mo && srForMarketRank.length) {
-      return srForMarketRank[Math.min(mo, srForMarketRank.length) - 1];
+    const bo = boardOrder[id];
+    if (!isDynasty && bo && srForMarketRank.length) {
+      return srForMarketRank[Math.min(bo, srForMarketRank.length) - 1];
     }
-    return sr != null ? sr : 100000 + (mo || 9999);
+    return sr != null ? sr : 100000 + (marketOrder[id] || 9999);
   };
 
   const marketValue = (id: string): PlayerValue | null => {
@@ -1736,17 +1775,37 @@ export function buildModel(input: ModelInput): Model {
         continue;
       }
 
-      // A bot. Value lifted by its own thinness, then a weighted draw from the
-      // top of that list rather than the strict maximum — real managers reach,
-      // and a board that never does is not a forecast.
-      const ranked = live.slice(0, 25)
-        .map(x => ({ x, s: x.q * (1 + (rid ? shortAt(rid, x.pos) : 0) * 0.3) }))
-        .sort((a, b) => b.s - a.s);
-      const top = ranked.slice(0, 5);
-      const total = top.reduce((a, b) => a + b.s, 0) || 1;
+      /**
+       * A bot.
+       *
+       * It used to re-sort the next TWENTY-FIVE names by trade value lifted by
+       * how short the roster was, and then draw from the top five of that in
+       * proportion to the value — which is nearly a coin toss between five
+       * similar numbers, and the need multiplier ran to 1.9× where a position
+       * was three starters short. Measured over a full draft: the average pick
+       * came from 7.6 places down the board, one bot took the 24th-best name
+       * available at 1.04, and the consensus number two fell to the sixth pick.
+       * That is not a mock of anything.
+       *
+       * A room follows the board and occasionally reaches. So the draw is over
+       * a SHORT window in board order, weighted geometrically — the best man
+       * left goes 46% of the time, the next 25%, and a six-slot reach is the
+       * 2% tail. Need is a tiebreak inside that window, not a licence to jump
+       * twenty names: two open slots at most, 15% each.
+       *
+       * Measured after: the average pick comes from 2.0 places down, which is
+       * about what a real board strays.
+       */
+      const window = live.slice(0, BOT_WINDOW);
+      const weights = window.map((x, i) => Math.pow(BOT_FOLLOW, i)
+        * (1 + Math.min(rid ? shortAt(rid, x.pos) : 0, 2) * 0.15));
+      const total = weights.reduce((a, b) => a + b, 0) || 1;
       let r = rnd() * total;
-      let choice = top[0].x;
-      for (const c of top) { r -= c.s; if (r <= 0) { choice = c.x; break; } }
+      let choice = window[0];
+      for (let i = 0; i < window.length; i++) {
+        r -= weights[i];
+        if (r <= 0) { choice = window[i]; break; }
+      }
 
       const choiceAt = live.indexOf(choice);
       gone.add(choice.id);

@@ -4,21 +4,23 @@ import type { MockPick } from './types';
 /**
  * How deep a pick has to be to count as a reach.
  *
- * Measured, not chosen. A bot draws from the best five on its own list, and its
- * list is the board re-weighted by what it is short of — so most picks land in
- * the first handful and only a need-weighted promotion pulls anybody far down.
- * Across a played-out draft the places came out
+ * Measured, not chosen — and re-measured, because the room it was measured in
+ * no longer exists. It used to be 15, on a bot that re-sorted the next
+ * twenty-five names by need-weighted trade value and drew almost evenly from
+ * the top five of that: its picks came from an average of 7.6 places down the
+ * board with spikes past 20, so 15 caught the spikes and nothing else.
  *
- *     4 8 5 3 3 4 2 2 1 22 6 12 2 1 12 4 4 1 21 4 1 5 3 12 14
+ * That bot was replaced for being unrealistic, and the spikes went with it.
+ * The draw is now geometric over the next six names in board order, and across
+ * a played-out draft the places land
  *
- * which is a floor of small numbers with occasional spikes. At 8 the boom fires
- * on a fifth of all picks — one every two seconds through the reveal, and it is
- * the loudest thing in the set by three and a half times, so a fifth of the
- * board makes the room unlistenable. At 15 it is those spikes and nothing else:
- * twice in twenty-five picks, about ten times in a full draft, every one of
- * them a pick that genuinely made no sense.
+ *     #1 × 67   #2 × 27   #3 × 16   #4 × 12   #5 × 6   #6 × 7
+ *
+ * At 15 the sound could never fire again. At 6 it is the tail — seven times in
+ * a full draft, every one of them the deepest name anybody took — which is
+ * about what 15 used to catch, and the loudest thing in the set stays rare.
  */
-export const REACH = 15;
+export const REACH = 6;
 
 /**
  * What a revealed pick sounds like.
