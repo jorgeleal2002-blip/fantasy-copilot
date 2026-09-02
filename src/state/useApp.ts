@@ -6,7 +6,7 @@ import {
 import type { LeagueBundle, PosFilter, SleeperLeague } from '../api/types';
 import { DRAFT_POLL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
-  EMPTY_ROOM, claimSeat, createRoom as createRoomAt, liveEnabled, newRoomId,
+  EMPTY_ROOM, claimSeat, createRoom as createRoomAt, liveEnabled, liveReason, newRoomId,
   pushPick, readRoom, startRoom, watchRoom, type Room,
 } from '../api/live';
 import { clearInvite, parseInvite, type Invite } from '../model/invite';
@@ -364,8 +364,8 @@ export function useApp() {
       setRoomError('');
       setRoomId(id);
       return id;
-    } catch {
-      setRoomError('Could not open the room.');
+    } catch (e) {
+      setRoomError(liveReason(e, 'open the room'));
       return null;
     }
   }, [leagueId, me, mockSeed, username]);
@@ -381,8 +381,8 @@ export function useApp() {
       if (seat) await claimSeat(id, seat, { id: me.user_id, name: me.display_name || username });
       setRoomError('');
       setRoomId(id);
-    } catch {
-      setRoomError('Could not reach the room.');
+    } catch (e) {
+      setRoomError(liveReason(e, 'reach the room'));
     }
   }, [me, username]);
 
@@ -390,8 +390,8 @@ export function useApp() {
     if (!roomId || !me) return;
     try {
       await claimSeat(roomId, seat, { id: me.user_id, name: me.display_name || username });
-    } catch {
-      setRoomError('Could not take that seat.');
+    } catch (e) {
+      setRoomError(liveReason(e, 'take that seat'));
     }
   }, [roomId, me, username]);
 
@@ -689,7 +689,7 @@ export function useApp() {
     /* In a room this begins for everybody. Starting only your own copy would
      * let the bots take the seats your friends have not sat in yet. */
     startMock: () => {
-      if (roomId) { void startRoom(roomId).catch(() => setRoomError('Could not start the room.')); }
+      if (roomId) { void startRoom(roomId).catch(e => setRoomError(liveReason(e, 'start the room'))); }
       setMockStarted(true);
     },
     // A different seat is a different draft, so nothing carries over.

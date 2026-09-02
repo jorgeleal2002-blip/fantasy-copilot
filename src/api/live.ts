@@ -77,6 +77,26 @@ async function send(url: string, method: string, body?: unknown): Promise<unknow
   return res.status === 204 ? null : res.json();
 }
 
+/**
+ * Why a room operation failed, in words a person can act on.
+ *
+ * Every one of these used to be "Could not open the room", which names the
+ * symptom and hides the only cause that matters. A 401 here is never a network
+ * problem and never a bug in the app — it is the database saying no, and it
+ * says no for exactly one reason in a fresh setup: the rules were typed into
+ * the console's editor and never published. Shared with the connection check
+ * so the two can never disagree about what a refusal means.
+ */
+export function liveReason(e: unknown, what: string): string {
+  const msg = String((e as Error)?.message || e);
+  if (/40[13]/.test(msg)) {
+    return 'The database refused it — your rules are not published. Firebase '
+      + 'console → Realtime Database → Rules → Publish (the rules playground '
+      + 'only simulates, it does not publish). You tab → Test says more.';
+  }
+  return 'Could not ' + what + '. The database did not answer (' + msg + ').';
+}
+
 export async function createRoom(id: string, room: Room): Promise<void> {
   await send(roomPath(id), 'PUT', room);
 }
