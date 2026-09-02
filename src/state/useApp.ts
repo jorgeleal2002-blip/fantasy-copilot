@@ -3,7 +3,7 @@ import {
   findUser, getDraftPicks, getRosters, getSeasonStats, getTradedPicks, getUsers,
   loadLeague, matchMe, userLeagues, playerPhoto,
 } from '../api/sleeper';
-import type { LeagueBundle, SleeperLeague } from '../api/types';
+import type { LeagueBundle, PosFilter, SleeperLeague } from '../api/types';
 import { DRAFT_POLL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
   EMPTY_ROOM, claimSeat, createRoom as createRoomAt, liveEnabled, newRoomId,
@@ -113,7 +113,9 @@ export function useApp() {
   const [room, setRoom] = useState<Room | null>(null);
   const [roomError, setRoomError] = useState('');
   const [tradeView, setTradeView] = useState<'suggested' | 'block' | 'saved'>('suggested');
-  const [filter, setFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
+  // A redraft board holds kickers and defences too, so the picker that filters
+  // it has to be able to say so.
+  const [filter, setFilter] = useState<PosFilter>('ALL');
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterSort, setRosterSort] = useState<'value' | 'age' | 'snap'>('value');
   const [boardMode, setBoardMode] = useState<'rookies' | 'fa'>('rookies');

@@ -5,6 +5,17 @@ import type { Usage } from './usage';
 
 export type Metrics = Record<MetricKey, number>;
 
+/**
+ * The breakdown for a player the Fit Score does not describe.
+ *
+ * Kickers and defences are on the board but not scored by it, and a breakdown
+ * of zeroes is the truthful shape: the sheet draws nine bars at nothing rather
+ * than nine bars of whatever each missing metric happens to default to.
+ */
+export const EMPTY_METRICS: Metrics = {
+  talent: 0, need: 0, value: 0, floor: 0, boom: 0, combo: 0, age: 0, stack: 0, rz: 0,
+};
+
 /** How much of a ceiling we credit to a player nobody has seen produce yet. */
 const UNSEEN = 0.6;
 

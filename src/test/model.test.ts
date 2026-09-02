@@ -1279,6 +1279,33 @@ describe('what a redraft mock board holds, and in what order', () => {
     // and they sit deep enough that the bots' window never reaches them early
     expect(board.findIndex(o => o.pos === 'K')).toBeGreaterThan(40);
   });
+
+  /* The board proper, not the mock. It listed neither for as long as the mock
+   * did, so a redraft league with a kicker round and a defence round had two
+   * picks a season the app said nothing at all about. */
+  it('and the DRAFT BOARD holds them on the same terms', () => {
+    const { m } = league(REDRAFT, 0);
+    expect(m.scored.some(p => p.pos === 'K')).toBe(true);
+    expect(m.scored.some(p => p.pos === 'DEF')).toBe(true);
+    expect(m.fills).toEqual(['K', 'DEF']);
+  });
+
+  it('the board leaves them out where the league does not start them', () => {
+    const { m } = league(DYNASTY, 2);
+    expect(m.scored.some(p => p.pos === 'K' || p.pos === 'DEF')).toBe(false);
+    expect(m.fills).toEqual([]);
+  });
+
+  it('the board rates them off the consensus, never off nine invented metrics', () => {
+    const { m } = league(REDRAFT, 0);
+    const k = m.scored.find(p => p.pos === 'K')!;
+    expect(k).toBeTruthy();
+    // Every metric zero: the breakdown says "nothing measured here" rather than
+    // nine bars made of whatever each missing input defaults to.
+    expect(Object.values(k.m).every(v => v === 0)).toBe(true);
+    const best = Math.max(...m.scored.filter(p => p.pos === 'WR' || p.pos === 'RB').map(p => p.fit));
+    expect(k.fit).toBeLessThan(best - 25);
+  });
 });
 
 describe('a room with other people in it', () => {

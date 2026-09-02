@@ -1,4 +1,4 @@
-import { ACCENT, METRIC_LABEL, PEAK, type Weights } from '../model/constants';
+import { ACCENT, METRIC_LABEL, PEAK, POS, type Weights } from '../model/constants';
 import { num } from '../model/math';
 import type { Metrics } from '../model/score';
 import type { SleeperPlayer } from '../api/types';
@@ -65,6 +65,17 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
   const u = p.use;
+
+  /**
+   * A kicker or a team defence, who is on the board but not described by it.
+   *
+   * Their number is where the consensus takes them, not a Fit — so the sheet
+   * cannot draw the nine bars that explain a Fit. It drew them anyway, nine
+   * rows of "0 × 31% = 0" under a score of 23, which reads as a broken screen
+   * rather than as an absence of data. Every stat tile below said "no data" for
+   * the same reason. One sentence is the honest version of both.
+   */
+  const fill = POS.indexOf(p.pos as typeof POS[number]) < 0;
 
   const fin = Number.isFinite;
   const diverge = m.qDiverge(p.raw, p.id);
@@ -190,7 +201,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: 25, fontWeight: 500, letterSpacing: '-0.025em' }}>{p.name}</div>
           <div style={{ fontSize: 12.5, color: dim(0.5), marginTop: 4 }}>
-            {p.pos} · {p.team} · {p.age ?? '?'} yrs · {p.ownerLabel}
+            {[p.pos, p.team].concat(p.age ? [p.age + ' yrs'] : []).concat([p.ownerLabel]).join(' · ')}
           </div>
           {custom ? (
             <button
@@ -207,11 +218,28 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         <div style={{ textAlign: 'right', flex: 'none' }}>
           <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-0.03em', color: fitColor(p.fit) }}>{p.fit}</div>
           <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
-            fit score
+            {/* Never call it a Fit Score when it is not one. */}
+            {fill ? 'consensus' : 'fit score'}
           </div>
         </div>
       </div>
 
+      {fill ? (
+        <Card style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 13.5, lineHeight: 1.55, textWrap: 'pretty' }}>
+            No Fit Score for a {p.pos === 'DEF' ? 'team defence' : 'kicker'}.
+          </div>
+          <div style={{ fontSize: 12, color: dim(0.5), lineHeight: 1.55, marginTop: 8, textWrap: 'pretty' }}>
+            The Fit is built from market value, snap share, targets, yards per touch,
+            red-zone looks and an age curve.{' '}
+            {p.pos === 'DEF'
+              ? 'A team defence has none of them: no snap count, no targets, no age, and no market — nobody trades one.'
+              : 'A kicker has none of them: he is not on the field for a snap that counts here, and nobody trades one, so the market never prices him.'}{' '}
+            The number above is where the consensus drafts him, which is the only real
+            signal there is. Take one late.
+          </div>
+        </Card>
+      ) : (
       <Card style={{ marginTop: 16 }}>
         <div style={{ fontSize: 12, color: dim(0.45), marginBottom: 12 }}>
           Breakdown — metric × weight, biggest contribution first
@@ -242,7 +270,9 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
             ))}
         </div>
       </Card>
+      )}
 
+      {fill ? null : (
       <div style={{
         border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)', borderRadius: 12, padding: '14px 13px', marginTop: 12,
         background: 'color-mix(in srgb, var(--color-accent) 6%, transparent)',
@@ -254,11 +284,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </div>
         <div style={{ fontSize: 14, lineHeight: 1.5, textWrap: 'pretty' }}>{verdict(p)}</div>
       </div>
+      )}
 
-      <WhatHeCosts app={app} m={m} sheet={p} />
+      {fill ? null : <WhatHeCosts app={app} m={m} sheet={p} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
-        {stats.map(s => (
+        {(fill ? [] : stats).map(s => (
           <div key={s.label} style={{ background: 'var(--color-surface)', borderRadius: 11, padding: 12 }}>
             <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.42) }}>
               {s.label}

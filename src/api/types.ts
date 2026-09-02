@@ -17,6 +17,8 @@ export type Pos = 'QB' | 'RB' | 'WR' | 'TE';
 export type FillPos = 'K' | 'DEF';
 /** Anything a draft board can hold. */
 export type DraftPos = Pos | FillPos;
+/** The board's category picker: every draftable position, plus "all of them". */
+export type PosFilter = 'ALL' | DraftPos;
 
 export interface SleeperPlayer {
   player_id?: string;

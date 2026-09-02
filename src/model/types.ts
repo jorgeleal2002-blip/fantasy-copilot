@@ -1,4 +1,4 @@
-import type { DraftPos, Pos, SleeperDraft, SleeperLeague, SleeperPick, SleeperPlayer } from '../api/types';
+import type { DraftPos, FillPos, Pos, SleeperDraft, SleeperLeague, SleeperPick, SleeperPlayer } from '../api/types';
 import type { MetricKey, Weights } from './constants';
 // Weights is re-exported through the Model's wUsed below.
 import type { Metrics } from './score';
@@ -38,7 +38,9 @@ export interface RosterPlayer extends LineupItem {
 export interface BoardPlayer {
   id: string;
   name: string;
-  pos: Pos;
+  /** Anything a draft can take, which in a league that starts them includes a
+   *  kicker and a team defence. They carry a rank instead of a Fit Score. */
+  pos: DraftPos;
   team: string | null | undefined;
   age: number | null | undefined;
   exp: number | null | undefined;
@@ -373,6 +375,9 @@ export interface Model {
   rounds: number;
   /** the draft reverses every other round, which the board has to draw */
   snake: boolean;
+  /** Which of the fill positions this league actually starts, so the screens
+   *  offer a kicker exactly where one can be played and nowhere else. */
+  fills: FillPos[];
   seasonNum: number;
 
   myPlayers: RosterPlayer[];

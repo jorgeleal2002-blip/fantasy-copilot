@@ -1,3 +1,4 @@
+import type { FillPos, Pos, PosFilter } from '../api/types';
 import { ACCENT, GOOD, POS } from '../model/constants';
 import { num, pickLabel } from '../model/math';
 import { reasons } from '../model/score';
@@ -14,8 +15,12 @@ const STATUS_TEXT: Record<string, string> = {
   paused: 'Draft paused',
 };
 
-const POS_FILTERS: SegOption<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>[] =
-  [{ key: 'ALL', label: 'All' }, ...POS.map(p => ({ key: p, label: p }))];
+/** The kicker and the defence join the row only where the league starts one,
+ *  which is also the only place the board carries them. */
+const posFilters = (fills: FillPos[]): SegOption<PosFilter>[] => [
+  { key: 'ALL', label: 'All' },
+  ...(POS as PosFilter[]).concat(fills).map(p => ({ key: p, label: p })),
+];
 
 export function DraftTab({ app, m }: { app: App; m: Model }) {
   // Once every pick is in, this screen stops being a draft board and becomes
@@ -39,7 +44,12 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
       ? (goes ? 'FA #' + goes : 'unranked')
       : (pickLabel(asPick(goes), m.teamCount) || 'unranked')
   );
-  const filtered = app.filter === 'ALL' ? m.scored : m.scored.filter(p => p.pos === app.filter);
+  /* The picker keeps its choice across leagues, and K is not a choice in a
+   * league that starts no kicker: left alone it selected a tab that was no
+   * longer drawn and emptied the board with nothing on screen looking wrong. */
+  const filter: PosFilter = m.fills.indexOf(app.filter as FillPos) < 0
+    && POS.indexOf(app.filter as Pos) < 0 && app.filter !== 'ALL' ? 'ALL' : app.filter;
+  const filtered = filter === 'ALL' ? m.scored : m.scored.filter(p => p.pos === filter);
   const top = filtered[0] || m.scored[0];
   const status = m.draft ? (STATUS_TEXT[m.draft.status || ''] || m.draft.status || '—') : 'No draft configured';
   const dotColor = m.draft?.status === 'drafting' ? GOOD : m.draft?.status === 'complete' ? dim(0.4) : ACCENT;
@@ -108,10 +118,10 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                 {top ? [
                   top.pos,
                   top.team || 'no team yet',
-                  (top.age ?? '?') + ' yrs',
+                ].concat(top.age ? [top.age + ' yrs'] : [])
                   // Where the board has him among what is left, as a pick.
-                  done ? where(top.goes) : 'goes ' + where(top.goes),
-                ].join(' · ') : ''}
+                  .concat([done ? where(top.goes) : 'goes ' + where(top.goes)])
+                  .join(' · ') : ''}
               </div>
             </div>
             <div style={{ textAlign: 'right', flex: 'none' }}>
@@ -119,7 +129,9 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                 {top ? top.fit : '—'}
               </div>
               <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
-                fit score
+                {/* A kicker's number is where the consensus takes him, not a
+                    Fit — none of the nine metrics exists for one. */}
+                {top && POS.indexOf(top.pos as Pos) < 0 ? 'consensus' : 'fit score'}
               </div>
             </div>
           </div>
@@ -184,7 +196,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                 a search over it that is not would hand you a name you cannot
                 draft. */}
             <PlayerSearch app={app} m={m} placeholder={searchScope.placeholder} scope={searchScope} />
-            <Segmented options={POS_FILTERS} value={app.filter} onChange={app.setFilter} />
+            <Segmented options={posFilters(m.fills)} value={filter} onChange={app.setFilter} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -217,7 +229,9 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{p.name}</div>
                     <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 2 }}>
-                      {[p.pos, p.team || 'no team yet', (p.age ?? '?') + ' yrs'].join(' · ')}
+                      {/* A team defence has no age, and "? yrs" is not a fact. */}
+                      {[p.pos, p.team || 'no team yet']
+                        .concat(p.age ? [p.age + ' yrs'] : []).join(' · ')}
                       {gone ? ' · unlikely to last' : ''}
                     </div>
                   </div>

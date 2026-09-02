@@ -5,7 +5,7 @@ import {
 } from './constants';
 import { ageCurve, clamp, modelVal, playerName, rankScore, talentScale } from './math';
 import type { Market } from './market';
-import { ownedWeights, redraftWeights, scorePlayer } from './score';
+import { EMPTY_METRICS, ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
   BlockReturn, MockOption, MockPick, MockState,
@@ -456,12 +456,27 @@ export function buildModel(input: ModelInput): Model {
   const pool: { id: string; raw: SleeperPlayer }[] = [];
   for (const id in players) {
     const p = players[id];
-    if (!p || !POS.includes(p.position as Pos) || takenIds.has(id)) continue;
+    if (!p || takenIds.has(id)) continue;
+    const skill = POS.includes(p.position as Pos);
+    /* Kickers and defences belong on this board on the same terms the mock
+     * already gives them: only where the league actually starts one. A real
+     * redraft still has two rounds to spend on them and the board said nothing
+     * about either, so the last two picks of every draft were made blind.
+     *
+     * Never on a rookie board — a rookie board is a board of rookies, and
+     * neither a kicker taken in the twelfth round nor a team defence is one. */
+    const fill = !skill && !rookieMode && fillPos.indexOf(p.position as FillPos) >= 0;
+    if (!skill && !fill) continue;
     if (p.active === false) continue;
     if (p.status && p.status !== 'Active') continue;
     const isRookie = (p.years_exp === 0 || p.years_exp == null) && !!p.age && p.age <= 24;
     if (rookieMode) {
       if (!isRookie || !p.search_rank || p.search_rank > 900) continue;
+    } else if (fill) {
+      // There are only thirty-two of each, and the consensus puts all of them
+      // behind the skill players, so the cap that keeps a practice-squad
+      // receiver off the board would have taken every one of these with it.
+      if (!p.team || !p.search_rank || p.search_rank > 800) continue;
     } else {
       if (!p.team || !p.search_rank || p.search_rank > 400) continue;
     }
@@ -540,12 +555,27 @@ export function buildModel(input: ModelInput): Model {
 
   const scored: BoardPlayer[] = pool.slice(0, 160).map((x, i) => {
     const p = x.raw;
+    /* A kicker and a defence get a place on the board, not a Fit Score — the
+     * same deal they already have in the mock. The Fit is nine metrics built
+     * from market value, snap share, targets, yards per touch, red-zone looks
+     * and an age curve; the market never prices a kicker and a team defence has
+     * no snap count, so every one of the nine would be its own default. Where
+     * the consensus takes them is the one real number, so that is the number,
+     * and it lands well under any startable skill player — which is the honest
+     * answer to taking a kicker early. */
+    if (POS.indexOf(p.position as Pos) < 0) {
+      return {
+        id: x.id, name: playerName(p), pos: p.position as DraftPos, team: p.team,
+        age: p.age, exp: p.years_exp, goes: i + 1, rank: marketOrder[x.id] || null,
+        m: EMPTY_METRICS, fit: Math.round(rankScore(p.search_rank) * 100), raw: p,
+      };
+    }
     const s = scorePlayer(p, needScore, {
       idx: i + 1, pick: pickForValue, now: nextOverall, dv: talentQ(p, x.id), dvMax,
       stack: stackFor(p), use: uFor(x.id), redraft: !isDynasty, rank: rankOf(x.id, p),
     }, w);
     return {
-      id: x.id, name: playerName(p), pos: p.position as Pos, team: p.team,
+      id: x.id, name: playerName(p), pos: p.position as DraftPos, team: p.team,
       // `slot` is his place among what is still on the board, so it reads as
       // the pick he goes at once the screen renders it round-by-pick.
       age: p.age, exp: p.years_exp, goes: i + 1, rank: marketOrder[x.id] || null,
@@ -1535,6 +1565,7 @@ export function buildModel(input: ModelInput): Model {
     allFits, searchIndex, qDiverge, wUsed: w,
     marketCount: mk ? Object.keys(mk.players).length : 0,
     snake: !!(d.draft && d.draft.type === 'snake'),
+    fills: fillPos,
     teamInfo, posRankOf, scoreAny, marketValue, offersFor, runMock, metricKeys,
   };
 }

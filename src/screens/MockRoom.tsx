@@ -560,9 +560,28 @@ function MockBoard({ m, made, seat, next, claimable, onClaim }: {
    * It moves only when the square is actually outside the view, so a board
    * already showing the action stays where the reader put it, and it stops
    * short of the sticky round numbers rather than sliding underneath them.
+   *
+   * The square it follows is the one ON THE CLOCK, not the last one taken.
+   * Following the last pick left the board a single column short of the draft,
+   * every time: the pick about to be made sat just off the edge — measured at
+   * 78px past it on a phone, one cell — so the square you were waiting on was
+   * the one square you could not see. And before the first pick exists there is
+   * nothing to follow at all, which left 1.1 off screen for its whole turn.
+   *
+   * The cell just taken is next door to the one on the clock, so aiming at the
+   * clock still brings it along.
    */
+  const clockKey = (() => {
+    if (!next) return null;
+    const round = Math.ceil(next / m.teamCount);
+    const inRound = next - (round - 1) * m.teamCount;
+    if (round > m.rounds) return null;
+    const slot = m.snake && round % 2 === 0 ? m.teamCount - inRound + 1 : inRound;
+    return round + '-' + slot;
+  })();
   const newest = made.length ? made[made.length - 1] : null;
-  const lastKey = newest ? newest.round + '-' + newest.slot : null;
+  // Once the board is full there is no clock left, so it rests on the last pick.
+  const lastKey = clockKey || (newest ? newest.round + '-' + newest.slot : null);
   useEffect(() => {
     const el = scroller.current;
     if (!el || !lastKey) return;
