@@ -43,7 +43,7 @@ h1, h2, h3, h4 {
 }
 
 a { color: var(--color-accent); text-underline-offset: 3px; }
-a:hover { color: #b3a9e6; }
+a:hover { color: var(--color-accent-300); }
 img { display: block; max-width: 100%; }
 button { font-family: inherit; }
 
@@ -72,9 +72,9 @@ button { font-family: inherit; }
 /* Rows and cards that respond to touch. Hover only where there is a pointer,
    so a tap on iOS does not leave the tint stuck on. */
 @media (hover: hover) {
-  .row-tap:hover { background: #2a2c3b !important; }
-  .ghost-tap:hover { background: rgba(233, 233, 237, 0.05); }
-  .accent-tap:hover { background: rgba(145, 132, 217, 0.12); }
+  .row-tap:hover { background: #1e2b4d !important; }
+  .ghost-tap:hover { background: rgba(242, 253, 254, 0.05); }
+  .accent-tap:hover { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
   .pick-tap:hover { border-color: var(--color-accent) !important; }
 }
 .row-tap:active, .ghost-tap:active, .accent-tap:active { opacity: 0.75; }
@@ -91,8 +91,8 @@ button { font-family: inherit; }
 @keyframes fadeUp { from { transform: translateY(10px); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes pop { from { transform: scale(0.96); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(145, 132, 217, 0.35) }
-  50% { box-shadow: 0 0 0 10px rgba(145, 132, 217, 0) }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 35%, transparent) }
+  50% { box-shadow: 0 0 0 10px transparent }
 }
 @keyframes spin { to { transform: rotate(360deg) } }
 
@@ -117,7 +117,7 @@ button { font-family: inherit; }
   height: var(--app-h, 100dvh);
   display: flex;
   justify-content: center;
-  background: radial-gradient(1200px 600px at 50% -10%, #1c1e30 0%, #0f101a 70%);
+  background: radial-gradient(1200px 600px at 50% -10%, #101a33 0%, #04060f 70%);
 }
 .app-column {
   position: relative;
@@ -158,7 +158,7 @@ button { font-family: inherit; }
   display: flex;
   padding: 5px 10px calc(var(--safe-bottom) + 3px);
   gap: 4px;
-  background: linear-gradient(to top, var(--color-bg) 60%, rgba(22, 24, 38, 0.4));
+  background: linear-gradient(to top, var(--color-bg) 60%, rgba(5, 8, 27, 0.4));
   border-top: 1px solid var(--color-divider);
 }
 .tab-btn {
@@ -237,7 +237,7 @@ button { font-family: inherit; }
     border-radius: 10px;
   }
   .tab-btn span { font-size: 13.5px; letter-spacing: -0.01em; }
-  .tab-btn[aria-current="page"] { background: rgba(145, 132, 217, 0.12); }
+  .tab-btn[aria-current="page"] { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
 }
 
 /* ── Sheets ───────────────────────────────────────────────────────────────
@@ -399,7 +399,7 @@ button { font-family: inherit; }
   letter-spacing: 0.03em;
   text-align: center;
   padding: 2px 2px 5px;
-  color: rgba(233, 233, 237, 0.35);
+  color: rgba(242, 253, 254, 0.35);
   min-width: 0;
   overflow: hidden;
 }
@@ -414,8 +414,8 @@ button { font-family: inherit; }
   border-radius: 999px;
   cursor: pointer;
   color: var(--color-accent);
-  background: rgba(145, 132, 217, 0.12);
-  border: 1px solid rgba(145, 132, 217, 0.35);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
 .bd-claim.is-on {
   color: var(--color-bg);
@@ -425,7 +425,7 @@ button { font-family: inherit; }
 }
 .bd-round {
   font-size: 9.5px;
-  color: rgba(233, 233, 237, 0.3);
+  color: rgba(242, 253, 254, 0.3);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -439,15 +439,15 @@ button { font-family: inherit; }
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: rgba(233, 233, 237, 0.03);
+  background: rgba(242, 253, 254, 0.03);
   border: 1px solid transparent;
 }
 /* The column you are drafting from stays legible even when it is empty. */
-.bd-cell.is-seat { background: rgba(145, 132, 217, 0.05); }
+.bd-cell.is-seat { background: color-mix(in srgb, var(--color-accent) 5%, transparent); }
 /* A filled cell is tinted with its position's hue. The `--pos` fallback keeps
    a player with no listed position looking like a card, not a hole. */
 .bd-cell.is-filled {
-  background: color-mix(in srgb, var(--pos, #8073c9) 20%, var(--color-surface));
+  background: color-mix(in srgb, var(--pos, #5671d8) 20%, var(--color-surface));
   /* The class arrives the moment the pick does, one square at a time, so this
      fires per pick and a run down a position reads as it happens rather than
      appearing between glances. `backwards` and an end at `none` keep it off
@@ -459,20 +459,20 @@ button { font-family: inherit; }
   to { transform: none; opacity: 1 }
 }
 .bd-cell.is-mine {
-  border-color: rgba(145, 132, 217, 0.55);
-  box-shadow: inset 0 0 0 1px rgba(145, 132, 217, 0.2);
+  border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 20%, transparent);
 }
 .bd-cell.is-clock {
-  background: rgba(145, 132, 217, 0.12);
-  border-color: rgba(145, 132, 217, 0.5);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 50%, transparent);
   /* Nothing else on the board moves between picks, and a still board reads as
      a finished one. Opacity only — a breathing box-shadow would repaint the
      whole grid every frame on a phone. */
   animation: clockBreathe 1500ms ease-in-out infinite;
 }
 @keyframes clockBreathe {
-  0%, 100% { border-color: rgba(145, 132, 217, 0.5) }
-  50% { border-color: rgba(145, 132, 217, 0.95) }
+  0%, 100% { border-color: color-mix(in srgb, var(--color-accent) 50%, transparent) }
+  50% { border-color: color-mix(in srgb, var(--color-accent) 95%, transparent) }
 }
 .bd-live { animation: livePulse 1100ms ease-in-out infinite; }
 @keyframes livePulse {
@@ -485,10 +485,10 @@ button { font-family: inherit; }
   justify-content: space-between;
   font-size: 8.5px;
   letter-spacing: 0.03em;
-  color: rgba(233, 233, 237, 0.32);
+  color: rgba(242, 253, 254, 0.32);
   font-variant-numeric: tabular-nums;
 }
-.bd-cell.is-filled .bd-tag { color: rgba(233, 233, 237, 0.45); }
+.bd-cell.is-filled .bd-tag { color: rgba(242, 253, 254, 0.45); }
 .bd-live { color: var(--color-accent); font-size: 7px; }
 .bd-name {
   font-size: 11.5px;
@@ -504,7 +504,7 @@ button { font-family: inherit; }
   font-size: 9px;
   letter-spacing: 0.05em;
   margin-top: 1px;
-  color: var(--pos, rgba(233, 233, 237, 0.4));
+  color: var(--pos, rgba(242, 253, 254, 0.4));
 }
 /* The arrow points at wherever the next pick lands, which is how a snake
    reads as a snake rather than as ten unrelated columns. */
@@ -515,7 +515,7 @@ button { font-family: inherit; }
   justify-content: flex-end;
   font-size: 11px;
   line-height: 1;
-  color: rgba(233, 233, 237, 0.2);
+  color: rgba(242, 253, 254, 0.2);
 }
 .bd-cell.is-clock .bd-arrow {
   font-size: 8px;
@@ -556,7 +556,7 @@ button { font-family: inherit; }
   background: none;
   border: 0;
   border-bottom: 2px solid transparent;
-  color: rgba(233, 233, 237, 0.45);
+  color: rgba(242, 253, 254, 0.45);
   cursor: pointer;
 }
 .dock-tab.is-on {
@@ -584,22 +584,22 @@ button { font-family: inherit; }
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  color: rgba(233, 233, 237, 0.6);
-  background: rgba(233, 233, 237, 0.05);
+  color: rgba(242, 253, 254, 0.6);
+  background: rgba(242, 253, 254, 0.05);
   border: 1px solid transparent;
 }
 .pos-chip.is-on {
   color: var(--color-text);
-  background: rgba(145, 132, 217, 0.18);
-  border-color: rgba(145, 132, 217, 0.45);
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
 }
 .pos-count {
   font-size: 9px;
-  color: rgba(233, 233, 237, 0.4);
+  color: rgba(242, 253, 254, 0.4);
   font-variant-numeric: tabular-nums;
 }
-.pos-chip.is-on .pos-count { color: rgba(233, 233, 237, 0.6); }
-.pos-chip.is-icon { padding: 8px 10px; color: rgba(233, 233, 237, 0.45); }
+.pos-chip.is-on .pos-count { color: rgba(242, 253, 254, 0.6); }
+.pos-chip.is-icon { padding: 8px 10px; color: rgba(242, 253, 254, 0.45); }
 .dock-search {
   flex: 1;
   min-width: 0;
@@ -608,7 +608,7 @@ button { font-family: inherit; }
   padding: 8px 12px;
   border-radius: 10px;
   color: var(--color-text);
-  background: rgba(233, 233, 237, 0.06);
+  background: rgba(242, 253, 254, 0.06);
   border: 1px solid var(--color-divider);
 }
 .dock-list {
@@ -634,15 +634,15 @@ button { font-family: inherit; }
   flex: none;
   cursor: pointer;
   color: var(--color-accent);
-  background: rgba(145, 132, 217, 0.14);
-  border: 1px solid rgba(145, 132, 217, 0.4);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
 /* Off the clock the button stays visible but plainly inert — hiding it would
    move every row the moment your turn came round. */
 .pl-draft:disabled {
   cursor: default;
-  color: rgba(233, 233, 237, 0.25);
-  background: rgba(233, 233, 237, 0.04);
+  color: rgba(242, 253, 254, 0.25);
+  background: rgba(242, 253, 254, 0.04);
   border-color: transparent;
 }
 .pl-lens {
@@ -660,7 +660,7 @@ button { font-family: inherit; }
 }
 .pl-meta {
   font-size: 10.5px;
-  color: rgba(233, 233, 237, 0.42);
+  color: rgba(242, 253, 254, 0.42);
   margin-top: 1px;
   white-space: nowrap;
   overflow: hidden;
@@ -671,7 +671,7 @@ button { font-family: inherit; }
   font-size: 8.5px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: rgba(233, 233, 237, 0.32);
+  color: rgba(242, 253, 254, 0.32);
 }
 .pl-stat-v {
   font-size: 13px;
@@ -713,7 +713,7 @@ button { font-family: inherit; }
   align-items: center;
   justify-content: center;
   gap: 18px;
-  background: radial-gradient(1200px 600px at 50% -10%, #1c1e30 0%, #0f101a 70%);
+  background: radial-gradient(1200px 600px at 50% -10%, #101a33 0%, #04060f 70%);
   opacity: 1;
   transition: opacity 320ms ease;
 }

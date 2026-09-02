@@ -90,7 +90,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
               display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px',
               borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
               cursor: 'pointer',
-              background: t.isMe ? 'rgba(145,132,217,.09)' : 'transparent',
+              background: t.isMe ? 'color-mix(in srgb, var(--color-accent) 9%, transparent)' : 'transparent',
             }}
           >
             <span style={{ width: 16, flex: 'none', color: dim(0.4), fontSize: 12 }}>{i + 1}</span>
@@ -258,7 +258,7 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px',
                   borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
                   cursor: 'pointer',
-                  background: x.mine ? 'rgba(145,132,217,.09)' : 'transparent',
+                  background: x.mine ? 'color-mix(in srgb, var(--color-accent) 9%, transparent)' : 'transparent',
                 }}
               >
                 <span style={{ width: 16, flex: 'none', color: dim(0.4), fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
@@ -278,7 +278,7 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
                 <span style={{
                   fontSize: 12.5, flex: 'none', padding: '2px 8px', borderRadius: 6,
                   fontVariantNumeric: 'tabular-nums',
-                  background: 'rgba(145,132,217,.12)', color: fitColor(valueOf(x)),
+                  background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)', color: fitColor(valueOf(x)),
                 }}>
                   {valueOf(x)}
                 </span>

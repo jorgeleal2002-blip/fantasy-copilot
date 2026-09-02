@@ -4,11 +4,24 @@ export const POS: Pos[] = ['QB', 'RB', 'WR', 'TE'];
 
 /** Palette pulled from the Nocturne accent plus the two status hues the
  *  prototype uses for good/bad readings. */
-export const ACCENT = '#9184d9';
+export const ACCENT = '#8eeded';
 export const GOOD = '#8ec9a8';
 export const BAD = '#d9a08e';
-export const MID = '#c9c0f0';
-export const MUTED = 'rgba(233,233,237,.45)';
+/**
+ * The middle of the good/bad scale.
+ *
+ * It used to be the accent, which worked while the accent was violet and stops
+ * working now that it is cyan: cyan sits 36° from the green that means "good",
+ * ΔE 11.5 — under the floor at which two colours can be told apart. Those two
+ * share a column, a league table paints every team contending, middle or
+ * rebuilding down one line, so the neutral would have echoed the verdict above
+ * it. Sleeper's own muted slate was worse still, ΔE 10.0 to the green.
+ *
+ * This is measured clear of all three: 24.9 from the green, 24.3 from the
+ * salmon, 29.6 from the accent itself, so it never reads as any of them.
+ */
+export const MID = '#6783ec';
+export const MUTED = 'rgba(242,253,254,.45)';
 
 /**
  * One hue per position, for the draft board.
@@ -42,7 +55,7 @@ export const POS_COLOR: Record<Pos, string> = {
  * would cost the four that carry meaning, so these stay a muted neutral, which
  * also says what they are: the slots you fill at the end.
  */
-export const FILL_COLOR = 'rgba(233,233,237,.42)';
+export const FILL_COLOR = 'rgba(242,253,254,.42)';
 export const FILL: FillPos[] = ['K', 'DEF'];
 /** The colour for anything a draft board can hold, hue or not. */
 export const colorOf = (pos: DraftPos): string =>
@@ -66,13 +79,15 @@ export const DEF_SLOTS = ['DEF', 'DST', 'D/ST'];
  * dark surface is too dark to be small type on it.
  */
 export const MARK_GOOD = '#3fa877';
-export const MARK_MID = '#8073c9';
+/** The fill of the same neutral. Worst adjacent pair ΔE 22.2 to deuteranopes,
+ *  against the 16.9 the violet managed. */
+export const MARK_MID = '#5671d8';
 export const MARK_BAD = '#cc6a4e';
 
 /** Recessive: the empty part of a meter is context, not data. */
-export const TRACK = 'rgba(233,233,237,.08)';
+export const TRACK = 'rgba(242,253,254,.08)';
 /** The surface a mark is painted on — used for the gap that separates marks. */
-export const MARK_GAP = '#232532';
+export const MARK_GAP = '#151f3e';
 
 /**
  * A prime is a window, not a point: inside it a player is at full value and

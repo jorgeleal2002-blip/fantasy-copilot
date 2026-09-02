@@ -115,7 +115,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
               </div>
             </div>
             <div style={{ textAlign: 'right', flex: 'none' }}>
-              <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.03em', color: '#c9c0f0' }}>
+              <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.03em', color: 'var(--color-accent-300)' }}>
                 {top ? top.fit : '—'}
               </div>
               <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
@@ -127,7 +127,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
             {top ? reasons(top.m, pickLabel(asPick(top.goes), m.teamCount), top.pos, top.age).map(r => (
               <span key={r} style={{
                 fontSize: 11, padding: '4px 9px', borderRadius: 7,
-                background: 'rgba(145,132,217,.18)', color: '#c9c0f0',
+                background: 'color-mix(in srgb, var(--color-accent) 18%, transparent)', color: 'var(--color-accent-200)',
               }}>
                 {r}
               </span>

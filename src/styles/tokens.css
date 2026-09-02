@@ -1,40 +1,46 @@
-/* Nocturne design system — tokens copied verbatim from
-   project/_ds/nocturne-7f0adc69-8c0b-4834-96da-53458aca2340/styles.css.
-   This file is the source of truth for the look: retune here, never inline a hex. */
+/* Nocturne's structure — the ramps, the spacing, the shadows — carrying
+   Sleeper's colours, sampled from the app itself rather than guessed: the
+   grounds #05081b / #151f3e, the cyan #8eeded, the near-white #f2fdfe.
+   This file is the source of truth for the look: retune here, never inline a hex.
+
+   The cyan is far brighter against these grounds than the violet it replaces —
+   11.94:1 on a card against 4.71 — which is the point of it. What it cost is
+   noted at --color-mid in constants.ts: cyan sits 36° from the green that means
+   "good", so the neutral of that scale could not stay tied to the accent. */
 
 :root {
-  --color-bg: #161826;
-  --color-surface: #232532;
-  --color-text: #e9e9ed;
-  --color-accent: #9184d9;
-  --color-accent-2: #a7a1db;
-  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
+  --color-bg: #05081b;
+  --color-surface: #151f3e;
+  --color-text: #f2fdfe;
+  --color-accent: #8eeded;
+  --color-accent-2: #a4e2e1;
+  --color-divider: color-mix(in srgb, #f2fdfe 14%, transparent);
 
   /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
      same step of any role matches the others in visual value. */
-  --color-neutral-100: #f3f5fe;
-  --color-neutral-200: #e4e7f5;
-  --color-neutral-300: #cfd3e5;
-  --color-neutral-400: #b2b6ca;
-  --color-neutral-500: #9397ab;
-  --color-neutral-600: #75798c;
-  --color-neutral-700: #595d6c;
-  --color-neutral-800: #3f424d;
+  --color-neutral-100: #f2f5fe;
+  --color-neutral-200: #e2e8f5;
+  --color-neutral-300: #cdd4e5;
+  --color-neutral-400: #afb7ca;
+  --color-neutral-500: #9098ab;
+  --color-neutral-600: #727a8c;
+  --color-neutral-700: #585d6c;
+  --color-neutral-800: #3e424d;
   --color-neutral-900: #292b31;
 
-  --color-accent-100: #f5f4ff;
-  --color-accent-200: #e7e5fe;
-  --color-accent-300: #d2cefd;
-  --color-accent-400: #b5abfc;
-  --color-accent-500: #968ae0;
-  --color-accent-600: #796cbf;
-  --color-accent-700: #5d5294;
-  --color-accent-800: #423a6a;
-  --color-accent-900: #2b2741;
+  --color-accent-100: #e7fafa;
+  --color-accent-200: #caf1f1;
+  --color-accent-300: #a4e2e1;
+  --color-accent-400: #72c8c9;
+  --color-accent-500: #3cabac;
+  --color-accent-600: #058c8d;
+  --color-accent-700: #006c6e;
+  --color-accent-800: #004d4e;
+  --color-accent-900: #073233;
 
-  --color-section: #262a60;
-  --color-section-glow: #353b80;
-  --color-section-ghost: #4c5397;
+  --color-section: #1b2e4b;
+  --color-section-glow: #24406b;
+  --color-section-ghost: #35598f;
 
   --font-heading: 'Inter', system-ui, sans-serif;
   --font-heading-weight: 500;
@@ -51,9 +57,9 @@
   --radius-md: 8px;
   --radius-lg: 14px;
 
-  --shadow-sm: 0 0 0 1px #3f424d;
-  --shadow-md: 0 0 0 1px #595d6c, 0 6px 18px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(0, 0, 0, 0.65);
+  --shadow-sm: 0 0 0 1px #3e424d;
+  --shadow-md: 0 0 0 1px #585d6c, 0 6px 18px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 0 0 1px #9098ab, 0 16px 40px rgba(0, 0, 0, 0.65);
 }
 
 /* — buttons — the primary is an accent outline, never a fill — */

@@ -156,12 +156,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
             style={photo
               ? {
                 width: 64, height: 64, flex: 'none', borderRadius: 14,
-                background: `rgba(145,132,217,.12) url(${photo}) center/cover no-repeat`,
+                background: `color-mix(in srgb, var(--color-accent) 12%, transparent) url(${photo}) center/cover no-repeat`,
                 border: '1px solid var(--color-divider)',
               }
               : {
                 width: 64, height: 64, flex: 'none', borderRadius: 14,
-                background: 'rgba(145,132,217,.12)', border: '1px solid var(--color-divider)',
+                background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)', border: '1px solid var(--color-divider)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: ACCENT, fontSize: 13, fontWeight: 600,
               }}
@@ -244,8 +244,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       </Card>
 
       <div style={{
-        border: '1px solid rgba(145,132,217,.4)', borderRadius: 12, padding: '14px 13px', marginTop: 12,
-        background: 'rgba(145,132,217,.06)',
+        border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)', borderRadius: 12, padding: '14px 13px', marginTop: 12,
+        background: 'color-mix(in srgb, var(--color-accent) 6%, transparent)',
       }}>
         <div style={{
           fontSize: 10, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--color-accent)', marginBottom: 8,
