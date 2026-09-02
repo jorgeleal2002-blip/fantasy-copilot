@@ -69,7 +69,7 @@ export const pickLabel = (n: number | null | undefined, teams: number) => {
  * round veteran is worth a hundred times a bench body, not five times. Divided
  * linearly by the most valuable asset in scope, almost everyone lands near
  * zero: the best rookie on a real board scored 0.056, and since talent carries
- * the heaviest weight in the Fit, it dragged every rookie into the twenties out
+ * the heaviest weight in the Rating, it dragged every rookie into the twenties out
  * of a hundred. A board where the 1.01 reads 32 is not measuring anything.
  *
  * A decade of value is worth a third of the scale, which is the same shape

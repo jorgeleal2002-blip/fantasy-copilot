@@ -34,30 +34,30 @@ they would plausibly accept. Each one says whether you are buying under
 market, paying fair, or overpaying for a lineup jump — and why it works for
 them.
 
-**Draft** — the rookie board ranked by Fit Score for the specific pick you
+**Draft** — the rookie board ranked by Rating for the specific pick you
 select, a search across Sleeper's whole catalog for anyone not on it, the
 reasoning behind the top recommendation, and pick-movement offers
 (trade up to consolidate, trade down to collect swings). While a draft is
 live it re-reads picks every 20 seconds and recomputes everything.
 
 **League** — all ten teams under four orderings: strength today, future value,
-Fit today and Fit two years out (a team's Fit being the average of its optimal
+Rating today and Rating two years out (a team's Rating being the average of its optimal
 starters). Each row carries its window, weighted age, weakest position and pick
-capital, and flags how many Fit points the roster sheds as it ages. Below it, the
+capital, and flags how many Rating points the roster sheds as it ages. Below it, the
 best players in the league through three lenses — how good he is, how much he
 would help *you*, and who he becomes in two years. Tap a team for their
 positional strengths, best assets and how to trade with them.
 
 **You** — the strategy selector (Balanced / Safe floor / Upside) genuinely
-rewrites the Fit Score weights and reorders the board, plus the positional
+rewrites the Rating weights and reorders the board, plus the positional
 premium derived from your league's real scoring rules.
 
 Redraft leagues drop everything about the future: no pick capital, no age
 curve, no sell window, no future-value column.
 
-## The Fit Score
+## The Rating
 
-`Fit = Σ wᵢ × metricᵢ`, over nine metrics, each independently normalised to
+`Rating = Σ wᵢ × metricᵢ`, over eleven metrics, each independently normalised to
 0..1 so the breakdown in a player sheet reads as *metric × weight =
 contribution*:
 
@@ -72,13 +72,15 @@ contribution*:
 | Age curve | a prime *window* per position; a star holds it 1.5 years longer and decays 45% slower |
 | NFL team correlation | stacking a QB adds; sharing a backfield subtracts — measured inside the owner's roster |
 | Red zone and TDs | share of the chances inside the 20, plus **expected** touchdowns per game |
+| Edge over a replacement | his value above the last man at his position the league still starts — `teams × slots`, flex included |
+| Strength of schedule | what his opponents gave up to his position last season, weighted 60/40 toward your own playoff weeks — redraft only |
 
-Two of those deserve their own note.
+Four of those deserve their own note.
 
 **Expected touchdowns.** Scored touchdowns carry luck with them, and luck does
 not repeat. So each season is fitted by least squares, per position, over the
 opportunities that produced it — `td ≈ b₁·(red-zone touches) + b₂·(the rest)` —
-and the Fit uses the expectation rather than the result. The coefficients come
+and the Rating uses the expectation rather than the result. The coefficients come
 out of the same feed being scored, so there is no invented constant and no
 second source to reconcile. Where the sample cannot support a fit, no number is
 published at all.
@@ -90,6 +92,24 @@ weight redistributed rather than counted as a bad year — and with older season
 fading further the longer he is past his prime. Shares stay on the most recent
 season, because they are measured against today's offence and do not travel
 backwards.
+
+**Replaceability.** Ten teams starting one quarterback make the eleventh-best
+one free — somebody will have him and he will play — so the only part of the
+best one you gain is the gap to that eleventh. The same ten teams start thirty
+receivers, so the thirty-first is a long way down and the gap is large. The
+replacement line comes off the league's own slots, and the surplus above it is
+scaled exactly like player quality, against the biggest gap any position
+offers rather than the best at his own — which would make the top quarterback
+and the top back both a perfect 1 and throw away the comparison.
+
+**Strength of schedule.** Per position, because the defence that cannot cover a
+tight end is often the one that stops the run. The fixtures and last season's
+points allowed by each defence ship with the app (`scripts/build-schedule.mjs`
+rebuilds them from nflverse once a year); nothing is fetched at runtime. The
+playoff half is read off your league's own `playoff_week_start` rather than the
+week 15 everybody assumes. Weighted at 4% and only in redraft: between the
+easiest and hardest full-season run there are about two points a game, which is
+real and is the least certain thing in the sum.
 
 A player you already own is scored on renormalised weights with the need term
 removed — you cannot fill your own hole, and leaving it in grades your whole

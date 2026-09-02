@@ -95,7 +95,7 @@ export function playoffWeeks(league?: SleeperLeague | null): number[] {
  *
  * The percentiles are over PPR points allowed, and a league that pays half a
  * point a catch orders defences very slightly differently. Slightly: the gap
- * between the toughest and softest schedule is worth a few points of Fit, and
+ * between the toughest and softest schedule is worth a few points of Rating, and
  * re-deriving 32 defensive seasons under each league's own scoring to move a
  * couple of teams one place is not worth what it costs to be that precise.
  */
@@ -159,7 +159,7 @@ export const sosFor = (
 };
 
 /**
- * The one number the Fit takes, 0..1.
+ * The one number the Rating takes, 0..1.
  *
  * Weighted toward the whole season, because that is where most of your points
  * come from, but not entirely: the weeks that decide the league are worth a

@@ -59,13 +59,13 @@ function Summary({ app, m }: { app: App; m: Model }) {
     return { value: p + ' ' + ord(m.posRankOf(me.id, p)), sub: 'of ' + m.teamCount + ' teams' };
   })();
 
-  // Raw sums are shown at scale; the Fit columns are already 0..100.
+  // Raw sums are shown at scale; the Rating columns are already 0..100.
   const heroRanks = [
     { label: 'strength today', rank: me?.rankNow || 0, value: num((me?.now || 0) * 100), color: ACCENT },
-    { label: 'quality today', rank: me?.rankFit || 0, value: 'Fit ' + Math.round(me?.fit || 0), color: MID },
+    { label: 'quality today', rank: me?.rankFit || 0, value: 'Rating ' + Math.round(me?.fit || 0), color: MID },
     ...(m.isDynasty ? [
       { label: 'future value', rank: me?.rankFut || 0, value: num((me?.future || 0) * 100), color: GOOD },
-      { label: 'quality in 2 yrs', rank: me?.rankFitFut || 0, value: 'Fit ' + Math.round(me?.fitFut || 0), color: '#bfe0cd' },
+      { label: 'quality in 2 yrs', rank: me?.rankFitFut || 0, value: 'Rating ' + Math.round(me?.fitFut || 0), color: '#bfe0cd' },
     ] : []),
   ];
 
@@ -142,7 +142,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
             </div>
             <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.45), marginTop: 8, textWrap: 'pretty' }}>
               {m.foundMyTeam
-                ? 'The board is already rated and ready — every available player carries a Fit score for the roster you are about to build.'
+                ? 'The board is already rated and ready — every available player carries a Rating for the roster you are about to build.'
                 : 'If you are in this league under a different username, name your team by hand from the You tab — it is remembered for this league.'}
             </div>
             <button
@@ -404,7 +404,7 @@ function Roster({ app, m }: { app: App; m: Model }) {
         <div style={{ background: 'var(--color-surface)', borderRadius: 12, padding: '24px 16px', textAlign: 'center' }}>
           <div style={{ fontSize: 13.5, fontWeight: 500, marginBottom: 6 }}>You haven't drafted yet</div>
           <div style={{ fontSize: 12.5, lineHeight: 1.5, color: dim(0.5) }}>
-            As soon as the draft starts, every pick of yours lands here and the Fit Score recomputes against your real holes.
+            As soon as the draft starts, every pick of yours lands here and the Rating recomputes against your real holes.
           </div>
         </div>
       ) : null}

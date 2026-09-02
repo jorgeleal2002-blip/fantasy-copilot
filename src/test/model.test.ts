@@ -92,7 +92,7 @@ describe('value helpers', () => {
   });
 });
 
-describe('fit score', () => {
+describe('the rating', () => {
   const w = STRATS.balanced.w;
 
   it('stays within 0..100 and equals the weighted sum of its metrics', () => {
@@ -184,7 +184,7 @@ describe('fit score', () => {
   it('puts talent on a log scale so a board is not all twenties', () => {
     // Value spans orders of magnitude. Divided linearly by the best asset in
     // scope, a rookie worth a twentieth of a veteran star scored 0.05 on the
-    // heaviest term in the Fit and dragged the whole board into the twenties.
+    // heaviest term in the Rating and dragged the whole board into the twenties.
     expect(talentScale(1, 1)).toBe(1);
     expect(talentScale(0.05, 1)).toBeGreaterThan(0.05 * 5);
     expect(talentScale(0.05, 1)).toBeCloseTo(0.567, 2);
@@ -464,9 +464,9 @@ describe('draft board', () => {
     }
   });
 
-  it('sorts the list by Fit while `goes` keeps the board order', () => {
+  it('sorts the list by Rating while `goes` keeps the board order', () => {
     // These are two different orders and the screens must not confuse them.
-    // Reading a row's position in this Fit-sorted list as its place on the
+    // Reading a row's position in this Rating-sorted list as its place on the
     // board is what marked the best-fitting players "gone before your pick"
     // no matter where the board actually had them.
     const byFit = model.scored.map(p => p.goes);
@@ -563,7 +563,7 @@ describe('trade engine', () => {
     }
   });
 
-  it('produces a spread of fit scores rather than everything at the ceiling', () => {
+  it('produces a spread of ratings rather than everything at the ceiling', () => {
     if (model.offers.length > 2) {
       const fits = model.offers.map(o => o.fit);
       expect(Math.max(...fits) - Math.min(...fits)).toBeGreaterThan(0);
@@ -715,7 +715,7 @@ describe('expected touchdowns', () => {
     expect(seasonUsage(thin, thinPlayers).a.xtd).toBeNull();
   });
 
-  it('feeds the Fit through expected rather than scored touchdowns', () => {
+  it('feeds the Rating through expected rather than scored touchdowns', () => {
     const w = STRATS.balanced.w;
     const p = { position: 'RB', age: 25, years_exp: 3, search_rank: 40 };
     const base = usageStub(0.8, 0.2);
@@ -961,7 +961,7 @@ describe('the mock draft room', () => {
     expect(new Set(open.options.map(o => o.lens)).size).toBe(open.options.length);
     for (const o of open.options) expect(o.fit).toBeGreaterThan(0);
 
-    // The first is the best Fit on the board, not merely the first name on it:
+    // The first is the best Rating on the board, not merely the first name on it:
     // the whole app is built on that number and nothing used to be chosen by
     // it. And "best player available" really is the most valuable man left.
     const bestFit = open.options.find(o => o.lens === 'best')!;
@@ -972,7 +972,7 @@ describe('the mock draft room', () => {
         (model.marketValue(b.id)?.pts || 0) - (model.marketValue(a.id)?.pts || 0))[0];
       expect(bpa.id).toBe(top.id);
     }
-    // Highest Fit first: the board's best player is often not the best fit for
+    // Highest Rating first: the board's best player is often not the best fit for
     // YOUR roster, and showing him above a higher-scoring name read as the app
     // arguing with its own number.
     const fits = open.options.map(o => o.fit);
@@ -1065,7 +1065,7 @@ describe('positional need is structural, not only relative', () => {
     expect(held.needScore.RB).toBeGreaterThan(0.9);   // a position short is untouched
   });
 
-  it('drops the Fit of a second quarterback in a one-QB league', () => {
+  it('drops the Rating of a second quarterback in a one-QB league', () => {
     const empty = oneQb([]);
     const qbs = empty.scored.filter(p => p.pos === 'QB');
     const held = oneQb([qbs[qbs.length - 1].id]);
@@ -1272,7 +1272,7 @@ describe('what a redraft mock board holds, and in what order', () => {
   });
 
   it('rates them off the board alone, well under a startable player', () => {
-    // Not a Fit: none of the nine metrics exists for a kicker. The number is
+    // Not a Rating: none of the eleven metrics exists for a kicker. The number is
     // where the consensus takes him, which is the only real signal there is —
     // and it has to land far enough below a starter that no suggestion ever
     // prefers one in an early round.
@@ -1306,7 +1306,7 @@ describe('what a redraft mock board holds, and in what order', () => {
     const k = m.scored.find(p => p.pos === 'K')!;
     expect(k).toBeTruthy();
     // Every metric zero: the breakdown says "nothing measured here" rather than
-    // nine bars made of whatever each missing input defaults to.
+    // a full set of bars made of whatever each missing input defaults to.
     expect(Object.values(k.m).every(v => v === 0)).toBe(true);
     const best = Math.max(...m.scored.filter(p => p.pos === 'WR' || p.pos === 'RB').map(p => p.fit));
     expect(k.fit).toBeLessThan(best - 25);
@@ -1679,7 +1679,7 @@ describe('positional replaceability', () => {
     expect(qb.fit).toBeLessThan(rb.fit);
 
     /* And it is this term doing it, not a coincidence of the other nine. What
-     * each metric contributes to the distance between them, in points of Fit:
+     * each metric contributes to the distance between them, in points of Rating:
      * replaceability alone opens nearly three, where before it opened none,
      * and it is the largest single reason the back is ahead. */
     const w = redraftWeights(STRATS.balanced.w);

@@ -147,7 +147,7 @@ export function PlayerSearch(
                   <div style={{ fontSize: 10, color: dim(0.4), marginTop: 2, whiteSpace: 'nowrap' }}>
                     {r.val && !r.val.real ? 'modelled · ' : ''}
                     {r.val && r.val.posRank ? r.val.pos + String(r.val.posRank) + ' · ' : ''}
-                    Fit <span style={{ color: r.fit != null ? fitColor(r.fit) : dim(0.5) }}>{r.fit ?? '—'}</span>
+                    Rating <span style={{ color: r.fit != null ? fitColor(r.fit) : dim(0.5) }}>{r.fit ?? '—'}</span>
                   </div>
                 </div>
               </div>

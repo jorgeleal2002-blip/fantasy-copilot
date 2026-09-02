@@ -287,7 +287,7 @@ export function buildModel(input: ModelInput): Model {
   // ── Quality measured twice. The market is the best judgement available, but
   // it is somebody else's judgement: where you only copy the market you cannot
   // beat it. Real production is the second opinion. Where they agree there is
-  // nothing to do; where they diverge is the edge. Note this feeds the Fit
+  // nothing to do; where they diverge is the edge. Note this feeds the Rating
   // only — trades are still priced at pure market, because a rival will not
   // accept an offer with YOUR opinion baked into it.
   const prodMap: Partial<Record<Pos, { vals: number[]; ppgs: number[] }>> = {};
@@ -592,7 +592,7 @@ export function buildModel(input: ModelInput): Model {
     // Owning the quarterback who throws him the ball is the strongest positive
     // correlation this metric can express, so it reaches the top of the range
     // rather than stopping halfway. At the old +0.25 a completed stack moved the
-    // Fit by a single point, which is not a reason to do anything.
+    // Rating by a single point, which is not a reason to do anything.
     if (isCatcher && mates.some(x => x.pos === 'QB')) v += 0.42;
     if (pl.position === 'QB' && mates.some(x => x.pos === 'WR' || x.pos === 'TE')) v += 0.42;
     if (pl.position === 'RB' && mates.some(x => x.pos === 'RB')) v -= 0.22;
@@ -628,11 +628,11 @@ export function buildModel(input: ModelInput): Model {
 
   const scored: BoardPlayer[] = pool.slice(0, 160).map((x, i) => {
     const p = x.raw;
-    /* A kicker and a defence get a place on the board, not a Fit Score — the
-     * same deal they already have in the mock. The Fit is nine metrics built
+    /* A kicker and a defence get a place on the board, not a Rating — the
+     * same deal they already have in the mock. The Rating is eleven metrics built
      * from market value, snap share, targets, yards per touch, red-zone looks
      * and an age curve; the market never prices a kicker and a team defence has
-     * no snap count, so every one of the nine would be its own default. Where
+     * no snap count, so every one of the eleven would be its own default. Where
      * the consensus takes them is the one real number, so that is the number,
      * and it lands well under any startable skill player — which is the honest
      * answer to taking a kicker early. */
@@ -701,7 +701,7 @@ export function buildModel(input: ModelInput): Model {
     }, 0);
   };
   /**
-   * A team's Fit Score: the average Fit of its optimal starters, scored on the
+   * A team's Rating: the average Rating of its optimal starters, scored on the
    * weights without the need term (nobody fills their own hole) and with the
    * stack measured inside THEIR roster, not mine.
    *
@@ -1315,10 +1315,10 @@ export function buildModel(input: ModelInput): Model {
         id: x.id, name: playerName(x.raw), pos: x.pos, team: x.raw.team,
         age: x.raw.age, rank: marketOrder[x.id] || null,
       };
-      /* A kicker and a defence do not get a Fit Score, they get a place on the
-       * board. The Fit is nine metrics built from market value, snap share,
+      /* A kicker and a defence do not get a Rating, they get a place on the
+       * board. The Rating is eleven metrics built from market value, snap share,
        * targets, yards per touch, red-zone looks and an age curve, and not one
-       * of the nine exists for them: nobody trades a kicker, so the market
+       * of the eleven exists for them: nobody trades a kicker, so the market
        * never prices one, and a team defence has no snap count. Running them
        * through it anyway would return a number made entirely of the defaults
        * each missing metric falls back to.
@@ -1397,7 +1397,7 @@ export function buildModel(input: ModelInput): Model {
           //      · "Fills your hole" fell back to plain market value whenever
           //        you were short nowhere, which made it "the second best guy"
           //        wearing a label about holes.
-          //      · Nothing was ever picked by the Fit Score, the number printed
+          //      · Nothing was ever picked by the Rating, the number printed
           //        beside it and the one the whole app is built on.
           const pool = live.slice(0, 40);
           const fitCache: Record<string, number> = {};
@@ -1461,17 +1461,17 @@ export function buildModel(input: ModelInput): Model {
             options.push(rate(x, { goes: where(x), ...extra }));
           };
 
-          // 1. The app's own answer: the highest Fit left for YOUR roster.
+          // 1. The app's own answer: the highest Rating left for YOUR roster.
           const alsoBPA = !!byFit[0] && !!byValue[0] && byFit[0].id === byValue[0].id;
           add(byFit[0], {
             lens: 'best',
-            title: 'Best fit',
+            title: 'Best rating',
             why: alsoBPA
-              ? 'The highest Fit Score left — and the most valuable man on the board'
-              : 'The highest Fit Score left, measured against your roster',
+              ? 'The highest Rating left — and the most valuable man on the board'
+              : 'The highest Rating left, measured against your roster',
           });
 
-          // 2. A position you cannot field yet — best Fit among those, not
+          // 2. A position you cannot field yet — best Rating among those, not
           //    merely the most expensive name that happens to play there. The
           //    holes are read AFTER the card above, which may have just filled
           //    the last one: in a one-quarterback league the best fit and the
@@ -1518,10 +1518,10 @@ export function buildModel(input: ModelInput): Model {
           // Fewer than three only when two lenses landed on the same man, and
           // two real answers beat three with a filler among them.
 
-          // Highest Fit first. The three lenses answer different questions —
+          // Highest Rating first. The three lenses answer different questions —
           // best on the board, fills a hole, highest ceiling — and the board's
           // best player is often not the best fit for YOUR roster. Leaving them
-          // in lens order put a lower Fit above a higher one and read as the
+          // in lens order put a lower Rating above a higher one and read as the
           // app contradicting its own headline number.
           options.sort((a, b) => b.fit - a.fit);
 

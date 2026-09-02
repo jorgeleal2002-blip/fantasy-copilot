@@ -405,7 +405,7 @@ function PlayerRow({ o, teams, canTake, onTake }: {
         <div className="pl-stat-v">{at || '—'}</div>
       </div>
       <div className="pl-stat">
-        <div className="pl-stat-k">fit</div>
+        <div className="pl-stat-k">rating</div>
         <div className="pl-stat-v" style={{ color: fitColor(o.fit) }}>{o.fit}</div>
       </div>
     </div>
@@ -422,7 +422,7 @@ function MyTeam({ st, m }: { st: MockState; m: Model }) {
         }}>
           <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{o.name}</span>
           <span style={{ color: dim(0.42), flex: 'none' }}>
-            <span style={{ color: colorOf(o.pos) }}>{o.pos}</span>{' · fit ' + o.fit}
+            <span style={{ color: colorOf(o.pos) }}>{o.pos}</span>{' · rating ' + o.fit}
           </span>
         </div>
       )) : (

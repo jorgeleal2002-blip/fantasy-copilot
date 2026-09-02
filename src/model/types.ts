@@ -39,7 +39,7 @@ export interface BoardPlayer {
   id: string;
   name: string;
   /** Anything a draft can take, which in a league that starts them includes a
-   *  kicker and a team defence. They carry a rank instead of a Fit Score. */
+   *  kicker and a team defence. They carry a rank instead of a Rating. */
   pos: DraftPos;
   team: string | null | undefined;
   age: number | null | undefined;
@@ -121,7 +121,7 @@ export interface LeagueRow {
   now: number;
   future: number;
   pickCapital: number;
-  /** average Fit of the optimal starters, today */
+  /** average Rating of the optimal starters, today */
   fit: number;
   /** the same, with the roster aged two seasons */
   fitFut: number;
@@ -130,7 +130,7 @@ export interface LeagueRow {
   worst: Pos | null;
   rankNow: number;
   rankFut: number;
-  /** place by the average Fit of the optimal starters, today and two years out */
+  /** place by the average Rating of the optimal starters, today and two years out */
   rankFit: number;
   rankFitFut: number;
   /** places gained (+) or lost (−) moving from today to the future view */
@@ -194,7 +194,7 @@ export interface SavedTrade {
   kind: 'offer' | 'target';
   /** the read at the moment you saved it */
   note: string;
-  /** Fit for a suggestion, acceptance odds for a target */
+  /** Rating for a suggestion, acceptance odds for a target */
   score: number;
   savedAt: number;
 }

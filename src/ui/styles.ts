@@ -6,7 +6,7 @@ export const dim = (a: number) => `rgba(242,253,254,${a})`;
 
 export const fitColor = (f: number) => (f >= 75 ? GOOD : f >= 60 ? MID : dim(0.6));
 
-/** The pill that carries a Fit Score next to a heading. */
+/** The pill that carries a Rating next to a heading. */
 export function fitStyle(fit: number): CSSProperties {
   const c = fit >= 75 ? GOOD : fit >= 60 ? MID : dim(0.55);
   return {

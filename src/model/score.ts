@@ -6,11 +6,11 @@ import type { Usage } from './usage';
 export type Metrics = Record<MetricKey, number>;
 
 /**
- * The breakdown for a player the Fit Score does not describe.
+ * The breakdown for a player the Rating does not describe.
  *
  * Kickers and defences are on the board but not scored by it, and a breakdown
- * of zeroes is the truthful shape: the sheet draws nine bars at nothing rather
- * than nine bars of whatever each missing metric happens to default to.
+ * of zeroes is the truthful shape: the sheet draws its bars at nothing rather
+ * than a full set made of whatever each missing metric defaults to.
  */
 export const EMPTY_METRICS: Metrics = {
   talent: 0, need: 0, value: 0, floor: 0, boom: 0, combo: 0, age: 0, stack: 0, rz: 0,
@@ -54,7 +54,7 @@ export interface ScoreResult {
 }
 
 /**
- * Fit Score = Σ wᵢ × metricᵢ, rendered 0–100.
+ * Rating = Σ wᵢ × metricᵢ, rendered 0–100.
  *
  * Each metric is independently 0..1 so the breakdown in the player sheet reads
  * as "metric × weight = contribution". Where real 2025 usage is available it
@@ -123,7 +123,7 @@ export function scorePlayer(
     // Who he actually has to play, at his own position — the defence that
     // cannot cover a tight end is often the one that stops the run, so a back
     // and a receiver on the same team do not have the same season ahead of
-    // them. Worth a few points of Fit and no more: last season's defensive
+    // them. Worth a few points of Rating and no more: last season's defensive
     // record is a lagged proxy for this season's, and it is the weakest of the
     // real things here. It is worth nothing at all outside redraft, and the
     // weights say so — see `redraftWeights`.
@@ -131,7 +131,7 @@ export function scorePlayer(
   };
 
   // Number.isFinite rather than != null: a missing value can arrive as NaN, and
-  // NaN != null is true — one of them would poison this player's Fit app-wide.
+  // NaN != null is true — one of them would poison this player's Rating app-wide.
   const fin = Number.isFinite;
   const u = ctx.use;
   let seenBoom = false;

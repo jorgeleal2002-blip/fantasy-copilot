@@ -17,7 +17,7 @@ const DATA_NOTE =
   'Live from Sleeper: league, managers, draft order, picks and the NFL catalog (position, age, team, experience). ' +
   'Market values come from FantasyCalc, priced for this league\'s format. ' +
   'Fixtures and last season\'s points allowed by each defence ship with the app, from nflverse. ' +
-  'The Fit Score, floor and upside are the app\'s own model on top of those.';
+  'The Rating, floor and upside are the app\'s own model on top of those.';
 
 interface Sheet {
   id: string;
@@ -73,8 +73,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   /**
    * A kicker or a team defence, who is on the board but not described by it.
    *
-   * Their number is where the consensus takes them, not a Fit — so the sheet
-   * cannot draw the nine bars that explain a Fit. It drew them anyway, nine
+   * Their number is where the consensus takes them, not a Rating — so the
+   * sheet cannot draw the bars that explain one. It drew them anyway, nine
    * rows of "0 × 31% = 0" under a score of 23, which reads as a broken screen
    * rather than as an absence of data. Every stat tile below said "no data" for
    * the same reason. One sentence is the honest version of both.
@@ -227,8 +227,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         <div style={{ textAlign: 'right', flex: 'none' }}>
           <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-0.03em', color: fitColor(p.fit) }}>{p.fit}</div>
           <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
-            {/* Never call it a Fit Score when it is not one. */}
-            {fill ? 'consensus' : 'fit score'}
+            {/* Never call it a Rating when it is not one. */}
+            {fill ? 'consensus' : 'rating'}
           </div>
         </div>
       </div>
@@ -236,10 +236,10 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       {fill ? (
         <Card style={{ marginTop: 16 }}>
           <div style={{ fontSize: 13.5, lineHeight: 1.55, textWrap: 'pretty' }}>
-            No Fit Score for a {p.pos === 'DEF' ? 'team defence' : 'kicker'}.
+            No Rating for a {p.pos === 'DEF' ? 'team defence' : 'kicker'}.
           </div>
           <div style={{ fontSize: 12, color: dim(0.5), lineHeight: 1.55, marginTop: 8, textWrap: 'pretty' }}>
-            The Fit is built from market value, snap share, targets, yards per touch,
+            The Rating is built from market value, snap share, targets, yards per touch,
             red-zone looks and an age curve.{' '}
             {p.pos === 'DEF'
               ? 'A team defence has none of them: no snap count, no targets, no age, and no market — nobody trades one.'

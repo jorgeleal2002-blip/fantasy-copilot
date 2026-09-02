@@ -32,10 +32,10 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
     ? [
       { key: 'now', label: 'Strength today' },
       { key: 'future', label: 'Future value' },
-      { key: 'fit', label: 'Fit today' },
-      { key: 'fitFut', label: 'Fit ahead' },
+      { key: 'fit', label: 'Rating today' },
+      { key: 'fitFut', label: 'Rating ahead' },
     ]
-    : [{ key: 'now', label: 'Roster strength' }, { key: 'fit', label: 'Fit Score' }];
+    : [{ key: 'now', label: 'Roster strength' }, { key: 'fit', label: 'Rating' }];
   const allowed = modes.map(o => o.key);
   const mode: Mode = allowed.includes(app.rankMode) ? app.rankMode : 'now';
   const isFitMode = mode === 'fit' || mode === 'fitFut';
@@ -49,8 +49,8 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
   const NOTES: Record<Mode, string> = {
     now: 'the sum of the best lineup each team can field today.',
     future: 'the roster aged two seasons plus the pick capital it owns.',
-    fit: 'the average Fit of the optimal starters — quality, not volume.',
-    fitFut: 'the same Fit with the roster aged two seasons, picks excluded.',
+    fit: 'the average Rating of the optimal starters — quality, not volume.',
+    fitFut: 'the same Rating with the roster aged two seasons, picks excluded.',
   };
   const note = 'Ordered by ' + NOTES[mode] +
     (m.isDynasty ? ' On the right, how far each team drifts from its raw strength.' : '');
@@ -127,7 +127,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
               </div>
               {/* Across ten teams the order barely moves between measures, so a
                   change of place says little. What does have range is how many
-                  Fit points a roster loses as it ages. */}
+                  Rating points a roster loses as it ages. */}
               {m.isDynasty && t.now > 0 ? (() => {
                 const d = Math.round(t.fitFut - t.fit);
                 if (Math.abs(d) < 2) return null;

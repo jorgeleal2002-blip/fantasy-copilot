@@ -129,8 +129,8 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
               </div>
               <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
                 {/* A kicker's number is where the consensus takes him, not a
-                    Fit — none of the nine metrics exists for one. */}
-                {top && POS.indexOf(top.pos as Pos) < 0 ? 'consensus' : 'fit score'}
+                    Rating — none of the eleven metrics exists for one. */}
+                {top && POS.indexOf(top.pos as Pos) < 0 ? 'consensus' : 'rating'}
               </div>
             </div>
           </div>
@@ -205,7 +205,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
             {filtered.slice(0, 24).map(p => {
               const before = m.selPick ? Math.max(m.selPick.overall - m.nextOverall, 0) : 0;
               // Against his place on the BOARD, not his place in this list.
-              // This list is sorted by Fit, so measuring against its index
+              // This list is sorted by Rating, so measuring against its index
               // marked the best-fitting players gone no matter where the board
               // actually had them — and then hid their pick number behind the
               // warning, which is how the top of the board ended up showing no
@@ -278,7 +278,7 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
           </div>
           <div style={{ fontSize: 12, color: dim(0.5), marginTop: 6, lineHeight: 1.5 }}>
             Claim a seat on the board, then start. The other {m.teamCount - 1} draft live
-            while you watch, and every name left carries a fit rating for your roster.
+            while you watch, and every name left carries a rating for your roster.
           </div>
           <button
             type="button"

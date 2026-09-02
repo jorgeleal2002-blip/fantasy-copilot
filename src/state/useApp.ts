@@ -26,7 +26,7 @@ export const BOOT_STEPS = [
   'Managers and draft order',
   'Draft status and picks',
   'Sleeper NFL catalog',
-  'Computing Fit Score',
+  'Computing ratings',
 ];
 
 /** Feeds are shared across league views within a session, keyed by what they

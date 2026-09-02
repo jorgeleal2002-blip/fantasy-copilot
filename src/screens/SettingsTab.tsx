@@ -84,8 +84,8 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
       </div>
 
       <Card>
-        <div style={{ ...cardTitle, marginBottom: 4 }}>Fit Score weights</div>
-        <div style={{ fontSize: 11.5, color: dim(0.45), marginBottom: 12 }}>Fit = Σ wᵢ × metricᵢ</div>
+        <div style={{ ...cardTitle, marginBottom: 4 }}>Rating weights</div>
+        <div style={{ fontSize: 11.5, color: dim(0.45), marginBottom: 12 }}>Rating = Σ wᵢ × metricᵢ</div>
         {/* Heaviest first, scaled against this profile's own largest weight:
             ordered by size, the chart answers "what is this profile actually
             buying?" without the reader ranking nine numbers by eye. */}
