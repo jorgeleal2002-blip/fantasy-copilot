@@ -146,6 +146,34 @@ Turning it on takes about two minutes and costs nothing:
    variable rather than a secret because the URL is public by design: it ships
    to every browser that loads the app. The database rules are what protect it.
 
+6. **Run the deploy again.** A repository variable is read when the site is
+   COMPILED, so adding one does not rebuild anything: Actions → Deploy to
+   GitHub Pages → Run workflow. Then open the app, **You → Shared draft rooms
+   → Test**. It writes a room, reads it back and deletes it, and names whatever
+   went wrong.
+
+### If it asks you to upgrade to a paid plan
+
+Nothing in this setup needs one, and the free Spark plan asks for no card.
+Stay on it. **Blaze is the only way any of this could ever bill you**, and
+nothing here needs a single thing it adds.
+
+If the console asks anyway, you are somewhere you do not need to be. The three
+that catch people:
+
+- **"Create database" a second time.** A project gets one Realtime Database
+  free; a second instance is a Blaze feature. If you already have one — you do,
+  if the URL in step 4 exists — do not create another. Open the one that is
+  there.
+- **The wrong product.** Cloud Firestore, Storage, Functions and Hosting all
+  have their own gates. This app uses **Realtime Database** and nothing else.
+- **A different region.** Creating the database somewhere other than the
+  default can want a paid plan. The default region is fine; the app does not
+  care where it lives.
+
+Publishing rules never asks for a plan. Reading and writing never asks for a
+plan. If you are being asked, you are not on the path this app needs.
+
 ### What it costs
 
 Nothing, by a wide margin, and the design is what keeps it that way.
