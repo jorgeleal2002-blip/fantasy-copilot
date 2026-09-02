@@ -19,6 +19,24 @@ import bootUrl from '../assets/boot.mp3';
 
 const KEY = 'fc.sound';
 
+/**
+ * Ask iOS to treat this as playback rather than as a UI blip.
+ *
+ * On an iPhone the ringer switch silences HTML audio outright — no error, no
+ * event, the sound simply does not happen — and most people keep that switch
+ * on. Safari 16.4 added a way to say what the audio is FOR, and "playback"
+ * means it belongs to the content and should be heard like a video would be.
+ * Where the API does not exist this does nothing, which is the old behaviour.
+ */
+function askToBeHeard(): void {
+  try {
+    const s = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+    if (s) s.type = 'playback';
+  } catch {
+    /* not supported — the ringer switch wins, and nothing else breaks */
+  }
+}
+
 export const soundOn = (): boolean => {
   try {
     return localStorage.getItem(KEY) !== 'off';
@@ -45,6 +63,7 @@ let playing: HTMLAudioElement | null = null;
 export function playBootSound(): void {
   if (already || !soundOn() || typeof Audio === 'undefined') return;
   already = true;
+  askToBeHeard();
 
   const el = new Audio(bootUrl);
   el.preload = 'auto';
@@ -66,4 +85,22 @@ export function playBootSound(): void {
 /** For the toggle in Settings: silence it now, not just next launch. */
 export function stopBootSound(): void {
   playing?.pause();
+}
+
+/**
+ * Play it on demand, from a real tap.
+ *
+ * This is the answer to "it doesn't make a sound", which has three very
+ * different causes that look identical from the outside: the browser held it
+ * back until a gesture, the phone is on silent, or something is wrong with the
+ * file. A button cannot be blocked by the autoplay rules — the tap IS the
+ * gesture — so if this is silent too the problem is the device or the file, and
+ * if it plays, the answer is that the launch attempt was refused.
+ */
+export function testSound(): Promise<'ok' | 'blocked'> {
+  askToBeHeard();
+  const el = playing ?? new Audio(bootUrl);
+  playing = el;
+  el.currentTime = 0;
+  return el.play().then(() => 'ok' as const).catch(() => 'blocked' as const);
 }

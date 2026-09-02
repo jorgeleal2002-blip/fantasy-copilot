@@ -1,5 +1,5 @@
 import { liveEnabled } from '../api/live';
-import { setSoundOn, soundOn, stopBootSound } from '../ui/boot-sound';
+import { setSoundOn, soundOn, stopBootSound, testSound } from '../ui/boot-sound';
 import { ACCENT, BAD, GOOD, METRIC_LABEL, MID, STRATS, StratKey } from '../model/constants';
 import { clamp } from '../model/math';
 import type { Model } from '../model/types';
@@ -350,7 +350,9 @@ function Row({ label, value, bad }: { label: string; value: string; bad?: boolea
  */
 function SoundToggle() {
   const [on, setOn] = useState(soundOn);
+  const [tried, setTried] = useState('');
   return (
+    <div>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 13 }}>Sound on open</div>
@@ -374,6 +376,30 @@ function SoundToggle() {
       >
         {on ? 'On' : 'Off'}
       </button>
+    </div>
+
+    {/* A tap is a gesture, so this cannot be refused by the autoplay rules.
+        Silence here means the phone or the file, not the browser. */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 9 }}>
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={() => {
+          setTried('…');
+          void testSound().then(r => setTried(
+            r === 'ok'
+              ? 'Playing. If you hear nothing, check the side switch and the volume.'
+              : 'The browser refused it. Reload and tap anywhere.',
+          ));
+        }}
+        style={{ flex: 'none', borderRadius: 10, minHeight: 34, fontSize: 12 }}
+      >
+        Test sound
+      </button>
+      {tried ? (
+        <div style={{ fontSize: 11.5, color: dim(0.5), minWidth: 0 }}>{tried}</div>
+      ) : null}
+    </div>
     </div>
   );
 }
