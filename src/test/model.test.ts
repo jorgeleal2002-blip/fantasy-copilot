@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ELIG, PRIME, STRATS } from '../model/constants';
+import { ELIG, POS, PRIME, STRATS } from '../model/constants';
 import { ageCurve, ageCurveRedraft, grade, modelVal, rankScore, talentBase, talentScale } from '../model/math';
 import { marketQuery, parseMarket } from '../model/market';
 import { matchMe } from '../api/sleeper';
@@ -1252,11 +1252,27 @@ describe('what a redraft mock board holds, and in what order', () => {
     return { m, players: b.players };
   };
 
-  it('runs in draft order, not in price order', () => {
-    // The two are different questions, and the draft board answers the first.
-    // Ordered by market value the list read 6, 1, 10, 5, 7 … — a trade value is
-    // what somebody is worth to hold, which is not where he comes off a board.
-    const { m, players } = league(REDRAFT, 0);
+  /* Draft order and price order are different questions, and which source
+   * answers the first depends on the format.
+   *
+   * In DYNASTY it is Sleeper's board: a trade value there carries three
+   * seasons of future with it and stops describing draft position — ordered by
+   * value the list read 6, 1, 10, 5, 7 …
+   *
+   * In REDRAFT there is no future to price, so the two collapse into one — and
+   * only the market knows how many quarterbacks this league starts. Sleeper
+   * ships one list to every league on the site. */
+  it('runs in the market\'s order in redraft', () => {
+    const { m } = league(REDRAFT, 0);
+    const board = m.runMock(5).board.slice(0, 40).filter(o => POS.indexOf(o.pos as Pos) >= 0);
+    const mv = (id: string) => m.marketValue(id)?.pts ?? 0;
+    for (let i = 1; i < board.length; i++) {
+      expect(mv(board[i].id)).toBeLessThanOrEqual(mv(board[i - 1].id));
+    }
+  });
+
+  it('and in Sleeper\'s order in dynasty', () => {
+    const { m, players } = league(DYNASTY, 2);
     const board = m.runMock(5).board.slice(0, 40);
     const sr = (id: string) => players[id]?.search_rank ?? 9999;
     for (let i = 1; i < board.length; i++) {
@@ -1684,25 +1700,29 @@ describe('positional replaceability', () => {
     expect(qb.m.scarce).toBeLessThan(rb.m.scarce);
     expect(qb.fit).toBeLessThan(rb.fit);
 
-    /* And it is this term doing it, not a coincidence of the other nine. What
-     * each metric contributes to the distance between them, in points of Rating:
-     * replaceability alone opens nearly three, where before it opened none,
-     * and it is the largest single reason the back is ahead. */
+    /* And it is this term doing it, not a coincidence of the other ten. What
+     * each metric contributes to the distance between them, in points of
+     * Rating: replaceability alone opens nearly four, where before it opened
+     * none. It shares the work with `value` now that a redraft board runs in
+     * the market's order — the same opinion reaching the score twice, once as
+     * "he is easy to replace" and once as "he does not come off the board
+     * here" — and between them they are most of the gap. */
     const w = redraftWeights(STRATS.balanced.w);
     const gap = (k: keyof typeof w) => (rb.m[k] - qb.m[k]) * w[k] * 100;
+    const total = (Object.keys(w) as (keyof typeof w)[]).reduce((a, k) => a + gap(k), 0);
     expect(gap('scarce')).toBeGreaterThan(2);
-    const biggest = (Object.keys(w) as (keyof typeof w)[])
-      .sort((a, b) => gap(b) - gap(a))[0];
-    expect(biggest).toBe('scarce');
+    expect(gap('scarce') + gap('value')).toBeGreaterThan(total * 0.6);
   });
 
   /* The same player, the same prices — only the league's own slots change. Ten
    * teams starting one quarterback make the eleventh best free; ten starting
    * two push that line to the twenty-first, and everyone above it gains. */
   it('and worth more in superflex, off the league slots alone', () => {
+    /* The same man, the same prices, named explicitly — the two formats no
+     * longer put the same quarterback at the top of the board, which is the
+     * point of the board reading the format. */
     const one = build(ONE_QB).scored.find(p => p.pos === 'QB')!;
-    const sf = build(SUPERFLEX).scored.find(p => p.pos === 'QB')!;
-    expect(sf.id).toBe(one.id);
+    const sf = build(SUPERFLEX).scored.find(p => p.id === one.id)!;
     expect(sf.m.scarce).toBeGreaterThan(one.m.scarce);
   });
 
@@ -1959,5 +1979,116 @@ describe('what the room offers you', () => {
     // Flat before: 51 at every turn. Now it climbs as the pick closes on him.
     expect(new Set(seen).size).toBeGreaterThan(1);
     expect(seen[seen.length - 1]).toBeGreaterThan(seen[0]);
+  });
+});
+
+/**
+ * The board has to know how many quarterbacks the league starts.
+ *
+ * Sleeper's `search_rank` is one list shipped to every league on the site, and
+ * it has the best quarterback alive inside the top ten — where he goes in
+ * superflex, and three rounds earlier than he goes in a league that starts one
+ * of him. Reported from a real draft, and measured before the fix: a one-QB
+ * redraft, a superflex redraft and a dynasty superflex produced the identical
+ * board, quarterback first in all three.
+ */
+describe('the board reads the format', () => {
+  const base = makeBundle();
+  const ONE_QB = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF',
+    'BN', 'BN', 'BN', 'BN', 'BN', 'BN'];
+  const SUPERFLEX = ONE_QB.map(p => (p === 'FLEX' ? 'SUPER_FLEX' : p));
+  const build = (positions: string[], type: number, qbDiscount: boolean, empty = true) => buildModel({
+    data: {
+      ...base,
+      league: { ...base.league, roster_positions: positions,
+        settings: { ...base.league.settings, type, draft_rounds: 15 } },
+      /* Empty for the format checks — a draft from scratch is where the order
+       * is visible. Populated for the kicker check, because with every skill
+       * player in the fixture still available none of them is inside a board
+       * 120 deep, which is also the right answer: nobody takes a kicker with
+       * one of the first 120 picks. */
+      rosters: empty ? base.rosters.map(r => ({ ...r, players: [], starters: [] })) : base.rosters,
+      draft: { ...base.draft!, type: 'snake', settings: { rounds: 15 } },
+    },
+    usage: buildUsage(makeStats(base.players), base.players),
+    // FantasyCalc is asked for numQbs, so a one-QB league gets quarterbacks
+    // priced far cheaper. That is the whole signal Sleeper's list cannot carry.
+    market: parseMarket(makeFantasyCalc(base.players).map(r => {
+      const v = r.value || 0;
+      return qbDiscount && (r.player || {}).position === 'QB'
+        ? { ...r, value: Math.round(v * 0.45 * (0.55 + 0.45 * (v / 9000))) } : r;
+    })),
+    strat: 'balanced', boardMode: 'fa', pickSel: 0,
+  });
+  /** Where the first quarterback comes off, as a pick of a ten-team draft. */
+  const firstQb = (m: ReturnType<typeof build>) => {
+    const order = m.scored.slice().sort((a, b) => (a.goes || 9999) - (b.goes || 9999));
+    return order.find(p => p.pos === 'QB')!.goes!;
+  };
+
+  it('takes a quarterback three rounds later where only one of him starts', () => {
+    const one = firstQb(build(ONE_QB, 0, true));
+    const sflx = firstQb(build(SUPERFLEX, 0, false));
+    expect(sflx).toBeLessThanOrEqual(10);              // round 1 in superflex
+    expect(one).toBeGreaterThan(20);                   // round 3 or later
+    expect(one - sflx).toBeGreaterThan(15);
+  });
+
+  /* The top of a one-QB board is the position you actually start three and
+   * four of. It used to be a quarterback, in every format. */
+  it('and does not open with one', () => {
+    const m = build(ONE_QB, 0, true);
+    const order = m.scored.slice().sort((a, b) => (a.goes || 9999) - (b.goes || 9999));
+    expect(order.slice(0, 10).filter(p => p.pos === 'QB')).toHaveLength(0);
+  });
+
+  /* Dynasty keeps Sleeper's board: there a trade value carries three seasons
+   * of future with it and stops describing where a player comes off. */
+  it('leaves dynasty on Sleeper\'s own order', () => {
+    const m = build(SUPERFLEX, 2, false);
+    const order = m.scored.slice().sort((a, b) => (a.goes || 9999) - (b.goes || 9999));
+    for (let i = 1; i < 40; i++) {
+      expect(order[i].raw.search_rank ?? 9999)
+        .toBeGreaterThanOrEqual(order[i - 1].raw.search_rank ?? 9999);
+    }
+  });
+
+  /**
+   * Kickers and defences are not priced by the market, so reordering by it
+   * could have dumped them past the end of the draft — the market's ORDER is
+   * used and its scale is thrown away precisely so it does not.
+   *
+   * The check is that switching format leaves them exactly where Sleeper had
+   * them, while the skill players around them move.
+   */
+  it('leaves the players the market never priced where they were', () => {
+    const rd = build(ONE_QB, 0, true, false);
+    const dyn = build(ONE_QB, 2, true, false);
+    const where = (m: ReturnType<typeof build>) => {
+      const order = m.runMock(5).board;
+      const at: Record<string, number> = {};
+      order.forEach((o, i) => { at[o.id] = i; });
+      return { order, at };
+    };
+    const a = where(rd);
+    const b = where(dyn);
+    const fills = a.order.filter(o => o.pos === 'K' || o.pos === 'DEF');
+    expect(fills.length).toBeGreaterThan(0);
+    // Same slot in both formats, and still in Sleeper's own order among
+    // themselves — nothing about a kicker changes when the QB count does.
+    fills.forEach(f => expect(b.at[f.id], f.pos + ' moved').toBe(a.at[f.id]));
+    for (let i = 1; i < fills.length; i++) {
+      expect(fills[i].rank == null || fills[i - 1].rank == null
+        || (rd.scoreAny(fills[i].id)?.raw.search_rank ?? 9999)
+          >= (rd.scoreAny(fills[i - 1].id)?.raw.search_rank ?? 9999)).toBe(true);
+    }
+  });
+
+  /* And the skill players around them DID move, or none of this did anything. */
+  it('while the skill players around them do move', () => {
+    const rd = build(ONE_QB, 0, true, false).runMock(5).board.filter(o => POS.indexOf(o.pos as Pos) >= 0);
+    const dyn = build(ONE_QB, 2, true, false).runMock(5).board.filter(o => POS.indexOf(o.pos as Pos) >= 0);
+    const moved = rd.filter((o, i) => dyn[i] && dyn[i].id !== o.id);
+    expect(moved.length).toBeGreaterThan(rd.length / 3);
   });
 });

@@ -264,11 +264,82 @@ export function buildModel(input: ModelInput): Model {
     }
     priced.sort((a, b) => b.v - a.v).forEach((x, i) => { marketOrder[x.id] = i + 1; });
   }
-  /** Draft order: Sleeper's board, with the market only breaking its ties. */
-  const rankOf = (id: string, pl: SleeperPlayer) =>
-    pl.search_rank && pl.search_rank < 9999
-      ? pl.search_rank
-      : 100000 + (marketOrder[id] || 9999);
+  /**
+   * Draft order.
+   *
+   * `search_rank` is ONE list, shipped to every league on Sleeper, and no
+   * single list can be right for both formats. It has the best quarterback
+   * alive inside the top ten — which is where he goes in superflex, and three
+   * rounds earlier than he goes in a league that starts one of him. Measured
+   * before this: a one-QB redraft, a superflex redraft and a dynasty superflex
+   * produced the identical board, quarterback first in all three.
+   *
+   * The market IS asked for this league's shape — `numQbs`, team count, PPR,
+   * redraft or dynasty — so it knows what Sleeper's list cannot. What it does
+   * not know is the future: in DYNASTY a trade value carries three seasons
+   * with it and stops describing draft position, which is the mistake that
+   * once pushed a back who goes second down to fourth. In redraft there is no
+   * future to price, the two questions collapse into one, and the
+   * format-aware answer is the better one.
+   *
+   * So redraft drafts off the market's order and dynasty keeps Sleeper's.
+   *
+   * The market only prices skill players, and a board still needs its kickers
+   * and defences somewhere sensible. They are slotted onto the market's scale
+   * at the place Sleeper's own board puts them — how many priced players it
+   * lists ahead of them — which is a neutral answer for exactly the players
+   * the market has no opinion about.
+   */
+  /**
+   * The market's order, written on Sleeper's scale.
+   *
+   * The two lists cannot simply be swapped for one another: `search_rank` runs
+   * over the whole catalogue and the market prices only skill players, so
+   * ordering by market rank alone dumps every kicker and defence past the end
+   * of the draft — measured, they left a 120-deep board entirely.
+   *
+   * So the market's ORDER is kept and its scale is thrown away. The priced
+   * players' own search ranks are the slots; the market says who fills them.
+   * The best man by this league's prices takes the earliest slot the board had
+   * for a priced player, the second takes the next, and so on. Anyone the
+   * market never priced — kickers, defences, deep fliers — keeps the rank
+   * Sleeper gave him and lands exactly where he always did.
+   */
+  const srForMarketRank: number[] = [];
+  if (!isDynasty) {
+    for (const pid in players) {
+      const pl = players[pid];
+      if (!pl || !marketOrder[pid]) continue;
+      srForMarketRank.push(pl.search_rank && pl.search_rank < 9999 ? pl.search_rank : 9999);
+    }
+    srForMarketRank.sort((a2, b2) => a2 - b2);
+  }
+  /**
+   * Draft order.
+   *
+   * `search_rank` is ONE list, shipped to every league on Sleeper, and no
+   * single list can be right for both formats. It has the best quarterback
+   * alive inside the top ten — which is where he goes in superflex, and three
+   * rounds earlier than he goes in a league that starts one of him. Measured
+   * before this: a one-QB redraft, a superflex redraft and a dynasty superflex
+   * produced the identical board, quarterback first in all three.
+   *
+   * The market IS asked for this league's shape — `numQbs`, team count, PPR,
+   * redraft or dynasty — so it knows what Sleeper's list cannot. What it does
+   * not know is the future: in DYNASTY a trade value carries three seasons
+   * with it and stops describing draft position, which is the mistake that
+   * once pushed a back who goes second down to fourth. In redraft there is no
+   * future to price, the two questions collapse into one, and the
+   * format-aware answer is the better one.
+   */
+  const rankOf = (id: string, pl: SleeperPlayer) => {
+    const sr = pl.search_rank && pl.search_rank < 9999 ? pl.search_rank : null;
+    const mo = marketOrder[id];
+    if (!isDynasty && mo && srForMarketRank.length) {
+      return srForMarketRank[Math.min(mo, srForMarketRank.length) - 1];
+    }
+    return sr != null ? sr : 100000 + (mo || 9999);
+  };
 
   const marketValue = (id: string): PlayerValue | null => {
     const pl = players[id];
