@@ -20,27 +20,9 @@
  * physics instead of sampling it.
  */
 
-import { readClips } from './sfx-clips';
-
 export type SfxName = 'tick' | 'coin' | 'boom' | 'horn' | 'pipe' | 'womp' | 'tung';
 
-const KEY = 'fc.sfx';
 
-export const sfxOn = (): boolean => {
-  try {
-    return localStorage.getItem(KEY) !== 'off';
-  } catch {
-    return true;
-  }
-};
-
-export const setSfxOn = (on: boolean): void => {
-  try {
-    localStorage.setItem(KEY, on ? 'on' : 'off');
-  } catch {
-    /* private mode — the setting just does not persist */
-  }
-};
 
 type Ctor = typeof AudioContext;
 
@@ -168,33 +150,6 @@ export function readySfx(): void {
     unlocked = false;
     GESTURES.forEach(e => addEventListener(e, once, { passive: true }));
   });
-}
-
-/**
- * What the audio is actually doing.
- *
- * Three wrong diagnoses of the opening clip were made in a row by reasoning
- * from the outside, and the thing that ended it was making the app report its
- * own state instead. Same here: when a phone stays silent this says which of
- * "never created", "suspended", "the switch is off" and "it is running and you
- * heard nothing" it is, and only one of those is a bug in this file.
- */
-export function sfxState(): {
-  state: string; unlocked: boolean; standalone: boolean; on: boolean; session: string;
-} {
-  let session = 'not supported';
-  try {
-    const s = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
-    if (s) session = s.type;
-  } catch { /* leave it */ }
-  return {
-    state: ctx ? ctx.state : 'not created',
-    unlocked,
-    standalone: !!(window.matchMedia?.('(display-mode: standalone)').matches
-      || (navigator as unknown as { standalone?: boolean }).standalone),
-    on: sfxOn(),
-    session,
-  };
 }
 
 /** One second of white noise, made once and re-read by every voice that wants
@@ -410,8 +365,9 @@ function womp(c: BaseAudioContext, out: AudioNode, t: number) {
  * thump with a knock of filtered noise on the front and almost no sustain. The
  * third lands lower and rings longer, the way the last of three does.
  *
- * The ones that are a voice singing, or a song, are not here and will not be —
- * see sfx-clips.ts for the way to have those.
+ * The ones that are a voice singing, or a song, are not here and will not be:
+ * they are not here, and a set with no way to change it is better than a
+ * half of one nobody can reach.
  */
 function tung(c: BaseAudioContext, out: AudioNode, t: number) {
   const hit = (at: number, f: number, v: number, d: number) => {
@@ -471,61 +427,13 @@ export function renderSfx(name: SfxName, c: BaseAudioContext, out: AudioNode, t:
 const FLOOR_MS = 90;
 let lastAt = 0;
 
-/**
- * Your own clips, decoded and ready.
- *
- * Decoded ONCE and held. A pick lands every 420ms and decoding an mp3 takes
- * longer than that on a phone, so decoding at play time would put the sound
- * somewhere after the pick it belongs to — and the second pick would decode it
- * all over again. Loaded when the room opens, which is a screen away from the
- * first sound it will need.
- */
-let clips: Partial<Record<SfxName, AudioBuffer>> = {};
-let loading: Promise<void> | null = null;
-
-export function loadSfxClips(): Promise<void> {
-  if (loading) return loading;
-  loading = readClips().then(found => {
-    const a = audio();
-    if (!a) return undefined;
-    return Promise.all(Object.keys(found).map(k =>
-      found[k].arrayBuffer()
-        .then(buf => a.c.decodeAudioData(buf))
-        .then(dec => { clips[k as SfxName] = dec; })
-        // A file the browser cannot decode falls back to the synthesised voice
-        // rather than to silence, which would look exactly like a broken app.
-        .catch(() => undefined)))
-      .then(() => undefined);
-  }).catch(() => undefined);
-  return loading;
-}
-
-/** After a clip is added or removed, so the change is audible now rather than
- *  at the next launch. */
-export function reloadSfxClips(): Promise<void> {
-  clips = {};
-  loading = null;
-  return loadSfxClips();
-}
-
-export const hasClip = (name: SfxName): boolean => !!clips[name];
-
 export function playSfx(name: SfxName): void {
-  if (!sfxOn()) return;
   const now = Date.now();
   if (name === 'tick' && now - lastAt < FLOOR_MS) return;
   const a = audio();
   if (!a) return;
   lastAt = now;
   try {
-    const own = clips[name];
-    if (own) {
-      const src = a.c.createBufferSource();
-      src.buffer = own;
-      src.connect(a.out);
-      src.start();
-      return;
-    }
     VOICES[name](a.c, a.out, a.c.currentTime);
   } catch {
     /* a context that died with the tab. The room does not stop for it. */
