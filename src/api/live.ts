@@ -179,3 +179,93 @@ export function watchRoom(id: string, onRoom: (r: Room) => void, onError?: () =>
     close();
   };
 }
+
+/**
+ * Prove the database is really there, from the phone that will use it.
+ *
+ * Setting this up has three steps that can each fail silently and look
+ * identical from the outside — the app just has no room button, or has one
+ * that does nothing:
+ *
+ *  · the URL never reached the build, because a repository variable is read
+ *    when the site is COMPILED and adding one does not rebuild anything;
+ *  · the URL is there but wrong, or the database was deleted;
+ *  · the database is there but still in locked mode, so every write is
+ *    refused — the commonest of the three by a distance, because "locked" is
+ *    what the console tells you to start with.
+ *
+ * A real round trip separates them: write a room, read it back, delete it.
+ * Nothing else can tell them apart, and guessing between them is how an
+ * evening disappears.
+ */
+export type LiveCheck =
+  | { ok: true; ms: number; streamed: boolean }
+  | { ok: false; why: 'unset' | 'rules' | 'unreachable' | 'mismatch'; detail: string };
+
+export async function checkLive(): Promise<LiveCheck> {
+  if (!LIVE_URL) {
+    return {
+      ok: false,
+      why: 'unset',
+      detail: 'No database URL in this build. A repository variable is read when the '
+        + 'site is compiled, so adding one does not rebuild it — run the deploy again '
+        + '(Actions → Deploy to GitHub Pages → Run workflow).',
+    };
+  }
+  const id = '_check_' + newRoomId();
+  const seed = Math.floor(Math.random() * 1e9);
+  const started = Date.now();
+  try {
+    // Shaped to satisfy the rule in the README, which requires both of these.
+    await send(roomPath(id), 'PUT', { seed, leagueId: 'connection-check' });
+    const back = (await send(roomPath(id), 'GET')) as { seed?: number } | null;
+    await send(roomPath(id), 'DELETE').catch(() => undefined);
+    if (!back || back.seed !== seed) {
+      return {
+        ok: false,
+        why: 'mismatch',
+        detail: 'The database accepted a write and then handed back something else. '
+          + 'Check that the URL points at YOUR database and not another project.',
+      };
+    }
+    return { ok: true, ms: Date.now() - started, streamed: await canStream(id) };
+  } catch (e) {
+    const msg = String((e as Error).message || e);
+    /* 401 is the rules, and it is worth saying so outright: it is the one
+     * failure whose fix is a paste into a box the person has already seen. */
+    if (/40[13]/.test(msg)) {
+      return {
+        ok: false,
+        why: 'rules',
+        detail: 'The database refused the write. It is still in locked mode — open '
+          + 'Realtime Database → Rules in the Firebase console and paste the rules '
+          + 'from the README, then Publish.',
+      };
+    }
+    return {
+      ok: false,
+      why: 'unreachable',
+      detail: 'Could not reach the database at all (' + msg + '). Check the URL, and '
+        + 'that the database has not been deleted.',
+    };
+  }
+}
+
+/** Whether the live stream opens, as opposed to falling back to polling. It
+ *  still works either way — this is the difference between instant and every
+ *  four seconds, and between a little traffic and twenty times as much. */
+function canStream(id: string): Promise<boolean> {
+  return new Promise(resolve => {
+    if (typeof EventSource === 'undefined') { resolve(false); return; }
+    let es: EventSource | null = null;
+    const done = (v: boolean) => { es?.close(); clearTimeout(t); resolve(v); };
+    const t = setTimeout(() => done(false), 4000);
+    try {
+      es = new EventSource(roomPath(id));
+      es.onopen = () => done(true);
+      es.onerror = () => done(false);
+    } catch {
+      done(false);
+    }
+  });
+}

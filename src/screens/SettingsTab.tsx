@@ -1,4 +1,4 @@
-import { liveEnabled } from '../api/live';
+import { checkLive, liveEnabled, type LiveCheck } from '../api/live';
 import { lastSound, setSoundOn, soundDetail, soundOn, stopBootSound, testSound } from '../ui/boot-sound';
 import { hasClip, loadSfxClips, playSfx, reloadSfxClips, setSfxOn, sfxOn, type SfxName } from '../ui/sfx';
 import { MAX_CLIP, dropClip, putClip } from '../ui/sfx-clips';
@@ -177,12 +177,10 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
       {/* Whether shared drafting is switched on at all. Without it the room
           button simply is not there, which looks identical to a broken feature
           from the outside — this is the one line that tells the two apart. */}
+      <RoomCheck />
+
       <div style={{ ...cardNote, textAlign: 'center', fontSize: 10.5 }}>
         Build {__BUILD__} UTC
-        <br />
-        {liveEnabled()
-          ? 'Shared draft rooms: on'
-          : 'Shared draft rooms: off — set VITE_RTDB_URL (see README)'}
       </div>
 
       <div style={{ height: 8 }} />
@@ -570,6 +568,67 @@ function DraftSoundToggle() {
             not uploaded, not shared with the room, and not part of the app. Clearing
             the site's data removes them.
           </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Is the shared room actually working.
+ *
+ * The line used to say only whether a URL made it into the build, which is one
+ * of three things that have to be true and the least likely to be the one that
+ * is wrong. A database still in locked mode reads as "on" and then refuses
+ * every write; a URL pointing at a deleted project reads as "on" too. Only a
+ * round trip can tell those apart, and it has to be made from the phone,
+ * because that is the machine the rules will be judging.
+ */
+function RoomCheck() {
+  const [state, setState] = useState<'idle' | 'going' | LiveCheck>('idle');
+  const on = liveEnabled();
+  const result = typeof state === 'object' ? state : null;
+
+  return (
+    <div style={{ marginTop: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13 }}>Shared draft rooms</div>
+          <div style={{ fontSize: 11.5, color: on ? dim(0.45) : BAD, marginTop: 2 }}>
+            {on ? 'A database is configured in this build.' : 'No database in this build.'}
+          </div>
+        </div>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          disabled={state === 'going'}
+          onClick={() => {
+            setState('going');
+            void checkLive().then(setState).catch(() =>
+              setState({ ok: false, why: 'unreachable', detail: 'The check itself failed.' }));
+          }}
+          style={{ flex: 'none', borderRadius: 10, minHeight: 34, fontSize: 12 }}
+        >
+          {state === 'going' ? 'Testing…' : 'Test'}
+        </button>
+      </div>
+
+      {result ? (
+        <div style={{
+          marginTop: 9, padding: '9px 11px', borderRadius: 10, fontSize: 11.5, lineHeight: 1.5,
+          background: 'color-mix(in srgb, ' + (result.ok ? 'var(--color-accent)' : '#d9a08e') + ' 10%, transparent)',
+          border: '1px solid color-mix(in srgb, ' + (result.ok ? 'var(--color-accent)' : '#d9a08e') + ' 35%, transparent)',
+          color: result.ok ? 'var(--color-accent-200)' : '#f0cfc3',
+        }}>
+          {result.ok ? (
+            <>
+              Working. Wrote a room, read it back and deleted it in {result.ms}ms.
+              {result.streamed
+                ? ' Picks will arrive the moment they happen.'
+                : ' The live stream did not open, so picks will arrive within four seconds'
+                  + ' instead of instantly — the room still works.'}
+            </>
+          ) : result.detail}
         </div>
       ) : null}
     </div>
