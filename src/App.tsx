@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppShell } from './screens/AppShell';
 import { BootScreen, ConnectScreen, LeaguesScreen } from './screens/Onboarding';
 import { Splash } from './screens/Splash';
 import { useApp } from './state/useApp';
 import { Mark } from './ui/Mark';
+import { playBootSound } from './ui/boot-sound';
 
 export default function App() {
   const app = useApp();
+  // Asked for on load; actually played on load or on the first touch, whichever
+  // the browser permits — see boot-sound.
+  useEffect(() => { playBootSound(); }, []);
   /* Shown once per launch, and skipped outright for anyone who has asked for
    * less motion — for them it is a second of held-back app, not a flourish. */
   const [splash, setSplash] = useState(

@@ -1,4 +1,5 @@
 import { liveEnabled } from '../api/live';
+import { setSoundOn, soundOn, stopBootSound } from '../ui/boot-sound';
 import { ACCENT, BAD, GOOD, METRIC_LABEL, MID, STRATS, StratKey } from '../model/constants';
 import { clamp } from '../model/math';
 import type { Model } from '../model/types';
@@ -71,6 +72,8 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           Sign out
         </button>
       </div>
+
+      <SoundToggle />
 
       <div>
         <div style={{
@@ -331,6 +334,46 @@ function Row({ label, value, bad }: { label: string; value: string; bad?: boolea
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
       <span style={{ color: dim(0.5) }}>{label}</span>
       <span style={{ textAlign: 'right', color: bad ? BAD : undefined }}>{value}</span>
+    </div>
+  );
+}
+
+
+/**
+ * The opening sound, and the way out of it.
+ *
+ * Thirteen seconds on every launch is a lot to hand somebody with no way to
+ * stop it, and the person who asked for the sound is not necessarily everyone
+ * who opens the app. Turning it off silences whatever is playing right now as
+ * well as every launch after — a switch that only takes effect next time reads
+ * as a broken switch.
+ */
+function SoundToggle() {
+  const [on, setOn] = useState(soundOn);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13 }}>Sound on open</div>
+        <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 2 }}>
+          Plays when the app loads, or at your first tap if the browser holds it back.
+        </div>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label="Sound on open"
+        onClick={() => {
+          const next = !on;
+          setOn(next);
+          setSoundOn(next);
+          if (!next) stopBootSound();
+        }}
+        className={'btn ' + (on ? 'btn-primary' : 'btn-secondary')}
+        style={{ flex: 'none', borderRadius: 10, minWidth: 62, minHeight: 34 }}
+      >
+        {on ? 'On' : 'Off'}
+      </button>
     </div>
   );
 }
