@@ -5,9 +5,8 @@ import { reasons } from '../model/score';
 import type { DraftDeal, Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { PlayerSearch, type SearchScope } from '../ui/PlayerSearch';
-import { Icon } from '../ui/icons';
-import { Banner, Card, Panel, Screen, Segmented, type SegOption } from '../ui/primitives';
-import { capsule, cardTitle, dim, ellipsis, fitColor, fitStyle, panelNote, panelTitle, posBadge } from '../ui/styles';
+import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
+import { capsule, cardTitle, dim, ellipsis, fitColor, fitStyle, heroCard, kicker, posBadge } from '../ui/styles';
 
 const STATUS_TEXT: Record<string, string> = {
   pre_draft: 'Draft not started',
@@ -99,76 +98,62 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
         </button>
       </div>
 
-      {/* The recommendation, drawn as the reference draws a headline card: the
-          page's own ground, one line round it, everything on the centre line.
-          The name is the headline and the score is the figure under it — side
-          by side they were two things at the top of the screen arguing about
-          which one you read first. */}
-      <Panel style={{ padding: '15px 14px' }}>
-        <div style={panelTitle}>
-          <Icon name="star" size={17} />
-          <span>
+      <div style={heroCard}>
+        <div style={{ position: 'relative' }}>
+          <div style={kicker}>
             {done
-              ? 'Best free agent'
-              : `Pick ${m.myRound}.${String(m.myPickInRound).padStart(2, '0')}`}
-          </span>
-        </div>
-        <div style={{
-          fontSize: 27, fontWeight: 500, letterSpacing: '-0.025em', textAlign: 'center',
-          marginTop: 10, ...ellipsis,
-        }}>
-          {top ? top.name : '—'}
-        </div>
-        <div style={{ ...panelNote, marginTop: 5 }}>
-          {/* A rookie has no NFL team until he is drafted, and Sleeper
-              reports that as null — which a template literal prints as
-              the word "null". */}
-          {top ? [
-            top.pos,
-            top.team || 'no team yet',
-          ].concat(top.age ? [top.age + ' yrs'] : [])
-            // Where the board has him among what is left, as a pick.
-            .concat([done ? where(top.goes) : 'goes ' + where(top.goes)])
-            .join(' · ') : ''}
-        </div>
-        {/* Stacked, not side by side: the figure has to sit on the card's
-            centre line, and a number with its caption beside it centres the
-            PAIR, which leaves the number itself off to the left. */}
-        <div style={{ textAlign: 'center', marginTop: 13 }}>
-          <div style={{
-            fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1,
-            color: 'var(--color-accent-300)',
-          }}>
-            {top ? top.fit : '—'}
+              ? 'Best free agent available'
+              : `Recommendation · pick ${m.myRound}.${String(m.myPickInRound).padStart(2, '0')}`}
           </div>
-          <div style={{
-            fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase',
-            color: dim(0.45), marginTop: 5,
-          }}>
-            {/* A kicker's number is where the consensus takes him, not a
-                Fit — none of the nine metrics exists for one. */}
-            {top && POS.indexOf(top.pos as Pos) < 0 ? 'consensus' : 'fit score'}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 10 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-0.025em', ...ellipsis }}>
+                {top ? top.name : '—'}
+              </div>
+              <div style={{ fontSize: 12.5, color: dim(0.6), marginTop: 4 }}>
+                {/* A rookie has no NFL team until he is drafted, and Sleeper
+                    reports that as null — which a template literal prints as
+                    the word "null". */}
+                {top ? [
+                  top.pos,
+                  top.team || 'no team yet',
+                ].concat(top.age ? [top.age + ' yrs'] : [])
+                  // Where the board has him among what is left, as a pick.
+                  .concat([done ? where(top.goes) : 'goes ' + where(top.goes)])
+                  .join(' · ') : ''}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', flex: 'none' }}>
+              <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.03em', color: 'var(--color-accent-300)' }}>
+                {top ? top.fit : '—'}
+              </div>
+              <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
+                {/* A kicker's number is where the consensus takes him, not a
+                    Fit — none of the nine metrics exists for one. */}
+                {top && POS.indexOf(top.pos as Pos) < 0 ? 'consensus' : 'fit score'}
+              </div>
+            </div>
           </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+            {top ? reasons(top.m, pickLabel(asPick(top.goes), m.teamCount), top.pos, top.age).map(r => (
+              <span key={r} style={{
+                fontSize: 11, padding: '4px 9px', borderRadius: 7,
+                background: 'color-mix(in srgb, var(--color-accent) 18%, transparent)', color: 'var(--color-accent-200)',
+              }}>
+                {r}
+              </span>
+            )) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => top && app.setDetail(top.id)}
+            className="btn btn-primary"
+            style={{ marginTop: 14, borderRadius: 9, padding: '8px 13px' }}
+          >
+            See score breakdown
+          </button>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 12 }}>
-          {top ? reasons(top.m, pickLabel(asPick(top.goes), m.teamCount), top.pos, top.age).map(r => (
-            <span key={r} style={{
-              fontSize: 11, padding: '4px 9px', borderRadius: 7,
-              background: 'color-mix(in srgb, var(--color-accent) 18%, transparent)', color: 'var(--color-accent-200)',
-            }}>
-              {r}
-            </span>
-          )) : null}
-        </div>
-        <button
-          type="button"
-          onClick={() => top && app.setDetail(top.id)}
-          className="btn btn-primary"
-          style={{ marginTop: 13, width: '100%', borderRadius: 9, padding: '9px 13px' }}
-        >
-          See score breakdown
-        </button>
-      </Panel>
+      </div>
 
       {/* A picker with one option is not a picker. Redraft leagues have no
           pick-movement view, so there is nothing to switch between. */}
@@ -285,34 +270,36 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <Banner
-        icon="board"
-        title="Mock draft"
-        note={`${m.teamCount} teams, ${m.rounds} rounds`}
-      >
-        <div style={{ fontSize: 12, color: dim(0.5), marginTop: 10, lineHeight: 1.5, textAlign: 'center', textWrap: 'pretty' }}>
-          Claim a seat on the board, then start. The other {m.teamCount - 1} draft live
-          while you watch, and every name left carries a fit rating for your roster.
-        </div>
-        <button
-          type="button"
-          onClick={app.openMock}
-          className="btn btn-primary"
-          style={{ marginTop: 13, width: '100%', padding: '12px 0', fontSize: 13.5, borderRadius: 11 }}
-        >
-          {going ? 'Back to the draft room' : 'Enter the draft room'}
-        </button>
-        {going ? (
+      <div style={{ ...heroCard, padding: '18px 16px' }}>
+        <div style={{ position: 'relative' }}>
+          <div style={kicker}>Mock draft</div>
+          <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 6 }}>
+            {m.teamCount} teams, {m.rounds} rounds
+          </div>
+          <div style={{ fontSize: 12, color: dim(0.5), marginTop: 6, lineHeight: 1.5 }}>
+            Claim a seat on the board, then start. The other {m.teamCount - 1} draft live
+            while you watch, and every name left carries a fit rating for your roster.
+          </div>
           <button
             type="button"
-            onClick={app.rerollMock}
-            className="btn btn-ghost"
-            style={{ marginTop: 8, width: '100%', fontSize: 12, padding: '6px 0' }}
+            onClick={app.openMock}
+            className="btn btn-primary"
+            style={{ marginTop: 14, width: '100%', padding: '12px 0', fontSize: 13.5, borderRadius: 11 }}
           >
-            Start over from scratch
+            {going ? 'Back to the draft room' : 'Enter the draft room'}
           </button>
-        ) : null}
-      </Banner>
+          {going ? (
+            <button
+              type="button"
+              onClick={app.rerollMock}
+              className="btn btn-ghost"
+              style={{ marginTop: 8, width: '100%', fontSize: 12, padding: '6px 0' }}
+            >
+              Start over from scratch
+            </button>
+          ) : null}
+        </div>
+      </div>
 
       {/* Only worth a card once there is something in it. The seat is claimed
           on the board inside the room, where you can see what you are claiming. */}

@@ -1,72 +1,8 @@
 import { useEffect, type CSSProperties, type ReactNode } from 'react';
-import { Icon, type IconName } from './icons';
-import { cardNote, cardTitle, dim, panel, panelNote, panelTitle, seg, SegSize, surface } from './styles';
+import { cardNote, cardTitle, seg, SegSize, surface } from './styles';
 
 export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return <div style={{ ...surface, ...style }}>{children}</div>;
-}
-
-/** The dashboard surface — see `panel`. Everything a dashboard says goes in one. */
-export function Panel({ children, style }: { children: ReactNode; style?: CSSProperties }) {
-  return <div style={{ ...panel, ...style }}>{children}</div>;
-}
-
-/**
- * A dashboard that says one thing: icon, headline, and the line under it.
- *
- * The whole of the reference's status card, and the right shape for any state
- * the app has to announce rather than quantify — no roster yet, no team found,
- * a draft that has not been scheduled.
- */
-export function Banner({ icon, title, note, children }: {
-  icon: IconName; title: string; note?: ReactNode; children?: ReactNode;
-}) {
-  return (
-    <Panel>
-      <div style={panelTitle}>
-        <Icon name={icon} size={17} />
-        <span>{title}</span>
-      </div>
-      {note ? <div style={panelNote}>{note}</div> : null}
-      {children}
-    </Panel>
-  );
-}
-
-/**
- * One number on its own card.
- *
- * The figure leads because the figure is why you looked; the label under it is
- * set in the headline's caps so a grid of these reads as one instrument rather
- * than as four paragraphs, and the third line carries what the figure is made
- * of — a rank means little without the total it came from.
- */
-export function Stat({ icon, value, label, note, color }: {
-  icon: IconName; value: string; label: string; note?: string; color?: string;
-}) {
-  return (
-    <Panel style={{ padding: '13px 10px', textAlign: 'center' }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-        color: color || 'var(--color-text)',
-      }}>
-        <Icon name={icon} size={15} style={{ opacity: 0.75 }} />
-        <span style={{
-          fontSize: 26, fontWeight: 600, letterSpacing: '-0.035em', lineHeight: 1,
-          fontVariantNumeric: 'tabular-nums',
-        }}>
-          {value}
-        </span>
-      </div>
-      <div style={{
-        fontSize: 10, fontWeight: 600, letterSpacing: '.07em', textTransform: 'uppercase',
-        color: 'var(--color-neutral-300)', marginTop: 8,
-      }}>
-        {label}
-      </div>
-      {note ? <div style={{ fontSize: 11, color: dim(0.38), marginTop: 3 }}>{note}</div> : null}
-    </Panel>
-  );
 }
 
 export function CardHead({ title, right, note }: { title: string; right?: ReactNode; note?: string }) {

@@ -75,51 +75,20 @@ export const surface: CSSProperties = {
 };
 
 /**
- * The dashboard surface: the page itself, with a line drawn round it.
+ * The one lifted ground the system allows, used for the hero cards.
  *
- * It replaces a filled gradient card with a glow in the corner. Every number
- * worth reading in this app sits on one of these, and a saturated ground under
- * a figure is a second thing competing with it — the reference draws the same
- * card as an outline and nothing else, and the figure is the only lit object in
- * it. Measured off that card: 70px tall for two lines, 12px radius, 1px border,
- * and a fill identical to the ground behind it.
+ * ONE tone. It used to be a gradient from #1b2e4b to #151f3e with a cyan glow
+ * burning in the top corner — three colours in a card whose job is to hold a
+ * number still, and the shading was the loudest thing on the screen. Flat, it
+ * is a single step above the regular cards: enough to say "this one first" and
+ * nothing more.
  */
-export const panel: CSSProperties = {
-  borderRadius: 12,
-  padding: '14px 14px',
-  background: 'transparent',
-  border: '1px solid var(--color-outline)',
-};
-
-/** The headline of one: caps, bold, beside its icon, centred. */
-export const panelTitle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 9,
-  fontSize: 16,
-  fontWeight: 700,
-  letterSpacing: '.04em',
-  textTransform: 'uppercase',
-  lineHeight: 1.25,
-  color: 'var(--color-text)',
-};
-
-/**
- * The line under it.
- *
- * Deliberately much brighter than this app's usual muted text: measured on the
- * reference it is #ccdaf2, 14:1 against the ground, because on a card with no
- * fill the second line is content and not a footnote. The neutral ramp already
- * has that value.
- */
-export const panelNote: CSSProperties = {
-  fontSize: 13.5,
-  lineHeight: 1.3,
-  marginTop: 5,
-  textAlign: 'center',
-  color: 'var(--color-neutral-300)',
-  textWrap: 'pretty' as CSSProperties['textWrap'],
+export const heroCard: CSSProperties = {
+  borderRadius: 14,
+  padding: 13,
+  background: 'var(--color-section)',
+  position: 'relative',
+  overflow: 'hidden',
 };
 
 export const kicker: CSSProperties = {
