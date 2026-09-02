@@ -31,15 +31,26 @@ export const REACH = 15;
  * line wins — your own selection is your own selection even if it was also a
  * reach, and a kicker taken sixteenth off the board is funnier as a kicker.
  */
-export function sfxFor(pick: MockPick, suggested: string[]): SfxName {
+/** Three of the same position in a row is a run, and a run is the thing a
+ *  draft room reacts to out loud. Three, not two: two is a coincidence. */
+export const RUN = 3;
+
+export function sfxFor(pick: MockPick, suggested: string[], before: MockPick[] = []): SfxName {
   // You took somebody. The one unambiguously good thing that happens in here.
   if (pick.mine) return 'coin';
-  // A kicker or a team defence came off the board.
   const pos = pick.player?.pos;
+  // A kicker or a team defence came off the board.
   if (pos === 'K' || pos === 'DEF') return 'pipe';
   // Somebody took a player the app had just told you to take.
   if (pick.player && suggested.indexOf(pick.player.id) >= 0) return 'womp';
   // A reach: taken from well down the board, ahead of better players.
   if (pick.boardAt >= REACH) return 'boom';
+  /* A run: this pick and the two before it, all the same position. It is the
+   * only thing on this list that is about the shape of the draft rather than
+   * about one pick, and it is the one that changes what you should do next —
+   * three backs gone in a row is the room telling you the position is drying
+   * up. Three hits on a drum for three of a kind. */
+  if (pos && before.length >= RUN - 1
+    && before.slice(-(RUN - 1)).every(p => p.player?.pos === pos)) return 'tung';
   return 'tick';
 }

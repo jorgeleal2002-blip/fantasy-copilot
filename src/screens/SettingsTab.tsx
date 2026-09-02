@@ -1,13 +1,14 @@
 import { liveEnabled } from '../api/live';
 import { lastSound, setSoundOn, soundDetail, soundOn, stopBootSound, testSound } from '../ui/boot-sound';
-import { playSfx, setSfxOn, sfxOn, type SfxName } from '../ui/sfx';
+import { hasClip, loadSfxClips, playSfx, reloadSfxClips, setSfxOn, sfxOn, type SfxName } from '../ui/sfx';
+import { MAX_CLIP, dropClip, putClip } from '../ui/sfx-clips';
 import { ACCENT, BAD, GOOD, METRIC_LABEL, MID, STRATS, StratKey } from '../model/constants';
 import { clamp } from '../model/math';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { Meter, SERIES, markFor } from '../ui/charts';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
 
 const STRAT_OPTIONS: SegOption<StratKey>[] =
@@ -437,21 +438,44 @@ function SoundToggle() {
  *
  * They are not the opening clip and they are not on the same switch: somebody
  * who does not want thirteen seconds of music every launch may well want to
- * hear a pick land, and somebody drafting on a bus wants neither. They are also
- * made rather than loaded, so nothing here can fail the way the clip can — the
- * only reasons for silence are this switch and the phone's own.
+ * hear a pick land, and somebody drafting on a bus wants neither.
  */
-const DEMO: { key: SfxName; label: string; when: string }[] = [
-  { key: 'coin', label: 'Coin', when: 'you draft somebody' },
-  { key: 'horn', label: 'Horn', when: 'your turn' },
-  { key: 'boom', label: 'Boom', when: 'a reach' },
-  { key: 'pipe', label: 'Pipe', when: 'a kicker or a defence' },
-  { key: 'womp', label: 'Womp', when: 'they took your man' },
-  { key: 'tick', label: 'Tick', when: 'every other pick' },
+const EVENTS: { key: SfxName; when: string }[] = [
+  { key: 'coin', when: 'You draft somebody' },
+  { key: 'horn', when: 'Your turn arrives' },
+  { key: 'boom', when: 'Somebody reaches' },
+  { key: 'tung', when: 'Three of a position in a row' },
+  { key: 'pipe', when: 'A kicker or a defence goes' },
+  { key: 'womp', when: 'They take the one you were told to' },
+  { key: 'tick', when: 'Every other pick' },
 ];
 
 function DraftSoundToggle() {
   const [on, setOn] = useState(sfxOn);
+  const [, bump] = useState(0);
+  const [err, setErr] = useState('');
+
+  useEffect(() => { void loadSfxClips().then(() => bump(n => n + 1)); }, []);
+
+  const take = (key: SfxName, file: File | null | undefined) => {
+    setErr('');
+    if (!file) return;
+    if (file.size > MAX_CLIP) {
+      setErr('That one is ' + Math.round(file.size / 1000) + ' KB. Keep it under '
+        + Math.round(MAX_CLIP / 1000) + ' — a draft sound is a second or two, and a longer '
+        + 'one would still be playing when the next pick lands.');
+      return;
+    }
+    void putClip(key, file)
+      .then(() => reloadSfxClips())
+      .then(() => { bump(n => n + 1); playSfx(key); })
+      .catch(() => setErr('This browser would not store it.'));
+  };
+
+  const clear = (key: SfxName) => {
+    void dropClip(key).then(() => reloadSfxClips()).then(() => bump(n => n + 1));
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -481,23 +505,71 @@ function DraftSoundToggle() {
         </button>
       </div>
 
-      {/* Every one of them, playable, with what sets it off. A list of sounds
-          you cannot hear is a list of words. */}
+      {/* One row per EVENT, not per sound: once you can put your own file on a
+          row, the row is "when this happens" and the sound is whatever you put
+          there. Each is playable, because a list of sounds you cannot hear is a
+          list of words. */}
       {on ? (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-          {DEMO.map(d => (
-            <button
-              key={d.key}
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => playSfx(d.key)}
-              title={d.when}
-              style={{ borderRadius: 9, padding: '5px 10px', fontSize: 11.5 }}
+        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column' }}>
+          {EVENTS.map((e, i) => (
+            <div
+              key={e.key}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0',
+                borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+              }}
             >
-              {d.label}
-              <span style={{ color: dim(0.35), fontSize: 10.5, marginLeft: 5 }}>{d.when}</span>
-            </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => playSfx(e.key)}
+                aria-label={'Play: ' + e.when}
+                style={{ flex: 'none', borderRadius: 8, padding: '5px 9px', fontSize: 11 }}
+              >
+                ▶
+              </button>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, ...ellipsis }}>{e.when}</div>
+                <div style={{ fontSize: 10.5, color: dim(0.35), marginTop: 1 }}>
+                  {hasClip(e.key) ? 'your clip' : 'built in'}
+                </div>
+              </div>
+              {hasClip(e.key) ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => clear(e.key)}
+                  style={{ flex: 'none', fontSize: 11 }}
+                >
+                  Remove
+                </button>
+              ) : null}
+              <label
+                className="btn btn-secondary"
+                style={{ flex: 'none', borderRadius: 8, padding: '5px 9px', fontSize: 11, cursor: 'pointer' }}
+              >
+                {hasClip(e.key) ? 'Replace' : 'Use my own'}
+                <input
+                  type="file"
+                  accept="audio/*"
+                  onChange={ev => { take(e.key, ev.target.files && ev.target.files[0]); ev.target.value = ''; }}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
           ))}
+
+          {err ? (
+            <div style={{ fontSize: 11, color: BAD, marginTop: 8, lineHeight: 1.45 }}>{err}</div>
+          ) : null}
+
+          {/* Where the files go, said plainly. Somebody about to hand the app a
+              sound is entitled to know it is not being uploaded anywhere. */}
+          <div style={{ fontSize: 10.5, color: dim(0.35), marginTop: 9, lineHeight: 1.5 }}>
+            Your clips stay on this device — in this browser's own storage. They are
+            not uploaded, not shared with the room, and not part of the app. Clearing
+            the site's data removes them.
+          </div>
         </div>
       ) : null}
     </div>

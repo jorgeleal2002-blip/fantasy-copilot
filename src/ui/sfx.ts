@@ -20,7 +20,9 @@
  * physics instead of sampling it.
  */
 
-export type SfxName = 'tick' | 'coin' | 'boom' | 'horn' | 'pipe' | 'womp';
+import { readClips } from './sfx-clips';
+
+export type SfxName = 'tick' | 'coin' | 'boom' | 'horn' | 'pipe' | 'womp' | 'tung';
 
 const KEY = 'fc.sfx';
 
@@ -290,9 +292,49 @@ function womp(c: BaseAudioContext, out: AudioNode, t: number) {
   lfo.start(t); lfo.stop(t + 0.95);
 }
 
+/**
+ * Three hits on a wooden drum. Tung, tung, tung.
+ *
+ * Of the sounds that get asked for by name, this is the one that is physics
+ * rather than a performance: a struck piece of wood, which is a short pitched
+ * thump with a knock of filtered noise on the front and almost no sustain. The
+ * third lands lower and rings longer, the way the last of three does.
+ *
+ * The ones that are a voice singing, or a song, are not here and will not be —
+ * see sfx-clips.ts for the way to have those.
+ */
+function tung(c: BaseAudioContext, out: AudioNode, t: number) {
+  const hit = (at: number, f: number, v: number, d: number) => {
+    const o = c.createOscillator();
+    o.type = 'sine';
+    // The pitch drops into the note instead of starting on it. A drum skin is
+    // tightest at the moment it is struck; hold the note flat and it is a bell.
+    o.frequency.setValueAtTime(f * 1.7, at);
+    o.frequency.exponentialRampToValueAtTime(f, at + 0.045);
+    const g = c.createGain();
+    shape(g, at, v, 0.004, d);
+    o.connect(g); g.connect(out);
+    o.start(at); o.stop(at + d + 0.05);
+
+    const n = noise(c);
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 1150;
+    bp.Q.value = 1.2;
+    const ng = c.createGain();
+    ng.gain.setValueAtTime(v * 0.45, at);
+    ng.gain.exponentialRampToValueAtTime(NEAR_ZERO, at + 0.035);
+    n.connect(bp); bp.connect(ng); ng.connect(out);
+    n.start(at); n.stop(at + 0.05);
+  };
+  hit(t, 152, 0.5, 0.2);
+  hit(t + 0.17, 152, 0.44, 0.2);
+  hit(t + 0.34, 118, 0.55, 0.45);
+}
+
 type Voice = (c: BaseAudioContext, out: AudioNode, t: number) => void;
 
-const VOICES: Record<SfxName, Voice> = { tick, coin, boom, horn, pipe, womp };
+const VOICES: Record<SfxName, Voice> = { tick, coin, boom, horn, pipe, womp, tung };
 
 /**
  * Draw one sound into any context at any time.
@@ -319,6 +361,45 @@ export function renderSfx(name: SfxName, c: BaseAudioContext, out: AudioNode, t:
 const FLOOR_MS = 90;
 let lastAt = 0;
 
+/**
+ * Your own clips, decoded and ready.
+ *
+ * Decoded ONCE and held. A pick lands every 420ms and decoding an mp3 takes
+ * longer than that on a phone, so decoding at play time would put the sound
+ * somewhere after the pick it belongs to — and the second pick would decode it
+ * all over again. Loaded when the room opens, which is a screen away from the
+ * first sound it will need.
+ */
+let clips: Partial<Record<SfxName, AudioBuffer>> = {};
+let loading: Promise<void> | null = null;
+
+export function loadSfxClips(): Promise<void> {
+  if (loading) return loading;
+  loading = readClips().then(found => {
+    const a = audio();
+    if (!a) return undefined;
+    return Promise.all(Object.keys(found).map(k =>
+      found[k].arrayBuffer()
+        .then(buf => a.c.decodeAudioData(buf))
+        .then(dec => { clips[k as SfxName] = dec; })
+        // A file the browser cannot decode falls back to the synthesised voice
+        // rather than to silence, which would look exactly like a broken app.
+        .catch(() => undefined)))
+      .then(() => undefined);
+  }).catch(() => undefined);
+  return loading;
+}
+
+/** After a clip is added or removed, so the change is audible now rather than
+ *  at the next launch. */
+export function reloadSfxClips(): Promise<void> {
+  clips = {};
+  loading = null;
+  return loadSfxClips();
+}
+
+export const hasClip = (name: SfxName): boolean => !!clips[name];
+
 export function playSfx(name: SfxName): void {
   if (!sfxOn()) return;
   const now = Date.now();
@@ -327,6 +408,14 @@ export function playSfx(name: SfxName): void {
   if (!a) return;
   lastAt = now;
   try {
+    const own = clips[name];
+    if (own) {
+      const src = a.c.createBufferSource();
+      src.buffer = own;
+      src.connect(a.out);
+      src.start();
+      return;
+    }
     VOICES[name](a.c, a.out, a.c.currentTime);
   } catch {
     /* a context that died with the tab. The room does not stop for it. */

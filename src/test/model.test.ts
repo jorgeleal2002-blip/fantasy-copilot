@@ -1556,3 +1556,35 @@ describe('what "usage" means on a roster row', () => {
     expect(of('QB').tgt).toBe(null);
   });
 });
+
+describe('a run on a position', () => {
+  const at = (pos: string, over: Partial<MockPick> = {}): MockPick => ({
+    overall: 5, round: 1, slot: 5, label: '1.05', team: 'Someone',
+    mine: false, boardAt: 2,
+    player: { id: 'p' + Math.random(), name: 'X', pos: pos as 'RB', team: 'MIA', age: 24, rank: 1, fit: 60 },
+    ...over,
+  });
+
+  it('sounds on the third of a kind, not the second', () => {
+    expect(sfxFor(at('RB'), [], [at('RB')])).toBe('tick');
+    expect(sfxFor(at('RB'), [], [at('RB'), at('RB')])).toBe('tung');
+  });
+
+  it('and only when they are actually the same position', () => {
+    expect(sfxFor(at('RB'), [], [at('RB'), at('WR')])).toBe('tick');
+    expect(sfxFor(at('WR'), [], [at('RB'), at('RB')])).toBe('tick');
+  });
+
+  it('reads the run off the picks BEFORE it, so it cannot fire on an empty board', () => {
+    expect(sfxFor(at('RB'), [], [])).toBe('tick');
+  });
+
+  /* Everything above it still wins. A run you are part of is your pick, and a
+   * run that ends on a reach is a reach — the louder fact is the one to say. */
+  it('gives way to everything that outranks it', () => {
+    const three = [at('RB'), at('RB')];
+    expect(sfxFor(at('RB', { mine: true }), [], three)).toBe('coin');
+    expect(sfxFor(at('RB', { boardAt: 40 }), [], three)).toBe('boom');
+    expect(sfxFor(at('K'), [], [at('K'), at('K')])).toBe('pipe');
+  });
+});

@@ -6,7 +6,7 @@ import { sfxFor } from '../model/sfx-map';
 import type { Pos } from '../api/types';
 import type { MockOption, MockPick, MockState, Model } from '../model/types';
 import type { App } from '../state/useApp';
-import { playSfx } from '../ui/sfx';
+import { loadSfxClips, playSfx } from '../ui/sfx';
 import { dim, ellipsis, fitColor } from '../ui/styles';
 
 /** How long each bot pick sits on screen before the next one lands. */
@@ -74,6 +74,11 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
    * the room can tell the difference between a pick and a robbery. `options`
    * only exists while it is your turn, and the moment worth reacting to is the
    * one after that — when somebody else takes one of them. */
+  /* Decoded before the room needs them. Decoding an mp3 takes longer than the
+   * 420ms between picks, so a clip decoded at play time would arrive after the
+   * pick it belongs to. Opening the room is a screen's worth of time earlier. */
+  useEffect(() => { void loadSfxClips(); }, []);
+
   const suggested = useRef<string[]>([]);
   if (st.onClock?.mine && st.options.length) suggested.current = st.options.map(o => o.id);
 
@@ -84,7 +89,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
   useEffect(() => {
     if (!live || !shown) return;
     const pick = st.made[shown - 1];
-    if (pick) playSfx(sfxFor(pick, suggested.current));
+    if (pick) playSfx(sfxFor(pick, suggested.current, st.made.slice(0, shown - 1)));
     // `st.made` is rebuilt every render and `shown` is what actually moves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shown, live]);
