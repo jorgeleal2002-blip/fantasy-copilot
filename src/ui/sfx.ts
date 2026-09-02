@@ -4,9 +4,10 @@
  * Two kinds, and the split is deliberate.
  *
  * THE MOMENTS ARE CLIPS. Six of them, cut from files handed over for this app:
- * the shout when you take somebody, the one that says it is your turn, the one
- * for a player taken out from under you, for a reach, for a run on a position,
- * and the line that closes a finished draft. Under two seconds and around ten
+ * the two that take turns when you take somebody, the one that says it is your
+ * turn, the one for a player taken out from under you, for a reach, for a run
+ * on a position, and the closing line — which is also one of the two your own
+ * picks alternate between, because it is worth hearing more than once a draft. Under two seconds and around ten
  * kilobytes each, fetched once and decoded once, then played from memory — so
  * nothing touches the network at the moment a pick lands, which is the only
  * thing that ever made a sound arrive late.
@@ -36,14 +37,19 @@ export type SfxName = 'tick' | 'coin' | 'boom' | 'horn' | 'pipe' | 'womp' | 'tun
  * `tick` and `pipe` are deliberately absent — those are the two that fire over
  * and over, and they stay short. Everything here happens a handful of times in
  * a draft, which is what earns a second and a half.
+ *
+ * A moment can have MORE THAN ONE, and takes them in turn. Your own pick is the
+ * good thing that happens in here and it happens fifteen times: one line said
+ * fifteen times stops being a celebration somewhere around the fourth, and two
+ * taking turns is the cheapest fix there is.
  */
-const CLIPS: Partial<Record<SfxName, string>> = {
-  coin: siuUrl,          // you took somebody
-  horn: patapimUrl,      // you are on the clock
-  womp: brainrotUrl,     // they took the one you were told to take
-  boom: chimpanziniUrl,  // a reach, from well down the board
-  tung: ballerinaUrl,    // three of a position in a row
-  done: gotthisUrl,      // the board is drafted out and that is your team
+const CLIPS: Partial<Record<SfxName, string[]>> = {
+  coin: [siuUrl, gotthisUrl],  // you took somebody, alternating
+  horn: [patapimUrl],          // you are on the clock
+  womp: [brainrotUrl],         // they took the one you were told to take
+  boom: [chimpanziniUrl],      // a reach, from well down the board
+  tung: [ballerinaUrl],        // three of a position in a row
+  done: [gotthisUrl],          // the board is drafted out and that is your team
 };
 
 
@@ -145,15 +151,15 @@ let unlocked = false;
  * has touched the screen. It runs once; a clip that fails simply stays absent
  * and its synthesised voice covers for it.
  */
-const clips: Partial<Record<SfxName, AudioBuffer>> = {};
+const clips: Record<string, AudioBuffer> = {};
 let loading = false;
 
 function loadClips(c: BaseAudioContext): void {
   if (loading) return;
   loading = true;
-  (Object.keys(CLIPS) as SfxName[]).forEach(name => {
-    const url = CLIPS[name];
-    if (!url) return;
+  // A url can appear under two moments; decode it once and share the buffer.
+  const urls = Array.from(new Set(Object.values(CLIPS).flat()));
+  urls.forEach(url => {
     void fetch(url)
       .then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('http ' + r.status))))
       // The callback form as well as the promise: older WebKit rejects the
@@ -162,9 +168,25 @@ function loadClips(c: BaseAudioContext): void {
         const p = c.decodeAudioData(buf, ok, no);
         if (p && typeof p.then === 'function') void p.then(ok, no);
       }))
-      .then(b => { clips[name] = b; })
+      .then(b => { clips[url] = b; })
       .catch(() => { /* the voice it replaced still plays */ });
   });
+}
+
+/** How many times each moment has been heard, so its clips take turns. */
+const turn: Partial<Record<SfxName, number>> = {};
+
+/** The next clip for this moment, or null while none of them has decoded. */
+function nextClip(name: SfxName): AudioBuffer | null {
+  const urls = CLIPS[name];
+  if (!urls || !urls.length) return null;
+  // Only the ones that arrived are in the rotation, so a slow decode shifts
+  // nothing: it simply joins once it is ready.
+  const ready = urls.filter(u => clips[u]);
+  if (!ready.length) return null;
+  const n = turn[name] || 0;
+  turn[name] = n + 1;
+  return clips[ready[n % ready.length]];
 }
 
 export function armSfx(): void {
@@ -508,7 +530,7 @@ export function playSfx(name: SfxName): void {
   if (!a) return;
   lastAt = now;
   try {
-    const buf = clips[name];
+    const buf = nextClip(name);
     if (buf) {
       try { playing?.stop(); } catch { /* already finished */ }
       const src = a.c.createBufferSource();
