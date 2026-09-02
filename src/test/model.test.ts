@@ -1588,3 +1588,49 @@ describe('a run on a position', () => {
     expect(sfxFor(at('K'), [], [at('K'), at('K')])).toBe('pipe');
   });
 });
+
+describe('sitting down in a league with no draft order', () => {
+  /* Sleeper does not assign an order until the commissioner sets one, and a
+   * league sitting in pre-draft usually has none. The mock still has to work
+   * there — it is exactly when somebody wants to mock a draft. */
+  const noOrder = () => {
+    const b = makeBundle();
+    b.draft = { ...b.draft, draft_order: undefined, slot_to_roster_id: undefined } as typeof b.draft;
+    return buildModel({
+      data: b,
+      usage: buildUsage(makeStats(b.players), b.players),
+      market: parseMarket(makeFantasyCalc(b.players)),
+      strat: 'balanced', boardMode: 'fa', pickSel: 0,
+    });
+  };
+
+  it('gives you a turn from every seat, seat one included', () => {
+    const m = noOrder();
+    for (let seat = 1; seat <= m.teamCount; seat++) {
+      const st = m.runMock(3, undefined, seat);
+      expect(st.onClock, 'seat ' + seat + ' never came on the clock').toBeTruthy();
+      expect(st.onClock!.mine, 'seat ' + seat + ' was on the clock for somebody else').toBe(true);
+      expect(st.onClock!.slot).toBe(seat);
+    }
+  });
+
+  /* Seat one was the only one that failed, and the reason is worth keeping:
+   * the seat you sat in was compared against a number that falls back to 1
+   * when there is no order, so choosing seat one read as choosing nothing —
+   * and then ownership fell to a seat-to-roster map that does not exist. */
+  it('and seat one in particular is on the clock at 1.01', () => {
+    const st = noOrder().runMock(3, undefined, 1);
+    expect(st.onClock!.overall).toBe(1);
+    expect(st.made.length).toBe(0);
+    expect(st.done).toBe(false);
+    expect(st.options.length).toBeGreaterThan(0);
+  });
+
+  it('a league that HAS an order still answers by roster when you sit nowhere', () => {
+    // which is what honours a pick acquired in a trade, rather than the slot
+    // it originally belonged to.
+    const st = model.runMock(3);
+    expect(st.onClock).toBeTruthy();
+    expect(st.onClock!.mine).toBe(true);
+  });
+});

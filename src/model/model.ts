@@ -1148,7 +1148,35 @@ export function buildModel(input: ModelInput): Model {
     // bot, exactly like joining a room from a slot you did not earn.
     const mySeat = mySlot || slotOfRoster[myRow.roster_id] || 1;
     const seat = fromSlot || mySeat;
-    const moved = seat !== mySeat;
+
+    /**
+     * Whether the SEAT decides whose pick it is, rather than the roster.
+     *
+     * It used to be `seat !== mySeat` — inferred by comparing two numbers, one
+     * of which has a silent fallback to 1 when the league has no draft order.
+     * So in a league that has not been ordered yet, sitting in seat one was
+     * indistinguishable from not sitting anywhere: the comparison said you had
+     * not moved, ownership fell back to asking which roster owns the seat, and
+     * with no order there is no seat-to-roster map, so the answer was "nobody"
+     * for every seat in the draft. No pick was ever yours. The room ran the
+     * whole board without stopping once and announced "Mock complete", and
+     * only seat one did it, which is a hard thing to believe from the outside.
+     *
+     * Two things make it the seat's answer, and neither is a guess:
+     *
+     *  · You sat down somewhere. Choosing a seat IS the statement that its
+     *    picks are yours — that is what the board draws and what the room
+     *    tells everybody else. Whether the number happens to match the one you
+     *    were assigned in real life has nothing to do with it.
+     *  · There is no order to consult. Asking who owns a seat when nothing
+     *    maps seats to rosters cannot return anything but "nobody".
+     *
+     * With neither — you opened a mock, sat nowhere, in a league that HAS an
+     * order — it still answers by roster, which is what honours a pick you
+     * acquired in a trade rather than the slot it originally belonged to.
+     */
+    const ordered = Object.keys(slotToRoster).length > 0;
+    const moved = fromSlot != null || !ordered;
 
     // Deterministic per seed, so the bots do not reshuffle every time you take
     // somebody — only the picks after yours can move.
