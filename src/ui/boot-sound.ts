@@ -88,7 +88,7 @@ const EVENTS: (keyof WindowEventMap)[] = [
  * question is answered by looking rather than by guessing again.
  */
 const LOG = 'fc.sound.last';
-export type SoundOutcome = 'played' | 'waiting' | 'blocked' | 'nofile';
+export type SoundOutcome = 'played' | 'waiting' | 'blocked' | 'nofile' | 'off';
 
 function note(outcome: SoundOutcome): void {
   try {
@@ -112,7 +112,12 @@ const why = (e: DOMException | undefined): SoundOutcome =>
 
 /** Try it, and if the browser says no, wait for the first touch and try then. */
 function start(): void {
-  if (starting || !soundOn() || typeof Audio === 'undefined') return;
+  if (starting || typeof Audio === 'undefined') return;
+  /* Recorded rather than returned silently. The switch being off and the
+   * sound being broken produce the same silence, and the test button ignores
+   * the switch — so "it stays quiet on open but the test plays" was the exact
+   * shape of a setting nobody could see. Now the app says which it is. */
+  if (!soundOn()) { note('off'); return; }
   starting = true;
   setTimeout(() => { starting = false; }, 0);
   askToBeHeard();
@@ -128,10 +133,17 @@ function start(): void {
     void el.play().then(() => note('played')).catch((e: DOMException) => note(why(e)));
   };
 
+  /* Armed BEFORE the attempt, not after it fails.
+   *
+   * `play()` rejects asynchronously, so listening only in the catch leaves a
+   * gap: a launch where the first touch lands inside that gap is a touch the
+   * sound never hears about, and then nothing wakes it for the rest of the
+   * session. Arming first costs nothing — a successful play disarms it. */
+  EVENTS.forEach(ev => window.addEventListener(ev, onGesture, { once: true, passive: true }));
+
   void el.play().then(() => { disarm(); note('played'); }).catch((e: DOMException) => {
     // Held back, not lost: the first touch of any kind plays it.
     note(e?.name === 'NotAllowedError' ? 'waiting' : why(e));
-    EVENTS.forEach(ev => window.addEventListener(ev, onGesture, { once: true, passive: true }));
   });
 }
 

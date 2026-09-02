@@ -387,11 +387,15 @@ function SoundToggle() {
         onClick={() => {
           setTried('…');
           void testSound().then(r => setTried(
-            r === 'ok'
-              ? 'Playing. If you hear nothing, check the side switch and the volume.'
-              : r === 'blocked'
+            r !== 'ok'
+              ? (r === 'blocked'
                 ? 'The browser held it back. Reload and tap anywhere.'
-                : 'The sound file did not load. Close the app fully and reopen it.',
+                : 'The sound file did not load. Close the app fully and reopen it.')
+              // The test ignores the switch, so it plays while the app stays
+              // quiet on open — which is a confusing pair unless it is said.
+              : on
+                ? 'Playing. If you hear nothing, check the side switch and the volume.'
+                : 'Playing — but "Sound on open" is Off, so it stays quiet at launch.',
           ));
         }}
         style={{ flex: 'none', borderRadius: 10, minHeight: 34, fontSize: 12 }}
@@ -412,8 +416,9 @@ function SoundToggle() {
         if (!l) return 'Last attempt: none recorded yet.';
         const text = l.outcome === 'played' ? 'it played'
           : l.outcome === 'waiting' ? 'held back, waiting for a tap'
-            : l.outcome === 'blocked' ? 'the browser refused it'
-              : 'the sound file did not load';
+            : l.outcome === 'off' ? 'skipped, the switch above is off'
+              : l.outcome === 'blocked' ? 'the browser refused it'
+                : 'the sound file did not load';
         return 'Last attempt: ' + text + '.';
       })()}
     </div>
