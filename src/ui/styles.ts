@@ -19,22 +19,34 @@ export function fitStyle(fit: number): CSSProperties {
 
 export type SegSize = 'md' | 'sm';
 
-/** Outlined segmented option — the system's one selection control. */
+/**
+ * A category picker, drawn as tabs rather than as a row of outlined pills.
+ *
+ * Five outlined chips side by side are five boxes competing with the card they
+ * sit on; underlining the chosen one says the same thing with one mark and
+ * leaves the row quiet. It also matches how the app this palette came from
+ * does it, which is the point of the exercise.
+ */
 export function seg(active: boolean, size: SegSize = 'md'): CSSProperties {
   return {
     flex: 1,
     textAlign: 'center',
-    padding: size === 'sm' ? '5px 3px' : '6px 4px',
-    borderRadius: size === 'sm' ? 8 : 9,
+    padding: size === 'sm' ? '6px 3px 5px' : '7px 4px 6px',
     fontSize: size === 'sm' ? 11 : 11.5,
     lineHeight: 1.3,
     // "Free agents" broke across two lines and made the row twice as tall as
     // its neighbour; a two-word option is still one option.
     whiteSpace: 'nowrap',
     cursor: 'pointer',
-    border: '1px solid ' + (active ? ACCENT : 'var(--color-divider)'),
-    color: active ? ACCENT : dim(0.6),
-    background: active ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'transparent',
+    border: 0,
+    // The underline is the whole of the selected state, so it is drawn on the
+    // unselected one too — transparent — or the row jumps 2px as you tap along.
+    borderBottom: '2px solid ' + (active ? ACCENT : 'transparent'),
+    borderRadius: 0,
+    fontWeight: active ? 600 : 400,
+    letterSpacing: active ? '.01em' : 0,
+    color: active ? ACCENT : dim(0.45),
+    background: 'transparent',
     userSelect: 'none',
   };
 }

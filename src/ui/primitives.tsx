@@ -32,7 +32,11 @@ export function Segmented<T extends string>({
   size?: SegSize;
 }) {
   return (
-    <div style={{ display: 'flex', gap: size === 'sm' ? 5 : 6 }}>
+    <div style={{
+      display: 'flex',
+      gap: size === 'sm' ? 5 : 6,
+      borderBottom: '1px solid var(--color-divider)',
+    }}>
       {options.map(o => (
         <button
           key={o.key}

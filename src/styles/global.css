@@ -385,9 +385,14 @@ button { font-family: inherit; }
   flex: 0 1 auto;
   max-height: 52vh;
   min-height: 110px;
-  overflow: auto;
+  /* Hidden, not `auto`: the board is driven, never dragged.
+     A grid this size scrolls in both directions at once, so a thumb aimed at
+     the dock underneath took the board sideways instead, and the draft you were
+     following ended up somewhere off screen with nothing to say it had moved.
+     `hidden` still scrolls programmatically — it only stops the hands — so the
+     follow keeps working and is now the ONLY thing that moves it. */
+  overflow: hidden;
   padding: 8px 0 12px;
-  -webkit-overflow-scrolling: touch;
 }
 .bd {
   display: grid;
