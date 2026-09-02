@@ -71,7 +71,44 @@ let starting = false;
 let leftAt = 0;
 let watching = false;
 
-const EVENTS: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart'];
+/* Broad on purpose. `touchstart` fires when a finger lands, which is also how
+ * a scroll begins, and a scroll does not always count as the activation a
+ * browser wants before it will make noise. `touchend` and `click` are the ones
+ * that always do, so all of them are listened for and the first to arrive
+ * wins. */
+const EVENTS: (keyof WindowEventMap)[] = [
+  'pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown',
+];
+
+/**
+ * What happened last time, kept so it can be read back.
+ *
+ * Two diagnoses of this have now been wrong, both made by reasoning from the
+ * outside. The app records the outcome of every attempt instead, so the next
+ * question is answered by looking rather than by guessing again.
+ */
+const LOG = 'fc.sound.last';
+export type SoundOutcome = 'played' | 'waiting' | 'blocked' | 'nofile';
+
+function note(outcome: SoundOutcome): void {
+  try {
+    localStorage.setItem(LOG, JSON.stringify({ outcome, at: Date.now() }));
+  } catch {
+    /* private mode — the diagnosis just is not kept */
+  }
+}
+
+export function lastSound(): { outcome: SoundOutcome; at: number } | null {
+  try {
+    const raw = localStorage.getItem(LOG);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+const why = (e: DOMException | undefined): SoundOutcome =>
+  (e?.name === 'NotAllowedError' ? 'blocked' : 'nofile');
 
 /** Try it, and if the browser says no, wait for the first touch and try then. */
 function start(): void {
@@ -88,11 +125,13 @@ function start(): void {
   const disarm = () => EVENTS.forEach(e => window.removeEventListener(e, onGesture));
   const onGesture = () => {
     disarm();
-    void el.play().catch(() => {});
+    void el.play().then(() => note('played')).catch((e: DOMException) => note(why(e)));
   };
 
-  void el.play().then(disarm).catch(() => {
-    EVENTS.forEach(e => window.addEventListener(e, onGesture, { once: true, passive: true }));
+  void el.play().then(() => { disarm(); note('played'); }).catch((e: DOMException) => {
+    // Held back, not lost: the first touch of any kind plays it.
+    note(e?.name === 'NotAllowedError' ? 'waiting' : why(e));
+    EVENTS.forEach(ev => window.addEventListener(ev, onGesture, { once: true, passive: true }));
   });
 }
 
@@ -141,7 +180,8 @@ export function testSound(): Promise<SoundResult> {
   const el = playing ?? new Audio(bootUrl);
   playing = el;
   try { el.currentTime = 0; } catch { /* nothing loaded yet */ }
-  return el.play().then(() => 'ok' as const).catch((e: DOMException) => {
+  return el.play().then(() => { note('played'); return 'ok' as const; }).catch((e: DOMException) => {
+    note(why(e));
     /* The reason matters, and collapsing every rejection into "blocked" sent
      * me hunting the wrong fault for an hour. A browser refusing autoplay
      * throws NotAllowedError; a file that never arrived throws

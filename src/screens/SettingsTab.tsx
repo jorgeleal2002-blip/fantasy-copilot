@@ -1,5 +1,5 @@
 import { liveEnabled } from '../api/live';
-import { setSoundOn, soundOn, stopBootSound, testSound } from '../ui/boot-sound';
+import { lastSound, setSoundOn, soundOn, stopBootSound, testSound } from '../ui/boot-sound';
 import { ACCENT, BAD, GOOD, METRIC_LABEL, MID, STRATS, StratKey } from '../model/constants';
 import { clamp } from '../model/math';
 import type { Model } from '../model/types';
@@ -401,6 +401,21 @@ function SoundToggle() {
       {tried ? (
         <div style={{ fontSize: 11.5, color: dim(0.5), minWidth: 0 }}>{tried}</div>
       ) : null}
+    </div>
+
+    {/* What happened the last time it tried, on its own, without anybody
+        watching. This is the line that ends an argument about why it is
+        silent — it is the app's own account rather than a guess. */}
+    <div style={{ fontSize: 11, color: dim(0.38), marginTop: 7 }}>
+      {(() => {
+        const l = lastSound();
+        if (!l) return 'Last attempt: none recorded yet.';
+        const text = l.outcome === 'played' ? 'it played'
+          : l.outcome === 'waiting' ? 'held back, waiting for a tap'
+            : l.outcome === 'blocked' ? 'the browser refused it'
+              : 'the sound file did not load';
+        return 'Last attempt: ' + text + '.';
+      })()}
     </div>
     </div>
   );
