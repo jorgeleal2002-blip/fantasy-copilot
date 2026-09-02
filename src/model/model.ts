@@ -1239,7 +1239,7 @@ export function buildModel(input: ModelInput): Model {
             made,
             onClock: { overall, round, slot, label, mine: false, who: teamName(owner?.owner_id) },
             options: [],
-            board: live.slice(0, 120).map((x, i) => rate(x, { goes: i + 1 })),
+            board: live.slice(0, 120).map((x, i) => rate(x, { goes: overall + i })),
             myTeam,
             shape,
             done: false,
@@ -1281,7 +1281,14 @@ export function buildModel(input: ModelInput): Model {
           const byValue = pool.slice().sort((a, b) => valueOf(b) - valueOf(a));
           const holes = POS.filter(p => shortAt(rid, p) > 0);
 
-          const where = (x: { id: string }) => live.findIndex(y => y.id === x.id) + 1;
+          /* Where he comes off the board, as a pick of this draft.
+           *
+           * `live` is what SURVIVES, so a position in it is not a pick number:
+           * the best man left is first in that list at every moment of the
+           * draft, and printed raw he read "1.01" in the fourth round. With
+           * `overall - 1` picks already spent, the player sitting i-th in the
+           * queue goes at `overall + i`. */
+          const where = (x: { id: string }) => overall + live.findIndex(y => y.id === x.id);
           const options: MockOption[] = [];
           const seen: Record<string, 1> = {};
           const add = (
@@ -1354,7 +1361,7 @@ export function buildModel(input: ModelInput): Model {
             onClock: { overall, round, slot, label, mine: true, who: 'you' },
             options,
             // The whole board, rated — a mock room lets you take anybody.
-            board: live.slice(0, 120).map((x, i) => rate(x, { goes: i + 1 })),
+            board: live.slice(0, 120).map((x, i) => rate(x, { goes: overall + i })),
             myTeam,
             shape,
             done: false,

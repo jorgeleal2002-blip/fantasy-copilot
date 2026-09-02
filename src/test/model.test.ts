@@ -1320,3 +1320,34 @@ describe('a room with other people in it', () => {
     expect(full).toBeGreaterThan(0);
   });
 });
+
+describe('where the mock says a player goes', () => {
+  it('counts from the pick on the clock, not from the top of the queue', () => {
+    // `live` is what survives, so the best man left is first in it at every
+    // moment of the draft. Printed raw that reads "1.01" in the fourth round.
+    let choices: Record<number, string> = {};
+    let st = model.runMock(11);
+    const first = st.onClock!.overall;
+    expect(st.board[0].goes).toBe(first);
+
+    // take a few, then look again
+    let guard = 0;
+    while (st.onClock && guard++ < 3) {
+      choices = { ...choices, [st.onClock.overall]: st.board[0].id };
+      st = model.runMock(11, choices);
+    }
+    if (!st.onClock) return;
+    expect(st.onClock.overall).toBeGreaterThan(first);
+    // the head of the queue now goes at THIS pick, not at 1
+    expect(st.board[0].goes).toBe(st.onClock.overall);
+    expect(st.board[0].goes).toBeGreaterThan(1);
+    // and the queue runs forward from there
+    expect(st.board[1].goes).toBe(st.onClock.overall + 1);
+    // the suggestions agree with the board
+    if (st.options.length) {
+      const top = st.options[0];
+      const seat = st.board.findIndex(o => o.id === top.id);
+      if (seat >= 0) expect(top.goes).toBe(st.onClock.overall + seat);
+    }
+  });
+});

@@ -23,10 +23,21 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
   // left, which is how a finished draft kept recommending a pick that had
   // already been used and counting "0 selections before yours".
   const done = m.draft?.status === 'complete' || m.picks.length >= m.rounds * m.teamCount;
-  /** Where a player sits. Once the draft is over "goes 2.03" is a claim about
-   *  a draft nobody is running, so it becomes his place in the free agents. */
+  /**
+   * Where a player sits.
+   *
+   * `goes` counts among who is STILL AVAILABLE, which is his place in the free
+   * agents once the draft is over — but is not a pick number while one is
+   * running. The best man left is first in that queue at every moment, so
+   * printed raw he read "1.01" in the fourth round. With `nextOverall - 1`
+   * picks already spent, the player first in the queue goes at `nextOverall`.
+   */
+  /** That queue position as an overall pick of this draft. */
+  const asPick = (goes: number | null) => (goes ? m.nextOverall - 1 + goes : null);
   const where = (goes: number | null) => (
-    done ? (goes ? 'FA #' + goes : 'unranked') : (pickLabel(goes, m.teamCount) || 'unranked')
+    done
+      ? (goes ? 'FA #' + goes : 'unranked')
+      : (pickLabel(asPick(goes), m.teamCount) || 'unranked')
   );
   const filtered = app.filter === 'ALL' ? m.scored : m.scored.filter(p => p.pos === app.filter);
   const top = filtered[0] || m.scored[0];
@@ -113,7 +124,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
             </div>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-            {top ? reasons(top.m, pickLabel(top.goes, m.teamCount), top.pos, top.age).map(r => (
+            {top ? reasons(top.m, pickLabel(asPick(top.goes), m.teamCount), top.pos, top.age).map(r => (
               <span key={r} style={{
                 fontSize: 11, padding: '4px 9px', borderRadius: 7,
                 background: 'rgba(145,132,217,.18)', color: '#c9c0f0',
