@@ -126,9 +126,26 @@ export async function readRoom(id: string): Promise<Room | null> {
   return { ...r, seats: r.seats || {}, picks: r.picks || {} };
 }
 
-/** Sit down. A PATCH so two people claiming different seats never collide. */
-export async function claimSeat(id: string, slot: number, who: { id: string; name: string }) {
-  await send(LIVE_URL + '/rooms/' + encodeURIComponent(id) + '/seats.json', 'PATCH', { [slot]: who });
+/**
+ * Sit down — and stand up from wherever you were.
+ *
+ * A PATCH, so two people claiming different seats never collide. `release` is
+ * every seat you are already in, cleared in the same write: without it, tapping
+ * a second seat left you occupying both, and a seat with somebody in it is a
+ * seat the draft WAITS at. Claim four while you are looking around and the room
+ * stops four times over, each time for you, and no bot ever picks. Sitting down
+ * means sitting in one chair.
+ */
+export async function claimSeat(
+  id: string,
+  slot: number,
+  who: { id: string; name: string },
+  release: number[] = [],
+) {
+  const patch: Record<string, unknown> = { [slot]: who };
+  // null is how this database deletes a key inside a merge.
+  release.forEach(n => { if (n !== slot) patch[n] = null; });
+  await send(LIVE_URL + '/rooms/' + encodeURIComponent(id) + '/seats.json', 'PATCH', patch);
 }
 
 /**

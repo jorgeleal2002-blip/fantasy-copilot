@@ -53,6 +53,23 @@ describe('what the client sends', () => {
     expect(calls[0].body).toEqual({ 4: { id: 'u2', name: 'Konoha' } });
   });
 
+  /* Sitting down means sitting in ONE chair. Without the release, tapping a
+   * second seat left the room holding you in both — and a seat with somebody
+   * in it is a seat the draft waits at, so a person looking around a room
+   * before it started could stop the bots from ever taking a turn. */
+  it('vacates the seats you were already in, in the same write', async () => {
+    const live = await load();
+    await live.claimSeat('ABC123', 8, { id: 'u2', name: 'Konoha' }, [1, 3, 5]);
+    expect(calls[0].method).toBe('PATCH');
+    expect(calls[0].body).toEqual({ 8: { id: 'u2', name: 'Konoha' }, 1: null, 3: null, 5: null });
+  });
+
+  it('does not vacate the seat it is claiming', async () => {
+    const live = await load();
+    await live.claimSeat('ABC123', 4, { id: 'u2', name: 'Konoha' }, [4]);
+    expect(calls[0].body).toEqual({ 4: { id: 'u2', name: 'Konoha' } });
+  });
+
   it('addresses a pick by its overall number, so a resend is idempotent', async () => {
     const live = await load();
     await live.pushPick('ABC123', 17, 'p99');

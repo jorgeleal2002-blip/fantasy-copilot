@@ -389,11 +389,15 @@ export function useApp() {
   const takeSeat = useCallback(async (seat: number) => {
     if (!roomId || !me) return;
     try {
-      await claimSeat(roomId, seat, { id: me.user_id, name: me.display_name || username });
+      // Every seat this account is already in, vacated in the same write.
+      const held = Object.keys(room?.seats || {})
+        .map(Number)
+        .filter(n => n && room?.seats[n]?.id === me.user_id);
+      await claimSeat(roomId, seat, { id: me.user_id, name: me.display_name || username }, held);
     } catch (e) {
       setRoomError(liveReason(e, 'take that seat'));
     }
-  }, [roomId, me, username]);
+  }, [roomId, me, username, room]);
 
   const leaveRoom = useCallback(() => {
     setRoomId(null);
@@ -411,11 +415,26 @@ export function useApp() {
     return out;
   }, [room]);
 
-  /** Seats with a person in them. The mock waits on these instead of botting. */
-  const humanSeats = useMemo(
-    () => (room ? Object.keys(room.seats || {}).map(Number).filter(Boolean) : null),
-    [room],
-  );
+  /**
+   * Seats with a PERSON in them. The mock waits on these instead of botting.
+   *
+   * At most one of them is you, however many your id is sitting in. A room that
+   * already has you in four seats — from before claiming released the last one
+   * — would otherwise stop four times over, every stop waiting for you, and the
+   * bots would never take a turn at all.
+   */
+  const humanSeats = useMemo(() => {
+    if (!room) return null;
+    const seats = room.seats || {};
+    const mine = me?.user_id;
+    const out = Object.keys(seats)
+      .map(Number)
+      .filter(n => n && seats[n] && seats[n].id !== mine);
+    const own = mine
+      ? Object.keys(seats).map(Number).filter(n => n && seats[n]?.id === mine).sort((a, b) => a - b)[0]
+      : 0;
+    return own ? out.concat([own]) : out;
+  }, [room, me]);
 
   /** Where YOU are sitting in the room, which may not be your league seat. */
   const mySeat = useMemo(() => {
