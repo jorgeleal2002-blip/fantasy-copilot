@@ -404,6 +404,54 @@ export function buildModel(input: ModelInput): Model {
   };
   const needScore = needFrom(countPos(myIds));
 
+  /**
+   * Replacement level: what the league would still be starting at each position
+   * if you never spent a pick there.
+   *
+   * With ten teams starting one quarterback, the eleventh-best quarterback alive
+   * is free — somebody is going to have him and he is going to play. So the only
+   * part of the best quarterback you actually gain is the gap between the two,
+   * and at a position ten deep that gap is small. The same ten teams start
+   * thirty receivers, so the thirty-first is a long way below the best one and
+   * the gap is large. That difference is the whole reason a first round is
+   * backs and receivers, and the model could not see it.
+   *
+   * `slots` already counts the flex, so a league that starts more receivers
+   * pushes its own replacement line deeper without being told.
+   */
+  const replValue = {} as Record<Pos, number>;
+  let surplusMax = 0.01;
+  {
+    const byPos: Partial<Record<Pos, number[]>> = {};
+    for (const pid in players) {
+      const pl = players[pid];
+      if (!pl || POS.indexOf(pl.position as Pos) < 0 || !pl.team) continue;
+      // Only players anyone would consider starting. The market's own universe
+      // is that set; where it is unreachable, the top of Sleeper's board is.
+      const known = mk ? !!mk.players[pid] : (pl.search_rank || 9999) <= 500;
+      if (!known) continue;
+      (byPos[pl.position as Pos] = byPos[pl.position as Pos] || []).push(talentQ(pl, pid));
+    }
+    POS.forEach(p => {
+      const vs = (byPos[p] || []).sort((a, b) => b - a);
+      const depth = Math.max(1, Math.round(teamCount * (slots[p] || 1)));
+      replValue[p] = vs.length ? (vs[depth] ?? vs[vs.length - 1]) : 0;
+      if (vs.length) surplusMax = Math.max(surplusMax, vs[0] - replValue[p]);
+    });
+  }
+  /**
+   * That gap, 0..1, against the biggest one any position offers.
+   *
+   * Scaled the same way talent is — a decade of value across a third of the
+   * scale — because the quantity is the same kind of thing and the eye already
+   * reads the board in that shape. Measured against the best gap ON THE WHOLE
+   * BOARD rather than the best at his own position, which would have made the
+   * top quarterback and the top back both a perfect 1 and thrown away the
+   * comparison this exists to make.
+   */
+  const vorOf = (pl: SleeperPlayer, pid: string) =>
+    talentScale(Math.max(0, talentQ(pl, pid) - (replValue[pl.position as Pos] ?? 0)), surplusMax);
+
   // ── Your roster.
   const starterIds = myRow.starters || [];
   const myPlayers: RosterPlayer[] = myIds.map(id => {
@@ -585,6 +633,7 @@ export function buildModel(input: ModelInput): Model {
     const s = scorePlayer(p, needScore, {
       idx: i + 1, pick: pickForValue, now: nextOverall, dv: talentQ(p, x.id), dvMax,
       stack: stackFor(p), use: uFor(x.id), redraft: !isDynasty, rank: rankOf(x.id, p),
+      vor: vorOf(p, x.id),
     }, w);
     return {
       id: x.id, name: playerName(p), pos: p.position as DraftPos, team: p.team,
@@ -600,7 +649,7 @@ export function buildModel(input: ModelInput): Model {
   myPlayers.forEach(p => {
     const s = scorePlayer(p.raw, {}, {
       dv: talentQ(p.raw, p.id), dvMax, stack: stackFor(p.raw, p.id), use: uFor(p.id),
-      redraft: !isDynasty, rank: rankOf(p.id, p.raw),
+      redraft: !isDynasty, rank: rankOf(p.id, p.raw), vor: vorOf(p.raw, p.id),
     }, wOwn);
     p.use = uFor(p.id);
     p.m = s.m;
@@ -669,6 +718,7 @@ export function buildModel(input: ModelInput): Model {
     const sum = starters.reduce((a, x) => a + scorePlayer(x.raw, {}, {
       dv: talentQ(x.raw, x.p.id), dvMax, stack: stackIn(list, x.raw, x.p.id),
       use: uFor(x.p.id), redraft: !isDynasty, rank: rankOf(x.p.id, x.raw),
+      vor: vorOf(x.raw, x.p.id),
     }, wOwn).fit, 0);
     return sum / starters.length;
   };
@@ -814,11 +864,13 @@ export function buildModel(input: ModelInput): Model {
       const neutral = scorePlayer(p.raw, {}, {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(list, p.raw, p.id),
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
+        vor: vorOf(p.raw, p.id),
       }, wOwn);
       if (!Number.isFinite(neutral.fit)) return;
       const forMe = scorePlayer(p.raw, needScore, {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(myPlayers, p.raw, p.id),
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
+        vor: vorOf(p.raw, p.id),
       }, w);
       const el = talentScale(talentQ(p.raw, p.id), dvMax || 1);
       const cur = ageCurve(p.pos, p.age, el) || 0.5;
@@ -827,6 +879,9 @@ export function buildModel(input: ModelInput): Model {
       const ahead = scorePlayer(raw2, {}, {
         dv: talentQ(p.raw, p.id) * keep, dvMax, stack: stackIn(list, p.raw, p.id),
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
+        // How deep his position runs in two years is not knowable, so this is
+        // today's line — the age discount above already prices the decline.
+        vor: vorOf(p.raw, p.id),
       }, wOwn);
       allFits.push({
         id: p.id, name: p.name, pos: p.pos, team: p.team, age: p.age,
@@ -1275,7 +1330,7 @@ export function buildModel(input: ModelInput): Model {
           .map(o => ({ id: o.id, pos: o.pos as Pos, team: o.team || 'FA' })));
       const sc = scorePlayer(x.raw, needFrom(shape), {
         dv: talentQ(x.raw, x.id), dvMax, stack: stackIn(mineNow, x.raw), use: uFor(x.id),
-        redraft: !isDynasty,
+        redraft: !isDynasty, vor: vorOf(x.raw, x.id),
       }, w);
       return { ...row, fit: sc.fit, ...extra };
     };
@@ -1349,7 +1404,6 @@ export function buildModel(input: ModelInput): Model {
            * but stopped being true once veterans could be taken. */
           const valueOf = (x: { id: string; q: number }) => marketValue(x.id)?.pts ?? x.q;
           const byValue = pool.slice().sort((a, b) => valueOf(b) - valueOf(a));
-          const holes = POS.filter(p => shortAt(rid, p) > 0);
 
           /* Where he comes off the board, as a pick of this draft.
            *
@@ -1361,12 +1415,36 @@ export function buildModel(input: ModelInput): Model {
           const where = (x: { id: string }) => overall + live.findIndex(y => y.id === x.id);
           const options: MockOption[] = [];
           const seen: Record<string, 1> = {};
+
+          /**
+           * How many more of each position you could still put in a lineup.
+           *
+           * Three cards go on the screen and you take ONE of them, so two of
+           * them offering the same one-slot position is one wasted card every
+           * time. In a league that starts a single quarterback the room would
+           * put up two: the need lens nominated the best one and the ceiling
+           * lens, which only ever asked who had the highest ceiling among the
+           * valuable, nominated the next. Both were true statements and only
+           * one of them could ever be taken.
+           *
+           * So a card claims the slot it would fill. Once a position has no
+           * room left, a second card there is skipped and the lens moves down
+           * to somebody you could actually start — but only when the first card
+           * already covers it. A position with three open slots still gets
+           * three receivers, which is the right answer there.
+           */
+          const room = {} as Record<Pos, number>;
+          POS.forEach(p => { room[p] = shortAt(rid, p); });
+          const blocked = (x: { pos: Pos } | undefined) =>
+            !!x && room[x.pos] <= 0 && options.some(o => o.pos === x.pos);
+
           const add = (
             x: { id: string; raw: SleeperPlayer; pos: Pos } | undefined,
             extra: Partial<MockOption>,
           ) => {
             if (!x || seen[x.id]) return;
             seen[x.id] = 1;
+            room[x.pos] = (room[x.pos] || 0) - 1;
             options.push(rate(x, { goes: where(x), ...extra }));
           };
 
@@ -1381,9 +1459,13 @@ export function buildModel(input: ModelInput): Model {
           });
 
           // 2. A position you cannot field yet — best Fit among those, not
-          //    merely the most expensive name that happens to play there.
-          if (holes.length) {
-            const fill = byFit.find(x => holes.indexOf(x.pos) >= 0 && !seen[x.id]);
+          //    merely the most expensive name that happens to play there. The
+          //    holes are read AFTER the card above, which may have just filled
+          //    the last one: in a one-quarterback league the best fit and the
+          //    hole it fills were both quarterbacks, and the room offered two.
+          const openNow = POS.filter(p => room[p] > 0);
+          if (openNow.length) {
+            const fill = byFit.find(x => openNow.indexOf(x.pos) >= 0 && !seen[x.id]);
             if (fill) {
               add(fill, {
                 lens: 'need',
@@ -1395,11 +1477,16 @@ export function buildModel(input: ModelInput): Model {
           }
 
           // 3. Best player available, which is a different question from best
-          //    fit and the one a lot of rooms actually draft by.
-          add(byValue[0], {
+          //    fit and the one a lot of rooms actually draft by. Past a position
+          //    another card already covers and you have no room left at, since
+          //    a card you cannot use is not an option.
+          const bpa = byValue.find(x => !blocked(x));
+          add(bpa, {
             lens: 'value',
             title: 'Best player available',
-            why: 'The most valuable man left, whatever your roster needs',
+            why: bpa && byValue[0] && bpa.id === byValue[0].id
+              ? 'The most valuable man left, whatever your roster needs'
+              : 'The most valuable man left you could still put in a lineup',
           });
 
           // A ceiling only counts among players worth taking, so it is picked
@@ -1409,7 +1496,7 @@ export function buildModel(input: ModelInput): Model {
           // whoever it lands on, where "best player available" would not.
           if (options.length < 3) {
             add(byValue.slice(0, 15).slice().sort((a, b) => boom(b) - boom(a))
-              .find(x => !seen[x.id]), {
+              .find(x => !seen[x.id] && !blocked(x)), {
               lens: 'upside',
               title: 'Highest ceiling',
               why: 'The biggest upside among the best still on the board',
@@ -1575,7 +1662,7 @@ export function buildModel(input: ModelInput): Model {
     if (onBoard) return onBoard;
     const s = scorePlayer(pl, needScore, {
       dv: talentQ(pl, id), dvMax, stack: stackFor(pl), use: uFor(id), redraft: !isDynasty,
-      rank: rankOf(id, pl),
+      rank: rankOf(id, pl), vor: vorOf(pl, id),
     }, w);
     const ownerRow = (d.rosters || []).find(r => (r.players || []).indexOf(id) >= 0);
     return {

@@ -1634,3 +1634,110 @@ describe('sitting down in a league with no draft order', () => {
     expect(st.onClock!.mine).toBe(true);
   });
 });
+
+/**
+ * A one-quarterback redraft league drafting from scratch, which is where the
+ * model was wrong: it kept nominating quarterbacks after the one slot you can
+ * start was full, because talent carries the heaviest weight and the log scale
+ * it runs on reads a man worth a third of the board's best as 87% as good.
+ */
+describe('positional replaceability', () => {
+  const base = makeBundle();
+  const redraftLeague = (positions: string[]) => ({
+    ...base,
+    league: { ...base.league, roster_positions: positions,
+      settings: { ...base.league.settings, type: 0, draft_rounds: 15 } },
+    rosters: base.rosters.map(r => ({ ...r, players: [], starters: [] })),
+    draft: { ...base.draft!, type: 'snake', settings: { rounds: 15 } },
+  });
+  const ONE_QB = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF',
+    'BN', 'BN', 'BN', 'BN', 'BN', 'BN'];
+  const SUPERFLEX = ONE_QB.map(p => (p === 'FLEX' ? 'SUPER_FLEX' : p));
+
+  /* The fixture prices every position off one rank curve, which is the shape a
+   * SUPERFLEX feed has. FantasyCalc is asked for numQbs=1 in a league like this
+   * and returns quarterbacks far cheaper and far flatter — see `marketQuery`. */
+  const oneQbMarket = parseMarket(makeFantasyCalc(base.players).map(r => {
+    const v = r.value || 0;
+    return (r.player || {}).position === 'QB'
+      ? { ...r, value: Math.round(v * 0.45 * (0.55 + 0.45 * (v / 9000))) }
+      : r;
+  }));
+  const u = buildUsage(makeStats(base.players), base.players);
+  const build = (positions: string[], mk = oneQbMarket) => buildModel({
+    data: redraftLeague(positions), usage: u, market: mk,
+    strat: 'balanced', boardMode: 'fa', pickSel: 0,
+  });
+
+  it('a one-slot quarterback is worth less over replacement than a back', () => {
+    const m = build(ONE_QB);
+    const qb = m.scored.find(p => p.pos === 'QB')!;
+    const rb = m.scored.find(p => p.pos === 'RB')!;
+    expect(qb.m.scarce).toBeLessThan(rb.m.scarce);
+    expect(qb.fit).toBeLessThan(rb.fit);
+
+    /* And it is the term doing it, not a coincidence of the other eight. The
+     * same two breakdowns, summed with the weight and then without it: the
+     * distance between the best back and the best quarterback goes from under
+     * two points of Fit to nearly five. */
+    const w = redraftWeights(STRATS.balanced.w);
+    const sum = (mm: typeof qb.m, ww: typeof w) =>
+      (Object.keys(ww) as (keyof typeof w)[]).reduce((a, k) => a + ww[k] * mm[k], 0) * 100;
+    const withIt = sum(rb.m, w) - sum(qb.m, w);
+    const without = sum(rb.m, { ...w, scarce: 0 }) - sum(qb.m, { ...w, scarce: 0 });
+    expect(without).toBeLessThan(2);
+    expect(withIt).toBeGreaterThan(without * 2);
+  });
+
+  /* The same player, the same prices — only the league's own slots change. Ten
+   * teams starting one quarterback make the eleventh best free; ten starting
+   * two push that line to the twenty-first, and everyone above it gains. */
+  it('and worth more in superflex, off the league slots alone', () => {
+    const one = build(ONE_QB).scored.find(p => p.pos === 'QB')!;
+    const sf = build(SUPERFLEX).scored.find(p => p.pos === 'QB')!;
+    expect(sf.id).toBe(one.id);
+    expect(sf.m.scarce).toBeGreaterThan(one.m.scarce);
+  });
+
+  it('never offers two cards at a position with one slot open', () => {
+    const m = build(ONE_QB);
+    const choices: Record<number, string> = {};
+    for (let turn = 0; turn < 6; turn++) {
+      const st = m.runMock(1, choices);
+      if (!st.onClock || !st.onClock.mine) break;
+      const qbs = st.options.filter(o => o.pos === 'QB');
+      expect(qbs.length, 'two quarterbacks offered at ' + st.onClock.label).toBeLessThan(2);
+      const best = st.options.find(o => o.lens === 'best') || st.board[0];
+      choices[st.onClock.overall] = best.id;
+    }
+  });
+
+  it('and does not spend five rounds on quarterbacks', () => {
+    const m = build(ONE_QB);
+    const choices: Record<number, string> = {};
+    const took: string[] = [];
+    for (let turn = 0; turn < 6; turn++) {
+      const st = m.runMock(1, choices);
+      if (!st.onClock || !st.onClock.mine) break;
+      const best = st.options.find(o => o.lens === 'best') || st.board[0];
+      choices[st.onClock.overall] = best.id;
+      took.push(best.pos);
+    }
+    expect(took.filter(p => p === 'QB').length).toBeLessThan(2);
+  });
+
+  /* A player looked up outside a league — the sheet reached from search — has
+   * no slots to be measured against, and a missing measurement must not read
+   * as a bad one. */
+  it('is neutral where nothing was measured', () => {
+    const w = STRATS.balanced.w;
+    const p = { player_id: '1', position: 'WR', search_rank: 20 } as SleeperPlayer;
+    expect(scorePlayer(p, {}, {}, w).m.scarce).toBe(0.5);
+    expect(scorePlayer(p, {}, { vor: 0.9 }, w).m.scarce).toBe(0.9);
+  });
+
+  it('weighs replaceability harder in redraft than in dynasty', () => {
+    const w = STRATS.balanced.w;
+    expect(redraftWeights(w).scarce).toBeGreaterThan(w.scarce);
+  });
+});

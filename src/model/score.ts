@@ -14,6 +14,7 @@ export type Metrics = Record<MetricKey, number>;
  */
 export const EMPTY_METRICS: Metrics = {
   talent: 0, need: 0, value: 0, floor: 0, boom: 0, combo: 0, age: 0, stack: 0, rz: 0,
+  scarce: 0,
 };
 
 /** How much of a ceiling we credit to a player nobody has seen produce yet. */
@@ -38,6 +39,9 @@ export interface ScoreContext {
   /** consensus rank on the board — the market's order, not Sleeper's search
    *  index. Falls back to `search_rank` only when nothing better exists. */
   rank?: number | null;
+  /** 0..1 edge over the man who would still be starting at his position if you
+   *  never drafted him — see `scarce` below. */
+  vor?: number;
 }
 
 export interface ScoreResult {
@@ -98,6 +102,21 @@ export function scorePlayer(
       : ageCurve(p.position, p.age, talent),
     stack: ctx.stack != null ? ctx.stack : 0.5,
     rz: 0.35,
+    // How much of him you actually keep. Talent above measures a player against
+    // the whole board; this measures him against the man who would be starting
+    // at HIS position if you spent the pick somewhere else — which is the only
+    // part of him you gain.
+    //
+    // Without it the model had no idea a position can be replaceable, and in a
+    // one-quarterback league that shows immediately: it went on recommending
+    // quarterbacks after the one slot was full, because talent carries the
+    // heaviest weight and the log scale it runs on reads a man worth a third of
+    // the board's best as 87% as good. Need knew the slot was taken and was
+    // outvoted.
+    //
+    // Neutral where nothing was passed, so a score taken outside a league —
+    // the sheet reached from search — is unchanged rather than penalised.
+    scarce: ctx.vor != null ? clamp(ctx.vor, 0, 1) : 0.5,
   };
 
   // Number.isFinite rather than != null: a missing value can arrive as NaN, and
@@ -217,6 +236,13 @@ export function redraftWeights(w: Weights): Weights {
     age: w.age * 0.30,       // only this season's risk
     stack: w.stack,
     rz: w.rz * 1.10,
+    // Replaceability decides a redraft draft. You keep one season, you start a
+    // fixed set of slots, and the man you passed on at a deep position is
+    // replaced next week off waivers — so what a pick is worth is the gap over
+    // whoever else would have filled that slot, not the player's standing on a
+    // board. In dynasty the same player is also an asset you can trade at his
+    // market price, which is why it stays lighter there.
+    scarce: w.scarce * 2.0,
   };
   const total = (Object.keys(r) as MetricKey[]).reduce((a, k) => a + r[k], 0);
   (Object.keys(r) as MetricKey[]).forEach(k => { r[k] = r[k] / total; });
@@ -243,6 +269,7 @@ export function reasons(m: Metrics, at: string | null, pos: string, age: number 
       ? age + ' years old, still rising'
       : 'Age is no argument against him');
   }
+  if (m.scarce > 0.75) out.push('Hard to replace at ' + pos);
   if (m.boom > 0.7) out.push('High ceiling');
   if (m.floor > 0.75) out.push('Safe floor');
   return out.slice(0, 4);
