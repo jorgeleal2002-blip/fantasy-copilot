@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_ROOM, newRoomId } from '../api/live';
-import { cleanRoomCode, isRoomCode, roomCodeProblem } from '../model/invite';
+import { caretAfterClean, cleanRoomCode, isRoomCode, roomCodeProblem } from '../model/invite';
 
 describe('a room id', () => {
   it('is six readable characters, with the ambiguous ones left out', () => {
@@ -48,6 +48,18 @@ describe('a room code somebody types', () => {
     expect(roomCodeProblem('A0I1LO')).toMatch(/No 0 or I or 1 or L or O/);
     expect(roomCodeProblem('ABCDEF')).toBe(null);
     expect(roomCodeProblem('')).toBe(null);
+  });
+
+  /* The box shows the cleaned code rather than the keystrokes, and a controlled
+   * input whose value differs from what was typed drops the caret at the end
+   * on every render — measured: inserting at position two left it at six, so
+   * tapping into the middle to fix one character was impossible. */
+  it('keeps the caret where the typing was', () => {
+    expect(caretAfterClean('EPXEWTS', 3)).toBe(3);
+    expect(caretAfterClean('ep-ew', 5)).toBe(4);        // the dash is not a character
+    expect(caretAfterClean('  abc', 5)).toBe(3);
+    expect(caretAfterClean('ABCDEFGH', 8)).toBe(6);     // never past the end of a code
+    expect(caretAfterClean('ABC', 0)).toBe(0);
   });
 
   it('is only whole at six', () => {

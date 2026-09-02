@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { FillPos, Pos, PosFilter } from '../api/types';
 import { ACCENT, BAD, GOOD, POS } from '../model/constants';
 import { num, pickLabel } from '../model/math';
-import { cleanRoomCode, isRoomCode, roomCodeProblem } from '../model/invite';
+import { caretAfterClean, cleanRoomCode, isRoomCode, roomCodeProblem } from '../model/invite';
 import { reasons } from '../model/score';
 import type { DraftDeal, Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -268,9 +268,29 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
 function JoinByCode({ app }: { app: App }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const box = useRef<HTMLInputElement>(null);
+  /** Where the caret belongs once the typed text has been cleaned up. */
+  const caret = useRef<number | null>(null);
   const clean = cleanRoomCode(code);
   const problem = roomCodeProblem(clean);
   const ready = isRoomCode(clean);
+
+  /* Put the caret back before the browser paints — see `caretAfterClean`.
+     Measured before this: inserting at position two left it at six. */
+  useLayoutEffect(() => {
+    if (caret.current == null || !box.current) return;
+    box.current.setSelectionRange(caret.current, caret.current);
+    caret.current = null;
+  });
+
+  const onType = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const el = e.target;
+    caret.current = caretAfterClean(el.value, el.selectionStart ?? el.value.length);
+    setCode(el.value);
+    /* A refusal is about the code that was refused. Leaving it up while they
+       type the next one reads as the app arguing with a code it has not seen. */
+    if (app.roomError) app.clearRoomError();
+  };
 
   const go = async () => {
     if (!ready || busy) return;
@@ -289,8 +309,9 @@ function JoinByCode({ app }: { app: App }) {
       <div style={{ display: 'flex', gap: 8 }}>
         <input
           id="room-code"
+          ref={box}
           value={clean}
-          onChange={e => setCode(e.target.value)}
+          onChange={onType}
           onKeyDown={e => { if (e.key === 'Enter') void go(); }}
           placeholder="ABC123"
           inputMode="text"

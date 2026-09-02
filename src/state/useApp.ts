@@ -718,6 +718,8 @@ export function useApp() {
     liveOn: liveEnabled(),
     room, roomId, roomError, humanSeats, mySeat,
     hostRoom, joinRoom, joinByCode, takeSeat, leaveRoom,
+    /** A refusal is about the code that was refused — see the join box. */
+    clearRoomError: () => setRoomError(''),
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
 

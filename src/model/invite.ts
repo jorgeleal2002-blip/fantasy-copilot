@@ -28,6 +28,18 @@ export const cleanRoomCode = (raw: string): string =>
   (raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, ROOM_LEN);
 
 /**
+ * Where the caret belongs once what they typed has been cleaned.
+ *
+ * The box shows the CLEANED code rather than the keystrokes, and a controlled
+ * input whose value differs from what was typed puts the caret back at the end
+ * on every render — tap into the middle of a code to fix one character and the
+ * cursor teleports past the last one. The answer is the count of characters
+ * that survive cleaning to the left of where they were typing.
+ */
+export const caretAfterClean = (raw: string, at: number): number =>
+  cleanRoomCode((raw || '').slice(0, Math.max(at, 0))).length;
+
+/**
  * Why what they typed cannot be a code, in a sentence they can act on.
  *
  * The look-alike characters are the whole point of the alphabet, so a typed I
