@@ -2349,45 +2349,72 @@ describe('what a team\'s strength means', () => {
 
 /* ── the points projection ──────────────────────────────────────────────────
    A different object from the Rating, and these are the properties that make
-   it one: it reads the player and nothing else, it declines to answer off a
-   sample too short to mean anything, and it steps exactly one year along the
-   age curve rather than applying the curve's absolute value. */
+   it one: it reads the player and nothing else, it is in POINTS rather than on
+   a 0-100 scale, and it declines to answer off a sample too short to mean
+   anything. */
 describe('projected points per game', () => {
   const at = (over: Partial<Usage>): Usage => ({ ...usageStub(0.8, 0.2), ...over });
 
-  it('is the luck-adjusted production when age is unknown', () => {
-    expect(projectPPG(at({ ppgAdj: 13.4 }), 'WR', null)).toBeCloseTo(13.4, 6);
+  it('is the luck-adjusted production, in points', () => {
+    expect(projectPPG(at({ ppgAdj: 13.4 }))).toBeCloseTo(13.4, 6);
   });
 
   it('does not answer at all off fewer than four games', () => {
-    expect(projectPPG(at({ gp: 3, gpTotal: 3 }), 'WR', 26)).toBeNull();
-    expect(projectPPG(at({ gp: 3, gpTotal: 20 }), 'WR', 26)).not.toBeNull();
+    expect(projectPPG(at({ gp: 3, gpTotal: 3 }))).toBeNull();
+    expect(projectPPG(at({ gp: 3, gpTotal: 20 }))).not.toBeNull();
   });
 
   it('has nothing to say about a player it has no usage for', () => {
-    expect(projectPPG(undefined, 'WR', 26)).toBeNull();
-    expect(projectPPG(at({ ppgAdj: null }), 'WR', 26)).toBeNull();
+    expect(projectPPG(undefined)).toBeNull();
+    expect(projectPPG(at({ ppgAdj: null }))).toBeNull();
   });
 
-  /* One year of the curve, not the curve. A 30-year-old back has already been
-     marked down for being 30 in the seasons the projection is built from;
-     applying the level again would charge him for it twice. */
-  it('steps one year along the age curve rather than applying its level', () => {
+  /* The age step was measured out: it cost the top backs 1.7 points a game and
+     raised their error, because the prime window closes at 26 for reasons about
+     what a back is WORTH, not about what he scores next September. This is the
+     regression test for that — a signature that cannot take an age cannot
+     quietly grow one back. */
+  it('does not read age at all — that belongs to the Rating', () => {
+    expect(projectPPG.length).toBe(1);
     const u = at({ ppgAdj: 12 });
-    const old = projectPPG(u, 'RB', 30) as number;
-    expect(old).toBeLessThan(12);
-    // the curve at 30 for a back is far below 0.5, so the level would be brutal
-    expect(old).toBeGreaterThan(12 * 0.85);
+    expect(projectPPG(u)).toBeCloseTo(12, 6);
   });
 
-  it('costs a back past his prime more than a quarterback of the same age', () => {
-    const u = at({ ppgAdj: 12 });
-    expect(projectPPG(u, 'RB', 30) as number).toBeLessThan(projectPPG(u, 'QB', 30) as number);
-  });
+  /* The luck adjustment shrinks each rate toward the position median by how
+     much that rate repeats, and how much it repeats differs by position. Held
+     at one global set, quarterbacks lost four points a game — their touchdowns
+     keep and everybody else's do not. These check the behaviour rather than the
+     constants, so the numbers can be re-measured without breaking the test. */
+  it('keeps more of a quarterback\'s hot touchdown rate than a receiver\'s', () => {
+    const GP = 16;
+    const BASE = {
+      gp: GP, rec_tgt: 100, rec: 65, rec_yd: 800, rush_att: 100, rush_yd: 400,
+      rush_td: 3, rec_td: 3, pass_att: 500, pass_yd: 3500, pass_td: 20,
+      pts_half_ppr: 200,
+    };
+    /** What one player's ppgAdj comes out as, among fifty ordinary ones at his
+     *  position — fifty because the median they set is what he is shrunk toward. */
+    const adj = (pos: Pos, over: Record<string, number>) => {
+      const league: Record<string, typeof BASE> = { him: { ...BASE, ...over } };
+      for (let i = 0; i < 50; i++) league['n' + i] = { ...BASE };
+      const players: Record<string, SleeperPlayer> = {};
+      Object.keys(league).forEach(id => {
+        players[id] = { player_id: id, position: pos, team: 'KC', full_name: id } as SleeperPlayer;
+      });
+      return buildUsage(league, players).him.ppgAdj as number;
+    };
+    /** Of the points a hot season really put on the board, what fraction does
+     *  the adjustment let him keep? */
+    const kept = (pos: Pos, over: Record<string, number>, rawPoints: number) =>
+      (adj(pos, over) - adj(pos, {})) / (rawPoints / GP);
 
-  it('leaves a player inside his prime window alone', () => {
-    const u = at({ ppgAdj: 12 });
-    expect(projectPPG(u, 'WR', 25) as number).toBeCloseTo(12, 6);
+    // Ten extra touchdowns each, worth the same raw points to both.
+    const qb = kept('QB', { pass_td: 30, pts_half_ppr: 240 }, 40);
+    const wr = kept('WR', { rec_td: 13, pts_half_ppr: 260 }, 60);
+
+    expect(qb).toBeGreaterThan(wr);
+    // and the receiver keeps well under half of it — his rate measures 0.21
+    expect(wr).toBeLessThan(0.5);
   });
 
   it('reports how much sample it is standing on', () => {

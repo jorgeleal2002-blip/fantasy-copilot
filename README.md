@@ -108,39 +108,82 @@ second one alongside — not reweighting this one further.
 **So there are two numbers now.** Every player with four games behind him
 carries a projection as well as a Rating: about how many half-PPR points a game
 he scores next season. It is the luck-adjusted production above, blended across
-his last three seasons, stepped one year along the redraft age curve, and it
-knows nothing about your roster or the pick — which is exactly why it predicts
-better. Backtested against the following season:
+his last three seasons, and nothing else. It knows nothing about your roster or
+the pick — which is exactly why it predicts points better. Ranked against the
+following season:
 
     last season's points, in order              0.795
     the Rating                                  0.783
-    the projection                              0.803
+    the projection                              0.797
 
     at quarterback, where they differ most:
     last season's points                         0.54
     the Rating                                   0.53
     the projection                               0.60
 
-Each ingredient earns its line: one season of luck-adjusted production alone is
-0.803, three seasons blended is 0.800, and the age step puts it back to 0.803
-while lifting quarterbacks from 0.55 to 0.60 — the blend buys stability at
-quarterback and the age step pays for it everywhere else.
-
 The two disagreeing on a player is information, not a bug: a second quarterback
 projects the same points as the first and is the wrong pick, and the Rating is
 the one that says so. Sorted lists stay sorted by Rating; the projection sits
 next to it.
 
+**A rank correlation cannot see whether the number is right.** It scores the
+order and is blind to every projection being two points low, which is what a
+card with units on it lives or dies by — so `scripts/proj-check.mjs` scores the
+level instead, out of sample and grouped by the PROJECTION rather than the
+result. ("The sixty best players of last season" is a set selected for having
+overperformed; a projection that is right in expectation will always read low
+on it. The question a card has to answer is the other one: when this app says
+15, do they score 15?) Projected from 2024·23·22 against 2025, and from
+2023·22·21 against 2024:
+
+    group                    says   scored    bias
+    everyone                 6.99     6.93    +0.06
+    top 24 by projection    17.97    17.16    +0.82
+    top 60 by projection    16.27    15.93    +0.34
+    top 120 by projection   14.58    14.59    -0.00
+
+Two things came out of measuring that which the backtest had been calling wins.
+**The age step was removed.** One year of the age curve cost the top two dozen
+running backs 1.7 points a game and pushed their error from 3.6 to 4.2, while
+buying 0.003 of rank — the prime window closes at 26 because that is when the
+league stops paying a back, not when he stops scoring. And the shrinkage
+constants became per-position, above. Both were the same mistake: trusting a
+measure that cannot see the quantity being published.
+
+What is left is honest and worth stating. A player is projected to about ±2.5
+points a game, which is what a season of football does to anybody. Receivers
+still read about 1.3 points a game high at the top of the board — real, on 48
+season-players, and not corrected here because a per-position offset fitted on
+two season pairs is a worse thing than a known bias.
+
 Four of those deserve their own note.
 
 **Volume, not points.** Points are volume times efficiency and the two do not
-keep the same way. Measured within position over 2021–2025: a player's touches
-survive into the next season at about 0.8, his yards per touch at 0.4, his
-touchdowns per touch at 0.2. So the production half of player quality is not
-last season's points but half of those and half of what his volume was worth at
-the median rates for his position — the luck deliberately thrown away.
-Backtested against the following season: raw points order at 0.795, this at
-0.803, volume alone at 0.566, so neither half is enough by itself.
+keep the same way. So production is not last season's points but his real
+volume re-priced at rates pulled from his own toward what is ordinary at his
+position — by exactly how much each rate repeats, which `scripts/keeps.mjs`
+measures within position over 2021–2025 and which is the whole of the
+adjustment:
+
+    year-to-year correlation      QB     RB     WR     TE
+    catches per target             -    0.01   0.44   0.24
+    yards per touch              0.55   0.32   0.51   0.58
+    TDs per touch                0.46   0.14   0.21   0.14
+    yards per pass attempt       0.37     -      -      -
+    TDs per pass attempt         0.36     -      -      -
+
+One global set of those numbers was wrong in both directions at once and both
+errors were visible on a phone: a quarterback's touchdowns keep — the goal-line
+runner is a job, not a run of luck — and holding them at 0.20 took four points
+a game off Josh Allen, while a running back's catch rate is noise at 0.01 and
+was being credited at 0.55.
+
+Whatever the four lines above do not model — interceptions, fumbles, two-point
+conversions, return yards — is carried across untouched, as the gap between what
+he really scored and what this same formula says he scored at his own rates.
+That makes it exact at the limit: shrink nothing and it gives back his actual
+points per game, so the adjustment can only move him by the part it claims to
+be adjusting.
 
 **Expected touchdowns.** Scored touchdowns carry luck with them, and luck does
 not repeat. So each season is fitted by least squares, per position, over the

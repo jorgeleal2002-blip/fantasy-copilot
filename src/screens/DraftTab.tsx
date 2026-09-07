@@ -309,7 +309,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
 
 /** The projection for a board row, computed where it is drawn: it is a pure
  *  function of the usage already on the row, so it needs no model plumbing. */
-const projOf = (p: BoardPlayer) => projectPPG(p.use, p.pos, p.age);
+const projOf = (p: BoardPlayer) => projectPPG(p.use);
 
 /** Six characters, read out loud and typed in. */
 function JoinByCode({ app }: { app: App }) {

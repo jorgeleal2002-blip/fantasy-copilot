@@ -75,7 +75,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
     );
   }
 
-  const proj = projectPPG(p.use, p.pos, p.age);
+  const proj = projectPPG(p.use);
   const conf = proj != null ? projectConfidence(p.use) : null;
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
@@ -272,11 +272,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
             {conf ? <span style={{ color: dim(0.5) }}>{' — ' + CONF[conf]}</span> : null}.
           </div>
           <div style={{ fontSize: 12, color: dim(0.5), lineHeight: 1.55, marginTop: 8, textWrap: 'pretty' }}>
-            Built from his last three seasons of volume rather than his points: half what
-            he actually scored and half what those touches were worth at ordinary rates for
-            his position, then stepped one year along the age curve. It knows nothing about
-            your roster or this pick — that is the Rating's job, and the two disagreeing on
-            a player is information rather than a bug.
+            Built from his last three seasons of volume rather than his points: his real
+            touches, priced at rates pulled from his own toward what is ordinary at his
+            position by how much each rate actually repeats year to year. A quarterback's
+            touchdowns mostly keep; a running back's catch rate is noise. It knows nothing
+            about your roster or this pick — that is the Rating's job, and the two
+            disagreeing on a player is information rather than a bug.
           </div>
         </Card>
       ) : null}

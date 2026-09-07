@@ -31,19 +31,21 @@ export interface Usage {
 
   ppg: number | null;
   /**
-   * Points per game with the luck taken out: half what he actually scored,
-   * half what his VOLUME was worth at ordinary rates for his position.
+   * Points per game with the luck taken out: his real volume, priced at rates
+   * shrunk from his own toward his position's by how much each rate actually
+   * repeats.
    *
-   * Points are volume times efficiency and the two do not keep the same way.
-   * Measured over 2021–2025, within position: a player's touches survive into
-   * the next season at about 0.8, his yards per touch at 0.4, his touchdowns
-   * per touch at 0.2. So last season's points carry a helping of luck that is
-   * not coming back, and pricing his opportunities at the position median
-   * throws that part away.
+   * Points are volume times efficiency and the two do not keep the same way. A
+   * player's touches survive into the next season at about 0.8; his rates keep
+   * anywhere from 0.58 down to 0.01 depending on which rate and which position
+   * — see `KEEP`. So last season's points carry a helping of luck that is not
+   * coming back, and re-pricing his opportunities throws that part away
+   * without throwing away the part that was him.
    *
-   * Backtested against the following season: raw points order at 0.795, this
-   * at 0.803, and volume on its own at 0.566 — so neither half is enough
-   * alone. See `scripts/backtest.mjs`.
+   * Backtested against the following season it orders at 0.797 where raw
+   * points manage 0.795 (`scripts/backtest.mjs`), and — the half a rank
+   * correlation cannot see — it is calibrated in POINTS to within a tenth
+   * overall and within a third on the top sixty (`scripts/proj-check.mjs`).
    */
   ppgAdj: number | null;
   rz: number;
@@ -207,28 +209,106 @@ function positionRates(
 }
 
 /**
+ * How much of a player's OWN rate survives into the next season.
+ *
+ * What survives is his; what does not is replaced by what an ordinary player at
+ * his position does, and that replacement is the whole of the luck adjustment.
+ * A rate's shrinkage weight ought to be its reliability, so these ARE the
+ * measured year-to-year correlations — volume-weighted, within position, over
+ * 2021–2025, by `scripts/keeps.mjs`, which prints the table and the sample
+ * behind every cell.
+ *
+ * They were one global set — cat .55, ypt .40, tdr .20 for everybody — which is
+ * a claim that a quarterback's touchdown rate and a running back's catch rate
+ * decay at the same speed. Measured, they do not, and the two worst errors both
+ * showed on screen:
+ *
+ *   · A QUARTERBACK'S TOUCHDOWNS KEEP. Per attempt .36, and per carry .46 — the
+ *     goal-line runner is a job, not a run of luck. Held at .20 the model took
+ *     four points a game off Josh Allen and eight off Lamar Jackson, which is
+ *     what a shrinkage weight too low for the position looks like from a phone.
+ *   · A RUNNING BACK'S CATCH RATE IS NOISE. .01, over a hundred and
+ *     twenty-five season pairs. It was being credited at .55.
+ *
+ * Everything not measurable for a position is zero, so it falls back to the
+ * position median untouched: a quarterback has no targets to catch and nobody
+ * else throws.
+ */
+const KEEP: Record<Pos, Rates> = {
+  QB: { cat: 0, ypt: 0.55, tdr: 0.46, ypa: 0.37, tpa: 0.36 },
+  RB: { cat: 0.01, ypt: 0.32, tdr: 0.14, ypa: 0, tpa: 0 },
+  WR: { cat: 0.44, ypt: 0.51, tdr: 0.21, ypa: 0, tpa: 0 },
+  TE: { cat: 0.24, ypt: 0.58, tdr: 0.14, ypa: 0, tpa: 0 },
+};
+
+/**
  * Points per game with the luck taken out — see `Usage.ppgAdj`.
  *
- * Half of what he scored and half of what his volume was worth at the rates
- * above, in half-PPR: half a point a catch, a tenth a yard, six a touchdown,
- * and a quarterback's passing on the same footing. Neither half is enough on
- * its own — the volume-only order backtests at 0.566 and the points-only at
- * 0.795, and the two together at 0.803.
+ * His real volume, priced at rates shrunk from his own toward his position's
+ * by how much each rate actually repeats, in half-PPR: half a point a catch, a
+ * tenth of a point a yard, six a touchdown, and a quarterback's passing on the
+ * same footing.
+ *
+ * The remainder — interceptions, fumbles, two-point conversions, return yards,
+ * everything the four lines above do not model — is carried across untouched,
+ * as the gap between what he really scored and what this same formula says he
+ * scored at his OWN rates. That makes the whole thing exact at the limit: shrink
+ * nothing and it returns his actual points per game, so the adjustment can only
+ * move him by the part it claims to be adjusting.
+ *
+ * This replaces a flat half-and-half of his points and his volume at the
+ * position MEDIAN, which regressed everybody most of the way to average and cost
+ * the sixty most productive players 1.41 points a game each — a compression a
+ * rank correlation cannot see and the reason this number was wrong on a card
+ * while scoring 0.803 in the backtest.
  */
 function luckAdjusted(
   st: SleeperStatLine,
   pos: string | undefined,
   rates: Partial<Record<Pos, Rates>>,
   gp: number,
+  hasRec: boolean,
 ): number | null {
   const k = rates[pos as Pos];
   const real = (st.pts_half_ppr || 0) / gp;
   if (!k || !k.ypt) return real;
-  const recs = (st.rec_tgt || 0) * k.cat;
-  const touches = recs + (st.rush_att || 0);
-  let pts = recs * 0.5 + touches * k.ypt * 0.1 + touches * k.tdr * 6;
-  if (pos === 'QB') pts += (st.pass_att || 0) * (k.ypa * 0.04 + k.tpa * 4);
-  return real * 0.5 + (pts / gp) * 0.5;
+
+  const tgt = st.rec_tgt || 0;
+  const rush = st.rush_att || 0;
+  const pa = st.pass_att || 0;
+  // The same convention `positionRates` uses to count a ball in the hands, so
+  // the player's rate and the position's are measured against each other
+  // rather than against two different denominators. A feed with no receptions
+  // column measures everybody by targets instead — worse, but consistent, and
+  // consistency is the whole of what a shrinkage toward the median needs.
+  const held = (hasRec ? (st.rec || 0) : (st.rec_tgt || 0)) + rush;
+
+  /** His own rate where the sample supports one, shrunk toward the position's
+   *  by how much that rate repeats; the position's where it does not. */
+  const mix = (v: number, n: number, min: number, base: number, keep: number) =>
+    (n >= min && Number.isFinite(v) ? base + keep * (v - base) : base);
+
+  const rate = (keep: Rates): Rates => ({
+    cat: mix(tgt && hasRec ? (st.rec || 0) / tgt : NaN, tgt, 25, k.cat, keep.cat),
+    ypt: mix(held ? ((st.rec_yd || 0) + (st.rush_yd || 0)) / held : NaN, held, 25, k.ypt, keep.ypt),
+    tdr: mix(held ? ((st.rec_td || 0) + (st.rush_td || 0)) / held : NaN, held, 25, k.tdr, keep.tdr),
+    ypa: mix(pa ? (st.pass_yd || 0) / pa : NaN, pa, 100, k.ypa, keep.ypa),
+    tpa: mix(pa ? (st.pass_td || 0) / pa : NaN, pa, 100, k.tpa, keep.tpa),
+  });
+
+  const points = (r: Rates) => {
+    const recs = tgt * r.cat;
+    const touches = recs + rush;
+    let pts = recs * 0.5 + touches * r.ypt * 0.1 + touches * r.tdr * 6;
+    if (pos === 'QB') pts += pa * (r.ypa * 0.04 + r.tpa * 4);
+    return pts;
+  };
+
+  // Everything the formula does not model, kept as it was.
+  const ALL: Rates = { cat: 1, ypt: 1, tdr: 1, ypa: 1, tpa: 1 };
+  const keep = KEEP[pos as Pos] || KEEP.WR;
+  const rest = (st.pts_half_ppr || 0) - points(rate(ALL));
+  return (points(rate(keep)) + rest) / gp;
 }
 
 export function seasonUsage(
@@ -318,7 +398,7 @@ export function seasonUsage(
       xtd, xtdPerGame: xtd != null && gp ? xtd / gp : null,
       tdLuck: xtd != null ? scoredTd - xtd : null,
       ppg: gp ? (st.pts_half_ppr || 0) / gp : null,
-      ppgAdj: gp ? luckAdjusted(st, pl.position, ordinary, gp) : null,
+      ppgAdj: gp ? luckAdjusted(st, pl.position, ordinary, gp, hasRec) : null,
       rz: rzOwn,
       rzShare: teamRz[pl.team] ? rzOwn / teamRz[pl.team] : null,
       rzPerGame: gp ? rzOwn / gp : null,

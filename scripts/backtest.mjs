@@ -448,8 +448,12 @@ line('Rating, market = adjusted', run((prev, usage) => rate(prev, w, usage, luck
    A separate answer to a separate question. The Rating orders a draft board;
    this orders expected points, which is the thing this test actually scores,
    and it is allowed to use none of the roster context that the Rating is
-   marked down for. Three rows, each adding one thing to the one above, so it
-   is visible which of them is carrying the result and which is decoration. */
+   marked down for.
+
+   The age step used to be a third row here and was removed from the model: it
+   bought +0.003 of rank and cost the top two dozen backs 1.7 POINTS A GAME of
+   level, which is a trade this test is constitutionally unable to see. See
+   scripts/proj-parts.mjs, which measures the level. */
 const usageBack = (year, depth) => {
   const src = [];
   for (let i = 0; i < depth; i++) {
@@ -459,23 +463,21 @@ const usageBack = (year, depth) => {
   return blendSeasons(src, loaded[year].players);
 };
 
-const projRun = (depth, withAge) => run((prev, oneSeason) => {
+const projRun = (depth) => run((prev, oneSeason) => {
   const u = depth === 1 ? oneSeason : usageBack(prev.year, depth);
   return Object.keys(u)
     .filter(id => prev.players[id])
     .map(id => ({
       id,
       pos: prev.players[id].position,
-      // age passed as null is how the projection is told to skip the age step
-      fit: projectPPG(u[id], prev.players[id].position, withAge ? prev.players[id].age : null),
+      fit: projectPPG(u[id]),
     }))
     .filter(x => Number.isFinite(x.fit));
 });
 
 console.log('');
-line('projection, 1 season', projRun(1, false), base.all);
-line('projection, 3 seasons', projRun(3, false), base.all);
-line('projection, 3 + age', projRun(3, true), base.all);
+line('projection, 1 season', projRun(1), base.all);
+line('projection, 3 seasons', projRun(3), base.all);
 
 console.log('');
 // Each metric taken out on its own: what does it actually buy?
