@@ -9,6 +9,7 @@ import { REACH, sfxFor } from '../model/sfx-map';
 import type { MockPick } from '../model/types';
 import { ownedWeights, pickValue, redraftWeights, scorePlayer } from '../model/score';
 import { blendSeasons, buildUsage, seasonUsage, type Usage } from '../model/usage';
+import { projectConfidence, projectPPG } from '../model/project';
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
 import { isMockEligible } from '../model/mock-pool';
@@ -2343,5 +2344,56 @@ describe('what a team\'s strength means', () => {
     const at = rows.findIndex(r => r.id === deepest);
     expect(at).toBeGreaterThan(3);              // sixth by the lineup it fields
     expect(rows[at].window).not.toBe('contender');
+  });
+});
+
+/* ── the points projection ──────────────────────────────────────────────────
+   A different object from the Rating, and these are the properties that make
+   it one: it reads the player and nothing else, it declines to answer off a
+   sample too short to mean anything, and it steps exactly one year along the
+   age curve rather than applying the curve's absolute value. */
+describe('projected points per game', () => {
+  const at = (over: Partial<Usage>): Usage => ({ ...usageStub(0.8, 0.2), ...over });
+
+  it('is the luck-adjusted production when age is unknown', () => {
+    expect(projectPPG(at({ ppgAdj: 13.4 }), 'WR', null)).toBeCloseTo(13.4, 6);
+  });
+
+  it('does not answer at all off fewer than four games', () => {
+    expect(projectPPG(at({ gp: 3, gpTotal: 3 }), 'WR', 26)).toBeNull();
+    expect(projectPPG(at({ gp: 3, gpTotal: 20 }), 'WR', 26)).not.toBeNull();
+  });
+
+  it('has nothing to say about a player it has no usage for', () => {
+    expect(projectPPG(undefined, 'WR', 26)).toBeNull();
+    expect(projectPPG(at({ ppgAdj: null }), 'WR', 26)).toBeNull();
+  });
+
+  /* One year of the curve, not the curve. A 30-year-old back has already been
+     marked down for being 30 in the seasons the projection is built from;
+     applying the level again would charge him for it twice. */
+  it('steps one year along the age curve rather than applying its level', () => {
+    const u = at({ ppgAdj: 12 });
+    const old = projectPPG(u, 'RB', 30) as number;
+    expect(old).toBeLessThan(12);
+    // the curve at 30 for a back is far below 0.5, so the level would be brutal
+    expect(old).toBeGreaterThan(12 * 0.85);
+  });
+
+  it('costs a back past his prime more than a quarterback of the same age', () => {
+    const u = at({ ppgAdj: 12 });
+    expect(projectPPG(u, 'RB', 30) as number).toBeLessThan(projectPPG(u, 'QB', 30) as number);
+  });
+
+  it('leaves a player inside his prime window alone', () => {
+    const u = at({ ppgAdj: 12 });
+    expect(projectPPG(u, 'WR', 25) as number).toBeCloseTo(12, 6);
+  });
+
+  it('reports how much sample it is standing on', () => {
+    expect(projectConfidence(at({ gpTotal: 45 }))).toBe('high');
+    expect(projectConfidence(at({ gpTotal: 17 }))).toBe('fair');
+    expect(projectConfidence(at({ gpTotal: 6 }))).toBe('low');
+    expect(projectConfidence(undefined)).toBeNull();
   });
 });

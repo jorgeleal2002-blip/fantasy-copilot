@@ -105,6 +105,32 @@ a 0–100 draft score and a points projection are different objects, and the gap
 is most of what makes the first one useful. Closing it means shipping the
 second one alongside — not reweighting this one further.
 
+**So there are two numbers now.** Every player with four games behind him
+carries a projection as well as a Rating: about how many half-PPR points a game
+he scores next season. It is the luck-adjusted production above, blended across
+his last three seasons, stepped one year along the redraft age curve, and it
+knows nothing about your roster or the pick — which is exactly why it predicts
+better. Backtested against the following season:
+
+    last season's points, in order              0.795
+    the Rating                                  0.783
+    the projection                              0.803
+
+    at quarterback, where they differ most:
+    last season's points                         0.54
+    the Rating                                   0.53
+    the projection                               0.60
+
+Each ingredient earns its line: one season of luck-adjusted production alone is
+0.803, three seasons blended is 0.800, and the age step puts it back to 0.803
+while lifting quarterbacks from 0.55 to 0.60 — the blend buys stability at
+quarterback and the age step pays for it everywhere else.
+
+The two disagreeing on a player is information, not a bug: a second quarterback
+projects the same points as the first and is the wrong pick, and the Rating is
+the one that says so. Sorted lists stay sorted by Rating; the projection sits
+next to it.
+
 Four of those deserve their own note.
 
 **Volume, not points.** Points are volume times efficiency and the two do not

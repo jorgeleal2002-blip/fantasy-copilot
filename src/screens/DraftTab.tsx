@@ -4,7 +4,8 @@ import { ACCENT, BAD, GOOD, POS } from '../model/constants';
 import { num, pickLabel } from '../model/math';
 import { caretAfterClean, cleanRoomCode, isRoomCode, roomCodeProblem } from '../model/invite';
 import { reasons } from '../model/score';
-import type { DraftDeal, Model } from '../model/types';
+import { projectPPG } from '../model/project';
+import type { BoardPlayer, DraftDeal, Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { PlayerSearch, type SearchScope } from '../ui/PlayerSearch';
 import { Card, Face, Screen, Segmented, type SegOption } from '../ui/primitives';
@@ -122,6 +123,12 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                 ].concat(top.age ? [top.age + ' yrs'] : [])
                   // Where the board has him among what is left, as a pick.
                   .concat([done ? where(top.goes) : 'goes ' + where(top.goes)])
+                  // The big number here is the Rating, because this card is a
+                  // recommendation and that is the question it answers. How
+                  // many points he scores is a fact about him, so it is stated
+                  // with the other facts rather than competing for the number.
+                  .concat(projOf(top) != null
+                    ? [(projOf(top) as number).toFixed(1) + ' proj'] : [])
                   .join(' · ') : ''}
               </div>
             </div>
@@ -200,6 +207,23 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
             <Segmented options={posFilters(m.fills)} value={filter} onChange={app.setFilter} />
           </div>
 
+          {/* Two unlabelled numbers on a row are a puzzle, so the column they
+              sit in is named once above the list rather than on every line —
+              and only while there is something under it. A rookie board is
+              nothing but players who have never played a down, so none of them
+              has a projection and naming an empty column would be worse than
+              leaving it unnamed. */}
+          <div style={{
+            display: 'flex', justifyContent: 'flex-end', gap: 7,
+            fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase',
+            color: dim(0.35), padding: '0 12px 2px',
+          }}>
+            {filtered.slice(0, 24).some(p => projOf(p) != null)
+              ? <><span>proj pts/gm</span><span>·</span></>
+              : null}
+            <span>rating</span>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {/* How many names come off between now and the pick you are
                 looking at. Anyone the board has inside that many is unlikely
@@ -242,8 +266,27 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flex: 'none' }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.02em', color: fitColor(p.fit) }}>
-                      {p.fit}
+                    {/* Projected points, then the Rating. Two numbers because
+                        they answer two questions — how many points he scores,
+                        and whether he is the right pick HERE — and the second
+                        is the one this list is sorted by, so it keeps the
+                        colour and the outside edge.
+
+                        Not in the line below the name, which is where this
+                        first went: with a projection in it the worst realistic
+                        subtitle ("WR · WAS · 29 yrs · 18.4 proj · still there
+                        at 12.11") overflowed every row on a phone, and what
+                        the ellipsis ate was the pick-timing warning — the most
+                        useful thing on the row. */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: 7 }}>
+                      {projOf(p) != null ? (
+                        <span style={{ fontSize: 11.5, color: dim(0.5), letterSpacing: '-0.01em' }}>
+                          {(projOf(p) as number).toFixed(1)}
+                        </span>
+                      ) : null}
+                      <span style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.02em', color: fitColor(p.fit) }}>
+                        {p.fit}
+                      </span>
                     </div>
                     <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2 }}>
                       {/* The warning goes with the number, never over it. */}
@@ -263,6 +306,10 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
     </Screen>
   );
 }
+
+/** The projection for a board row, computed where it is drawn: it is a pure
+ *  function of the usage already on the row, so it needs no model plumbing. */
+const projOf = (p: BoardPlayer) => projectPPG(p.use, p.pos, p.age);
 
 /** Six characters, read out loud and typed in. */
 function JoinByCode({ app }: { app: App }) {

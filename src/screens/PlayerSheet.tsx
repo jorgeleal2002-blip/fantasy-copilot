@@ -10,6 +10,7 @@ import { Meter, SERIES } from '../ui/charts';
 import { Card, Overlay } from '../ui/primitives';
 import { ALLOWED_SEASON, OPPONENTS, SCHEDULE_SEASON } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
+import { projectConfidence, projectPPG } from '../model/project';
 import { TradePackages } from '../ui/TradePackages';
 import { dim, fitColor } from '../ui/styles';
 
@@ -18,6 +19,14 @@ const DATA_NOTE =
   'Market values come from FantasyCalc, priced for this league\'s format. ' +
   'Fixtures and last season\'s points allowed by each defence ship with the app, from nflverse. ' +
   'The Rating, floor and upside are the app\'s own model on top of those.';
+
+/** How much sample the projection is standing on, said out loud rather than
+ *  left for the reader to assume from a number that prints the same either way. */
+const CONF: Record<string, string> = {
+  high: 'three full seasons behind it',
+  fair: 'a season and a half behind it',
+  low: 'off a short sample, treat it lightly',
+};
 
 interface Sheet {
   id: string;
@@ -66,6 +75,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
     );
   }
 
+  const proj = projectPPG(p.use, p.pos, p.age);
+  const conf = proj != null ? projectConfidence(p.use) : null;
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
   const u = p.use;
@@ -224,14 +235,51 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           ) : null}
         </div>
 
-        <div style={{ textAlign: 'right', flex: 'none' }}>
-          <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-0.03em', color: fitColor(p.fit) }}>{p.fit}</div>
-          <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
-            {/* Never call it a Rating when it is not one. */}
-            {fill ? 'consensus' : 'rating'}
+        <div style={{ textAlign: 'right', flex: 'none', display: 'flex', gap: 14 }}>
+          {/* Two numbers, because they answer two questions and the app was
+              only ever answering one of them. The Rating says who to take at
+              this pick — it prices your hole, the replacement at his position
+              and where the board has him. The projection says how many points
+              he scores, and knows nothing about your roster. Measured against
+              the following season the projection is the better predictor of
+              points (0.806 to the Rating's 0.783) and the Rating is the better
+              draft board, and printing one of them under both labels was the
+              thing that made the model look wrong. */}
+          {proj != null ? (
+            <div>
+              <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-0.03em' }}>
+                {proj.toFixed(1)}
+              </div>
+              <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
+                proj pts/gm
+              </div>
+            </div>
+          ) : null}
+          <div>
+            <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-0.03em', color: fitColor(p.fit) }}>{p.fit}</div>
+            <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
+              {/* Never call it a Rating when it is not one. */}
+              {fill ? 'consensus' : 'rating'}
+            </div>
           </div>
         </div>
       </div>
+
+      {proj != null ? (
+        <Card style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 13.5, lineHeight: 1.55, textWrap: 'pretty' }}>
+            About <b>{proj.toFixed(1)}</b> half-PPR points a game next season
+            {conf ? <span style={{ color: dim(0.5) }}>{' — ' + CONF[conf]}</span> : null}.
+          </div>
+          <div style={{ fontSize: 12, color: dim(0.5), lineHeight: 1.55, marginTop: 8, textWrap: 'pretty' }}>
+            Built from his last three seasons of volume rather than his points: half what
+            he actually scored and half what those touches were worth at ordinary rates for
+            his position, then stepped one year along the age curve. It knows nothing about
+            your roster or this pick — that is the Rating's job, and the two disagreeing on
+            a player is information rather than a bug.
+          </div>
+        </Card>
+      ) : null}
 
       {fill ? (
         <Card style={{ marginTop: 16 }}>

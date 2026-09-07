@@ -43,6 +43,7 @@ import { join } from 'node:path';
 import { STRATS } from '../src/model/constants.ts';
 import { talentScale } from '../src/model/math.ts';
 import { ownedWeights, redraftWeights, scorePlayer } from '../src/model/score.ts';
+import { projectPPG } from '../src/model/project.ts';
 import { blendSeasons, seasonUsage } from '../src/model/usage.ts';
 
 const DIR = process.env.NFLVERSE_DIR || join(process.cwd(), '.nflverse');
@@ -174,7 +175,7 @@ function load(year, bio) {
     }
     ppg[id] = (s.pts_half_ppr || 0) / Math.max(s.gp || 1, 1);
   });
-  return { players, stats, ppg };
+  return { year, players, stats, ppg };
 }
 
 const csvPos = (b) => (b && POSITIONS.indexOf(b.position) >= 0 ? b.position : null);
@@ -442,6 +443,39 @@ const luck = (prev) => {
   return out;
 };
 line('Rating, market = adjusted', run((prev, usage) => rate(prev, w, usage, luck(prev))), base.all);
+
+/* ── the projection ───────────────────────────────────────────────────────
+   A separate answer to a separate question. The Rating orders a draft board;
+   this orders expected points, which is the thing this test actually scores,
+   and it is allowed to use none of the roster context that the Rating is
+   marked down for. Three rows, each adding one thing to the one above, so it
+   is visible which of them is carrying the result and which is decoration. */
+const usageBack = (year, depth) => {
+  const src = [];
+  for (let i = 0; i < depth; i++) {
+    const y = year - i;
+    if (loaded[y]) src.push({ year: y, usage: seasonUsage(loaded[y].stats, loaded[y].players) });
+  }
+  return blendSeasons(src, loaded[year].players);
+};
+
+const projRun = (depth, withAge) => run((prev, oneSeason) => {
+  const u = depth === 1 ? oneSeason : usageBack(prev.year, depth);
+  return Object.keys(u)
+    .filter(id => prev.players[id])
+    .map(id => ({
+      id,
+      pos: prev.players[id].position,
+      // age passed as null is how the projection is told to skip the age step
+      fit: projectPPG(u[id], prev.players[id].position, withAge ? prev.players[id].age : null),
+    }))
+    .filter(x => Number.isFinite(x.fit));
+});
+
+console.log('');
+line('projection, 1 season', projRun(1, false), base.all);
+line('projection, 3 seasons', projRun(3, false), base.all);
+line('projection, 3 + age', projRun(3, true), base.all);
 
 console.log('');
 // Each metric taken out on its own: what does it actually buy?
