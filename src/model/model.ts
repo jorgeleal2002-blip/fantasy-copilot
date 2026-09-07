@@ -876,12 +876,28 @@ export function buildModel(input: ModelInput): Model {
   // ── Rookie picks as tradeable capital: real owner from the league's traded
   //    picks, valued at the market's price for that exact slot when it has one.
   const seasonNum = Number(league.season) || new Date().getFullYear();
+  /**
+   * How strong a team is: the best lineup it can field.
+   *
+   * It used to be the sum of EVERY skill player on the roster, bench included,
+   * and the league table is ordered by the best lineup — so the two disagreed,
+   * and they disagreed inside a single row. A team fifth on the screen was
+   * labelled "contending" while the third was "mid", because the fifth carried
+   * more on its bench. That reads as the app arguing with itself, and it is,
+   * since only one of the two can be what the row means by strength.
+   *
+   * The lineup is the one that answers the question the label asks. A bench
+   * does not play, and a contender is a team that can put a side out this
+   * Sunday — which is also what decides the record, and therefore where its
+   * pick lands, which is the other thing this order is used for.
+   */
   const rosterStrength: Record<number, number> = {};
   (d.rosters || []).forEach(r => {
-    rosterStrength[r.roster_id] = (r.players || []).reduce((a, id) => {
+    rosterStrength[r.roster_id] = lineupSum((r.players || []).map(id => {
       const pl = players[id];
-      return a + (pl && POS.indexOf(pl.position as Pos) >= 0 ? quality(pl) : 0);
-    }, 0);
+      if (!pl || POS.indexOf(pl.position as Pos) < 0) return null;
+      return { id, pos: pl.position as Pos, q: quality(pl) };
+    }).filter(Boolean) as LineupItem[]);
   });
   const strengthOrder = Object.keys(rosterStrength).sort((a, b) => rosterStrength[Number(a)] - rosterStrength[Number(b)]);
 

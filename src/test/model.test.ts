@@ -2280,3 +2280,68 @@ describe('a room that follows the board', () => {
     });
   });
 });
+
+/**
+ * The contention label and the table it sits in have to mean the same thing by
+ * "strong".
+ *
+ * Reported from a phone: a team fifth in the league table labelled "contending"
+ * while the third was "mid". The table is ordered by the best lineup each team
+ * can field — it says so at the top — and the label was computed from the sum
+ * of every player on the roster, bench included. Two different questions, one
+ * row, and no way for a reader to tell.
+ */
+describe('what a team\'s strength means', () => {
+  /* Ten teams whose lineups descend in quality, except one: the sixth-best
+     lineup is given sixteen extra bodies behind it. Sum the whole roster and it
+     is one of the strongest sides in the league; field a lineup and it is
+     sixth. */
+  const build = () => {
+    const b = makeBundle();
+    const byPos: Record<string, string[]> = { QB: [], RB: [], WR: [], TE: [] };
+    Object.keys(b.players).forEach(id => {
+      const p = b.players[id];
+      if (byPos[p.position || '']) byPos[p.position!].push(id);
+    });
+    Object.keys(byPos).forEach(k => byPos[k].sort((x, y) =>
+      (b.players[x].search_rank || 9999) - (b.players[y].search_rank || 9999)));
+    b.rosters = b.rosters.map((r, i) => {
+      const nine = [
+        ...byPos.QB.slice(i, i + 1), ...byPos.RB.slice(i * 3, i * 3 + 3),
+        ...byPos.WR.slice(i * 4, i * 4 + 4), ...byPos.TE.slice(i, i + 1),
+      ];
+      const deep = i === 5 ? [...byPos.RB.slice(30, 38), ...byPos.WR.slice(40, 48)] : [];
+      return { ...r, players: [...nine, ...deep], starters: nine };
+    });
+    const m = buildModel({
+      data: b, usage: buildUsage(makeStats(b.players), b.players),
+      market: parseMarket(makeFantasyCalc(b.players)),
+      strat: 'balanced', boardMode: 'fa', pickSel: 0,
+    });
+    return {
+      rows: m.leagueRows.slice().sort((x, y) => y.now - x.now),
+      deepest: b.rosters[5].roster_id,
+    };
+  };
+
+  it('does not call a team contending while the team above it is not', () => {
+    const { rows } = build();
+    const rank = (w: string) => (w === 'contender' ? 0 : w === 'medio' ? 1 : 2);
+    for (let i = 1; i < rows.length; i++) {
+      expect(
+        rank(rows[i].window),
+        rows[i].name + ' is ' + rows[i].window + ' below ' + rows[i - 1].name
+          + ', which is ' + rows[i - 1].window,
+      ).toBeGreaterThanOrEqual(rank(rows[i - 1].window));
+    }
+  });
+
+  /* The bench is where the two measures came apart, so this is the row that
+     used to be labelled contending from sixth place. */
+  it('and a deep bench does not make a sixth-place lineup a contender', () => {
+    const { rows, deepest } = build();
+    const at = rows.findIndex(r => r.id === deepest);
+    expect(at).toBeGreaterThan(3);              // sixth by the lineup it fields
+    expect(rows[at].window).not.toBe('contender');
+  });
+});
