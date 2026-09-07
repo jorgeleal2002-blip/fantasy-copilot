@@ -392,7 +392,7 @@ const base = run((prev, _u, dv) => Object.keys(dv)
 line('last season, as-is', base);
 
 const full = run((prev, usage, dv) => rate(prev, w, usage, dv));
-line('the Rating, as shipped', full, base.all);
+line('Rating, market = points', full, base.all);
 
 /* Points are volume times efficiency, and the two do not keep the same way:
    over these seasons a player's touches survive into the next year at about
@@ -425,8 +425,13 @@ const blend = run(prev => {
 line('half points, half volume', blend, base.all);
 
 /* The same idea fed to the model rather than used instead of it: the number
-   standing in for the market becomes the luck-adjusted one. This is what the
-   app now does with its own production half. */
+   standing in for the market becomes the luck-adjusted one. The two Rating
+   rows differ ONLY in that stand-in — both run whatever usage code is
+   currently in the tree, so neither is a before-and-after of a change to the
+   model. To measure one of those, check the old files out over the new ones
+   and run this twice. Done that way, the two changes of 7 Sep — production
+   read as half points and half volume-at-median-rates, and the combo term
+   dropped — moved these rows 0.772 to 0.776 and 0.779 to 0.783. */
 const luck = (prev) => {
   const exp = {};
   expectedPoints(prev).forEach(x => { exp[x.id] = x.fit; });
@@ -436,7 +441,7 @@ const luck = (prev) => {
   });
   return out;
 };
-line('the Rating on that input', run((prev, usage) => rate(prev, w, usage, luck(prev))), base.all);
+line('Rating, market = adjusted', run((prev, usage) => rate(prev, w, usage, luck(prev))), base.all);
 
 console.log('');
 // Each metric taken out on its own: what does it actually buy?

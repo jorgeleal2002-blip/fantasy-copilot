@@ -92,6 +92,19 @@ stand-in and only the half derived from real usage is under test. Metrics it
 cannot feed — stacks need a roster, the schedule table only covers this season
 — are named as unmeasured rather than reported as neutral.
 
+**And the answer is: not better than the simplest thing, at predicting points.**
+Ordering players by last season's points ranks the next season at 0.795. The
+Rating ranks it at 0.783 — up from 0.772 before the two changes below, and
+still behind. That is worth writing down rather than hiding, and it is also not
+the indictment it looks like: several of the heaviest metrics are not trying to
+predict points and are marked down here for doing their job. Replaceability,
+need, value against the pick and the stack all answer *what is this player
+worth to THIS roster at THIS pick*, and a second quarterback who scores exactly
+as many points as the first is worth almost nothing. The honest reading is that
+a 0–100 draft score and a points projection are different objects, and the gap
+is most of what makes the first one useful. Closing it means shipping the
+second one alongside — not reweighting this one further.
+
 Four of those deserve their own note.
 
 **Volume, not points.** Points are volume times efficiency and the two do not
