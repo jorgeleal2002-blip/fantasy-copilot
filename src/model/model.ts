@@ -408,8 +408,9 @@ export function buildModel(input: ModelInput): Model {
       if (!pl || POS.indexOf(pl.position as Pos) < 0) continue;
       const u = uFor(pid);
       const v = mval(pl);
-      if (v == null || !u || !Number.isFinite(u.ppg) || !(u.gp >= 4)) continue;
-      (byPos[pl.position as Pos] = byPos[pl.position as Pos] || []).push({ v, ppg: u.ppg as number });
+      const prod = u ? (u.ppgAdj ?? u.ppg) : null;
+      if (v == null || !u || !Number.isFinite(prod) || !(u.gp >= 4)) continue;
+      (byPos[pl.position as Pos] = byPos[pl.position as Pos] || []).push({ v, ppg: prod as number });
     }
     POS.forEach(p => {
       const arr = byPos[p];
@@ -432,8 +433,14 @@ export function buildModel(input: ModelInput): Model {
   const prodVal = (pl: SleeperPlayer, pid: string): number | null => {
     const m = prodMap[pl.position as Pos];
     const u = uFor(pid);
-    if (!m || !u || !Number.isFinite(u.ppg) || !(u.gp >= 4)) return null;
-    const pct = pctOf(m.ppgs, u.ppg as number);
+    /* The luck-adjusted number, not the raw one — see `Usage.ppgAdj`. Points
+     * are volume times efficiency and only the volume half keeps, so pricing
+     * a season's opportunities at ordinary rates predicts the next season
+     * better than the season's own points do: 0.803 against 0.795, backtested
+     * over 2021–2025. */
+    const prod = u ? (u.ppgAdj ?? u.ppg) : null;
+    if (!m || !u || !Number.isFinite(prod) || !(u.gp >= 4)) return null;
+    const pct = pctOf(m.ppgs, prod as number);
     return m.vals[Math.min(Math.round(pct * (m.vals.length - 1)), m.vals.length - 1)];
   };
   const talentQ = (pl: SleeperPlayer, pid: string): number => {
@@ -446,8 +453,9 @@ export function buildModel(input: ModelInput): Model {
     const m = pl ? prodMap[pl.position as Pos] : null;
     const u = uFor(pid);
     const v = pl ? mval(pl) : null;
-    if (!m || v == null || !u || !Number.isFinite(u.ppg) || !(u.gp >= 4)) return null;
-    return { mkt: pctOf(m.vals, v), prod: pctOf(m.ppgs, u.ppg as number) };
+    const prod = u ? (u.ppgAdj ?? u.ppg) : null;
+    if (!m || v == null || !u || !Number.isFinite(prod) || !(u.gp >= 4)) return null;
+    return { mkt: pctOf(m.vals, v), prod: pctOf(m.ppgs, prod as number) };
   };
 
   // ── Positional strength: the quality of the starters you can actually field

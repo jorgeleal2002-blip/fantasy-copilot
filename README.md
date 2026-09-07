@@ -57,18 +57,17 @@ curve, no sell window, no future-value column.
 
 ## The Rating
 
-`Rating = Σ wᵢ × metricᵢ`, over eleven metrics, each independently normalised to
+`Rating = Σ wᵢ × metricᵢ`, over ten metrics, each independently normalised to
 0..1 so the breakdown in a player sheet reads as *metric × weight =
 contribution*:
 
 | Metric | Where it comes from |
 | --- | --- |
-| Player quality | market value blended 60/40 with real production, quantile-mapped into the same unit |
+| Player quality | market value blended 60/40 with real production — and the production is luck-adjusted, see below — quantile-mapped into the same unit |
 | Positional need | your starters at that position, ranked against every other roster |
 | Value vs. availability | board position against the pick you are actually making |
 | Floor | snaps (62%) and volume (38%), then discounted for injury and depth-chart demotion |
 | Explosiveness | yards per touch (70%) and long-touchdown rate (30%) — both as within-position percentiles |
-| Floor AND ceiling | the geometric mean of the two, so the lopsided player cannot average his way through |
 | Age curve | a prime *window* per position; a star holds it 1.5 years longer and decays 45% slower |
 | NFL team correlation | stacking a QB adds; sharing a backfield subtracts — measured inside the owner's roster |
 | Red zone and TDs | share of the chances inside the 20, plus **expected** touchdowns per game |
@@ -94,6 +93,15 @@ cannot feed — stacks need a roster, the schedule table only covers this season
 — are named as unmeasured rather than reported as neutral.
 
 Four of those deserve their own note.
+
+**Volume, not points.** Points are volume times efficiency and the two do not
+keep the same way. Measured within position over 2021–2025: a player's touches
+survive into the next season at about 0.8, his yards per touch at 0.4, his
+touchdowns per touch at 0.2. So the production half of player quality is not
+last season's points but half of those and half of what his volume was worth at
+the median rates for his position — the luck deliberately thrown away.
+Backtested against the following season: raw points order at 0.795, this at
+0.803, volume alone at 0.566, so neither half is enough by itself.
 
 **Expected touchdowns.** Scored touchdowns carry luck with them, and luck does
 not repeat. So each season is fitted by least squares, per position, over the

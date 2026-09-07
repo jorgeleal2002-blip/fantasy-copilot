@@ -20,6 +20,17 @@
  * derives from real usage, and no test at all of the market half. It is the
  * half the numbers said was mispriced.
  *
+ * WHAT IT IS ENTITLED TO JUDGE. This scores one thing: does the order predict
+ * points. Several metrics are deliberately not trying to. Replaceability,
+ * positional need, value against the pick and the stack are about what a
+ * player is worth TO A ROSTER at a moment in a draft — a second quarterback
+ * scores exactly as many points as a first and is worth almost nothing, and
+ * saying so is the whole job. Marking those down because they do not predict
+ * points is a category error, and the leave-one-out rows for them should be
+ * read as "this is what it costs", not as "this is broken". The metrics this
+ * test can honestly judge are the ones claiming to describe the player:
+ * talent, floor, explosiveness, red zone and age.
+ *
  * Not part of the test suite: it needs sixty megabytes of downloads that the
  * repository does not carry, so it is a tool you run rather than a test that
  * runs itself.
@@ -276,6 +287,58 @@ const wasConstant = (k) => {
   return seenMetrics.every(m => m[k] === first);
 };
 
+
+/**
+ * What last season's VOLUME was worth at ordinary rates.
+ *
+ * Half-PPR scoring, rebuilt from opportunity: catches at the position's own
+ * catch rate, yards at the position's own yards per touch, touchdowns at the
+ * position's own touchdowns per touch, and a quarterback's passing on the same
+ * footing. Every rate is the position median rather than the player's, which
+ * is the point — it strips out the part of last season that was luck and keeps
+ * the part that was role.
+ */
+function expectedPoints(prev) {
+  const rows = Object.keys(prev.stats)
+    .filter(id => (prev.stats[id]?.gp || 0) >= 4 && prev.players[id])
+    .map(id => {
+      const st = prev.stats[id];
+      const g = Math.max(st.gp || 1, 1);
+      const touches = (st.rec || 0) + (st.rush_att || 0);
+      return {
+        id, pos: prev.players[id].position, g, st, touches,
+        ypt: touches >= 25 ? ((st.rec_yd || 0) + (st.rush_yd || 0)) / touches : null,
+        tdr: touches >= 25 ? ((st.rec_td || 0) + (st.rush_td || 0)) / touches : null,
+        cat: (st.rec_tgt || 0) >= 25 ? (st.rec || 0) / (st.rec_tgt || 1) : null,
+        ypa: (st.pass_att || 0) >= 100 ? (st.pass_yd || 0) / (st.pass_att || 1) : null,
+        tpa: (st.pass_att || 0) >= 100 ? (st.pass_td || 0) / (st.pass_att || 1) : null,
+      };
+    });
+  const median = (xs) => {
+    const v = xs.filter(x => x != null).sort((a, b) => a - b);
+    return v.length ? v[Math.floor(v.length / 2)] : 0;
+  };
+  const rate = {};
+  ['QB', 'RB', 'WR', 'TE'].forEach(p => {
+    const mine = rows.filter(r => r.pos === p);
+    rate[p] = {
+      ypt: median(mine.map(r => r.ypt)), tdr: median(mine.map(r => r.tdr)),
+      cat: median(mine.map(r => r.cat)) || 0.65,
+      ypa: median(mine.map(r => r.ypa)), tpa: median(mine.map(r => r.tpa)),
+    };
+  });
+  return rows.map(r => {
+    const k = rate[r.pos] || rate.WR;
+    const recs = (r.st.rec_tgt || 0) * k.cat;
+    const touches = recs + (r.st.rush_att || 0);
+    let pts = recs * 0.5 + touches * k.ypt * 0.1 + touches * k.tdr * 6;
+    if (r.pos === 'QB') {
+      pts += (r.st.pass_att || 0) * k.ypa * 0.04 + (r.st.pass_att || 0) * k.tpa * 4;
+    }
+    return { id: r.id, pos: r.pos, fit: pts / r.g };
+  });
+}
+
 /* ── the report ───────────────────────────────────────────────────────────── */
 
 const bio = {};
@@ -330,6 +393,50 @@ line('last season, as-is', base);
 
 const full = run((prev, usage, dv) => rate(prev, w, usage, dv));
 line('the Rating, as shipped', full, base.all);
+
+/* Points are volume times efficiency, and the two do not keep the same way:
+   over these seasons a player's touches survive into the next year at about
+   0.8 and his yards per touch at 0.4, his touchdowns per touch at 0.2. So
+   last season's POINTS carry a large helping of luck that will not come back.
+   These orderings take last season's volume and price it at what an average
+   player at that position does with a touch — the luck deliberately thrown
+   away — to see whether that is a better guess than the points themselves. */
+const volumeOnly = run(prev => Object.keys(prev.ppg)
+  .filter(id => (prev.stats[id]?.gp || 0) >= 4)
+  .map(id => {
+    const st = prev.stats[id];
+    const g = Math.max(st.gp || 1, 1);
+    return { id, pos: prev.players[id].position, fit: ((st.rec_tgt || 0) + (st.rush_att || 0)) / g };
+  }));
+line('volume alone', volumeOnly, base.all);
+
+const expected = run(prev => expectedPoints(prev));
+line('volume at average rates', expected, base.all);
+
+const blend = run(prev => {
+  const exp = {};
+  expectedPoints(prev).forEach(x => { exp[x.id] = x.fit; });
+  return Object.keys(exp).map(id => ({
+    id, pos: prev.players[id].position,
+    // half the player's own result, half what his volume alone was worth
+    fit: 0.5 * (prev.ppg[id] || 0) + 0.5 * exp[id],
+  }));
+});
+line('half points, half volume', blend, base.all);
+
+/* The same idea fed to the model rather than used instead of it: the number
+   standing in for the market becomes the luck-adjusted one. This is what the
+   app now does with its own production half. */
+const luck = (prev) => {
+  const exp = {};
+  expectedPoints(prev).forEach(x => { exp[x.id] = x.fit; });
+  const out = {};
+  Object.keys(exp).forEach(id => {
+    out[id] = Math.max(0.5 * (prev.ppg[id] || 0) + 0.5 * exp[id], 0.1) * 100;
+  });
+  return out;
+};
+line('the Rating on that input', run((prev, usage) => rate(prev, w, usage, luck(prev))), base.all);
 
 console.log('');
 // Each metric taken out on its own: what does it actually buy?

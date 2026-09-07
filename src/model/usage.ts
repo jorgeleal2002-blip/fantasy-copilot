@@ -1,5 +1,5 @@
 import type { PlayerCatalog, Pos, SleeperStatLine } from '../api/types';
-import { PRIME, USAGE_WEIGHTS } from './constants';
+import { PRIME, USAGE_WEIGHTS, POS } from './constants';
 
 export interface Usage {
   /** offensive snaps played / team offensive snaps */
@@ -30,6 +30,22 @@ export interface Usage {
   tdLuck: number | null;
 
   ppg: number | null;
+  /**
+   * Points per game with the luck taken out: half what he actually scored,
+   * half what his VOLUME was worth at ordinary rates for his position.
+   *
+   * Points are volume times efficiency and the two do not keep the same way.
+   * Measured over 2021–2025, within position: a player's touches survive into
+   * the next season at about 0.8, his yards per touch at 0.4, his touchdowns
+   * per touch at 0.2. So last season's points carry a helping of luck that is
+   * not coming back, and pricing his opportunities at the position median
+   * throws that part away.
+   *
+   * Backtested against the following season: raw points order at 0.795, this
+   * at 0.803, and volume on its own at 0.566 — so neither half is enough
+   * alone. See `scripts/backtest.mjs`.
+   */
+  ppgAdj: number | null;
   rz: number;
   rzShare: number | null;
   rzPerGame: number | null;
@@ -65,7 +81,7 @@ export type UsageMap = Record<string, Usage>;
  * the other would only have made them disagree.
  */
 const BLEND: (keyof Usage)[] = [
-  'snap', 'tgt', 'vol', 'eff', 'ltr', 'xtdPerGame', 'ppg', 'tdPerGame', 'rzPerGame',
+  'snap', 'tgt', 'vol', 'eff', 'ltr', 'xtdPerGame', 'ppg', 'ppgAdj', 'tdPerGame', 'rzPerGame',
 ];
 
 /**
@@ -132,6 +148,89 @@ function fitTdRates(
 }
 
 /** One season's metrics. Everything joins by player_id — nothing is matched by name. */
+
+/** The middle of a list, ignoring the entries that never existed. */
+function median(xs: (number | null)[]): number {
+  const v = xs.filter((x): x is number => Number.isFinite(x as number)).sort((a, b) => a - b);
+  return v.length ? v[Math.floor(v.length / 2)] : 0;
+}
+
+interface Rates {
+  /** catches per target */
+  cat: number;
+  /** yards per ball in hand, and touchdowns per ball in hand */
+  ypt: number; tdr: number;
+  /** the same two for a quarterback, per pass attempt */
+  ypa: number; tpa: number;
+}
+
+/**
+ * What an ORDINARY player at each position does with a chance.
+ *
+ * The median rather than the mean, because a handful of one-play specialists
+ * with an eighty-yard average pull a mean somewhere no real player lives. The
+ * minimums are there for the same reason: a rate off nine touches is not a
+ * rate.
+ */
+function positionRates(
+  stats: Record<string, SleeperStatLine>,
+  players: PlayerCatalog,
+  hasRec: boolean,
+): Partial<Record<Pos, Rates>> {
+  const rows: Partial<Record<Pos, SleeperStatLine[]>> = {};
+  for (const id of Object.keys(stats)) {
+    const pl = players[id];
+    const pos = pl?.position as Pos;
+    if (!pl || POS.indexOf(pos) < 0) continue;
+    if ((stats[id]?.gp || 0) < 4) continue;
+    (rows[pos] = rows[pos] || []).push(stats[id]);
+  }
+  const out: Partial<Record<Pos, Rates>> = {};
+  POS.forEach(pos => {
+    const list = rows[pos] || [];
+    const touches = (st: SleeperStatLine) =>
+      (hasRec ? (st.rec || 0) : (st.rec_tgt || 0)) + (st.rush_att || 0);
+    out[pos] = {
+      cat: median(list.map(st => ((st.rec_tgt || 0) >= 25 ? (st.rec || 0) / (st.rec_tgt || 1) : null)))
+        || 0.65,
+      ypt: median(list.map(st => (touches(st) >= 25
+        ? ((st.rec_yd || 0) + (st.rush_yd || 0)) / touches(st) : null))),
+      tdr: median(list.map(st => (touches(st) >= 25
+        ? ((st.rec_td || 0) + (st.rush_td || 0)) / touches(st) : null))),
+      ypa: median(list.map(st => ((st.pass_att || 0) >= 100
+        ? (st.pass_yd || 0) / (st.pass_att || 1) : null))),
+      tpa: median(list.map(st => ((st.pass_att || 0) >= 100
+        ? (st.pass_td || 0) / (st.pass_att || 1) : null))),
+    };
+  });
+  return out;
+}
+
+/**
+ * Points per game with the luck taken out — see `Usage.ppgAdj`.
+ *
+ * Half of what he scored and half of what his volume was worth at the rates
+ * above, in half-PPR: half a point a catch, a tenth a yard, six a touchdown,
+ * and a quarterback's passing on the same footing. Neither half is enough on
+ * its own — the volume-only order backtests at 0.566 and the points-only at
+ * 0.795, and the two together at 0.803.
+ */
+function luckAdjusted(
+  st: SleeperStatLine,
+  pos: string | undefined,
+  rates: Partial<Record<Pos, Rates>>,
+  gp: number,
+): number | null {
+  const k = rates[pos as Pos];
+  const real = (st.pts_half_ppr || 0) / gp;
+  if (!k || !k.ypt) return real;
+  const recs = (st.rec_tgt || 0) * k.cat;
+  const touches = recs + (st.rush_att || 0);
+  let pts = recs * 0.5 + touches * k.ypt * 0.1 + touches * k.tdr * 6;
+  if (pos === 'QB') pts += (st.pass_att || 0) * (k.ypa * 0.04 + k.tpa * 4);
+  return real * 0.5 + (pts / gp) * 0.5;
+}
+
 export function seasonUsage(
   stats: Record<string, SleeperStatLine>,
   players: PlayerCatalog,
@@ -159,6 +258,8 @@ export function seasonUsage(
     const r = stats[id] && stats[id].rec;
     return Number.isFinite(r) && (r as number) > 0;
   });
+
+  const ordinary = positionRates(stats, players, hasRec);
 
   const usage: UsageMap = {};
   for (const id of Object.keys(stats)) {
@@ -217,6 +318,7 @@ export function seasonUsage(
       xtd, xtdPerGame: xtd != null && gp ? xtd / gp : null,
       tdLuck: xtd != null ? scoredTd - xtd : null,
       ppg: gp ? (st.pts_half_ppr || 0) / gp : null,
+      ppgAdj: gp ? luckAdjusted(st, pl.position, ordinary, gp) : null,
       rz: rzOwn,
       rzShare: teamRz[pl.team] ? rzOwn / teamRz[pl.team] : null,
       rzPerGame: gp ? rzOwn / gp : null,

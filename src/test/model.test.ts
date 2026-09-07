@@ -640,7 +640,7 @@ function usageStub(snap: number, tgt: number): Usage {
     shareShort: Math.round(tgt * 100) + '% targets',
     eff: 8, effLabel: 'Yards per touch', ltr: 0.02, longTd: 2,
     xtd: 5, xtdPerGame: 0.31, tdLuck: 1,
-    ppg: 12, rz: 10, rzShare: 0.1, rzPerGame: 0.6,
+    ppg: 12, ppgAdj: 12, rz: 10, rzShare: 0.1, rzPerGame: 0.6,
     td: 6, tdPerGame: 0.4, tdShare: 0.2, rank: 12,
   };
 }

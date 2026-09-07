@@ -150,7 +150,7 @@ export const PEAK: Record<Pos, number> = { QB: 26, RB: 23, WR: 24, TE: 25 };
 /** Bumped when the shape of the usage map changes, so a cached map from an
  *  older build cannot survive a reload and publish one season's numbers under
  *  a three-season label. */
-export const USAGE_V = 3;
+export const USAGE_V = 4;
 
 /** How many seasons of usage to blend, and how much each is worth. The most
  *  recent leads; a season the player missed has its weight redistributed
@@ -174,8 +174,8 @@ export interface Strategy {
 export const STRATS: Record<StratKey, Strategy> = {
   balanced: {
     label: 'Balanced',
-    w: { talent: 0.22, need: 0.12, value: 0.08, floor: 0.06, boom: 0.06, combo: 0.18, age: 0.05, stack: 0.05, rz: 0.08, scarce: 0.10, sos: 0 },
-    copy: 'Real balance: it demands floor AND ceiling in the same player, not one or the other. The geometric mean punishes the lopsided — out goes the one who gives you 4 points one Sunday and 22 the next.',
+    w: { talent: 0.27, need: 0.15, value: 0.10, floor: 0.07, boom: 0.07, combo: 0, age: 0.06, stack: 0.06, rz: 0.10, scarce: 0.12, sos: 0 },
+    copy: 'Weighted by what actually repeats. Opportunity keeps year to year and efficiency mostly does not, so a season\'s points are priced at what its volume was worth rather than taken at face value.',
   },
   floor: {
     label: 'Safe floor',
