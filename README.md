@@ -75,6 +75,24 @@ contribution*:
 | Edge over a replacement | his value above the last man at his position the league still starts — `teams × slots`, flex included |
 | Strength of schedule | what his opponents gave up to his position last season, weighted 60/40 toward your own playoff weeks — redraft only |
 
+### Does it work?
+
+`scripts/backtest.mjs` scores the Rating against what actually happened. It
+feeds the model one real NFL season, takes the order it produces, and measures
+that order against the NEXT season's half-PPR points per game — running the
+shipped `seasonUsage`, `blendSeasons` and `scorePlayer` rather than a copy of
+them, because a backtest of a reimplementation measures the reimplementation.
+
+    node scripts/fetch-nflverse.mjs 2021 2025
+    npx vite-node scripts/backtest.mjs
+
+It prints the model, a baseline to beat, and every weight taken out on its own.
+Two of the heaviest metrics are built on FantasyCalc's market values and there
+is no historical archive of those to replay, so the market is held at a
+stand-in and only the half derived from real usage is under test. Metrics it
+cannot feed — stacks need a roster, the schedule table only covers this season
+— are named as unmeasured rather than reported as neutral.
+
 Four of those deserve their own note.
 
 **Expected touchdowns.** Scored touchdowns carry luck with them, and luck does
