@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   findUser, getDraftPicks, getRosters, getSeasonStats, getTradedPicks, getUsers,
-  loadLeague, matchMe, userLeagues, playerPhoto,
+  loadLeague, matchMe, userLeagues, playerPhoto, getMatchups, getNflState,
 } from '../api/sleeper';
-import type { LeagueBundle, PosFilter, SleeperLeague } from '../api/types';
-import { DRAFT_POLL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import type { LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup } from '../api/types';
+import { DRAFT_POLL_MS, MATCHUP_POLL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
   EMPTY_ROOM, claimSeat, createRoom as createRoomAt, liveEnabled, liveReason, newRoomId,
   pushPick, readRoom, restartRoom, startRoom, watchRoom, type Room,
@@ -144,6 +144,13 @@ export function useApp() {
   // makes no sense.
   const [savedAll, setSavedAll] = useState<SavedTrade[]>([]);
 
+  /* The week's head-to-heads, and where the NFL currently is. Kept out of the
+   * league bundle because it is the one thing on screen that changes while you
+   * are looking at it. */
+  const [week, setWeekState] = useState<number | null>(null);
+  const [matchups, setMatchups] = useState<SleeperMatchup[]>([]);
+  const [matchupState, setMatchupState] = useState<FeedState>('idle');
+
   // ── ephemera
   const [toast, setToast] = useState('');
   const [photos, setPhotos] = useState<Record<string, string>>({});
@@ -151,6 +158,24 @@ export function useApp() {
   const poll = useRef<number | undefined>(undefined);
   const dataRef = useRef<LeagueBundle | null>(null);
   dataRef.current = data;
+
+  const fetchMatchups = useCallback(async (lid: string, wk: number, quiet = false) => {
+    // A poll must not blank the scores it is refreshing, so it stays quiet and
+    // only a first load or a week change shows the loading state.
+    if (!quiet) setMatchupState('loading');
+    try {
+      const rows = await getMatchups(lid, wk);
+      setMatchups(Array.isArray(rows) ? rows : []);
+      setMatchupState('ok');
+    } catch {
+      setMatchupState('fail');
+    }
+  }, []);
+
+  const setWeek = useCallback((w: number) => {
+    setWeekState(w);
+    if (leagueId) void fetchMatchups(leagueId, w);
+  }, [leagueId, fetchMatchups]);
 
   const showToast = useCallback((text: string) => {
     window.clearTimeout(toastTimer.current);
@@ -295,6 +320,38 @@ export function useApp() {
       window.clearInterval(poll.current);
     };
   }, [load]);
+
+  /* Which week to show, from the NFL's own clock rather than the calendar —
+   * Sleeper's week rolls on Tuesday, and a date guess would be a day out for
+   * two days of every week. */
+  useEffect(() => {
+    if (!leagueId) return;
+    let cancelled = false;
+    void (async () => {
+      let wk = 1;
+      try {
+        const st = await getNflState();
+        wk = Math.max(1, Math.min(18, Number(st?.display_week || st?.week || 1)));
+      } catch {
+        /* week 1 is a truthful default when the state feed is down */
+      }
+      if (cancelled) return;
+      setWeekState(wk);
+      void fetchMatchups(leagueId, wk);
+    })();
+    return () => { cancelled = true; };
+  }, [leagueId, fetchMatchups]);
+
+  /* Scores move while games are on. Quietly, so the numbers change under you
+   * instead of the section blinking through a loading state every minute. */
+  useEffect(() => {
+    if (!leagueId || week == null) return;
+    const id = window.setInterval(
+      () => void fetchMatchups(leagueId, week, true),
+      MATCHUP_POLL_MS,
+    );
+    return () => window.clearInterval(id);
+  }, [leagueId, week, fetchMatchups]);
 
   const connectUser = useCallback(async () => {
     const name = (username || '').trim().replace(/^@/, '');
@@ -722,6 +779,7 @@ export function useApp() {
     clearRoomError: () => setRoomError(''),
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
+    week, matchups, matchupState,
 
     accounts, switchAccount, forgetAccount,
     block: (leagueId ? blocks[username + '/' + leagueId] : undefined) || [],
@@ -813,7 +871,8 @@ export function useApp() {
     },
     clearMockChoices: () => setMockChoices({}), setRosterFilter, setRosterSort,
     setBoardMode, setRankMode, setPickSel, setStrat, setDetail,
-    setQuery, setTopPos, setTopLens, setTopOpen,
+    setQuery, setTopPos, setTopLens, setTopOpen, setWeek,
+    refreshMatchups: () => { if (leagueId && week != null) void fetchMatchups(leagueId, week); },
     passOffer: (key: string) => setPassed(p => p.concat(key)),
     resetOffers: () => setPassed([]),
 

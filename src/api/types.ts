@@ -155,3 +155,21 @@ export interface FantasyCalcRow {
   trend30Day?: number;
   player?: { sleeperId?: string; name?: string; position?: string };
 }
+
+/** One roster's week, as Sleeper reports it. Teams that face each other share
+ *  a `matchup_id`; a team on a bye has one nobody else carries. */
+export interface SleeperMatchup {
+  roster_id: number;
+  matchup_id: number | null;
+  points: number | null;
+  starters?: string[] | null;
+  players_points?: Record<string, number> | null;
+}
+
+/** Where the NFL season currently is. */
+export interface SleeperNflState {
+  week?: number;
+  display_week?: number;
+  season?: string;
+  season_type?: string;
+}

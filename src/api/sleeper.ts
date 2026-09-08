@@ -1,5 +1,6 @@
 import type {
   LeagueBundle, PlayerCatalog, SleeperDraft, SleeperLeague, SleeperPick,
+  SleeperMatchup, SleeperNflState,
   SleeperRoster, SleeperStatLine, SleeperTradedPick, SleeperUser,
 } from './types';
 
@@ -79,6 +80,9 @@ export const getRosters = (lid: string) => get<SleeperRoster[]>('/league/' + lid
 export const getUsers = (lid: string) => get<SleeperUser[]>('/league/' + lid + '/users');
 export const getTradedPicks = (lid: string) => get<SleeperTradedPick[]>('/league/' + lid + '/traded_picks');
 export const getDraftPicks = (draftId: string) => get<SleeperPick[]>('/draft/' + draftId + '/picks');
+export const getMatchups = (lid: string, week: number) =>
+  get<SleeperMatchup[]>('/league/' + lid + '/matchups/' + week);
+export const getNflState = () => get<SleeperNflState>('/state/nfl');
 export const getSeasonStats = (year: number) =>
   get<Record<string, SleeperStatLine>>('/stats/nfl/regular/' + year);
 

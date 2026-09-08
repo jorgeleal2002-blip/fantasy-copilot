@@ -221,6 +221,9 @@ export const BASE_ROUND_VALUE: Record<number, number> = { 1: 42, 2: 16, 3: 7, 4:
 
 /** How often the draft board re-reads picks while a draft is live. */
 export const DRAFT_POLL_MS = 20000;
+/** Scores move while games are on; a minute is often enough to feel live
+ *  without asking Sleeper for the same numbers every few seconds. */
+export const MATCHUP_POLL_MS = 45000;
 
 export const STORAGE_SESSION = 'fc.session';
 export const STORAGE_PHOTOS = 'fc.photos';

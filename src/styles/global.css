@@ -919,4 +919,72 @@ button { font-family: inherit; }
   text-transform: uppercase;
   color: rgba(242, 253, 254, .32);
   border-top: 1px solid var(--color-divider);
+/* ── Matchups ─────────────────────────────────────────────────────────────
+   A scoreboard card: the two teams facing each other, side by side, with the
+   avatars on the outside so the names meet in the middle the way they do on
+   a board.
+   ──────────────────────────────────────────────────────────────────────── */
+.mu-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 11px;
+}
+/* Your own game is the one being looked for, so it says so twice: it is
+   first, and it is the only one with a border. */
+.mu-card.is-mine {
+  border-color: rgba(145, 132, 217, 0.45);
+  background: rgba(145, 132, 217, 0.08);
+}
+
+.mu-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.mu-side.is-right {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.mu-av {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--color-divider);
+}
+.mu-av-blank { background: rgba(233, 233, 237, 0.06); }
+
+.mu-name {
+  font-size: 12px;
+  line-height: 1.25;
+  color: rgba(233, 233, 237, 0.72);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mu-name.is-me { color: var(--color-accent); }
+
+.mu-pts {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin-top: 1px;
+  color: rgba(233, 233, 237, 0.55);
+}
+.mu-pts.is-up { color: var(--color-text); }
+
+.mu-vs {
+  flex: none;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(233, 233, 237, 0.3);
 }

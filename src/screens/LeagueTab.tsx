@@ -4,6 +4,7 @@ import type { LeagueRow, Model, PlayerFit } from '../model/types';
 import type { App } from '../state/useApp';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { cardTitle, dim, ellipsis, fitColor } from '../ui/styles';
+import { Matchups } from './Matchups';
 
 const STATUS_TEXT: Record<string, string> = {
   pre_draft: 'draft not started',
@@ -74,6 +75,10 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
 
   return (
     <Screen>
+      {/* Above the rankings: the scoreboard is what a league page is opened
+          for during the season, and the standings are still a scroll away. */}
+      <Matchups app={app} m={m} />
+
       <Segmented options={modes} value={mode} onChange={app.setRankMode} />
       <div style={{ fontSize: 11, lineHeight: 1.45, color: dim(0.4), marginTop: -4, textWrap: 'pretty' }}>{note}</div>
 

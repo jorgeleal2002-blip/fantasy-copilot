@@ -16,6 +16,7 @@ import { isMockEligible } from '../model/mock-pool';
 import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedule';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
+import { leaderOf, pairMatchups } from '../model/matchups';
 
 const bundle = makeBundle();
 const market = parseMarket(makeFantasyCalc(bundle.players));
@@ -2422,5 +2423,58 @@ describe('projected points per game', () => {
     expect(projectConfidence(at({ gpTotal: 17 }))).toBe('fair');
     expect(projectConfidence(at({ gpTotal: 6 }))).toBe('low');
     expect(projectConfidence(undefined)).toBeNull();
+  });
+});
+
+describe('the league\'s matchups', () => {
+  const teams = [
+    { id: 1, name: 'Cuboys', avatar: null, isMe: true },
+    { id: 2, name: 'Maulozano', avatar: null, isMe: false },
+    { id: 3, name: 'Third', avatar: null, isMe: false },
+    { id: 4, name: 'Fourth', avatar: null, isMe: false },
+  ];
+  const row = (roster_id: number, matchup_id: number | null, points: number | null) =>
+    ({ roster_id, matchup_id, points });
+
+  it('pairs the two rosters that share a matchup id', () => {
+    const out = pairMatchups(teams, [row(3, 9, 88), row(4, 9, 91)]);
+    expect(out).toHaveLength(1);
+    expect([out[0].a.name, out[0].b!.name].sort()).toEqual(['Fourth', 'Third']);
+  });
+
+  it('puts your own game first and you on the left of it', () => {
+    const out = pairMatchups(teams, [row(3, 9, 88), row(4, 9, 91), row(2, 7, 70), row(1, 7, 102)]);
+    expect(out[0].hasMe).toBe(true);
+    expect(out[0].a.name).toBe('Cuboys');
+    expect(out[0].b!.name).toBe('Maulozano');
+    expect(out[1].hasMe).toBe(false);
+  });
+
+  it('keeps a team on a bye rather than dropping it off the screen', () => {
+    const out = pairMatchups(teams, [row(3, null, 0)]);
+    expect(out).toHaveLength(1);
+    expect(out[0].b).toBe(null);
+    expect(out[0].a.name).toBe('Third');
+  });
+
+  it('ignores a roster the league no longer lists', () => {
+    expect(pairMatchups(teams, [row(99, 4, 50)])).toHaveLength(0);
+  });
+
+  it('names a leader only once both sides have scored something different', () => {
+    const [live] = pairMatchups(teams, [row(1, 7, 102), row(2, 7, 70)]);
+    expect(leaderOf(live)).toBe('a');
+    const [tied] = pairMatchups(teams, [row(1, 7, 70), row(2, 7, 70)]);
+    expect(leaderOf(tied)).toBe(null);
+    const [unplayed] = pairMatchups(teams, [row(1, 7, null), row(2, 7, null)]);
+    expect(leaderOf(unplayed)).toBe(null);
+  });
+
+  it('treats a scoreless kickoff as a score, not as missing', () => {
+    // 0-0 before kickoff is a real state; showing a dash there would read as
+    // "Sleeper is down" rather than "nobody has played yet".
+    const [m] = pairMatchups(teams, [row(1, 7, 0), row(2, 7, 0)]);
+    expect(m.a.points).toBe(0);
+    expect(leaderOf(m)).toBe(null);
   });
 });
