@@ -7,6 +7,7 @@ import { clockTime, ord } from '../ui/format';
 import { PlayerSearch } from '../ui/PlayerSearch';
 import { Card, Empty, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
+import { TradeBuilder } from './TradeBuilder';
 
 const assetMeta = (a: TradeAsset): string =>
   a.isPick
@@ -21,8 +22,9 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
   const badgeColor = app.marketState === 'ok' ? GOOD : app.marketState === 'fail' ? BAD : MID;
 
   const visible = m.offers.filter(o => app.passed.indexOf(o.partner + o.get.id) < 0).slice(0, 6);
-  const views: SegOption<'suggested' | 'block' | 'saved'>[] = [
+  const views: SegOption<'suggested' | 'block' | 'saved' | 'build'>[] = [
     { key: 'suggested', label: 'Suggested' },
+    { key: 'build', label: 'Build' },
     { key: 'block', label: app.block.length ? `Block · ${app.block.length}` : 'Block' },
     { key: 'saved', label: app.saved.length ? `Shortlist · ${app.saved.length}` : 'Shortlist' },
   ];
@@ -61,7 +63,9 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
 
       <Segmented options={views} value={app.tradeView} onChange={app.setTradeView} size="sm" />
 
-      {app.tradeView === 'saved' ? (
+      {app.tradeView === 'build' ? (
+        <TradeBuilder app={app} m={m} />
+      ) : app.tradeView === 'saved' ? (
         <Shortlist app={app} m={m} />
       ) : app.tradeView === 'block' ? (
         <Block app={app} m={m} />

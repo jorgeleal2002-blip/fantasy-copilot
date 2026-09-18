@@ -114,7 +114,13 @@ export function useApp() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
   const [roomError, setRoomError] = useState('');
-  const [tradeView, setTradeView] = useState<'suggested' | 'block' | 'saved'>('suggested');
+  const [tradeView, setTradeView] = useState<'suggested' | 'block' | 'saved' | 'build'>('suggested');
+  /* The trade being built. Kept here rather than in the screen because looking
+   * a player up mid-build means leaving the tab, and a half-built three-team
+   * trade is not something to lose to a navigation. */
+  const [tradeTeams, setTradeTeams] = useState<number[]>([]);
+  /** asset id → where it comes from and where it is going */
+  const [tradeAssets, setTradeAssets] = useState<Record<string, { from: number; to: number }>>({});
   // A redraft board holds kickers and defences too, so the picker that filters
   // it has to be able to say so.
   const [filter, setFilter] = useState<PosFilter>('ALL');
@@ -176,6 +182,47 @@ export function useApp() {
     setWeekState(w);
     if (leagueId) void fetchMatchups(leagueId, w);
   }, [leagueId, fetchMatchups]);
+
+  /* Dropping a team takes its assets with it — leaving them behind would route
+   * players to a team no longer in the deal, which scores as nothing and reads
+   * as the app losing them. */
+  const toggleTradeTeam = useCallback((rid: number) => {
+    setTradeTeams(list => {
+      const next = list.includes(rid) ? list.filter(x => x !== rid) : list.concat(rid);
+      setTradeAssets(assets => {
+        const kept: Record<string, { from: number; to: number }> = {};
+        for (const [id, a] of Object.entries(assets)) {
+          if (next.includes(a.from) && next.includes(a.to)) kept[id] = a;
+        }
+        return kept;
+      });
+      return next;
+    });
+  }, []);
+
+  const toggleTradeAsset = useCallback((id: string, from: number, to: number) => {
+    setTradeAssets(a => {
+      if (a[id]) {
+        const { [id]: _gone, ...rest } = a;
+        return rest;
+      }
+      return { ...a, [id]: { from, to } };
+    });
+  }, []);
+
+  /** Tapping the destination walks it round the other teams in the deal. */
+  const cycleTradeTo = useCallback((id: string, teamsInDeal: number[]) => {
+    setTradeAssets(a => {
+      const cur = a[id];
+      if (!cur) return a;
+      const options = teamsInDeal.filter(t => t !== cur.from);
+      if (options.length < 2) return a;
+      const next = options[(options.indexOf(cur.to) + 1) % options.length];
+      return { ...a, [id]: { ...cur, to: next } };
+    });
+  }, []);
+
+  const clearTrade = useCallback(() => { setTradeTeams([]); setTradeAssets({}); }, []);
 
   const showToast = useCallback((text: string) => {
     window.clearTimeout(toastTimer.current);
@@ -779,7 +826,7 @@ export function useApp() {
     clearRoomError: () => setRoomError(''),
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
-    week, matchups, matchupState,
+    week, matchups, matchupState, tradeTeams, tradeAssets,
 
     accounts, switchAccount, forgetAccount,
     block: (leagueId ? blocks[username + '/' + leagueId] : undefined) || [],
@@ -872,6 +919,7 @@ export function useApp() {
     clearMockChoices: () => setMockChoices({}), setRosterFilter, setRosterSort,
     setBoardMode, setRankMode, setPickSel, setStrat, setDetail,
     setQuery, setTopPos, setTopLens, setTopOpen, setWeek,
+    toggleTradeTeam, toggleTradeAsset, cycleTradeTo, clearTrade,
     refreshMatchups: () => { if (leagueId && week != null) void fetchMatchups(leagueId, week); },
     passOffer: (key: string) => setPassed(p => p.concat(key)),
     resetOffers: () => setPassed([]),

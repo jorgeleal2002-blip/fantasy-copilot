@@ -17,6 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, pairMatchups } from '../model/matchups';
+import { evaluateTrade, verdictLine } from '../model/trade-eval';
 
 const bundle = makeBundle();
 const market = parseMarket(makeFantasyCalc(bundle.players));
@@ -2476,5 +2477,78 @@ describe('the league\'s matchups', () => {
     const [m] = pairMatchups(teams, [row(1, 7, 0), row(2, 7, 0)]);
     expect(m.a.points).toBe(0);
     expect(leaderOf(m)).toBe(null);
+  });
+});
+
+describe('who wins a proposed trade', () => {
+  const teams = [
+    { id: 1, name: 'You', isMe: true },
+    { id: 2, name: 'Maulozano', isMe: false },
+    { id: 3, name: 'Third', isMe: false },
+  ];
+  const a = (id: string, value: number, from: number, to: number) =>
+    ({ id, name: id, value, from, to });
+
+  it('names you the winner when you take back more than you send', () => {
+    const v = evaluateTrade(teams.slice(0, 2), [a('gibbs', 8000, 2, 1), a('spare', 3000, 1, 2)]);
+    expect(v.winner?.isMe).toBe(true);
+    expect(v.ledgers[0].net).toBe(5000);
+    expect(v.ledgers[1].net).toBe(-5000);
+    expect(verdictLine(v)).toContain('You win');
+  });
+
+  it('calls a close deal even rather than inventing a winner', () => {
+    // Two percent apart: inside what an approximate market can tell apart.
+    const v = evaluateTrade(teams.slice(0, 2), [a('x', 5100, 2, 1), a('y', 5000, 1, 2)]);
+    expect(v.winner).toBe(null);
+    expect(v.ledgers.every(l => l.standing === 'even')).toBe(true);
+    expect(verdictLine(v)).toContain('Even trade');
+  });
+
+  it('scales the band with the size of the deal', () => {
+    // The same 100-point gap decides a small trade and not a large one.
+    const small = evaluateTrade(teams.slice(0, 2), [a('x', 600, 2, 1), a('y', 500, 1, 2)]);
+    expect(small.winner?.isMe).toBe(true);
+    const big = evaluateTrade(teams.slice(0, 2), [a('x', 20100, 2, 1), a('y', 20000, 1, 2)]);
+    expect(big.winner).toBe(null);
+  });
+
+  it('handles three teams in a ring, where no two are trading with each other', () => {
+    const v = evaluateTrade(teams, [
+      a('p1', 9000, 1, 2),
+      a('p2', 5000, 2, 3),
+      a('p3', 4000, 3, 1),
+    ]);
+    expect(v.ledgers).toHaveLength(3);
+    // Every asset is counted once on each side of the league's books.
+    expect(v.ledgers.reduce((s, l) => s + l.net, 0)).toBe(0);
+    const third = v.ledgers.find(l => l.name === 'Third')!;
+    expect(third.got.map(x => x.id)).toEqual(['p2']);
+    expect(third.gave.map(x => x.id)).toEqual(['p3']);
+    expect(v.winner?.name).toBe('Maulozano');
+  });
+
+  it('flags a team that gives and gets nothing back', () => {
+    const v = evaluateTrade(teams, [a('p1', 9000, 3, 1), a('p2', 4000, 1, 2)]);
+    expect(v.problems.join(' ')).toContain('Third gives and gets nothing back');
+  });
+
+  it('flags a team nothing moves for', () => {
+    const v = evaluateTrade(teams, [a('p1', 9000, 1, 2), a('p2', 8800, 2, 1)]);
+    expect(v.problems.join(' ')).toContain('Third is in the trade but nothing moves');
+  });
+
+  it('drops an asset sent to its own owner, or to nobody in the deal', () => {
+    const v = evaluateTrade(teams.slice(0, 2), [
+      a('self', 5000, 1, 1),
+      a('outside', 5000, 1, 9),
+      a('real', 1000, 2, 1),
+    ]);
+    expect(v.moved).toBe(1000);
+    expect(v.ledgers.find(l => l.isMe)!.got.map(x => x.id)).toEqual(['real']);
+  });
+
+  it('says nothing is in the trade before anything is picked', () => {
+    expect(verdictLine(evaluateTrade(teams, []))).toBe('Nothing in the trade yet');
   });
 });
