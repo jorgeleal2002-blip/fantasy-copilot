@@ -919,6 +919,8 @@ button { font-family: inherit; }
   text-transform: uppercase;
   color: rgba(242, 253, 254, .32);
   border-top: 1px solid var(--color-divider);
+}
+
 /* ── Matchups ─────────────────────────────────────────────────────────────
    A scoreboard card: the two teams facing each other, side by side, with the
    avatars on the outside so the names meet in the middle the way they do on
