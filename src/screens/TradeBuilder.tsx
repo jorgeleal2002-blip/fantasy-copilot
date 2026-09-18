@@ -1,4 +1,4 @@
-import { evaluateTrade, verdictLine, type TradeAsset, type TeamLedger } from '../model/trade-eval';
+import { evaluateTrade, fitLine, verdictLine, type TradeAsset, type TeamLedger } from '../model/trade-eval';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { BAD, GOOD, dim, ellipsis } from '../ui/styles';
@@ -30,7 +30,19 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
     return { id, name: found?.name || id, value: found?.q || 0, from: a.from, to: a.to };
   });
 
-  const v = evaluateTrade(teams, assets);
+  /* Value is what the assets are worth; fit is what the lineup does with them.
+   * Measured per team by rebuilding each roster with the swap applied, which is
+   * the same simulation the suggested offers already run. */
+  const fits: Record<number, number> = {};
+  for (const t of teams) {
+    const incoming = assets.filter(x => x.to === t.id).map(x => x.id);
+    const outgoing = assets.filter(x => x.from === t.id).map(x => x.id);
+    if (!incoming.length && !outgoing.length) continue;
+    fits[t.id] = m.lineupWith(t.id, incoming, outgoing).delta;
+  }
+
+  const v = evaluateTrade(teams, assets, fits);
+  const fit = fitLine(v);
   const nameOf = (rid: number) => teams.find(t => t.id === rid)?.name || '?';
 
   return (
@@ -51,7 +63,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
         </div>
       ) : (
         <>
-          <Verdict v={v} />
+          <Verdict v={v} fit={fit} />
           {teams.map(t => (
             <TeamAssets
               key={t.id}
@@ -76,7 +88,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
   );
 }
 
-function Verdict({ v }: { v: ReturnType<typeof evaluateTrade> }) {
+function Verdict({ v, fit }: { v: ReturnType<typeof evaluateTrade>; fit: string | null }) {
   const tone = !v.moved ? dim(0.5) : v.winner ? (v.winner.isMe ? GOOD : BAD) : dim(0.7);
   return (
     <div style={{
@@ -86,6 +98,12 @@ function Verdict({ v }: { v: ReturnType<typeof evaluateTrade> }) {
       <div style={{ fontSize: 13.5, fontWeight: 500, color: tone, textWrap: 'pretty' }}>
         {verdictLine(v)}
       </div>
+      {/* The second axis, and the one that decides most real trades. */}
+      {fit ? (
+        <div style={{ fontSize: 12, color: dim(0.62), marginTop: 6, textWrap: 'pretty' }}>
+          {fit}
+        </div>
+      ) : null}
       {v.moved ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
           {v.ledgers.map(l => <Row key={l.id} l={l} />)}
@@ -116,6 +134,9 @@ function Row({ l }: { l: TeamLedger }) {
       </span>
       <span style={{ color: dim(0.4), fontSize: 10.5 }}>
         {l.gave.length} out · {l.got.length} in
+        {l.fitDelta != null && Math.abs(l.fitDelta) >= 0.1
+          ? ' · lineup ' + (l.fitDelta > 0 ? '+' : '−') + Math.abs(l.fitDelta).toFixed(1)
+          : ''}
       </span>
       <span style={{ color, fontWeight: 500, minWidth: 62, textAlign: 'right' }}>{sign(l.net)}</span>
     </div>

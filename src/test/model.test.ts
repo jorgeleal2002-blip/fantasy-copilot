@@ -17,7 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, pairMatchups } from '../model/matchups';
-import { evaluateTrade, verdictLine } from '../model/trade-eval';
+import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 
 const bundle = makeBundle();
 const market = parseMarket(makeFantasyCalc(bundle.players));
@@ -2550,5 +2550,51 @@ describe('who wins a proposed trade', () => {
 
   it('says nothing is in the trade before anything is picked', () => {
     expect(verdictLine(evaluateTrade(teams, []))).toBe('Nothing in the trade yet');
+  });
+});
+
+describe('the fit half of a trade verdict', () => {
+  const two = [
+    { id: 1, name: 'You', isMe: true },
+    { id: 2, name: 'Them', isMe: false },
+  ];
+  const a = (id: string, value: number, from: number, to: number) =>
+    ({ id, name: id, value, from, to });
+  const swap = [a('in', 5000, 2, 1), a('out', 5000, 1, 2)];
+
+  it('says nothing about the lineup when nobody measured it', () => {
+    const v = evaluateTrade(two, swap);
+    expect(v.ledgers.every(l => l.fitDelta === null)).toBe(true);
+    expect(fitLine(v)).toBe(null);
+  });
+
+  it('reports the lineup change on its own terms', () => {
+    const v = evaluateTrade(two, swap, { 1: 6.4, 2: -6.4 });
+    expect(fitLine(v)).toContain('gains 6.4 pts');
+  });
+
+  it('calls out a deal that loses on value and wins on fit', () => {
+    // You overpay badly, and it still fixes the hole you could not field.
+    const v = evaluateTrade(two, [a('star', 9000, 2, 1), a('haul', 14000, 1, 2)], { 1: 8.2 });
+    expect(v.ledgers.find(l => l.isMe)!.standing).toBe('loses');
+    expect(fitLine(v)).toContain('pay over market');
+  });
+
+  it('calls out a deal that wins on value and costs you a starter', () => {
+    const v = evaluateTrade(two, [a('haul', 14000, 2, 1), a('star', 9000, 1, 2)], { 1: -5.1 });
+    expect(v.ledgers.find(l => l.isMe)!.standing).toBe('wins');
+    expect(fitLine(v)).toContain('selling from your starters');
+  });
+
+  it('does not dress a tenth of a point up as a lineup change', () => {
+    const v = evaluateTrade(two, swap, { 1: 0.04 });
+    expect(fitLine(v)).toBe('Your lineup is unchanged');
+  });
+
+  it('keeps the value verdict untouched by the fit', () => {
+    const bare = evaluateTrade(two, swap);
+    const withFit = evaluateTrade(two, swap, { 1: 40, 2: -40 });
+    expect(withFit.winner).toBe(bare.winner);
+    expect(withFit.ledgers.map(l => l.net)).toEqual(bare.ledgers.map(l => l.net));
   });
 });

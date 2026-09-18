@@ -460,6 +460,10 @@ export interface Model {
   marketCount: number;
 
   teamInfo: (rosterId: number) => TeamSheet | null;
+  /** What a trade would do to a team's best available lineup. Picks are
+   *  excluded — one cannot start a game. */
+  lineupWith: (rosterId: number, incoming: string[], outgoing: string[]) =>
+    { before: number; after: number; delta: number };
   posRankOf: (rosterId: number, pos: Pos) => number;
   scoreAny: (playerId: string) => BoardPlayer | null;
   /** the price tag for one player, with its rank inside his position */

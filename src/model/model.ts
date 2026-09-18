@@ -1095,6 +1095,31 @@ export function buildModel(input: ModelInput): Model {
     return { row, list, ranks, bestPos, picks: (picksByOwner[rid] || []).slice().sort((a, b) => b.q - a.q) };
   };
 
+  /**
+   * What a trade does to a team's best available lineup.
+   *
+   * Value and fit are different questions and a deal can answer them
+   * differently: paying over market for the position you cannot field is a
+   * good trade that looks bad on the ledger, and selling a backup quarterback
+   * for a fortune is the reverse. This measures the second one, by rebuilding
+   * the roster with the swap applied and re-picking the optimal starters.
+   *
+   * Picks are dropped rather than scored — a 2027 first cannot start a game,
+   * so counting one here would claim a lineup gain that does not arrive for a
+   * year. They still carry their full weight on the value side.
+   */
+  const lineupWith = (rid: number, incoming: string[], outgoing: string[]) => {
+    const r = (d.rosters || []).find(x => x.roster_id === rid);
+    if (!r) return { before: 0, after: 0, delta: 0 };
+    const out = new Set(outgoing);
+    const cur = mapRoster(r.players);
+    const before = lineupSum(cur);
+    const kept = cur.filter(p => !out.has(p.id));
+    const added = mapRoster(incoming.filter(id => !!players[id]));
+    const after = lineupSum(kept.concat(added));
+    return { before, after, delta: after - before };
+  };
+
   // ── Trade engine. Every offer is simulated on both sides: your optimal
   //    lineup and theirs are recomputed with the swap applied, and the deal
   //    only survives if you gain and they would plausibly say yes.
@@ -1971,5 +1996,6 @@ export function buildModel(input: ModelInput): Model {
     snake: !!(d.draft && d.draft.type === 'snake'),
     fills: fillPos,
     teamInfo, posRankOf, scoreAny, marketValue, offersFor, runMock, metricKeys,
+    lineupWith,
   };
 }
