@@ -30,17 +30,25 @@ const windowColor = (r: LeagueRow) =>
 
 export function LeagueTab({ app, m }: { app: App; m: Model }) {
   type Mode = 'now' | 'future' | 'fit' | 'fitFut';
-  const modes: SegOption<Mode>[] = m.isDynasty
-    ? [
-      { key: 'now', label: 'Strength today' },
-      { key: 'future', label: 'Future value' },
-      { key: 'fit', label: 'Rating today' },
-      { key: 'fitFut', label: 'Rating ahead' },
-    ]
-    : [{ key: 'now', label: 'Roster strength' }, { key: 'fit', label: 'Rating' }];
-  const allowed = modes.map(o => o.key);
+  /* One control carried two questions — what is measured, and when — so it
+   * needed four labels of fourteen characters and the fourth fell off the
+   * side of the phone. Split in two, every label is a word. */
+  const allowed: Mode[] = m.isDynasty ? ['now', 'future', 'fit', 'fitFut'] : ['now', 'fit'];
   const mode: Mode = allowed.includes(app.rankMode) ? app.rankMode : 'now';
   const isFitMode = mode === 'fit' || mode === 'fitFut';
+  const ahead = mode === 'future' || mode === 'fitFut';
+
+  const measures: SegOption<'strength' | 'rating'>[] = [
+    { key: 'strength', label: 'Strength' },
+    { key: 'rating', label: 'Rating' },
+  ];
+  const horizons: SegOption<'today' | 'ahead'>[] = [
+    { key: 'today', label: 'Today' },
+    { key: 'ahead', label: 'In 2 years' },
+  ];
+  const pick = (meas: 'strength' | 'rating', when: boolean) => app.setRankMode(
+    meas === 'rating' ? (when ? 'fitFut' : 'fit') : (when ? 'future' : 'now'),
+  );
 
   const ranked = m.leagueRows.slice().sort((a, b) => (
     mode === 'future' ? b.future - a.future
@@ -80,7 +88,21 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
           for during the season, and the standings are still a scroll away. */}
       <Matchups app={app} m={m} />
 
-      <Segmented options={modes} value={mode} onChange={app.setRankMode} />
+      <Segmented
+        options={measures}
+        value={isFitMode ? 'rating' : 'strength'}
+        onChange={v => pick(v, ahead)}
+      />
+      {/* Only a dynasty has a future to look at: a redraft roster two seasons
+          out is not a thing anybody owns. */}
+      {m.isDynasty ? (
+        <Segmented
+          options={horizons}
+          value={ahead ? 'ahead' : 'today'}
+          onChange={v => pick(isFitMode ? 'rating' : 'strength', v === 'ahead')}
+          size="sm"
+        />
+      ) : null}
       <div style={{ fontSize: 11, lineHeight: 1.45, color: dim(0.4), marginTop: -4, textWrap: 'pretty' }}>{note}</div>
 
       <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
