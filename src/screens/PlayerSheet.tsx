@@ -122,7 +122,11 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       value: u && u.seasons
         ? (u.seasons === 1
           ? '1 · ' + u.seasonList + ' (small sample)'
-          : u.seasons + ' · ' + u.seasonList + (u.fade != null && u.fade < 0.9 ? ' · past his peak: recency weighted' : ''))
+          : u.seasons + ' · ' + u.seasonList
+            /* How much of the number is the year you are watching. Two games
+             * and a full season print the same and are not the same claim. */
+            + (u.curWeight != null ? ' · ' + Math.round(u.curWeight * 100) + '% this year' : '')
+            + (u.fade != null && u.fade < 0.9 ? ' · past his peak: recency weighted' : ''))
         : 'no data',
     },
     { label: 'Snap %', value: u && u.snap != null ? Math.round(u.snap * 100) + '%' : 'no data' },
@@ -272,9 +276,10 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
             {conf ? <span style={{ color: dim(0.5) }}>{' — ' + CONF[conf]}</span> : null}.
           </div>
           <div style={{ fontSize: 12, color: dim(0.5), lineHeight: 1.55, marginTop: 8, textWrap: 'pretty' }}>
-            Built from his last three seasons of volume rather than his points: his real
-            touches, priced at rates pulled from his own toward what is ordinary at his
-            position by how much each rate actually repeats year to year. A quarterback's
+            Built from his volume rather than his points — the season being played,
+            weighted by how much of it there is, over his last three finished ones: his
+            real touches, priced at rates pulled from his own toward what is ordinary at
+            his position by how much each rate actually repeats year to year. A quarterback's
             touchdowns mostly keep; a running back's catch rate is noise. It knows nothing
             about your roster or this pick — that is the Rating's job, and the two
             disagreeing on a player is information rather than a bug.

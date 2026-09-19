@@ -1,5 +1,5 @@
 import type { PlayerCatalog, Pos, SleeperStatLine } from '../api/types';
-import { PRIME, USAGE_WEIGHTS, POS } from './constants';
+import { CURRENT_SEASON_K, PRIME, USAGE_WEIGHTS, POS } from './constants';
 
 export interface Usage {
   /** offensive snaps played / team offensive snaps */
@@ -60,6 +60,11 @@ export interface Usage {
   seasons?: number;
   seasonList?: string;
   gpTotal?: number;
+  /** the season in progress, once it has been folded in — see
+   *  `withCurrentSeason`. `curWeight` is how much of the number is this year. */
+  curYear?: number;
+  curGp?: number;
+  curWeight?: number;
   fade?: number;
   effPct?: number;
   volPct?: number;
@@ -455,9 +460,20 @@ export function blendSeasons(
     Object.assign(usage[id], shareTexts(pl?.position, usage[id].tgt, usage[id].vol));
   }
 
-  // Percentiles AFTER blending, so a player is ranked against a three-year
-  // distribution rather than one year's. A percentile also avoids any constant
-  // that would saturate.
+  rankWithin(usage, players);
+
+  if (!Object.keys(usage).length) throw new Error('empty');
+  return usage;
+}
+
+/**
+ * Percentiles, taken AFTER blending so a player is ranked against a
+ * multi-season distribution rather than one year's, and again whenever the
+ * numbers underneath them move — a percentile computed off a value that has
+ * since changed is the one kind of stale number nothing downstream can detect.
+ * A percentile also avoids any constant that would saturate.
+ */
+function rankWithin(usage: UsageMap, players: PlayerCatalog): void {
   for (const pos of ['QB', 'RB', 'WR', 'TE'] as Pos[]) {
     const ok = Object.keys(usage).filter(id => {
       const pl = players[id];
@@ -471,9 +487,78 @@ export function blendSeasons(
       vals.forEach((id, i) => { usage[id][dst] = i / (vals.length - 1); });
     }
   }
+}
 
-  if (!Object.keys(usage).length) throw new Error('empty');
-  return usage;
+/**
+ * Fold the season in progress into the blend of the finished ones.
+ *
+ * Until now the model counted back from the league's year and never looked at
+ * the season being played — "usage only exists for a finished season" — which
+ * left every number on every screen describing a player as he was last
+ * January. A back who lost his job in August, a receiver who inherited a
+ * hundred targets, a quarterback on a new team: none of it existed here.
+ *
+ * It is weighted by how much of it has been played rather than dropped in as
+ * another season, because four games and sixteen are not the same claim. See
+ * `CURRENT_SEASON_K`. Everything the finished seasons know stays underneath
+ * it: at three games the year so far is a third of the answer, not the answer.
+ *
+ * The small sample also takes care of itself further down. `positionRates`
+ * throws out any season under four games, so before week five there are no
+ * rates to shrink toward and `luckAdjusted` returns the player's real points
+ * per game untouched; after it, every rate the sample cannot support falls
+ * back to the position's. The number regresses hardest exactly when it is
+ * standing on the least.
+ */
+export function withCurrentSeason(
+  blend: UsageMap,
+  current: { year: number; usage: UsageMap },
+  players: PlayerCatalog,
+): UsageMap {
+  for (const id of Object.keys(current.usage)) {
+    const cur = current.usage[id];
+    const gp = cur.gp || 0;
+    // Nobody has played, or this player has not. Either way the season in
+    // progress has nothing to say about him yet, and a zero-game "season"
+    // dragging his numbers toward nothing would be worse than silence.
+    if (!gp) continue;
+    const w = gp / (gp + CURRENT_SEASON_K);
+    const prior = blend[id];
+
+    if (!prior) {
+      // No finished season carries him — a rookie, or a player the feed never
+      // had. What he has done this year is the whole of what is known, and the
+      // four-game floor in `projectPPG` is what keeps three of them off a card.
+      blend[id] = { ...cur, curYear: current.year, curGp: gp, curWeight: 1, gpTotal: gp, seasons: 1, seasonList: String(current.year) };
+      continue;
+    }
+
+    for (const k of BLEND) {
+      const a = cur[k] as number | null | undefined;
+      const b = prior[k] as number | null | undefined;
+      const hasA = Number.isFinite(a as number);
+      const hasB = Number.isFinite(b as number);
+      // Where only one side has the metric it stands alone: a rookie's first
+      // snap share is not worth less for having no 2023 to average against.
+      if (!hasA) continue;
+      (prior as unknown as Record<string, number>)[k as string] =
+        hasB ? (a as number) * w + (b as number) * (1 - w) : (a as number);
+    }
+
+    prior.curYear = current.year;
+    prior.curGp = gp;
+    prior.curWeight = w;
+    prior.gpTotal = (prior.gpTotal ?? prior.gp ?? 0) + gp;
+    prior.seasons = (prior.seasons ?? 0) + 1;
+    prior.seasonList = prior.seasonList ? current.year + ', ' + prior.seasonList : String(current.year);
+    // His position rank is a statement about right now, so the current one
+    // replaces last season's rather than averaging with it.
+    if (cur.rank != null) prior.rank = cur.rank;
+    Object.assign(prior, shareTexts(players[id]?.position, prior.tgt, prior.vol));
+  }
+
+  rankWithin(blend, players);
+  return blend;
 }
 
 /** Kept for the single-season path the tests and older callers use. */

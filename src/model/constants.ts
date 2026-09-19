@@ -150,12 +150,26 @@ export const PEAK: Record<Pos, number> = { QB: 26, RB: 23, WR: 24, TE: 25 };
 /** Bumped when the shape of the usage map changes, so a cached map from an
  *  older build cannot survive a reload and publish one season's numbers under
  *  a three-season label. */
-export const USAGE_V = 4;
+export const USAGE_V = 5;
 
 /** How many seasons of usage to blend, and how much each is worth. The most
  *  recent leads; a season the player missed has its weight redistributed
  *  across the ones they played, so an injury year is not counted as a bad year. */
 export const USAGE_WEIGHTS: [number, number, number] = [0.5, 0.3, 0.2];
+
+/**
+ * How many games of the season in progress are worth everything before it.
+ *
+ * The finished seasons are a big sample of a player who may no longer exist —
+ * new team, new coordinator, new depth chart — and the season in progress is a
+ * small sample of the one who does. So the current year is weighted by how
+ * much of it there is, `gp / (gp + K)`: a third of the number after three
+ * games, half after six, two thirds by week thirteen. Six is where per-game
+ * production stops being mostly noise, and it is deliberately not lower — one
+ * big Sunday should not repaint a player, which is the whole failure mode of
+ * looking at the current season at all.
+ */
+export const CURRENT_SEASON_K = 6;
 
 export type MetricKey =
   | 'talent' | 'need' | 'value' | 'floor' | 'boom' | 'combo' | 'age' | 'stack' | 'rz'

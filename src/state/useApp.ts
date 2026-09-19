@@ -15,7 +15,7 @@ import {
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
-import { blendSeasons, seasonUsage, type UsageMap } from '../model/usage';
+import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
 import { nextDetailStack, topDetail } from './detail-stack';
 
 export type Stage = 'connect' | 'leagues' | 'app';
@@ -255,12 +255,25 @@ export function useApp() {
   }, []);
 
   const fetchUsage = useCallback(async (bundle: LeagueBundle) => {
-    // Three seasons, not one: a single year is a small sample, and one injury
-    // or a new coordinator moves every number in it. Usage only exists for a
-    // finished season, so we count back from the league's own year.
-    const latest = (Number(bundle.league.season) || new Date().getFullYear()) - 1;
+    // Three finished seasons, not one: a single year is a small sample, and one
+    // injury or a new coordinator moves every number in it. On top of them, the
+    // season being played, weighted by how much of it there is — without it
+    // every screen describes a player as he was last January.
+    const season = Number(bundle.league.season) || new Date().getFullYear();
+    const latest = season - 1;
     const years = [latest, latest - 1, latest - 2];
-    const key = USAGE_V + ':' + latest;
+
+    /* The week is part of the key: the same three finished seasons plus two
+     * games is not the same map as the same three plus nine, and a map cached
+     * on Tuesday must not still be answering in December. */
+    let wk = 0;
+    try {
+      const st = await getNflState();
+      if (Number(st?.season) === season) wk = Math.max(0, Math.min(18, Number(st?.week || 0)));
+    } catch {
+      /* no state feed: fall back to the finished seasons alone */
+    }
+    const key = USAGE_V + ':' + latest + ':' + wk;
     if (usageCache.has(key)) {
       setUsage(usageCache.get(key)!);
       setUsageSeasons(seasonCache.get(key) || '');
@@ -280,8 +293,27 @@ export function useApp() {
           /* one season being down does not take the others with it */
         }
       }
-      const u = blendSeasons(loaded, bundle.players);
-      const label = loaded.map(l => l.year).join(' · ');
+      let u = blendSeasons(loaded, bundle.players);
+      let label = loaded.map(l => l.year).join(' · ');
+
+      if (wk > 0) {
+        try {
+          const now = await getSeasonStats(season);
+          if (now && typeof now === 'object') {
+            const cur = { year: season, usage: seasonUsage(now, bundle.players) };
+            const played = Object.keys(cur.usage).reduce((n, id) => Math.max(n, cur.usage[id].gp || 0), 0);
+            if (played > 0) {
+              u = withCurrentSeason(u, cur, bundle.players);
+              // Said out loud, because a number standing on two games and one
+              // standing on a season print the same and are not the same claim.
+              label = season + ' (' + played + ' gm' + (played === 1 ? '' : 's') + ') · ' + label;
+            }
+          }
+        } catch {
+          /* the season in progress being down leaves the finished ones intact */
+        }
+      }
+
       usageCache.set(key, u);
       seasonCache.set(key, label);
       setUsage(u);

@@ -8,7 +8,7 @@ import { buildModel } from '../model/model';
 import { REACH, sfxFor } from '../model/sfx-map';
 import type { MockPick } from '../model/types';
 import { ownedWeights, pickValue, redraftWeights, scorePlayer } from '../model/score';
-import { blendSeasons, buildUsage, seasonUsage, type Usage } from '../model/usage';
+import { blendSeasons, buildUsage, seasonUsage, withCurrentSeason, type Usage, type UsageMap } from '../model/usage';
 import { projectConfidence, projectPPG } from '../model/project';
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
@@ -2352,6 +2352,76 @@ describe('what a team\'s strength means', () => {
     const at = rows.findIndex(r => r.id === deepest);
     expect(at).toBeGreaterThan(3);              // sixth by the lineup it fields
     expect(rows[at].window).not.toBe('contender');
+  });
+});
+
+/* ── the season being played ────────────────────────────────────────────────
+   The model counted back from the league's year and never looked at the season
+   in progress, so every number described a player as he was last January: the
+   back who lost his job in August was still a starter here, and the receiver
+   who inherited a hundred targets was still a backup. */
+describe('the season in progress', () => {
+  const CATALOG = {
+    a: { player_id: 'a', position: 'WR', team: 'SEA', age: 26, years_exp: 4 },
+    rk: { player_id: 'rk', position: 'WR', team: 'SEA', age: 22, years_exp: 0 },
+  } as unknown as import('../api/types').PlayerCatalog;
+
+  const one = (over: Partial<Usage>): UsageMap => ({ a: { ...usageStub(0.8, 0.2), ...over } });
+  const prior = () => one({ ppgAdj: 12, gp: 16, gpTotal: 45, seasons: 3, seasonList: '2025, 2024, 2023', rank: 12 });
+
+  it('weighs this year by how much of it has been played', () => {
+    // Three games: a third of the answer, not the answer. Six: half.
+    const wk3 = withCurrentSeason(prior(), { year: 2026, usage: one({ ppgAdj: 24, gp: 3 }) }, CATALOG);
+    expect(wk3.a.ppgAdj as number).toBeCloseTo(12 + 12 * (3 / 9), 6);
+    const wk6 = withCurrentSeason(prior(), { year: 2026, usage: one({ ppgAdj: 24, gp: 6 }) }, CATALOG);
+    expect(wk6.a.ppgAdj as number).toBeCloseTo(18, 6);
+    // and it keeps growing, so by December the year in front of you leads
+    const wk13 = withCurrentSeason(prior(), { year: 2026, usage: one({ ppgAdj: 24, gp: 13 }) }, CATALOG);
+    expect(wk13.a.curWeight as number).toBeGreaterThan(0.65);
+  });
+
+  it('lets one big Sunday move a player without repainting him', () => {
+    const after = withCurrentSeason(prior(), { year: 2026, usage: one({ ppgAdj: 40, gp: 1 }) }, CATALOG);
+    expect(after.a.ppgAdj as number).toBeGreaterThan(12);
+    expect(after.a.ppgAdj as number).toBeLessThan(17);
+  });
+
+  it('does nothing at all before a snap has been played', () => {
+    // Preseason: the feed answers, everybody is at zero games, and a season of
+    // nothing dragging the blend toward nothing would be worse than silence.
+    const after = withCurrentSeason(prior(), { year: 2026, usage: one({ ppgAdj: 0, ppg: 0, gp: 0 }) }, CATALOG);
+    expect(after.a.ppgAdj).toBe(12);
+    expect(after.a.curGp).toBeUndefined();
+  });
+
+  it('carries a player no finished season has', () => {
+    // A rookie four weeks in is the one case where the year so far is all there
+    // is — and the four-game floor is still what decides whether it prints.
+    const rookie = { rk: { ...usageStub(0.6, 0.18), ppgAdj: 11, gp: 3 } };
+    const after = withCurrentSeason(prior(), { year: 2026, usage: rookie }, CATALOG);
+    expect(after.rk.ppgAdj).toBe(11);
+    expect(after.rk.seasonList).toBe('2026');
+    expect(projectPPG(after.rk)).toBeNull();
+    expect(projectPPG({ ...after.rk, gpTotal: 5 })).toBe(11);
+  });
+
+  it('counts this year toward how much sample a number is standing on', () => {
+    const after = withCurrentSeason(one({ ppgAdj: 12, gp: 2, gpTotal: 6 }), { year: 2026, usage: one({ gp: 9 }) }, CATALOG);
+    expect(after.a.gpTotal).toBe(15);
+    // 6 games was "low", 15 is "fair" — the confidence moves with the sample
+    expect(projectConfidence(after.a)).toBe('fair');
+    expect(after.a.seasonList).toContain('2026');
+  });
+
+  it('takes the position rank from now rather than last January', () => {
+    const after = withCurrentSeason(prior(), { year: 2026, usage: one({ rank: 3, gp: 4 }) }, CATALOG);
+    // A rank is a statement about the present; averaging two of them is not one.
+    expect(after.a.rank).toBe(3);
+  });
+
+  it('keeps a metric only this year has', () => {
+    const after = withCurrentSeason(one({ snap: null, gp: 16 }), { year: 2026, usage: one({ snap: 0.9, gp: 5 }) }, CATALOG);
+    expect(after.a.snap).toBe(0.9);
   });
 });
 

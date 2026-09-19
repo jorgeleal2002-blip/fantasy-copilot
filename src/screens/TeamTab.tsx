@@ -39,11 +39,12 @@ function Summary({ app, m }: { app: App; m: Model }) {
   const me = m.leagueRows.find(x => x.isMe);
   const shift = me?.shift ?? 0;
 
-  // Naming the seasons matters: the numbers below are a three-year blend, and
-  // a reader who assumes they are last season's will misread every one of them.
+  // Naming the seasons matters: the numbers below blend the year being played
+  // with the three before it, and a reader who assumes they are last season's
+  // — or this one's — will misread every one of them.
   const usageBadge = app.usageState === 'ok'
     ? `Real usage connected (${app.usageSeasons || 'last season'}): snap %, ball share, yards per touch and expected TDs`
-    : app.usageState === 'loading' ? 'Loading three seasons of usage…'
+    : app.usageState === 'loading' ? 'Loading this season and the three before it…'
       : app.usageState === 'fail' ? 'No real usage: floor and explosiveness fall back to the model' : '';
   const usageColor = app.usageState === 'ok' ? GOOD : app.usageState === 'fail' ? BAD : MID;
 
