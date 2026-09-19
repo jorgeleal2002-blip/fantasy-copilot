@@ -1087,3 +1087,119 @@ button { font-family: inherit; }
   font-size: 11.5px;
   color: rgba(233, 233, 237, 0.4);
 }
+
+/* ── Trade builder ────────────────────────────────────────────────────────
+   The verdict reads as a picture first and a ledger second: a headline, then
+   one bar per team either side of a centre line. Two signed numbers are
+   something to compare; a bar is something to glance at.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* Eleven teams wrapped to four rows of chips and pushed the verdict off the
+   screen. One row that scrolls keeps the answer in view while you pick. */
+.tb-teams {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scroll-snap-type: x proximity;
+}
+.tb-team {
+  flex: none;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 7px 11px;
+  border-radius: 999px;
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  scroll-snap-align: start;
+  color: rgba(242, 253, 254, 0.55);
+  border: 1px solid var(--color-divider);
+  background: transparent;
+}
+.tb-team.is-on {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+.tb-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: 14px;
+  padding: 14px 13px;
+}
+.tb-head {
+  font-family: var(--font-heading);
+  font-size: 19px;
+  font-weight: var(--font-heading-weight);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.tb-sub {
+  font-size: 11.5px;
+  color: rgba(242, 253, 254, 0.45);
+  margin-top: 3px;
+}
+
+.tb-ledger { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.tb-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.tb-name {
+  font-size: 12.5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tb-name.is-me { color: var(--color-accent); }
+.tb-net { font-size: 13px; font-weight: 500; flex: none; }
+
+/* The centre line is the whole point: it is what makes a bar mean "ahead" or
+   "behind" rather than just "this much". */
+.tb-bar {
+  position: relative;
+  height: 6px;
+  margin-top: 5px;
+  border-radius: 3px;
+  background: rgba(242, 253, 254, 0.06);
+}
+.tb-bar::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: rgba(242, 253, 254, 0.22);
+}
+.tb-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  min-width: 2px;
+}
+
+.tb-gets {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: rgba(242, 253, 254, 0.42);
+  margin-top: 5px;
+  text-wrap: pretty;
+}
+.tb-fit {
+  font-size: 12px;
+  color: rgba(242, 253, 254, 0.62);
+  margin-top: 12px;
+  text-wrap: pretty;
+}
+.tb-problem { font-size: 11px; color: #d9a08e; margin-top: 7px; text-wrap: pretty; }
+.tb-band {
+  font-size: 10px;
+  line-height: 1.45;
+  color: rgba(242, 253, 254, 0.3);
+  margin-top: 10px;
+  text-wrap: pretty;
+}

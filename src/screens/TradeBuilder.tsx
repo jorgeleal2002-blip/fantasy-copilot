@@ -1,4 +1,4 @@
-import { evaluateTrade, fitLine, verdictLine, type TradeAsset, type TeamLedger } from '../model/trade-eval';
+import { evaluateTrade, fitLine, type TradeAsset, type TeamLedger } from '../model/trade-eval';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { BAD, GOOD, dim, ellipsis } from '../ui/styles';
@@ -47,11 +47,6 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
-        Pick the teams, then tap the players and picks that move. Tap the arrow on
-        an asset to send it somewhere else — that is all a three-team trade is.
-      </div>
-
       <TeamPicker app={app} m={m} inDeal={ids} />
 
       {teams.length < 2 ? (
@@ -89,56 +84,80 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 }
 
 function Verdict({ v, fit }: { v: ReturnType<typeof evaluateTrade>; fit: string | null }) {
-  const tone = !v.moved ? dim(0.5) : v.winner ? (v.winner.isMe ? GOOD : BAD) : dim(0.7);
+  const tone = !v.moved ? dim(0.5) : v.winner ? (v.winner.isMe ? GOOD : BAD) : dim(0.75);
+  // Bars are drawn against the largest swing in the deal, so the longest one
+  // always fills its half and the rest are read against it.
+  const widest = Math.max(1, ...v.ledgers.map(l => Math.abs(l.net)));
+
+  const head = !v.moved ? 'Nothing picked yet'
+    : !v.winner ? 'Even trade'
+      : v.winner.isMe ? 'You win this trade' : v.winner.name + ' wins';
+  const sub = !v.moved ? 'Tap players below to build one'
+    : !v.winner ? 'Nobody comes out ahead'
+      : Math.round((v.winner.net / v.moved) * 100) + '% of the value moved';
+
   return (
-    <div style={{
-      background: 'var(--color-surface)', borderRadius: 12, padding: '12px 13px',
-      border: '1px solid ' + (v.winner ? tone + '55' : 'var(--color-divider)'),
-    }}>
-      <div style={{ fontSize: 13.5, fontWeight: 500, color: tone, textWrap: 'pretty' }}>
-        {verdictLine(v)}
-      </div>
-      {/* The second axis, and the one that decides most real trades. */}
-      {fit ? (
-        <div style={{ fontSize: 12, color: dim(0.62), marginTop: 6, textWrap: 'pretty' }}>
-          {fit}
+    <div className="tb-card" style={{ borderColor: v.winner ? tone + '66' : undefined }}>
+      <div className="tb-head" style={{ color: tone }}>{head}</div>
+      <div className="tb-sub">{sub}</div>
+
+      {v.moved ? (
+        <div className="tb-ledger">
+          {v.ledgers.map(l => <Row key={l.id} l={l} widest={widest} />)}
         </div>
       ) : null}
+
+      {fit ? <div className="tb-fit">{fit}</div> : null}
+
+      {v.problems.map(p => <div key={p} className="tb-problem">{p}</div>)}
+
       {v.moved ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-          {v.ledgers.map(l => <Row key={l.id} l={l} />)}
-        </div>
-      ) : null}
-      {v.problems.map(p => (
-        <div key={p} style={{ fontSize: 11, color: BAD, marginTop: 7, textWrap: 'pretty' }}>
-          {p}
-        </div>
-      ))}
-      {v.moved ? (
-        <div style={{ fontSize: 10.5, color: dim(0.38), marginTop: 8, textWrap: 'pretty' }}>
+        <div className="tb-band">
           {/* Say what "even" means here, or the number looks arbitrary. */}
-          Anything inside ±{Math.round(v.band).toLocaleString()} counts as even — four
-          percent of the {Math.round(v.moved).toLocaleString()} that changes hands.
+          Even is anything inside ±{Math.round(v.band).toLocaleString()} — four percent
+          of the {Math.round(v.moved).toLocaleString()} that changes hands.
         </div>
       ) : null}
     </div>
   );
 }
 
-function Row({ l }: { l: TeamLedger }) {
-  const color = l.standing === 'wins' ? GOOD : l.standing === 'loses' ? BAD : dim(0.55);
+/**
+ * One team's side of the deal: who they are, what they walk away with, and how
+ * far the value tipped — as a bar either side of a centre line, because "+6"
+ * and "−6" are two numbers to compare and a bar is a picture to glance at.
+ */
+function Row({ l, widest }: { l: TeamLedger; widest: number }) {
+  const color = l.standing === 'wins' ? GOOD : l.standing === 'loses' ? BAD : dim(0.5);
+  const pct = (Math.abs(l.net) / widest) * 50;
+  const up = l.net >= 0;
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-      <span style={{ flex: 1, minWidth: 0, color: l.isMe ? 'var(--color-accent)' : undefined, ...ellipsis }}>
-        {l.name}
-      </span>
-      <span style={{ color: dim(0.4), fontSize: 10.5 }}>
-        {l.gave.length} out · {l.got.length} in
+    <div className="tb-row">
+      <div className="tb-row-top">
+        <span className={'tb-name' + (l.isMe ? ' is-me' : '')}>{l.name}</span>
+        <span className="tb-net" style={{ color }}>{sign(l.net)}</span>
+      </div>
+
+      <div className="tb-bar">
+        <span
+          className="tb-fill"
+          style={{
+            background: color,
+            width: pct + '%',
+            left: up ? '50%' : (50 - pct) + '%',
+          }}
+        />
+      </div>
+
+      {/* What they actually receive. A ledger of counts says how many; the
+          names say whether the deal is worth reading twice. */}
+      <div className="tb-gets">
+        {l.got.length ? l.got.map(a => a.name).join(' · ') : 'nothing'}
         {l.fitDelta != null && Math.abs(l.fitDelta) >= 0.1
-          ? ' · lineup ' + (l.fitDelta > 0 ? '+' : '−') + Math.abs(l.fitDelta).toFixed(1)
+          ? '  ·  lineup ' + (l.fitDelta > 0 ? '+' : '−') + Math.abs(l.fitDelta).toFixed(1)
           : ''}
-      </span>
-      <span style={{ color, fontWeight: 500, minWidth: 62, textAlign: 'right' }}>{sign(l.net)}</span>
+      </div>
     </div>
   );
 }
@@ -147,7 +166,7 @@ function TeamPicker({ app, m, inDeal }: { app: App; m: Model; inDeal: number[] }
   const others = m.leagueRows.filter(r => !r.isMe);
   const full = inDeal.length >= MAX_TEAMS;
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+    <div className="tb-teams">
       {others.map(r => {
         const on = inDeal.includes(r.id);
         return (
@@ -157,15 +176,8 @@ function TeamPicker({ app, m, inDeal }: { app: App; m: Model; inDeal: number[] }
             aria-pressed={on}
             disabled={!on && full}
             onClick={() => app.toggleTradeTeam(r.id)}
-            style={{
-              font: 'inherit', fontSize: 11, cursor: 'pointer',
-              padding: '6px 9px', borderRadius: 8, maxWidth: 140,
-              color: on ? 'var(--color-accent)' : dim(0.55),
-              border: '1px solid ' + (on ? 'var(--color-accent)' : 'var(--color-divider)'),
-              background: on ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent',
-              opacity: !on && full ? 0.4 : 1,
-              ...ellipsis,
-            }}
+            className={'tb-team' + (on ? ' is-on' : '')}
+            style={{ opacity: !on && full ? 0.35 : 1 }}
           >
             {r.name}
           </button>
@@ -196,7 +208,7 @@ function TeamAssets({ app, m, team, inDeal, nameOf }: {
         color: team.isMe ? 'var(--color-accent)' : undefined,
         borderBottom: '1px solid var(--color-divider)',
       }}>
-        {team.name} sends
+        {team.isMe ? 'You send' : team.name + ' sends'}
       </div>
       <div style={{ maxHeight: 240, overflow: 'auto' }}>
         {items.map(p => {
@@ -224,7 +236,7 @@ function TeamAssets({ app, m, team, inDeal, nameOf }: {
                   {' · ' + Math.round(p.q).toLocaleString()}
                 </span>
               </button>
-              {picked ? (
+              {picked && inDeal.length > 2 ? (
                 <button
                   type="button"
                   onClick={() => app.cycleTradeTo(p.id, inDeal)}
@@ -236,6 +248,8 @@ function TeamAssets({ app, m, team, inDeal, nameOf }: {
                 >
                   → {nameOf(picked.to)}
                 </button>
+              ) : picked ? (
+                <span style={{ color: 'var(--color-accent)', fontSize: 13, flex: 'none' }}>✓</span>
               ) : null}
             </div>
           );
