@@ -6,7 +6,7 @@
  */
 import type {
   FantasyCalcRow, LeagueBundle, PlayerCatalog, SleeperDraft, SleeperLeague,
-  SleeperPick, SleeperRoster, SleeperStatLine, SleeperUser,
+  SleeperMatchup, SleeperPick, SleeperRoster, SleeperStatLine, SleeperUser,
 } from '../api/types';
 
 export const MY_USER_ID = 'u1';
@@ -252,4 +252,41 @@ export function makeBundle(): LeagueBundle {
     me: users[0],
     players,
   };
+}
+
+/**
+ * One week of head-to-heads, with the lineups Sleeper actually sends.
+ *
+ * The screen that reads this pairs the two lineups slot against slot, so the
+ * fixture has to carry `starters` and `players_points` and not just a total —
+ * a fixture with only the totals in it renders a scoreboard that opens onto
+ * nothing, which is exactly the state this is here to catch.
+ *
+ * Rosters are paired 1v2, 3v4 and so on, and one team is left out so the bye
+ * path is on screen too.
+ */
+export function makeMatchups(byPos: Record<string, string[]>, week: number): SleeperMatchup[] {
+  const rosters = makeRosters(byPos);
+  const r = rng(week * 7919 + 13);
+  return rosters.map((roster, i) => {
+    // The league starts nine; the roster's own `starters` is already that many.
+    const starters = (roster.starters || []).slice(0, 9);
+    const players_points: Record<string, number> = {};
+    let total = 0;
+    starters.forEach((id, j) => {
+      // A slot nobody filled, on one team, so the empty case is drawn.
+      if (i === 1 && j === 4) return;
+      const pts = Math.round(r() * 240) / 10;
+      players_points[id] = pts;
+      total += pts;
+    });
+    return {
+      roster_id: roster.roster_id,
+      // The last roster gets no id at all, which is Sleeper's way of saying bye.
+      matchup_id: i === rosters.length - 1 ? null : Math.floor(i / 2) + 1,
+      points: Math.round(total * 100) / 100,
+      starters: i === 1 ? starters.map((id, j) => (j === 4 ? '0' : id)) : starters,
+      players_points,
+    };
+  });
 }

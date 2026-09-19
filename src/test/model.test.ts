@@ -16,7 +16,7 @@ import { isMockEligible } from '../model/mock-pool';
 import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedule';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
-import { leaderOf, pairMatchups } from '../model/matchups';
+import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 
 const bundle = makeBundle();
@@ -2477,6 +2477,93 @@ describe('the league\'s matchups', () => {
     const [m] = pairMatchups(teams, [row(1, 7, 0), row(2, 7, 0)]);
     expect(m.a.points).toBe(0);
     expect(leaderOf(m)).toBe(null);
+  });
+
+  /* ── the lineups behind a card ────────────────────────────────────────────
+     Opening a matchup is meant to answer "where is this game being won", so
+     the two lineups are paired slot against slot rather than listed one team
+     after the other. */
+  describe('opened up', () => {
+    const SLOTS = ['QB', 'RB', 'RB', 'WR', 'WR', 'TE', 'FLEX', 'BN', 'BN', 'IR'];
+    const players: Record<string, SleeperPlayer> = {
+      p1: { player_id: 'p1', full_name: 'Josh Allen', position: 'QB', team: 'BUF' },
+      p2: { player_id: 'p2', first_name: 'Bijan', last_name: 'Robinson', position: 'RB', team: 'ATL' },
+      p3: { player_id: 'p3', full_name: 'Jalen Hurts', position: 'QB', team: 'PHI' },
+      p4: { player_id: 'p4', full_name: 'Puka Nacua', position: 'WR', team: 'LAR' },
+    };
+    const withLineup = (
+      roster_id: number, matchup_id: number, points: number,
+      starters: string[], players_points: Record<string, number>,
+    ) => ({ roster_id, matchup_id, points, starters, players_points });
+
+    const game = () => pairMatchups(teams, [
+      withLineup(1, 7, 40, ['p1', 'p2'], { p1: 25.4, p2: 14.6 }),
+      withLineup(2, 7, 18, ['p3', '0'], { p3: 18.2 }),
+    ])[0];
+
+    it('faces the two lineups off a slot at a time', () => {
+      const rows = lineupRows(game(), SLOTS, players);
+      expect(rows.map(r => r.slot)).toEqual(['QB', 'RB']);
+      expect(rows[0].a!.name).toBe('J. Allen');
+      expect(rows[0].b!.name).toBe('J. Hurts');
+      expect(rows[0].a!.points).toBe(25.4);
+      expect(rows[0].b!.points).toBe(18.2);
+    });
+
+    it('builds a name out of the parts when there is no full one', () => {
+      const rows = lineupRows(game(), SLOTS, players);
+      expect(rows[1].a!.name).toBe('B. Robinson');
+    });
+
+    /* The bench is not a lineup, and a league that starts seven would have had
+       three phantom rows off the end of the ten it lists. */
+    it('counts only the slots a lineup is actually made of', () => {
+      expect(startingSlots(SLOTS)).toEqual(['QB', 'RB', 'RB', 'WR', 'WR', 'TE', 'FLEX']);
+      expect(startingSlots(null)).toEqual([]);
+    });
+
+    /* An empty slot is where a week gets lost, so it is shown as one rather
+       than left blank or quietly skipped. */
+    it('shows a slot the manager never filled', () => {
+      const rows = lineupRows(game(), SLOTS, players);
+      expect(rows[1].b).toEqual({ id: null, name: 'Empty', pos: '', team: null, points: null });
+    });
+
+    it('keeps the slot labels when only one side has posted a lineup', () => {
+      const half = pairMatchups(teams, [
+        withLineup(1, 7, 40, ['p1', 'p4'], { p1: 25.4, p4: 14.6 }),
+        { roster_id: 2, matchup_id: 7, points: 0 },
+      ])[0];
+      const rows = lineupRows(half, SLOTS, players);
+      expect(rows).toHaveLength(2);
+      expect(rows[0].a!.name).toBe('J. Allen');
+      expect(rows[0].b).toBe(null);
+      expect(rows[0].slot).toBe('QB');
+    });
+
+    it('has nothing to draw before Sleeper publishes any lineup', () => {
+      const bare = pairMatchups(teams, [row(1, 7, 0), row(2, 7, 0)])[0];
+      expect(lineupRows(bare, SLOTS, players)).toEqual([]);
+    });
+
+    /* A started player the league lists no slot for would otherwise vanish. */
+    it('still draws a starter past the end of the slot list', () => {
+      const long = pairMatchups(teams, [
+        withLineup(1, 7, 40, ['p1', 'p2'], { p1: 25.4, p2: 14.6 }),
+        { roster_id: 2, matchup_id: 7, points: 0 },
+      ])[0];
+      expect(lineupRows(long, ['QB'], players)).toHaveLength(2);
+      expect(lineupRows(long, ['QB'], players)[1].slot).toBe('FLEX');
+    });
+
+    it('tells a player apart from the slot he is filling', () => {
+      const flexed = pairMatchups(teams, [
+        withLineup(1, 7, 14, ['p4'], { p4: 14.6 }),
+        { roster_id: 2, matchup_id: 7, points: 0 },
+      ])[0];
+      // a receiver in the flex is still a receiver, which is what colours him
+      expect(lineupRows(flexed, ['FLEX'], players)[0].a!.pos).toBe('WR');
+    });
   });
 });
 

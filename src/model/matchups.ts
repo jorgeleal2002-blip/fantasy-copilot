@@ -1,4 +1,4 @@
-import type { SleeperMatchup } from '../api/types';
+import type { PlayerCatalog, SleeperMatchup } from '../api/types';
 
 export interface MatchupSide {
   rosterId: number;
@@ -7,6 +7,11 @@ export interface MatchupSide {
   /** Sleeper reports 0 before kickoff and null for a week it has no row for. */
   points: number | null;
   isMe: boolean;
+  /** Who he started, in the league's own slot order. Absent for a week Sleeper
+   *  has published a score for but not a lineup. */
+  starters: string[] | null;
+  /** Every player's points that week, starters and bench alike. */
+  playerPoints: Record<string, number> | null;
 }
 
 export interface Matchup {
@@ -46,6 +51,8 @@ export function pairMatchups(teams: TeamLike[], rows: SleeperMatchup[]): Matchup
       avatar: t.avatar,
       points: r.points ?? null,
       isMe: t.isMe,
+      starters: r.starters ?? null,
+      playerPoints: r.players_points ?? null,
     };
   };
 
@@ -84,4 +91,91 @@ export function leaderOf(m: Matchup): 'a' | 'b' | null {
   const b = m.b?.points;
   if (a == null || b == null || a === b) return null;
   return a > b ? 'a' : 'b';
+}
+
+/** Slots a lineup is actually made of. Sleeper's `starters` array lines up with
+ *  `roster_positions` once the places nobody plays from are taken out. */
+const NOT_STARTED = ['BN', 'IR', 'TAXI'];
+export const startingSlots = (rosterPositions: string[] | null | undefined): string[] =>
+  (rosterPositions || []).filter(p => NOT_STARTED.indexOf(p) < 0);
+
+export interface LineupCell {
+  /** null where the manager left the slot empty — Sleeper writes "0" there. */
+  id: string | null;
+  name: string;
+  /** his real position, which is not the slot when he is in a flex */
+  pos: string;
+  team: string | null;
+  points: number | null;
+}
+
+export interface LineupRow {
+  slot: string;
+  a: LineupCell | null;
+  b: LineupCell | null;
+}
+
+/** "Christian McCaffrey" → "C. McCaffrey", because a scoreboard row is two
+ *  names wide and a phone is not. The surname is what identifies him. */
+export function shortName(full: string): string {
+  const parts = full.trim().split(/\s+/);
+  if (parts.length < 2) return full;
+  return parts[0][0] + '. ' + parts.slice(1).join(' ');
+}
+
+/**
+ * The two lineups laid against each other, a row per slot.
+ *
+ * This is the shape a scoreboard is read in: not "here is his team and here is
+ * hers" but "his quarterback against hers", because the question being asked of
+ * the screen is where the game is being won. Sleeper gives the two lineups as
+ * bare arrays in the league's slot order, so the pairing is by index.
+ *
+ * A side with no lineup published yet still gets its rows — with nothing in
+ * them — rather than collapsing the column, so the slot labels stay where the
+ * other side can be read against them.
+ */
+export function lineupRows(
+  m: Matchup,
+  rosterPositions: string[] | null | undefined,
+  players: PlayerCatalog,
+): LineupRow[] {
+  const slots = startingSlots(rosterPositions);
+  const cell = (side: MatchupSide | null, i: number): LineupCell | null => {
+    // Past the end of what Sleeper sent is not the same as an empty slot: one
+    // means he did not start anybody there, the other that the week has no
+    // lineup published at all. Drawing the second as the first invented a
+    // column of "Empty" down every card before kickoff.
+    if (!side || !side.starters || i >= side.starters.length) return null;
+    const id = side.starters[i];
+    // Sleeper writes "0" for a slot the manager never filled, and an empty
+    // slot is a fact worth showing: it is where the week was lost.
+    if (!id || id === '0') return { id: null, name: 'Empty', pos: '', team: null, points: null };
+    const p = players[id];
+    const full = p ? (p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim()) : '';
+    return {
+      id,
+      name: full ? shortName(full) : 'Unknown',
+      pos: p?.position || '',
+      team: p?.team || null,
+      points: side.playerPoints?.[id] ?? null,
+    };
+  };
+
+  // As deep as the deeper of the two LINEUPS, never as deep as the slot list:
+  // the slots only supply the labels, and a league that lists seven while
+  // Sleeper has posted two would otherwise draw five rows of nothing. A league
+  // can also publish more starters than it lists slots for — a mid-season rule
+  // change does it — and dropping those would silently hide a started player,
+  // so they keep their row under a generic label.
+  const depth = Math.max(m.a.starters?.length || 0, m.b?.starters?.length || 0);
+
+  const out: LineupRow[] = [];
+  for (let i = 0; i < depth; i++) {
+    const a = cell(m.a, i);
+    const b = cell(m.b, i);
+    if (!a && !b) continue;
+    out.push({ slot: slots[i] || 'FLEX', a, b });
+  }
+  return out;
 }

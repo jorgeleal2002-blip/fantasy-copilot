@@ -927,13 +927,23 @@ button { font-family: inherit; }
    a board.
    ──────────────────────────────────────────────────────────────────────── */
 .mu-card {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   background: var(--color-surface);
   border: 1px solid transparent;
   border-radius: 12px;
   padding: 10px 11px;
+}
+/* The scoreboard line itself, which is also the control that opens the card. */
+.mu-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mu-head:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 8px;
 }
 /* Your own game is the one being looked for, so it says so twice: it is
    first, and it is the only one with a border. */
@@ -985,8 +995,95 @@ button { font-family: inherit; }
 
 .mu-vs {
   flex: none;
+  width: 22px;
+  text-align: center;
   font-size: 9.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(233, 233, 237, 0.3);
+}
+.mu-vs.is-open { color: rgba(233, 233, 237, 0.5); }
+
+/* ── The two lineups, once the card is open ───────────────────────────────
+   A row per slot with the slot between the two players, because the question
+   is not "who is on his team" but "who is beating whom at running back". The
+   slot label anchors the middle so both columns stay readable at a glance.
+   ──────────────────────────────────────────────────────────────────────── */
+.mu-lineup {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-divider);
+  display: flex;
+  flex-direction: column;
+}
+.mu-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+.mu-slot {
+  flex: none;
+  width: 38px;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: rgba(233, 233, 237, 0.34);
+}
+
+.mu-cell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  border-radius: 6px;
+  padding: 2px 3px;
+}
+.mu-cell.is-right { flex-direction: row-reverse; }
+.mu-cell.is-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mu-cell.is-tap:active { background: rgba(233, 233, 237, 0.06); }
+.mu-cell.is-tap:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.mu-pl {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  overflow: hidden;
+}
+.is-right .mu-pl { flex-direction: row-reverse; }
+/* The position as a dot rather than a label: at this size the six hues are
+   readable and three more characters of the name are worth more than "WR". */
+.mu-dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  align-self: center;
+}
+.mu-pl-name {
+  font-size: 11.5px;
+  color: rgba(233, 233, 237, 0.78);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mu-pl-pts {
+  flex: none;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(233, 233, 237, 0.55);
+}
+
+.mu-empty {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-divider);
+  font-size: 11.5px;
+  color: rgba(233, 233, 237, 0.4);
 }

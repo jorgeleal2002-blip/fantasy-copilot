@@ -7,8 +7,8 @@
  */
 import { writeFileSync } from 'node:fs';
 import {
-  DRAFT_ID, LEAGUE_ID, MY_USERNAME, makeDraft, makeFantasyCalc, makeLeague, makePicks,
-  makePlayers, makeRosters, makeStats, makeTraded, makeUsers,
+  DRAFT_ID, LEAGUE_ID, MY_USERNAME, makeDraft, makeFantasyCalc, makeLeague, makeMatchups,
+  makePicks, makePlayers, makeRosters, makeStats, makeTraded, makeUsers,
 } from '../src/test/fixture';
 
 const { players, byPos } = makePlayers();
@@ -33,6 +33,12 @@ const routes: Record<string, unknown> = {
   '/v1/stats/nfl/regular/2023': makeStats(players),
   '__fantasycalc__': makeFantasyCalc(players),
 };
+
+// Every week the scoreboard can page to, so stepping back and forward is a
+// real journey rather than one stubbed week and seventeen blanks.
+for (let w = 1; w <= 18; w++) {
+  routes[`/v1/league/${LEAGUE_ID}/matchups/${w}`] = makeMatchups(byPos, w);
+}
 
 writeFileSync(process.argv[2], JSON.stringify(routes));
 console.log('wrote', process.argv[2], Object.keys(routes).length, 'routes');

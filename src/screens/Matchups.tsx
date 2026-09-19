@@ -1,6 +1,12 @@
-import { leaderOf, pairMatchups, type Matchup, type MatchupSide } from '../model/matchups';
+import { useState } from 'react';
+import {
+  leaderOf, lineupRows, pairMatchups,
+  type LineupCell, type Matchup, type MatchupSide,
+} from '../model/matchups';
+import type { DraftPos } from '../api/types';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
+import { colorOf } from '../model/constants';
 import { dim } from '../ui/styles';
 
 const LAST_WEEK = 18;
@@ -55,7 +61,7 @@ export function Matchups({ app, m }: { app: App; m: Model }) {
             ? 'Reading the scoreboard…'
             : 'No schedule published for this week yet.'}
         </Note>
-      ) : games.map((g, i) => <Game key={(g.id ?? 'bye') + '-' + i} g={g} />)}
+      ) : games.map((g, i) => <Game key={(g.id ?? 'bye') + '-' + i} app={app} m={m} g={g} />)}
     </div>
   );
 }
@@ -71,13 +77,72 @@ function Note({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Game({ g }: { g: Matchup }) {
+function Game({ app, m, g }: { app: App; m: Model; g: Matchup }) {
+  // Your own game opens by itself. It is the one the screen was opened for,
+  // and making you tap it to see your own lineup is a tap with no question
+  // behind it.
+  const [open, setOpen] = useState(g.hasMe);
   const lead = leaderOf(g);
+  const rows = open ? lineupRows(g, m.league.roster_positions, app.data?.players || {}) : [];
+
   return (
     <div className={'mu-card' + (g.hasMe ? ' is-mine' : '')}>
-      <Side s={g.a} winning={lead === 'a'} />
-      <div className="mu-vs">{g.b ? 'vs' : 'bye'}</div>
-      {g.b ? <Side s={g.b} winning={lead === 'b'} align="right" /> : <div style={{ flex: 1 }} />}
+      <div
+        className="mu-head"
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={() => setOpen(v => !v)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(v => !v); } }}
+      >
+        <Side s={g.a} winning={lead === 'a'} />
+        {/* The chevron replaces "vs" rather than joining it: two marks in a
+            34px column is a column of marks, and the one that says the card
+            does something is the one worth keeping. */}
+        <div className={'mu-vs' + (open ? ' is-open' : '')}>{g.b ? (open ? '▾' : '▸') : 'bye'}</div>
+        {g.b ? <Side s={g.b} winning={lead === 'b'} align="right" /> : <div style={{ flex: 1 }} />}
+      </div>
+
+      {open ? (
+        rows.length ? (
+          <div className="mu-lineup">
+            {rows.map((r, i) => (
+              <div className="mu-row" key={r.slot + '-' + i}>
+                <Cell app={app} c={r.a} />
+                <div className="mu-slot">{r.slot === 'SUPER_FLEX' ? 'SFLX' : r.slot.replace('_', ' ')}</div>
+                <Cell app={app} c={r.b} align="right" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mu-empty">
+            Sleeper has not published the lineups for this week yet.
+          </div>
+        )
+      ) : null}
+    </div>
+  );
+}
+
+/** One player on one side of a slot. Tapping him opens his card, which is what
+ *  every other list of players in the app does. */
+function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'right' }) {
+  const right = align === 'right';
+  if (!c) return <div className="mu-cell" />;
+  const tappable = !!c.id;
+  return (
+    <div
+      className={'mu-cell' + (right ? ' is-right' : '') + (tappable ? ' is-tap' : '')}
+      role={tappable ? 'button' : undefined}
+      tabIndex={tappable ? 0 : undefined}
+      onClick={tappable ? () => app.setDetail(c.id as string) : undefined}
+      onKeyDown={tappable ? e => { if (e.key === 'Enter') app.setDetail(c.id as string); } : undefined}
+    >
+      <div className="mu-pl">
+        <span className="mu-dot" style={{ background: c.pos ? colorOf(c.pos as DraftPos) : 'transparent' }} />
+        <span className="mu-pl-name">{c.name}</span>
+      </div>
+      <div className="mu-pl-pts">{c.points == null ? '—' : c.points.toFixed(1)}</div>
     </div>
   );
 }
