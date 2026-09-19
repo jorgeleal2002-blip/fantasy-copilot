@@ -6,6 +6,7 @@ import { ord, pct } from '../ui/format';
 import { Meter, SERIES, markFor } from '../ui/charts';
 import { Card, CardHead, DividedRow, Screen, Segmented, type SegOption, Face } from '../ui/primitives';
 import { capsule, cardNote, cardTitle, dim, ellipsis, heroCard, kicker } from '../ui/styles';
+import { leagueScoringAverage, projectLineup, projectionIsSound, scoringAverage } from '../model/team-points';
 
 const POS_FILTERS: SegOption<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>[] =
   [{ key: 'ALL', label: 'All' }, ...POS.map(p => ({ key: p, label: p }))];
@@ -88,6 +89,15 @@ function Summary({ app, m }: { app: App; m: Model }) {
     return move;
   })();
 
+  /* Once the draft is done the questions change. "Next pick" is a dash and a
+   * note saying so, while the two numbers a team actually wants — what it has
+   * averaged, and what its lineup is worth on Sunday — were nowhere. */
+  const meRow = m.leagueRows.find(r => r.isMe);
+  const avg = meRow ? scoringAverage(meRow.record) : null;
+  const lgAvg = leagueScoringAverage(m.leagueRows);
+  const proj = projectLineup(m.optimal);
+  const projOk = projectionIsSound(proj);
+
   const stats = [
     { label: 'Players', value: String(m.myPlayers.length), sub: POS.map(p => m.have[p] + ' ' + p).join(' · '), color: 'var(--color-text)' },
     {
@@ -95,19 +105,44 @@ function Summary({ app, m }: { app: App; m: Model }) {
       value: ages.length ? (ages.reduce((x, y) => x + (y.age || 0), 0) / ages.length).toFixed(1) : '—',
       sub: oldest + ' aged 28+', color: 'var(--color-text)',
     },
-    {
+    ...(drafted ? [
+      {
+        label: 'Points per game',
+        value: avg == null ? '—' : avg.toFixed(1),
+        // The league's own average is the only comparison that means anything:
+        // a hundred and ten points is a good week in one league and a bad one
+        // in the next.
+        sub: avg == null ? 'no games played yet'
+          : lgAvg == null ? 'season average'
+            : lgAvg === avg ? 'exactly the league average'
+              : (avg > lgAvg ? '+' : '−') + Math.abs(avg - lgAvg).toFixed(1) + ' vs league',
+        color: avg != null && lgAvg != null && avg >= lgAvg ? GOOD : 'var(--color-text)',
+      },
+      {
+        label: 'Projected',
+        // A total summed over part of a lineup is not a smaller number, it is
+        // a wrong one — so it is withheld rather than quietly understated.
+        value: projOk ? proj.total.toFixed(1) : '—',
+        sub: projOk
+          ? 'your best lineup this week'
+          : proj.slots
+            ? 'only ' + proj.counted + ' of ' + proj.slots + ' starters priced'
+            : 'no lineup to project',
+        color: ACCENT,
+      },
+    ] : []),
+    ...(drafted ? [] : [{
       label: 'Next pick',
       // Two ways there is no pick to name, and neither should print one. The
       // fallback used to show whatever round the draft was sitting on — a real
       // -looking slot in a league that had not drafted, and an already-used one
       // in a league that had finished.
-      value: drafted || !m.myNextOverall
+      value: !m.myNextOverall
         ? '—'
         : m.myRound + '.' + String(m.myPickInRound).padStart(2, '0'),
-      sub: drafted ? 'draft complete'
-        : m.myNextOverall ? 'overall ' + m.myNextOverall : 'draft order not set',
+      sub: m.myNextOverall ? 'overall ' + m.myNextOverall : 'draft order not set',
       color: ACCENT,
-    },
+    }]),
     { label: 'Weakest position', value: weakest.value, sub: weakest.sub, color: BAD },
   ];
 
@@ -234,8 +269,16 @@ function Summary({ app, m }: { app: App; m: Model }) {
       </Card>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        {stats.map(s => (
-          <div key={s.label} style={{ background: 'var(--color-surface)', borderRadius: 12, padding: 13 }}>
+        {stats.map((s, i) => (
+          <div
+            key={s.label}
+            style={{
+              background: 'var(--color-surface)', borderRadius: 12, padding: 13,
+              // An odd count leaves the last tile alone in half a row, which
+              // reads as a missing one. It takes the width instead.
+              gridColumn: i === stats.length - 1 && stats.length % 2 ? 'span 2' : undefined,
+            }}
+          >
             <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.42) }}>{s.label}</div>
             <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: '-0.03em', marginTop: 4, color: s.color }}>{s.value}</div>
             <div style={{ fontSize: 11, color: dim(0.42), marginTop: 3 }}>{s.sub}</div>
