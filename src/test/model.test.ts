@@ -12,7 +12,7 @@ import { blendSeasons, buildUsage, seasonUsage, type Usage } from '../model/usag
 import { projectConfidence, projectPPG } from '../model/project';
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
-import { isMockEligible } from '../model/mock-pool';
+import { isInLeague, isMockEligible } from '../model/mock-pool';
 import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedule';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
@@ -20,6 +20,7 @@ import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matc
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
+import { leagueScoringAverage, projectLineup, projectionIsSound, scoringAverage } from '../model/team-points';
 
 const bundle = makeBundle();
 const market = parseMarket(makeFantasyCalc(bundle.players));
@@ -2767,5 +2768,85 @@ describe('a team\'s record', () => {
     expect(hasPlayed(readRecord(roster({ wins: 0, losses: 1 })))).toBe(true);
     // A season whose only result is a tie has still been played.
     expect(hasPlayed(readRecord(roster({ ties: 1 })))).toBe(true);
+  });
+});
+
+describe('what a team scores and what it should', () => {
+  const slot = (ppgAdj: number | null) => ({
+    slot: 'RB',
+    player: { id: 'x', use: ppgAdj == null ? undefined : { ppgAdj } },
+  } as unknown as import('../model/types').LineupSlot);
+  const rec = (wins: number, losses: number, pointsFor: number) =>
+    ({ wins, losses, ties: 0, label: '', pointsFor, pointsAgainst: 0 });
+
+  it('adds up only the starters it can actually price', () => {
+    const p = projectLineup([slot(18.2), slot(11.4), slot(null)]);
+    expect(p.total).toBe(29.6);
+    expect(p.counted).toBe(2);
+    expect(p.slots).toBe(3);
+  });
+
+  it('refuses to call a mostly unpriced lineup a projection', () => {
+    // Six of nine is not a smaller projection, it is a wrong one.
+    const mostly = projectLineup([...Array(7)].map(() => slot(10)).concat([slot(null), slot(null)]));
+    const half = projectLineup([...Array(5)].map(() => slot(10)).concat([...Array(4)].map(() => slot(null))));
+    expect(projectionIsSound(mostly)).toBe(true);
+    expect(projectionIsSound(half)).toBe(false);
+    expect(projectionIsSound(projectLineup([]))).toBe(false);
+  });
+
+  it('averages the points actually scored', () => {
+    expect(scoringAverage(rec(3, 1, 449.2))).toBe(112.3);
+  });
+
+  it('says nothing before a game has been played', () => {
+    expect(scoringAverage(rec(0, 0, 0))).toBe(null);
+  });
+
+  it('averages the league over the teams that have played', () => {
+    const rows = [
+      { record: rec(2, 0, 200) },
+      { record: rec(1, 1, 180) },
+      { record: rec(0, 0, 0) },
+    ] as unknown as import('../model/types').LeagueRow[];
+    // 100 and 90 — the team with no games does not drag the mean to 63.3.
+    expect(leagueScoringAverage(rows)).toBe(95);
+  });
+});
+
+describe('who counts as still in the league', () => {
+  const BASE = {
+    player_id: 'x', first_name: 'A', last_name: 'B', position: 'RB',
+    team: 'SEA', age: 27, years_exp: 5, search_rank: 300, active: true,
+    status: 'Active',
+  } as unknown as SleeperPlayer;
+  const player = (over: Partial<SleeperPlayer>) => ({ ...BASE, ...over }) as SleeperPlayer;
+
+  it('drops a retired back the catalog still lists as active', () => {
+    // The real shape of the bug: Sleeper keeps the page, the flags stay
+    // "Active", and only the missing NFL team says he is gone.
+    expect(isInLeague(player({ team: null }))).toBe(false);
+  });
+
+  it('keeps an undrafted rookie, who has no team yet', () => {
+    expect(isInLeague(player({ team: null, years_exp: 0, age: 22 }))).toBe(true);
+  });
+
+  it('keeps a deep backup with no rank cap to fall foul of', () => {
+    // Searching a fourth-string tight end by name has to keep working, which
+    // is why this rule has no rank in it.
+    expect(isInLeague(player({ search_rank: 4000 }))).toBe(true);
+    expect(isMockEligible(player({ search_rank: 4000 }))).toBe(false);
+  });
+
+  it('still honours the flags Sleeper does keep current', () => {
+    expect(isInLeague(player({ active: false }))).toBe(false);
+    expect(isInLeague(player({ status: 'Inactive' }))).toBe(false);
+  });
+
+  it('is the rule the mock pool is built on top of', () => {
+    const gone = player({ team: null });
+    expect(isInLeague(gone)).toBe(false);
+    expect(isMockEligible(gone)).toBe(false);
   });
 });

@@ -13,18 +13,31 @@ import type { SleeperPlayer } from '../api/types';
  * Being on an NFL roster is the signal that does not go stale. The single
  * exception is an incoming rookie, who has no team until he is drafted.
  */
-export function isMockEligible(p: SleeperPlayer | null | undefined): boolean {
+/**
+ * Whether a player is actually in the league right now.
+ *
+ * Sleeper keeps a page for everyone who ever had one, and its `active` and
+ * `status` flags go stale on players who quietly stopped playing — so a
+ * catalog walk turns up men who retired years ago, and the model happily
+ * rates them. Being on an NFL roster is the signal that does not go stale.
+ * The one exception is an incoming rookie, who has no team until he is
+ * drafted.
+ *
+ * No rank cap here: looking a deep backup up by name has to keep working.
+ * The pool that feeds a draft board adds one on top of this.
+ */
+export function isInLeague(p: SleeperPlayer | null | undefined): boolean {
   if (!p) return false;
   if (p.active === false) return false;
   if (p.status && p.status !== 'Active') return false;
-  if (!p.search_rank) return false;
+  return !!p.team || isIncomingRookie(p);
+}
 
-  const rookie = isIncomingRookie(p);
-  if (!p.team && !rookie) return false;
-
+export function isMockEligible(p: SleeperPlayer | null | undefined): boolean {
+  if (!isInLeague(p) || !p?.search_rank) return false;
   // Deep enough to reach a real bench veteran, not so deep it reaches the
   // practice squad.
-  return p.search_rank <= (rookie ? 900 : 800);
+  return p.search_rank <= (isIncomingRookie(p) ? 900 : 800);
 }
 
 export function isIncomingRookie(p: SleeperPlayer): boolean {

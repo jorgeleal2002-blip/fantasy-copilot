@@ -15,7 +15,7 @@ import type {
   TeamSheet, Window,
 } from './types';
 import type { UsageMap } from './usage';
-import { isMockEligible } from './mock-pool';
+import { isInLeague, isMockEligible } from './mock-pool';
 import { readRecord } from './record';
 
 export interface ModelInput {
@@ -1936,6 +1936,9 @@ export function buildModel(input: ModelInput): Model {
   for (const id in players) {
     const pl = players[id];
     if (!pl || POS.indexOf(pl.position as Pos) < 0) continue;
+    // Retired names were reaching every list this index feeds — priced,
+    // rated and offered as trade targets years after they last played.
+    if (!isInLeague(pl)) continue;
     const name = playerName(pl);
     if (!name) continue;
     searchIndex.push({
