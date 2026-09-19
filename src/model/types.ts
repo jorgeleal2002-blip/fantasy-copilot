@@ -148,6 +148,9 @@ export interface LeagueRow {
   /** places gained (+) or lost (−) moving from today to the future view */
   shift: number;
   record: TeamRecord;
+  /** this team's best lineup, in half-PPR points — the raw number the league
+   *  scale is built out of, never the one a screen prints */
+  proj: Projection;
 }
 
 export interface Offer {
@@ -332,6 +335,21 @@ export interface DraftDeal {
 export interface LineupSlot {
   slot: string;
   player?: RosterPlayer;
+}
+
+/** A lineup slot with just enough of a player on it to price one. */
+export interface PricedSlot {
+  player?: { use?: Usage };
+}
+
+/** What a lineup is projected to score — see `model/team-points`. */
+export interface Projection {
+  /** Points the optimal lineup is expected to score. */
+  total: number;
+  /** Starters the projection could actually be built from. */
+  counted: number;
+  /** Slots in the lineup, filled or not. */
+  slots: number;
 }
 
 /** One row of the search index over Sleeper's whole catalog. */

@@ -10,10 +10,11 @@ import { EMPTY_METRICS, ownedWeights, redraftWeights, scorePlayer } from './scor
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
   BlockReturn, MockOption, MockPick, MockState,
-  OppPlayer, PickAsset, PlayerFit, PlayerValue, PositionMultiplier, RosterPlayer, SearchEntry, TargetTrade,
+  OppPlayer, PickAsset, PlayerFit, PlayerValue, PositionMultiplier, Projection, RosterPlayer, SearchEntry, TargetTrade,
   TeamEntry, TeamProfile,
   TeamSheet, Window,
 } from './types';
+import { projectLineup } from './team-points';
 import type { UsageMap } from './usage';
 import { isInLeague, isMockEligible } from './mock-pool';
 import { readRecord } from './record';
@@ -819,14 +820,25 @@ export function buildModel(input: ModelInput): Model {
   // ── Optimal lineup: fill every slot the format defines with your best
   //    eligible player, scarcest slot first so a flex never steals a starter.
   const lineupSlots = rp.filter(x => ELIG[x]);
-  const used: Record<string, 1> = {};
-  const optimal: LineupSlot[] = lineupSlots.slice()
-    .sort((a, b) => ELIG[a].length - ELIG[b].length)
-    .map(slot => {
-      const cand = myPlayers.filter(p => !used[p.id] && ELIG[slot].indexOf(p.pos) >= 0).sort((a, b) => b.q - a.q)[0];
-      if (cand) used[cand.id] = 1;
-      return { slot, player: cand };
-    })
+  /** Scarcest slot first, so a flex never steals a starter. */
+  const slotOrder = lineupSlots.slice().sort((a, b) => ELIG[a].length - ELIG[b].length);
+  /**
+   * Fill every slot the format defines with the best eligible player left.
+   *
+   * One rule with three callers — the lineup on screen, a team's strength, and
+   * its projection — because a projection built over a different lineup than
+   * the one drawn is a different team's projection.
+   */
+  const fillLineup = <T extends LineupItem>(list: T[]): (T | undefined)[] => {
+    const seen: Record<string, 1> = {};
+    return slotOrder.map(slot => {
+      const c = list.filter(p => !seen[p.id] && ELIG[slot].indexOf(p.pos as Pos) >= 0).sort((a, b) => b.q - a.q)[0];
+      if (c) seen[c.id] = 1;
+      return c;
+    });
+  };
+  const optimal: LineupSlot[] = fillLineup(myPlayers)
+    .map((player, i) => ({ slot: slotOrder[i], player }))
     .sort((a, b) => SLOT_SORT[a.slot] - SLOT_SORT[b.slot]);
 
   const curStarters = (myRow.starters || []).filter(x => x && x !== '0');
@@ -836,14 +848,16 @@ export function buildModel(input: ModelInput): Model {
   const benchQ = myPlayers.filter(p => optIds.indexOf(p.id) < 0).reduce((a, b) => a + b.q, 0);
   const starterQ = totalQ - benchQ;
 
-  const lineupSum = (list: LineupItem[]): number => {
-    const seen: Record<string, 1> = {};
-    return lineupSlots.slice().sort((a, b) => ELIG[a].length - ELIG[b].length).reduce((sum, slot) => {
-      const c = list.filter(p => !seen[p.id] && ELIG[slot].indexOf(p.pos as Pos) >= 0).sort((a, b) => b.q - a.q)[0];
-      if (c) { seen[c.id] = 1; return sum + c.q; }
-      return sum;
-    }, 0);
-  };
+  const lineupSum = (list: LineupItem[]): number =>
+    fillLineup(list).reduce((sum, p) => sum + (p ? p.q : 0), 0);
+
+  /**
+   * What a roster's best lineup projects to score, in half-PPR. Every team gets
+   * one because the league is what turns half-PPR into this league's points —
+   * see `leagueProjectionScale`.
+   */
+  const lineupProjection = (list: LineupItem[]): Projection =>
+    projectLineup(fillLineup(list).map(p => ({ player: p ? { use: uFor(p.id) } : undefined })));
   /**
    * A team's Rating: the average Rating of its optimal starters, scored on the
    * weights without the need term (nobody fills their own hole) and with the
@@ -1022,6 +1036,7 @@ export function buildModel(input: ModelInput): Model {
       avgAge: prof.avgAge || 0, window: prof.window || 'medio', worst: prof.worst || null,
       rankNow: 0, rankFut: 0, rankFit: 0, rankFitFut: 0, shift: 0,
       record: readRecord(r),
+      proj: lineupProjection(list),
     };
   });
 

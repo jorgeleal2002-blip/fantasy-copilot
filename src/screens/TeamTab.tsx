@@ -6,7 +6,9 @@ import { ord, pct } from '../ui/format';
 import { Meter, SERIES, markFor } from '../ui/charts';
 import { Card, CardHead, DividedRow, Screen, Segmented, type SegOption, Face } from '../ui/primitives';
 import { capsule, cardNote, cardTitle, dim, ellipsis, heroCard, kicker } from '../ui/styles';
-import { leagueScoringAverage, projectLineup, projectionIsSound, scoringAverage } from '../model/team-points';
+import {
+  leagueProjectionScale, leagueScoringAverage, projectLineup, projectedPoints, scoringAverage,
+} from '../model/team-points';
 
 const POS_FILTERS: SegOption<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>[] =
   [{ key: 'ALL', label: 'All' }, ...POS.map(p => ({ key: p, label: p }))];
@@ -96,7 +98,9 @@ function Summary({ app, m }: { app: App; m: Model }) {
   const avg = meRow ? scoringAverage(meRow.record) : null;
   const lgAvg = leagueScoringAverage(m.leagueRows);
   const proj = projectLineup(m.optimal);
-  const projOk = projectionIsSound(proj);
+  /* Half-PPR lineup points are not this league's points — the projection is
+   * put on the same footing as the average beside it, or withheld. */
+  const projPts = projectedPoints(proj, leagueProjectionScale(m.leagueRows));
 
   const stats = [
     { label: 'Players', value: String(m.myPlayers.length), sub: POS.map(p => m.have[p] + ' ' + p).join(' · '), color: 'var(--color-text)' },
@@ -120,14 +124,16 @@ function Summary({ app, m }: { app: App; m: Model }) {
       },
       {
         label: 'Projected',
-        // A total summed over part of a lineup is not a smaller number, it is
-        // a wrong one — so it is withheld rather than quietly understated.
-        value: projOk ? proj.total.toFixed(1) : '—',
-        sub: projOk
-          ? 'your best lineup this week'
-          : proj.slots
-            ? 'only ' + proj.counted + ' of ' + proj.slots + ' starters priced'
-            : 'no lineup to project',
+        // A total summed over part of a lineup, or left in the wrong scoring,
+        // is not a smaller number — it is a wrong one, so it is withheld.
+        value: projPts == null ? '—' : projPts.toFixed(1),
+        sub: projPts == null
+          ? (!proj.slots ? 'no lineup to project'
+            : proj.counted < proj.slots ? 'only ' + proj.counted + ' of ' + proj.slots + ' starters priced'
+              : 'not enough of the league scored yet')
+          : avg == null ? 'your best lineup, league scoring'
+            : 'best lineup, ' + (projPts >= avg ? '+' : '−') +
+              Math.abs(projPts - avg).toFixed(1) + ' vs your average',
         color: ACCENT,
       },
     ] : []),

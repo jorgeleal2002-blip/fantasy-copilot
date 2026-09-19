@@ -20,7 +20,10 @@ import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matc
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
-import { leagueScoringAverage, projectLineup, projectionIsSound, scoringAverage } from '../model/team-points';
+import {
+  leagueProjectionScale, leagueScoringAverage, projectLineup, projectedPoints, projectionIsSound,
+  scoringAverage,
+} from '../model/team-points';
 
 const bundle = makeBundle();
 const market = parseMarket(makeFantasyCalc(bundle.players));
@@ -2811,6 +2814,83 @@ describe('what a team scores and what it should', () => {
     ] as unknown as import('../model/types').LeagueRow[];
     // 100 and 90 — the team with no games does not drag the mean to 63.3.
     expect(leagueScoringAverage(rows)).toBe(95);
+  });
+
+  /* ── the league's own points ───────────────────────────────────────────────
+   * The screen printed a 128.1 average beside an 83.6 projection for the same
+   * roster. Both were right and neither was comparable: the average is what
+   * this league pays, the projection was half-PPR over the skill slots alone,
+   * with no kicker, no defence and no full point for a catch. */
+  const row = (pointsFor: number, games: number, projTotal: number, slots = 9) => ({
+    record: { wins: games, losses: 0, ties: 0, label: '', pointsFor, pointsAgainst: 0 },
+    proj: { total: projTotal, counted: slots, slots },
+  } as unknown as import('../model/types').LeagueRow);
+
+  /** Twelve teams averaging 128 a week off lineups that sum to 95 in half-PPR. */
+  const league = () => [...Array(12)].map((_, i) => row(128 * 4 + i, 4, 95 + (i % 3)));
+
+  it('states the projection in the points the league actually scores', () => {
+    const rows = league();
+    const scale = leagueProjectionScale(rows) as number;
+    expect(scale).toBeGreaterThan(1.3);
+    // The team whose lineup was reading 83.6 lands near the league's own scale,
+    // not a third under it.
+    const mine = projectedPoints({ total: 83.6, counted: 9, slots: 9 }, scale) as number;
+    expect(mine).toBeGreaterThan(110);
+    expect(mine).toBeLessThan(120);
+  });
+
+  it('leaves the order of the teams alone', () => {
+    // A scale is allowed to change the units and nothing else: the spread
+    // between two lineups has to survive it.
+    const scale = leagueProjectionScale(league()) as number;
+    const a = projectedPoints({ total: 110, counted: 9, slots: 9 }, scale) as number;
+    const b = projectedPoints({ total: 90, counted: 9, slots: 9 }, scale) as number;
+    expect(a / b).toBeCloseTo(110 / 90, 3);
+  });
+
+  it('withholds the number rather than printing the wrong currency', () => {
+    // No scale is not "roughly right" — it is half-PPR where the rest of the
+    // screen is in league points.
+    expect(projectedPoints({ total: 83.6, counted: 9, slots: 9 }, null)).toBe(null);
+    // Three teams is a guess, not a measurement.
+    expect(leagueProjectionScale(league().slice(0, 3))).toBe(null);
+    // Nobody has played, so there is nothing to calibrate against.
+    expect(leagueProjectionScale(league().map(r => row(0, 0, r.proj.total)))).toBe(null);
+  });
+
+  it('refuses a factor that says the two sides are not the same sport', () => {
+    // Lineups summing to 12 against a 128-point average is not a scoring
+    // difference, it is a broken usage feed, and 10.7× would hide it.
+    expect(leagueProjectionScale([...Array(12)].map(() => row(512, 4, 12)))).toBe(null);
+  });
+
+  it('puts a real league on one scale instead of two', () => {
+    // The shape of the complaint, end to end: a league scoring a hundred and
+    // sixty a week, off lineups this model prices at a hundred and eighteen
+    // because it knows nothing about full PPR, six-point passing touchdowns,
+    // or the kicker and the defence that have no slot in `ELIG`.
+    const b = makeBundle();
+    b.rosters.forEach(r => { r.settings = { wins: 4, losses: 0, ties: 0, fpts: 640, fpts_decimal: 0 }; });
+    const mm = buildModel({ data: b, usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0 });
+    const raw = projectLineup(mm.optimal);
+    const scale = leagueProjectionScale(mm.leagueRows) as number;
+    const shown = projectedPoints(raw, scale) as number;
+
+    expect(mm.leagueRows.every(r => projectionIsSound(r.proj))).toBe(true);
+    expect(scale).toBeGreaterThan(1.2);
+    // The number on the card belongs beside the 160 average, not a third under it.
+    expect(Math.abs(shown - 160)).toBeLessThan(40);
+    expect(Math.abs(raw.total - 160)).toBeGreaterThan(40);
+  });
+
+  it('will not scale a lineup it could not price', () => {
+    const half = projectLineup([...Array(5)].map(() => slot(10)).concat([...Array(4)].map(() => slot(null))));
+    expect(projectedPoints(half, 1.35)).toBe(null);
+    // And a team like that is kept out of the scale everyone else is measured on.
+    const rows = league().concat([row(512, 4, 20, 9)]);
+    rows[12].proj.counted = 4;
+    expect(leagueProjectionScale(rows)).toBeCloseTo(leagueProjectionScale(league()) as number, 2);
   });
 });
 
