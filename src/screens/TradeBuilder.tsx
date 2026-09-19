@@ -1,24 +1,29 @@
-import { evaluateTrade, fitLine, type TradeAsset, type TeamLedger } from '../model/trade-eval';
-import { depthOf, readPick, startsAt, type PickTag } from '../model/trade-picks';
+import { useState } from 'react';
+import { colorOf } from '../model/constants';
+import { evaluateTrade, fitLine, type TradeAsset } from '../model/trade-eval';
+import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
-import { BAD, GOOD, dim, ellipsis } from '../ui/styles';
+import { Overlay } from '../ui/primitives';
+import { BAD, GOOD, dim } from '../ui/styles';
 
 /** Four is where a phone runs out of room, and the league runs out of patience. */
 const MAX_TEAMS = 4;
 
-const sign = (n: number) => (n > 0 ? '+' : '') + Math.round(n).toLocaleString();
-
 /**
- * Build a trade and see who wins it.
+ * Build a trade, laid out the way a trade is argued about: a column per team
+ * saying what that team walks away with, and one bar across the top saying who
+ * is winning.
  *
- * Three teams is not a special mode: every asset carries where it goes, so a
- * ring of three is the same screen as a swap of two, with one more column of
- * names to route between.
+ * Columns rather than sides, because sides only exist when there are two of
+ * them. A third team is one more column, and every asset already carries where
+ * it is going, so nothing else has to change.
  */
 export function TradeBuilder({ app, m }: { app: App; m: Model }) {
+  const [addTo, setAddTo] = useState<number | null>(null);
+  const [pickingTeam, setPickingTeam] = useState(false);
+
   const mine = m.leagueRows.find(r => r.isMe);
-  // Yours is always in the deal — you are the one proposing it.
   const ids = mine ? [mine.id, ...app.tradeTeams.filter(t => t !== mine.id)] : app.tradeTeams;
   const teams = ids
     .map(id => m.leagueRows.find(r => r.id === id))
@@ -31,9 +36,6 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
     return { id, name: found?.name || id, value: found?.q || 0, from: a.from, to: a.to };
   });
 
-  /* Value is what the assets are worth; fit is what the lineup does with them.
-   * Measured per team by rebuilding each roster with the swap applied, which is
-   * the same simulation the suggested offers already run. */
   const fits: Record<number, number> = {};
   for (const t of teams) {
     const incoming = assets.filter(x => x.to === t.id).map(x => x.id);
@@ -44,250 +46,247 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 
   const v = evaluateTrade(teams, assets, fits);
   const fit = fitLine(v);
-  const nameOf = (rid: number) => teams.find(t => t.id === rid)?.name || '?';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <TeamPicker app={app} m={m} inDeal={ids} />
+    <div className="fb">
+      <Balance v={v} fit={fit} />
 
       {teams.length < 2 ? (
-        <div style={{
-          background: 'var(--color-surface)', borderRadius: 12, padding: '14px 13px',
-          fontSize: 12.5, color: dim(0.5),
-        }}>
-          Add at least one other team to start.
-        </div>
+        <div className="fb-empty">Add a team to trade with.</div>
       ) : (
-        <>
-          <Verdict v={v} fit={fit} />
+        <div className="fb-cols">
           {teams.map(t => (
-            <TeamAssets
-              key={t.id}
-              app={app}
-              m={m}
-              team={t}
-              inDeal={ids}
-              nameOf={nameOf}
-            />
+            <div key={t.id} className={'fb-col' + (t.isMe ? ' is-me' : '')}>
+              <div className="fb-col-head">
+                {/* Two lines, because a narrow column truncated "receives"
+                    mid-word and a cut-off label reads as a broken one. */}
+                <span className="fb-col-title">
+                  <span className="fb-col-name">{t.name}</span>
+                  <span className="fb-col-sub">receives</span>
+                </span>
+                {!t.isMe ? (
+                  <button
+                    type="button"
+                    className="fb-x"
+                    aria-label={'Remove ' + t.name}
+                    onClick={() => app.toggleTradeTeam(t.id)}
+                  >
+                    ×
+                  </button>
+                ) : null}
+              </div>
+
+              {assets.filter(a => a.to === t.id).map(a => (
+                <Card key={a.id} app={app} m={m} asset={a} />
+              ))}
+
+              <button type="button" className="fb-add" onClick={() => setAddTo(t.id)}>
+                + Add player
+              </button>
+            </div>
           ))}
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={app.clearTrade}
-            style={{ borderRadius: 10, minHeight: 40 }}
-          >
-            Clear the trade
-          </button>
-        </>
+        </div>
       )}
+
+      <div className="fb-actions">
+        {ids.length < MAX_TEAMS ? (
+          <button type="button" className="btn btn-secondary fb-btn" onClick={() => setPickingTeam(true)}>
+            + Add team
+          </button>
+        ) : null}
+        {v.moved ? (
+          <button type="button" className="btn btn-secondary fb-btn" onClick={app.clearTrade}>
+            Clear
+          </button>
+        ) : null}
+      </div>
+
+      {pickingTeam ? (
+        <TeamList app={app} m={m} inDeal={ids} onClose={() => setPickingTeam(false)} />
+      ) : null}
+
+      {addTo != null ? (
+        <AssetPicker
+          app={app}
+          m={m}
+          to={addTo}
+          from={ids.filter(x => x !== addTo)}
+          onClose={() => setAddTo(null)}
+        />
+      ) : null}
     </div>
   );
 }
 
-function Verdict({ v, fit }: { v: ReturnType<typeof evaluateTrade>; fit: string | null }) {
+/** The headline and the one bar that answers the whole screen. */
+function Balance({ v, fit }: { v: ReturnType<typeof evaluateTrade>; fit: string | null }) {
+  const me = v.ledgers.find(l => l.isMe);
   const tone = !v.moved ? dim(0.5) : v.winner ? (v.winner.isMe ? GOOD : BAD) : dim(0.75);
-  // Bars are drawn against the largest swing in the deal, so the longest one
-  // always fills its half and the rest are read against it.
-  const widest = Math.max(1, ...v.ledgers.map(l => Math.abs(l.net)));
 
-  const head = !v.moved ? 'Nothing picked yet'
+  const head = !v.moved ? 'Nothing in the trade yet'
     : !v.winner ? 'Even trade'
-      : v.winner.isMe ? 'You win this trade' : v.winner.name + ' wins';
-  const sub = !v.moved ? 'Tap players below to build one'
-    : !v.winner ? 'Nobody comes out ahead'
-      : Math.round((v.winner.net / v.moved) * 100) + '% of the value moved';
+      : v.winner.isMe ? 'You win this trade' : v.winner.name + ' wins this trade';
+
+  /* The bar reads as a tug of war: dead centre is even, and it travels toward
+   * whoever is gaining. Measured against the whole deal rather than against
+   * the largest net, so the same edge looks the same size in any trade. */
+  const tilt = v.moved && me ? Math.max(-1, Math.min(1, me.net / v.moved)) : 0;
 
   return (
-    <div className="tb-card" style={{ borderColor: v.winner ? tone + '66' : undefined }}>
-      <div className="tb-head" style={{ color: tone }}>{head}</div>
-      <div className="tb-sub">{sub}</div>
-
-      {v.moved ? (
-        <div className="tb-ledger">
-          {v.ledgers.map(l => <Row key={l.id} l={l} widest={widest} />)}
-        </div>
-      ) : null}
-
-      {fit ? <div className="tb-fit">{fit}</div> : null}
-
-      {v.problems.map(p => <div key={p} className="tb-problem">{p}</div>)}
-
-      {v.moved ? (
-        <div className="tb-band">
-          {/* Say what "even" means here, or the number looks arbitrary. */}
-          Even is anything inside ±{Math.round(v.band).toLocaleString()} — four percent
-          of the {Math.round(v.moved).toLocaleString()} that changes hands.
-        </div>
-      ) : null}
+    <div className="fb-bal">
+      <div className="fb-bal-head" style={{ color: tone }}>{head}</div>
+      <div className="fb-bar">
+        <span
+          className="fb-bar-fill"
+          style={{
+            background: tone,
+            left: tilt >= 0 ? '50%' : (50 + tilt * 50) + '%',
+            width: Math.abs(tilt) * 50 + '%',
+          }}
+        />
+      </div>
+      <div className="fb-bal-legs">
+        <span>{v.ledgers.find(l => !l.isMe)?.name || 'Them'}</span>
+        <span>You</span>
+      </div>
+      {fit ? <div className="fb-fit">{fit}</div> : null}
+      {v.problems.map(p => <div key={p} className="fb-problem">{p}</div>)}
     </div>
+  );
+}
+
+/** One asset in a column: who he is, what he is worth, and the way out. */
+function Card({ app, m, asset }: { app: App; m: Model; asset: TradeAsset }) {
+  const val = m.marketValue(asset.id);
+  const photo = app.photoFor(asset.id);
+  const pos = val?.pos;
+  return (
+    <div className="fb-card">
+      {photo
+        ? <img className="fb-face" src={photo} alt="" />
+        : <span className="fb-face fb-face-blank" />}
+      <span className="fb-card-body">
+        <span className="fb-card-name">{asset.name}</span>
+        <span className="fb-card-meta">
+          {pos ? (
+            <span className="fb-pill" style={{ background: colorOf(pos) }}>
+              {pos}{val?.posRank ? ' ' + val.posRank : ''}
+            </span>
+          ) : null}
+          <span className="fb-val">{Math.round(asset.value).toLocaleString()}</span>
+        </span>
+      </span>
+      <button
+        type="button"
+        className="fb-x"
+        aria-label={'Remove ' + asset.name}
+        onClick={() => app.toggleTradeAsset(asset.id, asset.from, asset.to)}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+/** Choose who else is in the deal, from the league's own list. */
+function TeamList({ app, m, inDeal, onClose }: {
+  app: App; m: Model; inDeal: number[]; onClose: () => void;
+}) {
+  const rest = m.leagueRows.filter(r => !r.isMe && !inDeal.includes(r.id));
+  return (
+    <Overlay onClose={onClose} label="Trade" z={7}>
+      <div className="fb-pick-title">Add a team</div>
+      {rest.length ? rest.map(r => (
+        <button
+          key={r.id}
+          type="button"
+          className="fb-pick-row"
+          onClick={() => { app.toggleTradeTeam(r.id); onClose(); }}
+        >
+          {r.avatar
+            ? <img className="fb-face" src={r.avatar} alt="" />
+            : <span className="fb-face fb-face-blank" />}
+          <span className="fb-card-body">
+            <span className="fb-card-name">{r.name}</span>
+            <span className="fb-card-meta">
+              <span className="fb-val">
+                {r.record.wins + r.record.losses + r.record.ties ? r.record.label + ' · ' : ''}
+                {r.worst ? 'weak at ' + r.worst : 'no obvious hole'}
+              </span>
+            </span>
+          </span>
+        </button>
+      )) : <div className="fb-empty">Every team is already in the trade.</div>}
+    </Overlay>
   );
 }
 
 /**
- * One team's side of the deal: who they are, what they walk away with, and how
- * far the value tipped — as a bar either side of a centre line, because "+6"
- * and "−6" are two numbers to compare and a bar is a picture to glance at.
+ * Who this team could receive.
+ *
+ * Ordered by what makes sense to move rather than by price, with the reason
+ * written next to each — the same reading the board uses, applied to the team
+ * that would be sending him.
  */
-function Row({ l, widest }: { l: TeamLedger; widest: number }) {
-  const color = l.standing === 'wins' ? GOOD : l.standing === 'loses' ? BAD : dim(0.5);
-  const pct = (Math.abs(l.net) / widest) * 50;
-  const up = l.net >= 0;
+function AssetPicker({ app, m, to, from, onClose }: {
+  app: App; m: Model; to: number; from: number[]; onClose: () => void;
+}) {
+  const receiver = m.teamInfo(to);
+  const rows = from.flatMap(owner => {
+    const info = m.teamInfo(owner);
+    if (!info) return [];
+    const ownerName = m.leagueRows.find(r => r.id === owner)?.name || '';
+    return [
+      ...info.list.map(p => ({
+        p, owner, ownerName,
+        read: readPick({
+          pos: p.pos,
+          depth: depthOf(info.list, p),
+          startsAt: startsAt(m.league.roster_positions, p.pos),
+          senderRank: info.ranks[p.pos] ?? m.teamCount,
+          receiverRank: receiver?.ranks[p.pos] ?? m.teamCount,
+          teamCount: m.teamCount,
+        }),
+      })),
+      ...info.picks.map(p => ({
+        p, owner, ownerName, read: { tag: null, score: 0, why: '' },
+      })),
+    ];
+  }).sort((a, b) => (b.read.score - a.read.score) || (b.p.q - a.p.q)).slice(0, 60);
+
+  const dest = m.leagueRows.find(r => r.id === to);
+  const toName = dest?.isMe ? 'you' : dest?.name;
 
   return (
-    <div className="tb-row">
-      <div className="tb-row-top">
-        <span className={'tb-name' + (l.isMe ? ' is-me' : '')}>{l.name}</span>
-        <span className="tb-net" style={{ color }}>{sign(l.net)}</span>
-      </div>
-
-      <div className="tb-bar">
-        <span
-          className="tb-fill"
-          style={{
-            background: color,
-            width: pct + '%',
-            left: up ? '50%' : (50 - pct) + '%',
-          }}
-        />
-      </div>
-
-      {/* What they actually receive. A ledger of counts says how many; the
-          names say whether the deal is worth reading twice. */}
-      <div className="tb-gets">
-        {l.got.length ? l.got.map(a => a.name).join(' · ') : 'nothing'}
-        {l.fitDelta != null && Math.abs(l.fitDelta) >= 0.1
-          ? '  ·  lineup ' + (l.fitDelta > 0 ? '+' : '−') + Math.abs(l.fitDelta).toFixed(1)
-          : ''}
-      </div>
-    </div>
-  );
-}
-
-function TeamPicker({ app, m, inDeal }: { app: App; m: Model; inDeal: number[] }) {
-  const others = m.leagueRows.filter(r => !r.isMe);
-  const full = inDeal.length >= MAX_TEAMS;
-  return (
-    <div className="tb-teams">
-      {others.map(r => {
-        const on = inDeal.includes(r.id);
+    <Overlay onClose={onClose} label="Trade" z={7}>
+      <div className="fb-pick-title">Send to {toName}</div>
+      {rows.map(({ p, owner, ownerName, read }) => {
+        const val = m.marketValue(p.id);
+        const on = !!app.tradeAssets[p.id];
         return (
           <button
-            key={r.id}
+            key={p.id}
             type="button"
-            aria-pressed={on}
-            disabled={!on && full}
-            onClick={() => app.toggleTradeTeam(r.id)}
-            className={'tb-team' + (on ? ' is-on' : '')}
-            style={{ opacity: !on && full ? 0.35 : 1 }}
+            className={'fb-pick-row' + (on ? ' is-on' : '')}
+            onClick={() => { app.toggleTradeAsset(p.id, owner, to); onClose(); }}
           >
-            {r.name}
+            <span className="fb-card-body">
+              <span className="fb-card-name">{p.name}</span>
+              <span className="fb-card-meta">
+                {val?.pos ? (
+                  <span className="fb-pill" style={{ background: colorOf(val.pos) }}>
+                    {val.pos}{val.posRank ? ' ' + val.posRank : ''}
+                  </span>
+                ) : null}
+                <span className="fb-val">{Math.round(p.q).toLocaleString()}</span>
+                {from.length > 1 ? <span className="fb-from">from {ownerName}</span> : null}
+              </span>
+              {read.why ? <span className={'tb-why is-' + (read.tag || 'none')}>{read.why}</span> : null}
+            </span>
+            {on ? <span className="fb-on">in</span> : null}
           </button>
         );
       })}
-    </div>
-  );
-}
-
-function TeamAssets({ app, m, team, inDeal, nameOf }: {
-  app: App;
-  m: Model;
-  team: { id: number; name: string; isMe: boolean };
-  inDeal: number[];
-  nameOf: (rid: number) => string;
-}) {
-  const info = m.teamInfo(team.id);
-  if (!info) return null;
-  const defaultTo = inDeal.find(t => t !== team.id) ?? team.id;
-  const to = m.teamInfo(defaultTo);
-
-  /* Sorted by what makes sense to move, not by price.
-   *
-   * Price alone puts the untouchable starters at the top and the men nobody
-   * wants at the bottom, which is the list backwards. A spare at a position
-   * the other team cannot field leads instead, and the player this team
-   * cannot replace sinks — with the reason written next to each, because a
-   * ranking nobody can see the logic of is just a different arbitrary order.
-   */
-  const players = info.list.map(p => {
-    const read = readPick({
-      pos: p.pos,
-      depth: depthOf(info.list, p),
-      startsAt: startsAt(m.league.roster_positions, p.pos),
-      senderRank: info.ranks[p.pos] ?? m.teamCount,
-      receiverRank: to?.ranks[p.pos] ?? m.teamCount,
-      teamCount: m.teamCount,
-    });
-    return { p, read };
-  }).sort((a, b) => (b.read.score - a.read.score) || (b.p.q - a.p.q));
-
-  // Picks belong in a trade as much as players do — in dynasty they are often
-  // the whole of one side — but no depth chart applies to them.
-  const items = [
-    ...players,
-    ...info.picks.map(p => ({ p, read: { tag: null as PickTag, score: 0, why: '' } })),
-  ].slice(0, 40);
-
-  return (
-    <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
-      <div style={{
-        padding: '9px 12px', fontSize: 12, fontWeight: 500,
-        color: team.isMe ? 'var(--color-accent)' : undefined,
-        borderBottom: '1px solid var(--color-divider)',
-      }}>
-        {team.isMe ? 'You send' : team.name + ' sends'}
-      </div>
-      <div style={{ maxHeight: 240, overflow: 'auto' }}>
-        {items.map(({ p, read }) => {
-          const picked = app.tradeAssets[p.id];
-          return (
-            <div
-              key={p.id}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
-                borderTop: '1px solid var(--color-divider)',
-                background: picked ? 'color-mix(in srgb, var(--color-accent) 9%, transparent)' : 'transparent',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => app.toggleTradeAsset(p.id, team.id, defaultTo)}
-                style={{
-                  flex: 1, minWidth: 0, textAlign: 'left', font: 'inherit', fontSize: 12.5,
-                  background: 'transparent', border: 0, color: 'var(--color-text)', cursor: 'pointer',
-                  padding: 0, ...ellipsis,
-                }}
-              >
-                <span className="tb-asset">
-                  <span className="tb-asset-name">
-                    {p.name}
-                    <span style={{ color: dim(0.4), fontSize: 11 }}>
-                      {' · ' + Math.round(p.q).toLocaleString()}
-                    </span>
-                  </span>
-                  {read.why ? (
-                    <span className={'tb-why is-' + (read.tag || 'none')}>{read.why}</span>
-                  ) : null}
-                </span>
-              </button>
-              {picked && inDeal.length > 2 ? (
-                <button
-                  type="button"
-                  onClick={() => app.cycleTradeTo(p.id, inDeal)}
-                  style={{
-                    font: 'inherit', fontSize: 10.5, cursor: 'pointer', flex: 'none', maxWidth: 120,
-                    padding: '3px 7px', borderRadius: 7, color: 'var(--color-accent)',
-                    border: '1px solid var(--color-accent)', background: 'transparent', ...ellipsis,
-                  }}
-                >
-                  → {nameOf(picked.to)}
-                </button>
-              ) : picked ? (
-                <span style={{ color: 'var(--color-accent)', fontSize: 13, flex: 'none' }}>✓</span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    </Overlay>
   );
 }

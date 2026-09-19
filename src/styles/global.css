@@ -1229,3 +1229,188 @@ button { font-family: inherit; }
   margin-top: 1px;
   color: rgba(242, 253, 254, 0.35);
 }
+
+/* ── Trade builder ────────────────────────────────────────────────────────
+   A column per team saying what it walks away with, and one bar across the
+   top saying who is winning. Columns rather than sides: sides only exist when
+   there are two of them, and a third team is one more column.
+   ──────────────────────────────────────────────────────────────────────── */
+.fb { display: flex; flex-direction: column; gap: 10px; }
+
+.fb-bal {
+  background: var(--color-surface);
+  border-radius: 14px;
+  padding: 13px;
+}
+.fb-bal-head {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: var(--font-heading-weight);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+/* A tug of war, not a progress bar: dead centre is even and the fill travels
+   toward whoever is gaining, so the direction carries as much as the length. */
+.fb-bar {
+  position: relative;
+  height: 8px;
+  margin-top: 10px;
+  border-radius: 4px;
+  background: rgba(242, 253, 254, 0.07);
+  overflow: hidden;
+}
+.fb-bar::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(242, 253, 254, 0.25);
+}
+.fb-bar-fill { position: absolute; top: 0; bottom: 0; }
+.fb-bal-legs {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 5px;
+  font-size: 10px;
+  color: rgba(242, 253, 254, 0.35);
+}
+.fb-bal-legs span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-fit { font-size: 11.5px; color: rgba(242, 253, 254, 0.6); margin-top: 10px; text-wrap: pretty; }
+.fb-problem { font-size: 11px; color: #d9a08e; margin-top: 7px; text-wrap: pretty; }
+
+/* Two columns fit a phone; a third and fourth scroll rather than squeeze, so
+   a card never gets too narrow to read a name in. */
+.fb-cols {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+.fb-col {
+  flex: 1 0 168px;
+  min-width: 168px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--color-surface);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 9px;
+}
+.fb-col.is-me { border-color: color-mix(in srgb, var(--color-accent) 45%, transparent); }
+.fb-col-head { display: flex; align-items: flex-start; gap: 6px; }
+.fb-col-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.fb-col-name {
+  font-size: 11.5px;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fb-col-sub {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(242, 253, 254, 0.38);
+}
+
+.fb-card {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(242, 253, 254, 0.04);
+  border-radius: 9px;
+  padding: 6px 7px;
+}
+.fb-face {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(242, 253, 254, 0.07);
+}
+.fb-face-blank { display: block; }
+.fb-card-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; text-align: left; }
+.fb-card-name {
+  font-size: 12px;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fb-card-meta { display: flex; align-items: center; gap: 5px; min-width: 0; }
+/* The position pill is the one saturated thing on the card, because position
+   is what you scan a trade for before you read a single name. */
+.fb-pill {
+  flex: none;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  color: #04060f;
+}
+.fb-val { font-size: 10.5px; color: rgba(242, 253, 254, 0.45); }
+.fb-from { font-size: 9.5px; color: rgba(242, 253, 254, 0.3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.fb-x {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  color: rgba(242, 253, 254, 0.4);
+  background: transparent;
+}
+.fb-add {
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 7px 0;
+  border-radius: 9px;
+  color: var(--color-accent);
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 45%, transparent);
+  background: transparent;
+}
+
+.fb-actions { display: flex; gap: 8px; }
+.fb-btn { flex: 1; border-radius: 10px; min-height: 40px; }
+.fb-empty {
+  background: var(--color-surface);
+  border-radius: 12px;
+  padding: 14px 13px;
+  font-size: 12.5px;
+  color: rgba(242, 253, 254, 0.5);
+}
+
+.fb-pick-title {
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(242, 253, 254, 0.4);
+  margin-bottom: 8px;
+}
+.fb-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  padding: 9px 2px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--color-divider);
+}
+.fb-pick-row.is-on { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.fb-on { flex: none; font-size: 10px; color: var(--color-accent); }
