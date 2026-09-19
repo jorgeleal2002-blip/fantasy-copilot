@@ -111,6 +111,18 @@ export interface TeamProfile {
   worstRank: number;
 }
 
+/** A team's standing, as the league keeps it. */
+export interface TeamRecord {
+  wins: number;
+  losses: number;
+  ties: number;
+  /** "7-3" — or "7-3-1" only when a tie actually happened. */
+  label: string;
+  /** Points scored, rejoined from the two halves Sleeper stores them in. */
+  pointsFor: number;
+  pointsAgainst: number;
+}
+
 export interface LeagueRow {
   id: number;
   ownerId: string;
@@ -135,6 +147,7 @@ export interface LeagueRow {
   rankFitFut: number;
   /** places gained (+) or lost (−) moving from today to the future view */
   shift: number;
+  record: TeamRecord;
 }
 
 export interface Offer {

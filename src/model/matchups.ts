@@ -7,6 +7,8 @@ export interface MatchupSide {
   /** Sleeper reports 0 before kickoff and null for a week it has no row for. */
   points: number | null;
   isMe: boolean;
+  /** "7-3", or empty before a season has been played. */
+  record: string;
   /** Who he started, in the league's own slot order. Absent for a week Sleeper
    *  has published a score for but not a lineup. */
   starters: string[] | null;
@@ -27,6 +29,7 @@ interface TeamLike {
   name: string;
   avatar: string | null;
   isMe: boolean;
+  record?: { label: string; wins: number; losses: number; ties: number };
 }
 
 /**
@@ -51,6 +54,11 @@ export function pairMatchups(teams: TeamLike[], rows: SleeperMatchup[]): Matchup
       avatar: t.avatar,
       points: r.points ?? null,
       isMe: t.isMe,
+      // Before a game has been played, "0-0" under every name is a column of
+      // noise pretending to be standings.
+      record: t.record && (t.record.wins + t.record.losses + t.record.ties) > 0
+        ? t.record.label
+        : '',
       starters: r.starters ?? null,
       playerPoints: r.players_points ?? null,
     };

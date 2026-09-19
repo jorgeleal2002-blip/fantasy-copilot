@@ -16,6 +16,7 @@ import type {
 } from './types';
 import type { UsageMap } from './usage';
 import { isMockEligible } from './mock-pool';
+import { readRecord } from './record';
 
 export interface ModelInput {
   data: LeagueBundle;
@@ -1020,6 +1021,7 @@ export function buildModel(input: ModelInput): Model {
       fitFut: isDynasty ? lineupFit(list, 2) : 0,
       avgAge: prof.avgAge || 0, window: prof.window || 'medio', worst: prof.worst || null,
       rankNow: 0, rankFut: 0, rankFit: 0, rankFitFut: 0, shift: 0,
+      record: readRecord(r),
     };
   });
 

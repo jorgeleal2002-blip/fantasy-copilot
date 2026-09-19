@@ -1220,3 +1220,12 @@ button { font-family: inherit; }
 .tb-why.is-surplus { color: #8ec9a8; }
 .tb-why.is-fills { color: var(--color-accent); }
 .tb-why.is-core { color: #d9a08e; }
+
+/* The record, under the name the way a scoreboard prints it. Quiet enough
+   that the score stays the number being read. */
+.mu-rec {
+  font-size: 10px;
+  line-height: 1.2;
+  margin-top: 1px;
+  color: rgba(242, 253, 254, 0.35);
+}

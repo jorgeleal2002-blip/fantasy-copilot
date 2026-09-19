@@ -156,6 +156,7 @@ function Side({ s, winning, align }: { s: MatchupSide; winning: boolean; align?:
         : <div className="mu-av mu-av-blank" />}
       <div style={{ minWidth: 0, flex: 1 }}>
         <div className={'mu-name' + (s.isMe ? ' is-me' : '')}>{s.name}</div>
+        {s.record ? <div className="mu-rec">{s.record}</div> : null}
         {/* Bold on the leader rather than a colour: at 0-0 nobody is winning,
             and a green score before kickoff would say otherwise. */}
         <div className={'mu-pts' + (winning ? ' is-up' : '')}>{score(s.points)}</div>

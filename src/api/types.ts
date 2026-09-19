@@ -57,6 +57,17 @@ export interface SleeperRoster {
   co_owners?: string[] | null;
   players?: string[] | null;
   starters?: string[] | null;
+  /** The standings, as Sleeper keeps them. `fpts` is whole points and
+   *  `fpts_decimal` the hundredths, stored apart. */
+  settings?: {
+    wins?: number;
+    losses?: number;
+    ties?: number;
+    fpts?: number;
+    fpts_decimal?: number;
+    fpts_against?: number;
+    fpts_against_decimal?: number;
+  } | null;
 }
 
 export interface SleeperLeague {

@@ -5,6 +5,7 @@ import type { App } from '../state/useApp';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { cardTitle, dim, ellipsis, fitColor } from '../ui/styles';
 import { Matchups } from './Matchups';
+import { hasPlayed } from '../model/record';
 
 const STATUS_TEXT: Record<string, string> = {
   pre_draft: 'draft not started',
@@ -117,6 +118,10 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
                 <span style={{ fontSize: 10, color: windowColor(t), flex: 'none' }}>{windowLabel(t, m.isDynasty)}</span>
               </div>
               <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2 }}>
+                {/* The record leads: the table ranks rosters by what they are
+                    worth, and the first thing anyone checks against that is
+                    what the season has actually done to them. */}
+                {hasPlayed(t.record) ? t.record.label + ' · ' : ''}
                 {t.now <= 0
                   ? 'Draft not started'
                   : 'age ' + t.avgAge.toFixed(1) +

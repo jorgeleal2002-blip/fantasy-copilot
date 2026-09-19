@@ -19,6 +19,7 @@ import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
+import { hasPlayed, readRecord } from '../model/record';
 
 const bundle = makeBundle();
 const market = parseMarket(makeFantasyCalc(bundle.players));
@@ -2736,5 +2737,35 @@ describe('what is worth moving in a trade', () => {
     expect(depthOf(list, list[1])).toBe(2);
     // A different position has its own chart, not a place on the roster's.
     expect(depthOf(list, list[2])).toBe(1);
+  });
+});
+
+describe('a team\'s record', () => {
+  const roster = (settings: Record<string, number>) => ({ roster_id: 1, owner_id: 'u', settings });
+
+  it('rejoins the two halves Sleeper stores a score in', () => {
+    // 1,284.56 arrives as 1284 and 56. Read straight, it is 1284 or 128456.
+    const r = readRecord(roster({ fpts: 1284, fpts_decimal: 56, fpts_against: 1190, fpts_against_decimal: 4 }));
+    expect(r.pointsFor).toBe(1284.56);
+    expect(r.pointsAgainst).toBe(1190.04);
+  });
+
+  it('leaves the ties column out of a league that has none', () => {
+    expect(readRecord(roster({ wins: 7, losses: 3, ties: 0 })).label).toBe('7-3');
+    expect(readRecord(roster({ wins: 7, losses: 3, ties: 1 })).label).toBe('7-3-1');
+  });
+
+  it('reads an empty roster as 0-0 rather than falling over', () => {
+    const r = readRecord(null);
+    expect(r.label).toBe('0-0');
+    expect(r.pointsFor).toBe(0);
+    expect(hasPlayed(r)).toBe(false);
+  });
+
+  it('knows whether the season has started', () => {
+    expect(hasPlayed(readRecord(roster({ wins: 0, losses: 0 })))).toBe(false);
+    expect(hasPlayed(readRecord(roster({ wins: 0, losses: 1 })))).toBe(true);
+    // A season whose only result is a tie has still been played.
+    expect(hasPlayed(readRecord(roster({ ties: 1 })))).toBe(true);
   });
 });
