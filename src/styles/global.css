@@ -1414,3 +1414,55 @@ button { font-family: inherit; }
 }
 .fb-pick-row.is-on { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .fb-on { flex: none; font-size: 10px; color: var(--color-accent); }
+
+/* The breakdown, folded away. The headline names one team; this is where the
+   other two live, and where a two-team swap says by how much. */
+.fb-more {
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--color-accent);
+}
+.fb-rows { display: flex; flex-direction: column; gap: 12px; margin-top: 11px; }
+.fb-row { border-top: 1px solid var(--color-divider); padding-top: 9px; }
+.fb-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.fb-row-name {
+  font-size: 12.5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fb-row-name.is-me { color: var(--color-accent); }
+.fb-row-net { font-size: 12.5px; font-weight: 500; flex: none; }
+.fb-row-pct { font-weight: 400; opacity: 0.7; }
+.fb-row-line {
+  display: flex;
+  gap: 6px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: rgba(242, 253, 254, 0.5);
+  margin-top: 3px;
+  text-wrap: pretty;
+}
+/* A fixed gutter so gets, gives and lineup line up down the card. */
+.fb-row-tag {
+  flex: none;
+  width: 40px;
+  color: rgba(242, 253, 254, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 9px;
+  padding-top: 1px;
+}
+.fb-note {
+  font-size: 10px;
+  line-height: 1.45;
+  color: rgba(242, 253, 254, 0.3);
+  text-wrap: pretty;
+}

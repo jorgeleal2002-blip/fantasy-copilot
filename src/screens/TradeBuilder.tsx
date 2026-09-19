@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { colorOf } from '../model/constants';
-import { evaluateTrade, fitLine, type TradeAsset } from '../model/trade-eval';
+import { evaluateTrade, fitLine, type TeamLedger, type TradeAsset } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -120,6 +120,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 
 /** The headline and the one bar that answers the whole screen. */
 function Balance({ v, fit }: { v: ReturnType<typeof evaluateTrade>; fit: string | null }) {
+  const [open, setOpen] = useState(false);
   const me = v.ledgers.find(l => l.isMe);
   const tone = !v.moved ? dim(0.5) : v.winner ? (v.winner.isMe ? GOOD : BAD) : dim(0.75);
 
@@ -151,6 +152,64 @@ function Balance({ v, fit }: { v: ReturnType<typeof evaluateTrade>; fit: string 
       </div>
       {fit ? <div className="fb-fit">{fit}</div> : null}
       {v.problems.map(p => <div key={p} className="fb-problem">{p}</div>)}
+
+      {/* The headline can only name one team. In a three-way the other two
+          are the whole question, and even in a swap "by how much, and what
+          does it do to their lineup" is the part you argue with. */}
+      {v.moved ? (
+        <>
+          <button
+            type="button"
+            className="fb-more"
+            aria-expanded={open}
+            onClick={() => setOpen(o => !o)}
+          >
+            {open ? 'Hide the breakdown' : 'See more'}
+          </button>
+          {open ? (
+            <div className="fb-rows">
+              {v.ledgers.map(l => <LedgerRow key={l.id} l={l} moved={v.moved} />)}
+              <div className="fb-note">
+                Even is anything inside ±{Math.round(v.band).toLocaleString()} — four
+                percent of the {Math.round(v.moved).toLocaleString()} that changes hands.
+              </div>
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/** One team's whole side of the deal, in the terms it would judge it by. */
+function LedgerRow({ l, moved }: { l: TeamLedger; moved: number }) {
+  const tone = l.standing === 'wins' ? GOOD : l.standing === 'loses' ? BAD : dim(0.5);
+  const pct = moved ? Math.round((l.net / moved) * 100) : 0;
+  return (
+    <div className="fb-row">
+      <div className="fb-row-top">
+        <span className={'fb-row-name' + (l.isMe ? ' is-me' : '')}>{l.name}</span>
+        <span className="fb-row-net" style={{ color: tone }}>
+          {(l.net > 0 ? '+' : '') + Math.round(l.net).toLocaleString()}
+          <span className="fb-row-pct">{pct ? ` (${pct > 0 ? '+' : ''}${pct}%)` : ''}</span>
+        </span>
+      </div>
+      <div className="fb-row-line">
+        <span className="fb-row-tag">gets</span>
+        {l.got.length ? l.got.map(a => a.name).join(', ') : 'nothing'}
+      </div>
+      <div className="fb-row-line">
+        <span className="fb-row-tag">gives</span>
+        {l.gave.length ? l.gave.map(a => a.name).join(', ') : 'nothing'}
+      </div>
+      {l.fitDelta != null && Math.abs(l.fitDelta) >= 0.1 ? (
+        <div className="fb-row-line">
+          <span className="fb-row-tag">lineup</span>
+          <span style={{ color: l.fitDelta > 0 ? GOOD : BAD }}>
+            {(l.fitDelta > 0 ? '+' : '−') + Math.abs(l.fitDelta).toFixed(1)} pts a week
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

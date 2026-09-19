@@ -2850,3 +2850,36 @@ describe('who counts as still in the league', () => {
     expect(isMockEligible(gone)).toBe(false);
   });
 });
+
+describe('the trade on the screen', () => {
+  // Exactly what the builder showed: you receive a 104, you send a 46, and a
+  // third team sits in the deal with nothing moving for it. The headline named
+  // the wrong winner, so this pins down what the model actually says.
+  const teams = [
+    { id: 1, name: 'You', isMe: true },
+    { id: 2, name: 'The Price Is Right', isMe: false },
+    { id: 3, name: 'Third', isMe: false },
+  ];
+  const a = (id: string, value: number, from: number, to: number) =>
+    ({ id, name: id, value, from, to });
+
+  it('gives the win to whoever takes back more, whichever team that is', () => {
+    const v = evaluateTrade(teams, [a('bijan', 104, 2, 1), a('montgomery', 46, 1, 2)]);
+    expect(v.winner?.isMe).toBe(true);
+    expect(v.ledgers.find(l => l.isMe)!.net).toBe(58);
+    expect(v.ledgers.find(l => l.name === 'The Price Is Right')!.net).toBe(-58);
+  });
+
+  it('is unmoved by a third team that nothing passes through', () => {
+    const v = evaluateTrade(teams, [a('bijan', 104, 2, 1), a('montgomery', 46, 1, 2)]);
+    expect(v.ledgers.find(l => l.name === 'Third')!.net).toBe(0);
+    expect(v.problems.join(' ')).toContain('Third is in the trade but nothing moves');
+  });
+
+  it('still reads correctly when the player comes from the third team', () => {
+    const v = evaluateTrade(teams, [a('bijan', 104, 3, 1), a('montgomery', 46, 1, 2)]);
+    expect(v.ledgers.find(l => l.isMe)!.net).toBe(58);
+    expect(v.ledgers.find(l => l.name === 'Third')!.net).toBe(-104);
+    expect(v.winner?.isMe).toBe(true);
+  });
+});
