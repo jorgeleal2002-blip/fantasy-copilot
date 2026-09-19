@@ -1203,3 +1203,20 @@ button { font-family: inherit; }
   margin-top: 10px;
   text-wrap: pretty;
 }
+
+/* The reason a player is high or low in the list, said next to him. A sorted
+   list whose logic is invisible is just a different arbitrary order. */
+.tb-asset { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tb-asset-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-why {
+  font-size: 10px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(242, 253, 254, 0.4);
+}
+/* Green where the deal is there to be made, amber where it costs you. */
+.tb-why.is-surplus { color: #8ec9a8; }
+.tb-why.is-fills { color: var(--color-accent); }
+.tb-why.is-core { color: #d9a08e; }

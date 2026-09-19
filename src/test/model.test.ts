@@ -18,6 +18,7 @@ import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
+import { depthOf, readPick, startsAt } from '../model/trade-picks';
 
 const bundle = makeBundle();
 const market = parseMarket(makeFantasyCalc(bundle.players));
@@ -2683,5 +2684,57 @@ describe('the fit half of a trade verdict', () => {
     const withFit = evaluateTrade(two, swap, { 1: 40, 2: -40 });
     expect(withFit.winner).toBe(bare.winner);
     expect(withFit.ledgers.map(l => l.net)).toEqual(bare.ledgers.map(l => l.net));
+  });
+});
+
+describe('what is worth moving in a trade', () => {
+  const TEAMS = 12;
+  const base = { pos: 'RB' as const, depth: 3, startsAt: 2, senderRank: 4, receiverRank: 4, teamCount: TEAMS };
+
+  it('warns off a starter at a position the team is already thin at', () => {
+    const r = readPick({ ...base, depth: 1, senderRank: 11 });
+    expect(r.tag).toBe('core');
+    expect(r.score).toBeLessThan(0);
+    expect(r.why).toContain('thin at RB');
+  });
+
+  it('ranks a spare who fills their hole above everything else', () => {
+    const spareAndNeeded = readPick({ ...base, depth: 3, senderRank: 3, receiverRank: 11 });
+    const justNeeded = readPick({ ...base, depth: 1, senderRank: 3, receiverRank: 11 });
+    const justSpare = readPick({ ...base, depth: 3, senderRank: 3, receiverRank: 2 });
+    expect(spareAndNeeded.tag).toBe('surplus');
+    expect(spareAndNeeded.score).toBeGreaterThan(justNeeded.score);
+    expect(justNeeded.score).toBeGreaterThan(justSpare.score);
+  });
+
+  it('says nothing about a player who is neither spare nor needed', () => {
+    const r = readPick({ ...base, depth: 1, senderRank: 4, receiverRank: 3 });
+    expect(r.tag).toBe(null);
+    expect(r.why).toBe('');
+  });
+
+  it('counts a flex as half a slot, so the third back is not called spare', () => {
+    // 2 RB + a flex: a third runner starts often enough to matter.
+    expect(startsAt(['QB', 'RB', 'RB', 'WR', 'WR', 'TE', 'FLEX', 'BN'], 'RB')).toBe(3);
+    expect(startsAt(['QB', 'RB', 'RB', 'WR', 'WR', 'TE', 'BN'], 'RB')).toBe(2);
+    // A superflex means the second quarterback is a starter, not a backup.
+    expect(startsAt(['QB', 'SUPER_FLEX', 'RB', 'WR'], 'QB')).toBe(2);
+  });
+
+  it('always starts at least one of a position it lists', () => {
+    expect(startsAt(['QB', 'FLEX'], 'RB')).toBe(1);
+    expect(startsAt([], 'QB')).toBe(1);
+  });
+
+  it('reads a depth chart off value alone', () => {
+    const list = [
+      { id: 'a', pos: 'RB', q: 90 },
+      { id: 'b', pos: 'RB', q: 40 },
+      { id: 'c', pos: 'WR', q: 95 },
+    ];
+    expect(depthOf(list, list[0])).toBe(1);
+    expect(depthOf(list, list[1])).toBe(2);
+    // A different position has its own chart, not a place on the roster's.
+    expect(depthOf(list, list[2])).toBe(1);
   });
 });

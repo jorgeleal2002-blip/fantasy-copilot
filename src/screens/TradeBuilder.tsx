@@ -1,4 +1,5 @@
 import { evaluateTrade, fitLine, type TradeAsset, type TeamLedger } from '../model/trade-eval';
+import { depthOf, readPick, startsAt, type PickTag } from '../model/trade-picks';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { BAD, GOOD, dim, ellipsis } from '../ui/styles';
@@ -196,10 +197,35 @@ function TeamAssets({ app, m, team, inDeal, nameOf }: {
 }) {
   const info = m.teamInfo(team.id);
   if (!info) return null;
-  // Picks belong in a trade as much as players do, and in dynasty they are
-  // often the whole of one side.
-  const items = [...info.list, ...info.picks].slice(0, 40);
   const defaultTo = inDeal.find(t => t !== team.id) ?? team.id;
+  const to = m.teamInfo(defaultTo);
+
+  /* Sorted by what makes sense to move, not by price.
+   *
+   * Price alone puts the untouchable starters at the top and the men nobody
+   * wants at the bottom, which is the list backwards. A spare at a position
+   * the other team cannot field leads instead, and the player this team
+   * cannot replace sinks — with the reason written next to each, because a
+   * ranking nobody can see the logic of is just a different arbitrary order.
+   */
+  const players = info.list.map(p => {
+    const read = readPick({
+      pos: p.pos,
+      depth: depthOf(info.list, p),
+      startsAt: startsAt(m.league.roster_positions, p.pos),
+      senderRank: info.ranks[p.pos] ?? m.teamCount,
+      receiverRank: to?.ranks[p.pos] ?? m.teamCount,
+      teamCount: m.teamCount,
+    });
+    return { p, read };
+  }).sort((a, b) => (b.read.score - a.read.score) || (b.p.q - a.p.q));
+
+  // Picks belong in a trade as much as players do — in dynasty they are often
+  // the whole of one side — but no depth chart applies to them.
+  const items = [
+    ...players,
+    ...info.picks.map(p => ({ p, read: { tag: null as PickTag, score: 0, why: '' } })),
+  ].slice(0, 40);
 
   return (
     <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
@@ -211,7 +237,7 @@ function TeamAssets({ app, m, team, inDeal, nameOf }: {
         {team.isMe ? 'You send' : team.name + ' sends'}
       </div>
       <div style={{ maxHeight: 240, overflow: 'auto' }}>
-        {items.map(p => {
+        {items.map(({ p, read }) => {
           const picked = app.tradeAssets[p.id];
           return (
             <div
@@ -231,9 +257,16 @@ function TeamAssets({ app, m, team, inDeal, nameOf }: {
                   padding: 0, ...ellipsis,
                 }}
               >
-                {p.name}
-                <span style={{ color: dim(0.4), fontSize: 11 }}>
-                  {' · ' + Math.round(p.q).toLocaleString()}
+                <span className="tb-asset">
+                  <span className="tb-asset-name">
+                    {p.name}
+                    <span style={{ color: dim(0.4), fontSize: 11 }}>
+                      {' · ' + Math.round(p.q).toLocaleString()}
+                    </span>
+                  </span>
+                  {read.why ? (
+                    <span className={'tb-why is-' + (read.tag || 'none')}>{read.why}</span>
+                  ) : null}
                 </span>
               </button>
               {picked && inDeal.length > 2 ? (
