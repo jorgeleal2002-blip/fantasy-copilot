@@ -87,6 +87,28 @@ export const getSeasonStats = (year: number) =>
   get<Record<string, SleeperStatLine>>('/stats/nfl/regular/' + year);
 
 /**
+ * Sleeper's own projections for one week.
+ *
+ * On a different host than the rest of the API and outside the `/v1` prefix,
+ * which is why it does not go through `get`. The positions are repeated
+ * parameters rather than a joined list — that is the shape the endpoint wants,
+ * and a comma-joined one comes back empty.
+ *
+ * The shape of the response is read defensively in `model/projections`: this
+ * is not a documented endpoint, and a scoreboard that loses its projections is
+ * a scoreboard, while one that throws is a blank screen.
+ */
+const PROJ_POS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+export async function getWeekProjections(season: string | number, week: number): Promise<unknown> {
+  const q = PROJ_POS.map(p => 'position[]=' + p).join('&');
+  const url = 'https://api.sleeper.com/projections/nfl/' + season + '/' + week
+    + '?season_type=regular&order_by=ppr&' + q;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('projections ' + r.status);
+  return r.json();
+}
+
+/**
  * Which manager in this league is the person signed in.
  *
  * It used to fall back to `users[0]` when the username matched nobody, which

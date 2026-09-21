@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   findUser, getDraftPicks, getRosters, getSeasonStats, getTradedPicks, getUsers,
-  loadLeague, matchMe, userLeagues, playerPhoto, getMatchups, getNflState,
+  loadLeague, matchMe, userLeagues, playerPhoto, getMatchups, getNflState, getWeekProjections,
 } from '../api/sleeper';
 import type { LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup } from '../api/types';
 import { DRAFT_POLL_MS, MATCHUP_POLL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
@@ -16,6 +16,7 @@ import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
+import { readProjections } from '../model/projections';
 import { nextDetailStack, topDetail } from './detail-stack';
 
 export type Stage = 'connect' | 'leagues' | 'app';
@@ -35,6 +36,9 @@ export const BOOT_STEPS = [
  *  actually depend on — the market is format-specific, usage is per season. */
 const marketCache = new Map<string, Market>();
 const usageCache = new Map<string, UsageMap>();
+/** Sleeper's projections for one week of one season. They move during the week
+ *  as news breaks, but not between two looks at the same scoreboard. */
+const projCache = new Map<string, Record<string, number>>();
 const seasonCache = new Map<string, string>();
 
 function readJson<T>(key: string, fallback: T): T {
@@ -154,6 +158,7 @@ export function useApp() {
    * league bundle because it is the one thing on screen that changes while you
    * are looking at it. */
   const [week, setWeekState] = useState<number | null>(null);
+  const [projections, setProjections] = useState<Record<string, number>>({});
   const [matchups, setMatchups] = useState<SleeperMatchup[]>([]);
   const [matchupState, setMatchupState] = useState<FeedState>('idle');
 
@@ -164,6 +169,33 @@ export function useApp() {
   const poll = useRef<number | undefined>(undefined);
   const dataRef = useRef<LeagueBundle | null>(null);
   dataRef.current = data;
+
+  /**
+   * Sleeper's projections for the week, scored in this league's own settings.
+   *
+   * Deliberately outside the scoreboard's own try: projections are an extra on
+   * a scoreboard, and a week without them still has scores on it. They also
+   * come from an undocumented endpoint, so everything downstream treats "no
+   * projection" as an ordinary answer rather than an error.
+   */
+  const fetchProjections = useCallback(async (wk: number) => {
+    const d = dataRef.current;
+    if (!d || !wk) return;
+    const season = d.league.season || String(new Date().getFullYear());
+    const key = season + ':' + wk;
+    if (projCache.has(key)) { setProjections(projCache.get(key)!); return; }
+    try {
+      const raw = await getWeekProjections(season, wk);
+      const map = readProjections(raw, d.league.scoring_settings);
+      // An empty map is an answer that did not arrive, not a league where
+      // nobody is projected to score: it must not replace one that did.
+      if (!Object.keys(map).length) return;
+      projCache.set(key, map);
+      setProjections(map);
+    } catch {
+      /* the scoreboard is a scoreboard without them */
+    }
+  }, []);
 
   const fetchMatchups = useCallback(async (lid: string, wk: number, quiet = false) => {
     // A poll must not blank the scores it is refreshing, so it stays quiet and
@@ -176,7 +208,8 @@ export function useApp() {
     } catch {
       setMatchupState('fail');
     }
-  }, []);
+    void fetchProjections(wk);
+  }, [fetchProjections]);
 
   const setWeek = useCallback((w: number) => {
     setWeekState(w);
@@ -858,7 +891,7 @@ export function useApp() {
     clearRoomError: () => setRoomError(''),
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
-    week, matchups, matchupState, tradeTeams, tradeAssets,
+    week, matchups, matchupState, projections, tradeTeams, tradeAssets,
 
     accounts, switchAccount, forgetAccount,
     block: (leagueId ? blocks[username + '/' + leagueId] : undefined) || [],

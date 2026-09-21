@@ -87,6 +87,7 @@ export function buildModel(input: ModelInput): Model {
   const teams: TeamEntry[] = d.users.map(u => ({
     id: u.user_id,
     name: (u.metadata && u.metadata.team_name) || u.display_name || 'Team',
+    user: u.display_name || '',
     avatar: avatarUrl((u.metadata && u.metadata.avatar) || u.avatar),
     slot: draftOrder[u.user_id] || null,
     isMe: u.user_id === d.me.user_id,
@@ -1027,6 +1028,7 @@ export function buildModel(input: ModelInput): Model {
     const st = allStrength.find(x => x.owner === r.owner_id);
     return {
       id: r.roster_id, ownerId: r.owner_id, name: teamName(r.owner_id),
+      user: (teams.find(t => t.id === r.owner_id) || {} as TeamEntry).user || '',
       isMe: isMine(r),
       avatar: (teams.find(t => t.id === r.owner_id) || {} as TeamEntry).avatar || null,
       posStrength: st ? st.s : {},

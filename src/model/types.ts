@@ -95,6 +95,8 @@ export interface MyDraftPick {
 export interface TeamEntry {
   id: string;
   name: string;
+  /** the manager's Sleeper handle, which is not the team's name */
+  user: string;
   avatar: string | null;
   slot: number | null;
   isMe: boolean;
@@ -127,6 +129,8 @@ export interface LeagueRow {
   id: number;
   ownerId: string;
   name: string;
+  /** the manager's Sleeper handle */
+  user: string;
   isMe: boolean;
   avatar: string | null;
   posStrength: Partial<Record<Pos, number>>;

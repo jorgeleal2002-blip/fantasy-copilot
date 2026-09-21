@@ -1,8 +1,12 @@
 import type { PlayerCatalog, SleeperMatchup } from '../api/types';
+import { projectSide, sideProjectionIsSound } from './projections';
 
 export interface MatchupSide {
   rosterId: number;
   name: string;
+  /** The manager's Sleeper handle. A team called "Brady Bunch" says nothing
+   *  about who you are playing; empty when it IS the team's name. */
+  user: string;
   avatar: string | null;
   /** Sleeper reports 0 before kickoff and null for a week it has no row for. */
   points: number | null;
@@ -14,6 +18,10 @@ export interface MatchupSide {
   starters: string[] | null;
   /** Every player's points that week, starters and bench alike. */
   playerPoints: Record<string, number> | null;
+  /** What Sleeper projects the started lineup to score, in this league's
+   *  scoring. Null before the feed has one, or when too little of the lineup
+   *  is priced for a total to mean anything. */
+  projected: number | null;
 }
 
 export interface Matchup {
@@ -27,6 +35,7 @@ export interface Matchup {
 interface TeamLike {
   id: number;
   name: string;
+  user?: string;
   avatar: string | null;
   isMe: boolean;
   record?: { label: string; wins: number; losses: number; ties: number };
@@ -43,16 +52,26 @@ interface TeamLike {
  * Your own game comes first. It is the one being looked for, and in a
  * fourteen-team league it would otherwise sit anywhere in seven cards.
  */
-export function pairMatchups(teams: TeamLike[], rows: SleeperMatchup[]): Matchup[] {
+export function pairMatchups(
+  teams: TeamLike[],
+  rows: SleeperMatchup[],
+  projections?: Record<string, number> | null,
+): Matchup[] {
   const byRoster = new Map(teams.map(t => [t.id, t]));
+  const proj = projections || {};
   const side = (r: SleeperMatchup): MatchupSide | null => {
     const t = byRoster.get(r.roster_id);
     if (!t) return null; // a roster the league no longer lists
+    const p = projectSide(r.starters, proj);
     return {
       rosterId: r.roster_id,
       name: t.name,
+      // Only when it adds something. Most managers never rename their team, and
+      // "Konoha" over "@Konoha" is the same word twice in a 30px column.
+      user: t.user && t.user !== t.name ? t.user : '',
       avatar: t.avatar,
       points: r.points ?? null,
+      projected: sideProjectionIsSound(p) ? p.total : null,
       isMe: t.isMe,
       // Before a game has been played, "0-0" under every name is a column of
       // noise pretending to be standings.
@@ -115,6 +134,8 @@ export interface LineupCell {
   pos: string;
   team: string | null;
   points: number | null;
+  /** what Sleeper projects him for this week, in this league's scoring */
+  projected: number | null;
 }
 
 export interface LineupRow {
@@ -147,8 +168,10 @@ export function lineupRows(
   m: Matchup,
   rosterPositions: string[] | null | undefined,
   players: PlayerCatalog,
+  projections?: Record<string, number> | null,
 ): LineupRow[] {
   const slots = startingSlots(rosterPositions);
+  const proj = projections || {};
   const cell = (side: MatchupSide | null, i: number): LineupCell | null => {
     // Past the end of what Sleeper sent is not the same as an empty slot: one
     // means he did not start anybody there, the other that the week has no
@@ -158,7 +181,9 @@ export function lineupRows(
     const id = side.starters[i];
     // Sleeper writes "0" for a slot the manager never filled, and an empty
     // slot is a fact worth showing: it is where the week was lost.
-    if (!id || id === '0') return { id: null, name: 'Empty', pos: '', team: null, points: null };
+    if (!id || id === '0') {
+      return { id: null, name: 'Empty', pos: '', team: null, points: null, projected: null };
+    }
     const p = players[id];
     const full = p ? (p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim()) : '';
     return {
@@ -167,6 +192,7 @@ export function lineupRows(
       pos: p?.position || '',
       team: p?.team || null,
       points: side.playerPoints?.[id] ?? null,
+      projected: Number.isFinite(proj[id]) ? proj[id] : null,
     };
   };
 

@@ -17,6 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
+import { readProjections, scoreProjection, scoringKind } from '../model/projections';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -2503,6 +2504,68 @@ describe('projected points per game', () => {
   });
 });
 
+/* ── reading Sleeper's projection feed ──────────────────────────────────────
+   Undocumented, so the parser is written to survive it rather than to assume
+   it, and the totals are re-scored in the league's own settings: the three
+   pre-totalled numbers it ships are right for exactly three leagues. */
+describe('Sleeper\'s weekly projections', () => {
+  // Six-point passing touchdowns and a tight-end premium — the two settings
+  // that make pts_half_ppr wrong by several points a week for one position.
+  const SCORING = {
+    pass_yd: 0.04, pass_td: 6, pass_int: -2,
+    rec: 0.5, rec_yd: 0.1, rec_td: 6, bonus_rec_te: 0.5,
+    rush_yd: 0.1, rush_td: 6, fum_lost: -2,
+  };
+  const qb = { pass_yd: 275, pass_td: 2, pass_int: 1, rush_yd: 20, pts_half_ppr: 18.4 };
+
+  it('scores the projected stat line in the league\'s own settings', () => {
+    // 11 + 12 − 2 + 2 = 23, where half-PPR's four-point passing TD says 18.4.
+    expect(scoreProjection(qb, SCORING)).toBeCloseTo(23, 6);
+  });
+
+  it('falls back to the pre-totalled number when the league has no settings', () => {
+    expect(scoreProjection(qb, null)).toBe(18.4);
+    expect(scoreProjection(qb, {})).toBe(18.4);
+  });
+
+  it('picks the pre-totalled number that matches the league', () => {
+    const line = { pts_std: 10, pts_half_ppr: 13, pts_ppr: 16 };
+    expect(scoreProjection(line, null, scoringKind({ rec: 1 }))).toBe(16);
+    expect(scoreProjection(line, null, scoringKind({ rec: 0.5 }))).toBe(13);
+    expect(scoreProjection(line, null, scoringKind({ rec: 0 }))).toBe(10);
+    // No `rec` at all is a league we cannot read; half is the common ground.
+    expect(scoringKind({})).toBe('half');
+  });
+
+  it('does not report a nought when the column names have moved', () => {
+    // Nothing in the line matches anything the league pays for. That is a feed
+    // that changed, not a player projected to score nothing, and a confident
+    // zero on a scoreboard is the worst of the three available answers.
+    expect(scoreProjection({ points_half_ppr: 14, pts_half_ppr: 14 }, { pass_yd: 0.04 })).toBe(14);
+    expect(scoreProjection({ xx: 1 }, { pass_yd: 0.04 })).toBe(null);
+    expect(scoreProjection(null, SCORING)).toBe(null);
+  });
+
+  it('reads the feed as a list or as a map, nested or flat', () => {
+    const flatMap = readProjections({ '4046': { pts_half_ppr: 21 } }, null);
+    expect(flatMap['4046']).toBe(21);
+    const nestedList = readProjections([{ player_id: '4046', stats: { pts_half_ppr: 21 } }], null);
+    expect(nestedList['4046']).toBe(21);
+    const nestedMap = readProjections({ '4046': { stats: { pts_half_ppr: 21 } } }, null);
+    expect(nestedMap['4046']).toBe(21);
+    const viaPlayer = readProjections([{ player: { player_id: '9' }, stats: { pts_half_ppr: 8 } }], null);
+    expect(viaPlayer['9']).toBe(8);
+  });
+
+  it('leaves out what it cannot read instead of falling over', () => {
+    expect(readProjections(null, null)).toEqual({});
+    expect(readProjections('nope', null)).toEqual({});
+    expect(readProjections([1, null, { no_id: true }], null)).toEqual({});
+    expect(readProjections([{ player_id: 'a' }, { player_id: 'b', stats: { pts_half_ppr: 9 } }], null))
+      .toEqual({ b: 9 });
+  });
+});
+
 describe('the league\'s matchups', () => {
   const teams = [
     { id: 1, name: 'Cuboys', avatar: null, isMe: true },
@@ -2536,6 +2599,19 @@ describe('the league\'s matchups', () => {
 
   it('ignores a roster the league no longer lists', () => {
     expect(pairMatchups(teams, [row(99, 4, 50)])).toHaveLength(0);
+  });
+
+  it('names the manager, but not twice', () => {
+    // A team called "Brady Bunch" says nothing about who you are playing. A
+    // team called "Konoha" managed by Konoha says it once, and "@Konoha"
+    // under it is the same word in a 30px column.
+    const named = [
+      { id: 1, name: 'Cuboys', user: 'jorgeleal', avatar: null, isMe: true },
+      { id: 2, name: 'Konoha', user: 'Konoha', avatar: null, isMe: false },
+    ];
+    const [g] = pairMatchups(named, [row(1, 7, 0), row(2, 7, 0)]);
+    expect(g.a.user).toBe('jorgeleal');
+    expect(g.b!.user).toBe('');
   });
 
   it('names a leader only once both sides have scored something different', () => {
@@ -2602,7 +2678,46 @@ describe('the league\'s matchups', () => {
        than left blank or quietly skipped. */
     it('shows a slot the manager never filled', () => {
       const rows = lineupRows(game(), SLOTS, players);
-      expect(rows[1].b).toEqual({ id: null, name: 'Empty', pos: '', team: null, points: null });
+      expect(rows[1].b).toEqual({
+        id: null, name: 'Empty', pos: '', team: null, points: null, projected: null,
+      });
+    });
+
+    /* ── Sleeper's own projections ──────────────────────────────────────────
+       Read defensively, scored in the league's settings, and withheld rather
+       than understated — the same rule the team projection follows. */
+    it('carries a projection down to the player row', () => {
+      const rows = lineupRows(game(), SLOTS, players, { p1: 22.5, p3: 19.1 });
+      expect(rows[0].a!.projected).toBe(22.5);
+      expect(rows[0].b!.projected).toBe(19.1);
+      // Nobody projected him: that is not a projection of zero, which on a
+      // scoreboard would read as "he will not score".
+      expect(rows[1].a!.projected).toBe(null);
+    });
+
+    it('adds the starters up into the number beside the score', () => {
+      const [g] = pairMatchups(teams, [
+        withLineup(1, 7, 40, ['p1', 'p2'], {}),
+        withLineup(2, 7, 18, ['p3', 'p4'], {}),
+      ], { p1: 22.5, p2: 14.2, p3: 19.1, p4: 11.9 });
+      expect(g.a.projected).toBe(36.7);
+      expect(g.b!.projected).toBe(31);
+    });
+
+    it('withholds a total it could only half price', () => {
+      const [g] = pairMatchups(teams, [
+        withLineup(1, 7, 40, ['p1', 'p2', 'p4'], {}),
+        withLineup(2, 7, 18, ['p3', '0'], {}),
+      ], { p1: 22.5, p3: 19.1 });
+      // One of three starters priced is not a smaller projection, it is a
+      // wrong one. The empty slot on the other side counts as priced, because
+      // nothing is exactly what it will score.
+      expect(g.a.projected).toBe(null);
+      expect(g.b!.projected).toBe(19.1);
+    });
+
+    it('says nothing at all when no projections arrived', () => {
+      expect(game().a.projected).toBe(null);
     });
 
     it('keeps the slot labels when only one side has posted a lineup', () => {

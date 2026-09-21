@@ -23,7 +23,7 @@ const score = (p: number | null) => (p == null ? '—' : p.toFixed(2));
  */
 export function Matchups({ app, m }: { app: App; m: Model }) {
   const week = app.week;
-  const games = pairMatchups(m.leagueRows, app.matchups);
+  const games = pairMatchups(m.leagueRows, app.matchups, app.projections);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -83,7 +83,9 @@ function Game({ app, m, g }: { app: App; m: Model; g: Matchup }) {
   // behind it.
   const [open, setOpen] = useState(g.hasMe);
   const lead = leaderOf(g);
-  const rows = open ? lineupRows(g, m.league.roster_positions, app.data?.players || {}) : [];
+  const rows = open
+    ? lineupRows(g, m.league.roster_positions, app.data?.players || {}, app.projections)
+    : [];
 
   return (
     <div className={'mu-card' + (g.hasMe ? ' is-mine' : '')}>
@@ -142,13 +144,24 @@ function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'righ
         <span className="mu-dot" style={{ background: c.pos ? colorOf(c.pos as DraftPos) : 'transparent' }} />
         <span className="mu-pl-name">{c.name}</span>
       </div>
-      <div className="mu-pl-pts">{c.points == null ? '—' : c.points.toFixed(1)}</div>
+      {/* Both numbers in one element, so the right-hand column stays two boxes
+          wide and `row-reverse` keeps putting the name against the middle. */}
+      <div className="mu-pl-pts">
+        {c.points == null ? '—' : c.points.toFixed(1)}
+        {c.projected != null ? (
+          <span className="mu-pl-proj" title="Sleeper projection">{c.projected.toFixed(1)}</span>
+        ) : null}
+      </div>
     </div>
   );
 }
 
 function Side({ s, winning, align }: { s: MatchupSide; winning: boolean; align?: 'right' }) {
   const right = align === 'right';
+  // The handle and the record read as one line of small print under the team
+  // name. Two lines of it would push the score, which is what the card is for,
+  // a third of the way down the card.
+  const sub = [s.user ? '@' + s.user : '', s.record].filter(Boolean).join(' · ');
   return (
     <div className={'mu-side' + (right ? ' is-right' : '')}>
       {s.avatar
@@ -156,10 +169,15 @@ function Side({ s, winning, align }: { s: MatchupSide; winning: boolean; align?:
         : <div className="mu-av mu-av-blank" />}
       <div style={{ minWidth: 0, flex: 1 }}>
         <div className={'mu-name' + (s.isMe ? ' is-me' : '')}>{s.name}</div>
-        {s.record ? <div className="mu-rec">{s.record}</div> : null}
+        {sub ? <div className="mu-rec">{sub}</div> : null}
         {/* Bold on the leader rather than a colour: at 0-0 nobody is winning,
             and a green score before kickoff would say otherwise. */}
-        <div className={'mu-pts' + (winning ? ' is-up' : '')}>{score(s.points)}</div>
+        <div className={'mu-pts' + (winning ? ' is-up' : '')}>
+          {score(s.points)}
+          {s.projected != null ? (
+            <span className="mu-proj">{'proj ' + s.projected.toFixed(1)}</span>
+          ) : null}
+        </div>
       </div>
     </div>
   );

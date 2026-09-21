@@ -1228,6 +1228,32 @@ button { font-family: inherit; }
   line-height: 1.2;
   margin-top: 1px;
   color: rgba(242, 253, 254, 0.35);
+  /* It carries the handle as well as the record now, and a long one has to cut
+     rather than push the card wider than the phone. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sleeper's projection for the lineup, beside the score it is a forecast of.
+   Small and dim on purpose: the score is the fact and this is the guess, and
+   two numbers at the same weight would make you read both to find out which
+   is which. */
+.mu-proj {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: rgba(233, 233, 237, 0.3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The same thing a slot down: what he is projected for, after what he has
+   actually scored. */
+.mu-pl-proj {
+  margin-left: 4px;
+  font-size: 10px;
+  color: rgba(233, 233, 237, 0.3);
 }
 
 /* ── Trade builder ────────────────────────────────────────────────────────
