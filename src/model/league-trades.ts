@@ -23,6 +23,8 @@ export interface TradeMove {
   name: string;
   /** a position and team for a player, a round for a pick */
   note: string;
+  /** his position, for reading the trade against a team's thinnest spot */
+  pos: string;
   from: number;
   to: number;
   value: number;
@@ -69,6 +71,8 @@ export interface LeagueTrade {
 export interface Priced {
   name: string;
   note: string;
+  /** a player's position; empty for a pick or a budget line */
+  pos?: string;
   value: number;
   priced: boolean;
 }
@@ -119,6 +123,7 @@ export function readLeagueTrades(
         id: 'p' + pid,
         name: p?.name || 'Unknown player',
         note: p?.note || '',
+        pos: p?.pos || '',
         from, to,
         value: p?.value || 0,
         priced: !!p && p.priced,
@@ -139,6 +144,7 @@ export function readLeagueTrades(
         id: 'k' + season + '-' + round + '-' + dp.roster_id + '-' + to,
         name: info?.name || (season + ' round ' + round),
         note: info?.note || '',
+        pos: 'PICK',
         from, to,
         value: info?.value || 0,
         priced: !!info && info.priced,
@@ -152,6 +158,7 @@ export function readLeagueTrades(
         id: 'f' + w.sender + '-' + w.receiver + '-' + w.amount,
         name: '$' + w.amount + ' FAAB',
         note: 'waiver budget',
+        pos: '',
         from: w.sender, to: w.receiver,
         // Budget is real and is not priced in the market's currency. Counting
         // it at some invented exchange rate would move a verdict on a guess.
@@ -215,6 +222,69 @@ export function readLeagueTrades(
   // Newest first: the trade you are wondering about is the one that just
   // happened, not the one from week one.
   return out.sort((a, b) => b.at - a.at || b.week - a.week);
+}
+
+/**
+ * What one side of a finished trade looks like FROM THAT TEAM.
+ *
+ * The ledger says who got the better of it. It does not say whether either of
+ * them was trying to win it, and those come apart constantly: a rebuild that
+ * hands a contender a starter for picks loses the ledger on purpose, and a
+ * contender that pays over the market for the position it cannot field made a
+ * good trade a value column calls a bad one.
+ *
+ * `lineup` is the piece that needs the team: it is the starting-lineup points
+ * the trade added to THIS roster as it stands today, measured by rebuilding
+ * their best lineup with the trade undone. That means later moves are in it —
+ * a player traded away and since replaced shows a smaller hole than he left —
+ * which is the right answer to "where does this team stand now" and the wrong
+ * one to "what did they think in week three". This screen asks the first.
+ */
+export interface SideContext {
+  window: 'contender' | 'rebuild' | 'medio';
+  /** their thinnest position, from the league model */
+  worst: string | null;
+  /** starting-lineup points the trade added them, or null if unmeasured */
+  lineup: number | null;
+}
+
+/** Under a tenth of a point a week is not a lineup change anyone can feel. */
+const FELT = 0.1;
+
+export function sideRead(side: TradeSide, ctx: SideContext, band: number): string {
+  const net = side.net;
+  const lu = ctx.lineup;
+  const moved = lu != null && Math.abs(lu) >= FELT;
+  const pts = moved ? Math.abs(lu as number).toFixed(1) : '';
+  const fills = !!ctx.worst && side.got.some(mv => mv.pos === ctx.worst);
+  const spot = fills ? ' at ' + ctx.worst + ', their thinnest spot' : '';
+  const won = net != null && net > band;
+  const lost = net != null && net < -band;
+
+  // The two disagreements first, because they are the whole reason a value
+  // column is not enough on its own.
+  if (lost && moved && (lu as number) > 0) {
+    return 'Paid over the market and bought ' + pts + ' pts a week of lineup' + spot + '.';
+  }
+  if (won && moved && (lu as number) < 0) {
+    return 'Won the value and sold ' + pts + ' pts a week out of their starters'
+      + (ctx.window === 'rebuild' ? ' — which is what a rebuild is for.' : '.');
+  }
+
+  if (moved && (lu as number) > 0) {
+    return 'Their starters gain ' + pts + ' pts a week' + spot
+      + (ctx.window === 'contender' ? ' — a contender buying now.' : '.');
+  }
+  if (moved) return 'Their starters lose ' + pts + ' pts a week' + '.';
+
+  // Nothing in the lineup moved, so the deal was about what it is worth.
+  if (won) {
+    return 'Took the value without touching their lineup'
+      + (ctx.window === 'rebuild' ? ', a rebuild banking assets.' : '.');
+  }
+  if (lost) return 'Gave up value and their lineup is unchanged.';
+  if (lu == null) return 'Even on value.';
+  return 'Even on value, and their lineup is unchanged.';
 }
 
 /**

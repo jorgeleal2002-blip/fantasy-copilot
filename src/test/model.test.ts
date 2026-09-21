@@ -18,7 +18,7 @@ import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { readProjections, scoreProjection, scoringKind } from '../model/projections';
-import { readLeagueTrades, tradeOutcome } from '../model/league-trades';
+import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -2673,6 +2673,54 @@ describe('the season\'s trades', () => {
       trade({ transaction_id: 'new', week: 9, status_updated: 9 }),
     ];
     expect(readLeagueTrades(rows, look).map(t => t.id)).toEqual(['new', 'old']);
+  });
+
+  /* ── read against the team, not just the ledger ──────────────────────────
+     Who got the better of it and whether either was trying to win it come
+     apart constantly, and the disagreement is the useful half. */
+  describe('one team\'s side of it', () => {
+    const side = (net: number, gotPos: string[] = ['RB']) => ({
+      id: 1, name: 'You', isMe: true, net,
+      got: gotPos.map((pos, i) => ({ kind: 'player', id: 'p' + i, name: 'X', note: '', pos, from: 2, to: 1, value: 0, priced: true })),
+      gave: [],
+    } as unknown as import('../model/league-trades').TradeSide);
+    const ctx = (over: Partial<import('../model/league-trades').SideContext> = {}) =>
+      ({ window: 'medio' as const, worst: null, lineup: null, ...over });
+
+    it('says when a team paid over the market and got lineup for it', () => {
+      // The whole reason a value column is not enough: overpaying for the
+      // position you cannot field is a good trade it calls a bad one.
+      const line = sideRead(side(-800), ctx({ lineup: 2.4, worst: 'RB' }), 200);
+      expect(line).toContain('Paid over the market');
+      expect(line).toContain('2.4 pts');
+      expect(line).toContain('thinnest spot');
+    });
+
+    it('says when a team won the value by selling its starters', () => {
+      const line = sideRead(side(900), ctx({ lineup: -3.1, window: 'rebuild' }), 200);
+      expect(line).toContain('Won the value');
+      expect(line).toContain('3.1 pts');
+      expect(line).toContain('rebuild');
+    });
+
+    it('does not call a tenth of a point a lineup change', () => {
+      expect(sideRead(side(0), ctx({ lineup: 0.04 }), 200)).toContain('lineup is unchanged');
+    });
+
+    it('names the contender buying now', () => {
+      expect(sideRead(side(0), ctx({ lineup: 1.8, window: 'contender' }), 200))
+        .toContain('contender buying now');
+    });
+
+    it('only calls it their thinnest spot when they actually received one', () => {
+      expect(sideRead(side(0, ['WR']), ctx({ lineup: 1.8, worst: 'RB' }), 200))
+        .not.toContain('thinnest');
+    });
+
+    it('still reads a side whose lineup was never measured', () => {
+      expect(sideRead(side(900), ctx(), 200)).toContain('Took the value');
+      expect(sideRead(side(0), ctx(), 200)).toBe('Even on value.');
+    });
   });
 
   it('works for a trade with more than two teams', () => {

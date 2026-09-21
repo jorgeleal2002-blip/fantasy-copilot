@@ -1,9 +1,13 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ACCENT, BAD, GOOD } from '../model/constants';
 import { playerName } from '../model/math';
-import { readLeagueTrades, tradeOutcome, type LeagueTrade, type TradeLookup, type TradeMove } from '../model/league-trades';
+import {
+  readLeagueTrades, sideRead, tradeOutcome,
+  type LeagueTrade, type TradeLookup, type TradeMove, type TradeSide,
+} from '../model/league-trades';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
+import { ord } from '../ui/format';
 import { Card, Empty } from '../ui/primitives';
 import { cardNote, dim, ellipsis } from '../ui/styles';
 
@@ -32,6 +36,8 @@ export function LeagueTrades({ app, m }: { app: App; m: Model }) {
         return {
           name: playerName(pl),
           note: [pl.position, pl.team || 'FA'].filter(Boolean).join(' · '),
+          // Read against the receiving team's thinnest position — see `sideRead`.
+          pos: pl.position || '',
           // `marketValue` covers the four skill positions. A kicker or a
           // defence is priced at nothing ON PURPOSE — that is what they fetch
           // — so they are priced, not unknown, and a trade with one in it
@@ -84,7 +90,7 @@ export function LeagueTrades({ app, m }: { app: App; m: Model }) {
         — whether a deal was fair when it was made is answered by both managers having accepted it. A pick is
         worth what its round fetches now, including one already spent in a draft.
       </div>
-      {trades.map(t => <TradeCard key={t.id} t={t} />)}
+      {trades.map(t => <TradeCard key={t.id} app={app} m={m} t={t} />)}
     </>
   );
 }
@@ -93,7 +99,8 @@ const WHEN = (at: number) => (at
   ? new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
   : '');
 
-function TradeCard({ t }: { t: LeagueTrade }) {
+function TradeCard({ app, m, t }: { app: App; m: Model; t: LeagueTrade }) {
+  const [open, setOpen] = useState(false);
   const winner = t.verdict?.winner || null;
   const tone = !winner ? dim(0.5) : winner.isMe ? GOOD : ACCENT;
 
@@ -146,7 +153,98 @@ function TradeCard({ t }: { t: LeagueTrade }) {
           </div>
         ))}
       </div>
+
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        aria-expanded={open}
+        className="btn btn-ghost"
+        style={{ fontSize: 11, padding: 0, marginTop: 9 }}
+      >
+        {open ? 'Less' : 'What it did to each team ›'}
+      </button>
+
+      {open ? (
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {t.sides.map(s => <SideDetail key={s.id} app={app} m={m} t={t} s={s} />)}
+        </div>
+      ) : null}
     </Card>
+  );
+}
+
+/**
+ * One team's side of a finished trade, read against that team.
+ *
+ * The lineup number is the piece that needs the roster: it re-picks their best
+ * lineup with the trade UNDONE — the pieces they gave put back, the pieces
+ * they got taken away — and reports the difference. `lineupWith` gives the
+ * current lineup as `before`, so the trade's own effect is `before − after`.
+ */
+function SideDetail({ app, m, t, s }: { app: App; m: Model; t: LeagueTrade; s: TradeSide }) {
+  const row = m.leagueRows.find(r => r.id === s.id);
+  // Picks are excluded on purpose: a 2027 first cannot start a game, so
+  // counting one here would claim a lineup change that has not arrived.
+  const players = (list: TradeMove[]) => list.filter(mv => mv.kind === 'player').map(mv => mv.id.slice(1));
+  const undone = m.lineupWith(s.id, players(s.gave), players(s.got));
+  const lineup = row ? Math.round((undone.before - undone.after) * 10) / 10 : null;
+
+  const read = sideRead(s, {
+    window: row?.window || 'medio',
+    worst: row?.worst || null,
+    lineup,
+  }, t.verdict?.band ?? 0);
+
+  return (
+    <div style={{ borderTop: '1px solid var(--color-divider)', paddingTop: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11 }}>
+        <span style={{
+          fontWeight: 500, color: s.isMe ? 'var(--color-accent)' : 'var(--color-text)', ...ellipsis,
+        }}>
+          {s.name}
+        </span>
+        <span style={{ fontSize: 10, color: dim(0.4), flex: 'none' }}>
+          {[row?.record.label, row ? ord(row.rankNow) + ' in the league' : ''].filter(Boolean).join(' · ')}
+        </span>
+      </div>
+
+      <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.72), marginTop: 4, textWrap: 'pretty' }}>
+        {read}
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+        <Column app={app} label="Gave" list={s.gave} />
+        <Column app={app} label="Got" list={s.got} />
+      </div>
+    </div>
+  );
+}
+
+/** Tapping a player opens his card, which is what every other list does. */
+function Column({ app, label, list }: { app: App; label: string; list: TradeMove[] }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ fontSize: 9.5, letterSpacing: '0.06em', color: dim(0.32), marginBottom: 3 }}>
+        {label.toUpperCase()}
+      </div>
+      {list.length ? list.map(mv => (
+        <div
+          key={mv.id}
+          role={mv.kind === 'player' ? 'button' : undefined}
+          tabIndex={mv.kind === 'player' ? 0 : undefined}
+          onClick={mv.kind === 'player' ? () => app.setDetail(mv.id.slice(1)) : undefined}
+          onKeyDown={mv.kind === 'player'
+            ? e => { if (e.key === 'Enter') app.setDetail(mv.id.slice(1)); }
+            : undefined}
+          style={{
+            fontSize: 11, marginBottom: 2,
+            cursor: mv.kind === 'player' ? 'pointer' : undefined, ...ellipsis,
+          }}
+        >
+          {mv.name}
+        </div>
+      )) : <div style={{ fontSize: 11, color: dim(0.3) }}>—</div>}
+    </div>
   );
 }
 
