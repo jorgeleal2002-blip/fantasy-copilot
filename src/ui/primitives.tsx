@@ -32,10 +32,14 @@ export function Segmented<T extends string>({
   size?: SegSize;
 }) {
   return (
+    // Five tabs with a count on two of them do not fit a narrow phone, and the
+    // one that falls off is the one you cannot reach. Scrolling costs nothing
+    // where they already fit.
     <div style={{
       display: 'flex',
       gap: size === 'sm' ? 5 : 6,
       borderBottom: '1px solid var(--color-divider)',
+      overflowX: 'auto',
     }}>
       {options.map(o => (
         <button
@@ -43,7 +47,10 @@ export function Segmented<T extends string>({
           type="button"
           onClick={() => onChange(o.key)}
           aria-pressed={value === o.key}
-          style={{ ...seg(value === o.key, size), font: 'inherit', fontSize: size === 'sm' ? 11 : 11.5 }}
+          style={{
+            ...seg(value === o.key, size), font: 'inherit', fontSize: size === 'sm' ? 11 : 11.5,
+            flex: 'none', whiteSpace: 'nowrap',
+          }}
         >
           {o.label}
         </button>

@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   findUser, getDraftPicks, getRosters, getSeasonStats, getTradedPicks, getUsers,
-  loadLeague, matchMe, userLeagues, playerPhoto, getMatchups, getNflState, getWeekProjections,
+  loadLeague, matchMe, userLeagues, playerPhoto, getMatchups, getNflState, getTransactions,
+  getWeekProjections,
 } from '../api/sleeper';
-import type { LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup } from '../api/types';
+import type {
+  LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup, SleeperTransaction,
+} from '../api/types';
 import { DRAFT_POLL_MS, MATCHUP_POLL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
   EMPTY_ROOM, claimSeat, createRoom as createRoomAt, liveEnabled, liveReason, newRoomId,
@@ -39,6 +42,8 @@ const usageCache = new Map<string, UsageMap>();
 /** Sleeper's projections for one week of one season. They move during the week
  *  as news breaks, but not between two looks at the same scoreboard. */
 const projCache = new Map<string, Record<string, number>>();
+/** A league's transactions, keyed by how many weeks of them were asked for. */
+const txCache = new Map<string, SleeperTransaction[]>();
 const seasonCache = new Map<string, string>();
 
 function readJson<T>(key: string, fallback: T): T {
@@ -118,7 +123,7 @@ export function useApp() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
   const [roomError, setRoomError] = useState('');
-  const [tradeView, setTradeView] = useState<'suggested' | 'block' | 'saved' | 'build'>('suggested');
+  const [tradeView, setTradeView] = useState<'suggested' | 'block' | 'saved' | 'build' | 'league'>('suggested');
   /* The trade being built. Kept here rather than in the screen because looking
    * a player up mid-build means leaving the tab, and a half-built three-team
    * trade is not something to lose to a navigation. */
@@ -159,6 +164,10 @@ export function useApp() {
    * are looking at it. */
   const [week, setWeekState] = useState<number | null>(null);
   const [projections, setProjections] = useState<Record<string, number>>({});
+  /** Raw league transactions; the trades are read out of them where the market
+   *  that prices them is in scope. */
+  const [transactions, setTransactions] = useState<SleeperTransaction[]>([]);
+  const [tradeLogState, setTradeLogState] = useState<FeedState>('idle');
   const [matchups, setMatchups] = useState<SleeperMatchup[]>([]);
   const [matchupState, setMatchupState] = useState<FeedState>('idle');
 
@@ -196,6 +205,34 @@ export function useApp() {
       /* the scoreboard is a scoreboard without them */
     }
   }, []);
+
+  /**
+   * Every trade the league has made this season.
+   *
+   * Sleeper keeps transactions a week at a time and has no endpoint for the
+   * season, so a season is eighteen calls. They are only made when you open
+   * the list, rather than on every league load, and the weeks go out together
+   * — one round trip's latency instead of eighteen.
+   */
+  const fetchTrades = useCallback(async (upTo: number) => {
+    const lid = leagueId;
+    if (!lid) return;
+    const weeks = Math.max(1, Math.min(18, upTo || 1));
+    const key = lid + ':' + weeks;
+    if (txCache.has(key)) { setTransactions(txCache.get(key)!); return; }
+    setTradeLogState('loading');
+    const got = await Promise.all(
+      Array.from({ length: weeks }, (_, i) => getTransactions(lid, i + 1).catch(() => null)),
+    );
+    // A week that returns nothing is a quiet week. EVERY week failing is the
+    // feed being down, and the two must not read the same on screen.
+    const ok = got.filter((w): w is SleeperTransaction[] => Array.isArray(w));
+    if (!ok.length) { setTradeLogState('fail'); return; }
+    const rows = ok.flat();
+    txCache.set(key, rows);
+    setTransactions(rows);
+    setTradeLogState('ok');
+  }, [leagueId]);
 
   const fetchMatchups = useCallback(async (lid: string, wk: number, quiet = false) => {
     // A poll must not blank the scores it is refreshing, so it stays quiet and
@@ -892,6 +929,7 @@ export function useApp() {
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
     week, matchups, matchupState, projections, tradeTeams, tradeAssets,
+    transactions, tradeLogState, fetchTrades,
 
     accounts, switchAccount, forgetAccount,
     block: (leagueId ? blocks[username + '/' + leagueId] : undefined) || [],

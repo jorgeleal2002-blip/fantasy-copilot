@@ -503,6 +503,10 @@ export interface Model {
   scoreAny: (playerId: string) => BoardPlayer | null;
   /** the price tag for one player, with its rank inside his position */
   marketValue: (playerId: string) => PlayerValue | null;
+  /** What a draft pick is worth, named the way a completed trade names it:
+   *  season, round, and the roster it originally belongs to. Null in a redraft
+   *  league, and for a pick that has already been used. */
+  pickWorth: (season: number, round: number, origin: number) => PickAsset | null;
   /** what it would cost to acquire one specific player from his owner */
   offersFor: (playerId: string) => TargetTrade[];
   /**

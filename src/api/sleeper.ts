@@ -1,7 +1,7 @@
 import type {
   LeagueBundle, PlayerCatalog, SleeperDraft, SleeperLeague, SleeperPick,
   SleeperMatchup, SleeperNflState,
-  SleeperRoster, SleeperStatLine, SleeperTradedPick, SleeperUser,
+  SleeperRoster, SleeperStatLine, SleeperTradedPick, SleeperTransaction, SleeperUser,
 } from './types';
 
 const API = 'https://api.sleeper.app/v1';
@@ -83,6 +83,10 @@ export const getDraftPicks = (draftId: string) => get<SleeperPick[]>('/draft/' +
 export const getMatchups = (lid: string, week: number) =>
   get<SleeperMatchup[]>('/league/' + lid + '/matchups/' + week);
 export const getNflState = () => get<SleeperNflState>('/state/nfl');
+/** Sleeper keeps transactions a week at a time; there is no endpoint for the
+ *  season, so a season is that call repeated. */
+export const getTransactions = (lid: string, week: number) =>
+  get<SleeperTransaction[]>('/league/' + lid + '/transactions/' + week);
 export const getSeasonStats = (year: number) =>
   get<Record<string, SleeperStatLine>>('/stats/nfl/regular/' + year);
 

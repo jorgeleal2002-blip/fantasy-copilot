@@ -18,6 +18,7 @@ import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { readProjections, scoreProjection, scoringKind } from '../model/projections';
+import { readLeagueTrades, tradeOutcome } from '../model/league-trades';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -2501,6 +2502,132 @@ describe('projected points per game', () => {
     expect(projectConfidence(at({ gpTotal: 17 }))).toBe('fair');
     expect(projectConfidence(at({ gpTotal: 6 }))).toBe('low');
     expect(projectConfidence(undefined)).toBeNull();
+  });
+});
+
+/* ── the trades the league actually made ────────────────────────────────────
+   Sleeper describes a trade by where each asset LANDS rather than by sides,
+   which is the same shape the trade engine takes, so a finished deal and a
+   proposed one are judged by the same arithmetic. */
+describe('the season\'s trades', () => {
+  const PRICES: Record<string, number> = { a: 4000, b: 3000, c: 900, k: 0 };
+  const look = {
+    player: (id: string) => (id in PRICES
+      // A kicker is priced at nothing on purpose. That is a price.
+      ? { name: id.toUpperCase(), note: 'RB · SEA', value: PRICES[id], priced: true }
+      : null),
+    pick: (season: number, round: number) => (season === 2027
+      ? { name: season + ' 1st', note: 'Round ' + round, value: 2000, priced: true }
+      : null),
+    teamName: (rid: number) => 'Team ' + rid,
+    isMe: (rid: number) => rid === 1,
+  };
+  const trade = (over: Record<string, unknown> = {}) => ({
+    type: 'trade', status: 'complete', transaction_id: 't1', week: 3,
+    status_updated: 1_700_000_000_000,
+    roster_ids: [1, 2],
+    adds: { a: 2, b: 1 },
+    drops: { a: 1, b: 2 },
+    ...over,
+  }) as unknown as import('../api/types').SleeperTransaction;
+
+  it('routes every asset from the roster that gave it to the one that got it', () => {
+    const [t] = readLeagueTrades([trade()], look);
+    expect(t.sides.map(s => s.name)).toEqual(['You', 'Team 2']);
+    expect(t.sides[0].got.map(mv => mv.name)).toEqual(['B']);
+    expect(t.sides[1].got.map(mv => mv.name)).toEqual(['A']);
+  });
+
+  it('names the winner with the same engine that judges a proposal', () => {
+    // 4000 out, 3000 in: you lose this one by a thousand.
+    const [t] = readLeagueTrades([trade()], look);
+    expect(t.verdict!.winner!.name).toBe('Team 2');
+    expect(t.sides[0].net).toBe(-1000);
+    expect(tradeOutcome(t)).toContain('Team 2 wins this one');
+  });
+
+  it('calls an even trade even rather than inventing a winner', () => {
+    const even = trade({ adds: { a: 2, b: 1 }, drops: { a: 1, b: 2 }, });
+    const flat = readLeagueTrades([even], {
+      ...look, player: (id: string) => ({ name: id, note: '', value: 3000, priced: true }),
+    })[0];
+    expect(flat.verdict!.winner).toBe(null);
+    expect(tradeOutcome(flat)).toContain('Even trade');
+  });
+
+  it('carries a draft pick as an asset on the same ledger', () => {
+    const [t] = readLeagueTrades([trade({
+      adds: { a: 2 }, drops: { a: 1 },
+      draft_picks: [{ season: '2027', round: 1, roster_id: 2, previous_owner_id: 2, owner_id: 1 }],
+    })], look);
+    expect(t.sides[0].got.map(mv => mv.name)).toEqual(['2027 1st']);
+    // 2000 for the pick against 4000 for the player.
+    expect(t.verdict!.winner!.name).toBe('Team 2');
+  });
+
+  it('refuses a verdict on a deal it could not price all of', () => {
+    // A player the catalog has never heard of is credited with nothing, which
+    // hands his new team a loss it did not earn. Say so instead.
+    const [t] = readLeagueTrades([trade({ adds: { a: 2, zz: 1 }, drops: { a: 1, zz: 2 } })], look);
+    expect(t.verdict).toBe(null);
+    expect(t.unpriced).toBe(1);
+    expect(tradeOutcome(t)).toContain('no market price');
+  });
+
+  it('still judges a trade with a kicker in it', () => {
+    const [t] = readLeagueTrades([trade({ adds: { a: 2, k: 1 }, drops: { a: 1, k: 2 } })], look);
+    expect(t.unpriced).toBe(0);
+    expect(t.verdict!.winner!.name).toBe('Team 2');
+  });
+
+  it('shows FAAB without letting it move the verdict', () => {
+    // Budget is real and is not priced in the market's currency; scoring it at
+    // some invented exchange rate would decide a trade on a guess.
+    const [t] = readLeagueTrades([trade({
+      adds: { a: 2 }, drops: { a: 1 },
+      waiver_budget: [{ sender: 2, receiver: 1, amount: 40 }],
+    })], look);
+    expect(t.sides[0].got.map(mv => mv.name)).toEqual(['$40 FAAB']);
+    expect(t.verdict).toBe(null);
+  });
+
+  it('keeps only the trades, and only the ones that went through', () => {
+    const rows = [
+      trade(),
+      trade({ type: 'waiver', transaction_id: 'w1' }),
+      trade({ type: 'free_agent', transaction_id: 'f1' }),
+      trade({ status: 'vetoed', transaction_id: 't2' }),
+    ];
+    expect(readLeagueTrades(rows, look).map(t => t.id)).toEqual(['t1']);
+    expect(readLeagueTrades(null, look)).toEqual([]);
+  });
+
+  it('ignores a player who arrives without anyone giving him up', () => {
+    // A waiver add riding in the same payload is not a leg of the trade.
+    const [t] = readLeagueTrades([trade({ adds: { a: 2, b: 1, x: 1 }, drops: { a: 1, b: 2 } })], look);
+    expect(t.moves).toHaveLength(2);
+  });
+
+  it('puts the newest trade first', () => {
+    const rows = [
+      trade({ transaction_id: 'old', week: 1, status_updated: 1 }),
+      trade({ transaction_id: 'new', week: 9, status_updated: 9 }),
+    ];
+    expect(readLeagueTrades(rows, look).map(t => t.id)).toEqual(['new', 'old']);
+  });
+
+  it('works for a trade with more than two teams', () => {
+    const [t] = readLeagueTrades([trade({
+      roster_ids: [1, 2, 3],
+      adds: { a: 2, b: 3, c: 1 },
+      drops: { a: 1, b: 2, c: 3 },
+    })], look);
+    expect(t.sides).toHaveLength(3);
+    // A ring, which is the case sides cannot describe at all: you pay 4000 for
+    // 900, team 2 pays 3000 for 4000, team 3 pays 900 for 3000. Nobody traded
+    // "with" anybody and team 3 still walks away with the most.
+    expect(t.sides.map(s => s.net)).toEqual([-3100, 1000, 2100]);
+    expect(t.verdict!.winner!.name).toBe('Team 3');
   });
 });
 

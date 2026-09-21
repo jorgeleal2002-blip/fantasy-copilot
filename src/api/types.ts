@@ -126,6 +126,36 @@ export interface SleeperTradedPick {
   owner_id: number;
 }
 
+/**
+ * One entry from /league/{id}/transactions/{week} — a trade, a waiver claim or
+ * a free-agent move. Sleeper keys `adds` and `drops` by player id and values
+ * them with the roster the player ARRIVES AT and the one he LEAVES, which is
+ * the whole of the routing in a trade of any size.
+ */
+export interface SleeperTransaction {
+  transaction_id?: string;
+  type?: string;
+  status?: string;
+  week?: number;
+  /** ms since epoch, when the trade actually went through */
+  status_updated?: number;
+  created?: number;
+  roster_ids?: number[];
+  /** player id → roster that receives him */
+  adds?: Record<string, number> | null;
+  /** player id → roster that gives him up */
+  drops?: Record<string, number> | null;
+  draft_picks?: {
+    season?: string | number;
+    round?: number;
+    /** roster the pick originally belongs to */
+    roster_id?: number;
+    previous_owner_id?: number;
+    owner_id?: number;
+  }[] | null;
+  waiver_budget?: { sender?: number; receiver?: number; amount?: number }[] | null;
+}
+
 /** Per-player season totals from /stats/nfl/regular/{year}. */
 export interface SleeperStatLine {
   gp?: number;

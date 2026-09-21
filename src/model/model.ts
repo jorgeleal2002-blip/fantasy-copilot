@@ -975,6 +975,20 @@ export function buildModel(input: ModelInput): Model {
   Object.keys(picksByOwner).forEach(k => picksByOwner[Number(k)].sort((a, b) => b.q - a.q));
   const pickAssets = picksByOwner[myRow.roster_id] || [];
 
+  /**
+   * A pick by the three things a completed trade names it by: the season, the
+   * round, and the roster it originally belongs to. Ownership is not part of
+   * the key, because the trade being priced is the reason ownership changed.
+   *
+   * Empty in a redraft league, which owns no future picks to price.
+   */
+  const allPicks: Record<string, PickAsset> = {};
+  Object.keys(picksByOwner).forEach(k => {
+    picksByOwner[Number(k)].forEach(p => { allPicks[p.id] = p; });
+  });
+  const pickWorth = (season: number, round: number, origin: number): PickAsset | null =>
+    allPicks['pick-' + season + '-' + round + '-' + origin] || null;
+
   const mapRoster = (ids: string[] | null | undefined): OppPlayer[] => (ids || []).map(id => {
     const pl = players[id];
     if (!pl || POS.indexOf(pl.position as Pos) < 0) return null;
@@ -2017,7 +2031,7 @@ export function buildModel(input: ModelInput): Model {
     marketCount: mk ? Object.keys(mk.players).length : 0,
     snake: !!(d.draft && d.draft.type === 'snake'),
     fills: fillPos,
-    teamInfo, posRankOf, scoreAny, marketValue, offersFor, runMock, metricKeys,
+    teamInfo, posRankOf, scoreAny, marketValue, pickWorth, offersFor, runMock, metricKeys,
     lineupWith,
   };
 }
