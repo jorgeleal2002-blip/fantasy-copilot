@@ -50,10 +50,15 @@ export interface LeagueTrade {
   /** what each of them walked away with — the way the card is read */
   sides: TradeSide[];
   moves: TradeMove[];
-  /** null when something in the deal has no price — see `unpriced` */
+  /** null when the deal cannot be scored — see `unpriced` and `budgetOnly` */
   verdict: TradeVerdict | null;
-  /** how many moves the market could not put a number on */
+  /** how many moves the market could not put a number on at all */
   unpriced: number;
+  /** a team whose entire return is waiver budget, which has no price in the
+   *  market's currency and so cannot be scored against players */
+  budgetOnly: boolean;
+  /** budget changed hands and was left out of the ledger */
+  faab: boolean;
 }
 
 /**
@@ -162,11 +167,26 @@ export function readLeagueTrades(
       : [...new Set(moves.flatMap(mv => [mv.from, mv.to]))];
     const teams = ids.map(id => ({ id, name: look.isMe(id) ? 'You' : look.teamName(id), isMe: look.isMe(id) }));
 
-    const unpriced = moves.filter(mv => !mv.priced).length;
-    /* One unpriced asset does not make the verdict approximate, it makes it
-     * wrong: the team that received it is credited with nothing. Better to
-     * show the trade and say the winner cannot be called. */
-    const verdict = unpriced ? null : evaluateTrade(teams, moves.map(mv => ({
+    /* Two different reasons a deal cannot be scored, and only one of them is
+     * a gap in what we know.
+     *
+     * An asset with no price at all — a player the catalog has never heard of
+     * — does not make the verdict approximate, it makes it wrong: whoever
+     * received him is credited with nothing and handed a loss he did not take.
+     *
+     * Waiver budget is the other. It is perfectly well known and simply not
+     * denominated in the market's currency, so putting it on the ledger means
+     * inventing an exchange rate and deciding a trade on the invention. It is
+     * left out — which is harmless as a sweetener alongside real assets, and
+     * fatal when it is the whole of what a team got back. Only the second case
+     * withholds the verdict. */
+    const unpriced = moves.filter(mv => !mv.priced && mv.kind !== 'faab').length;
+    const faab = moves.some(mv => mv.kind === 'faab');
+    const budgetOnly = ids.some(id => {
+      const got = moves.filter(mv => mv.to === id);
+      return got.length > 0 && got.every(mv => mv.kind === 'faab');
+    });
+    const verdict = unpriced || budgetOnly ? null : evaluateTrade(teams, moves.map(mv => ({
       id: mv.id, name: mv.name, value: mv.value, from: mv.from, to: mv.to,
     })));
     const netOf = new Map(verdict?.ledgers.map(l => [l.id, l.net]) ?? []);
@@ -187,6 +207,8 @@ export function readLeagueTrades(
       moves,
       verdict,
       unpriced,
+      budgetOnly,
+      faab,
     });
   }
 
@@ -208,6 +230,7 @@ export function tradeOutcome(t: LeagueTrade): string {
       ? 'No market price for anything in this trade'
       : 'Not judged — ' + t.unpriced + ' of ' + t.moves.length + ' pieces have no market price';
   }
+  if (t.budgetOnly) return 'Not judged — a team was paid in waiver budget, which has no market price';
   const v = t.verdict;
   if (!v || !v.moved) return 'Nothing of value changed hands';
   if (!v.winner) return 'Even trade at today\'s prices';

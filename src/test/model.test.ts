@@ -609,6 +609,51 @@ describe('league ranking', () => {
   });
 });
 
+/* ── pricing a pick that is no longer an asset ──────────────────────────────
+   The pick LIST is about what you can trade away, so it leaves out a redraft
+   league's picks, anything past three seasons, and a pick already spent in a
+   draft. A trade that moved one of those still happened, and asking the list
+   to price it came back empty — which withheld the winner on every pick trade
+   in the league. */
+describe('what a traded pick is worth', () => {
+  const year = Number(bundle.league.season);
+
+  it('prices a pick the tradeable list does not carry', () => {
+    // Four seasons out: past the three the list covers.
+    const far = model.pickWorth(year + 4, 1, 1);
+    expect(far).toBeTruthy();
+    expect(far!.q).toBeGreaterThan(0);
+  });
+
+  it('prices one in a redraft league, which lists none at all', () => {
+    const redraft = buildModel({
+      data: { ...bundle, league: { ...bundle.league, settings: { ...bundle.league.settings, type: 0 } } },
+      usage, market, strat: 'balanced', boardMode: 'rookies', pickSel: 0,
+    });
+    expect(redraft.pickAssets).toHaveLength(0);
+    expect(redraft.pickWorth(year + 1, 1, 1)!.q).toBeGreaterThan(0);
+  });
+
+  it('agrees with the list where the list has one', () => {
+    // One formula, two callers. They drifted before it was pulled out.
+    const listed = model.teamInfo(1)!.picks[0];
+    expect(listed).toBeTruthy();
+    expect(model.pickWorth(listed.season, listed.round, 1)).toBeTruthy();
+  });
+
+  it('still says nothing about a round that is not a round', () => {
+    expect(model.pickWorth(year + 1, 0, 1)).toBe(null);
+    expect(model.pickWorth(NaN, 1, 1)).toBe(null);
+  });
+
+  it('does not let an old pick appreciate', () => {
+    // The year discount is a discount; unclamped, a past season multiplied.
+    const past = model.pickWorth(year - 3, 1, 1)!.q;
+    const now = model.pickWorth(year, 1, 1)!.q;
+    expect(past).toBeLessThanOrEqual(now);
+  });
+});
+
 describe('redraft leagues drop everything about the future', () => {
   const redraft = buildModel({
     data: { ...bundle, league: { ...bundle.league, settings: { ...bundle.league.settings, type: 0 } } },
@@ -2580,15 +2625,29 @@ describe('the season\'s trades', () => {
     expect(t.verdict!.winner!.name).toBe('Team 2');
   });
 
-  it('shows FAAB without letting it move the verdict', () => {
-    // Budget is real and is not priced in the market's currency; scoring it at
-    // some invented exchange rate would decide a trade on a guess.
+  /* Budget is not priced in the market's currency, so scoring it means
+     inventing an exchange rate and deciding a trade on the invention. Leaving
+     it out is harmless as a sweetener and fatal as the whole return, and only
+     the second withholds the verdict. */
+  it('judges a trade with budget thrown in on top', () => {
+    const [t] = readLeagueTrades([trade({
+      adds: { a: 2, b: 1 }, drops: { a: 1, b: 2 },
+      waiver_budget: [{ sender: 2, receiver: 1, amount: 40 }],
+    })], look);
+    expect(t.faab).toBe(true);
+    expect(t.budgetOnly).toBe(false);
+    expect(t.verdict!.winner!.name).toBe('Team 2');
+  });
+
+  it('refuses to judge a team that was paid only in budget', () => {
     const [t] = readLeagueTrades([trade({
       adds: { a: 2 }, drops: { a: 1 },
       waiver_budget: [{ sender: 2, receiver: 1, amount: 40 }],
     })], look);
     expect(t.sides[0].got.map(mv => mv.name)).toEqual(['$40 FAAB']);
+    expect(t.budgetOnly).toBe(true);
     expect(t.verdict).toBe(null);
+    expect(tradeOutcome(t)).toContain('waiver budget');
   });
 
   it('keeps only the trades, and only the ones that went through', () => {

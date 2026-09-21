@@ -925,6 +925,29 @@ export function buildModel(input: ModelInput): Model {
   });
   const strengthOrder = Object.keys(rosterStrength).sort((a, b) => rosterStrength[Number(a)] - rosterStrength[Number(b)]);
 
+  /**
+   * What a pick of this season and round is worth to the roster it belongs to.
+   *
+   * Deliberately independent of who owns it now, of whether it still exists as
+   * an asset, and of whether this league lists it at all: one formula with two
+   * callers, the pick list you can trade FROM and the ledger that judges a
+   * trade already made. They drifted apart before this was pulled out, and the
+   * ledger lost — a trade with a pick in it could not be scored and printed no
+   * winner at all.
+   */
+  const pickValueOf = (sea: number, round: number, originRoster: number): number => {
+    const weakIdx = strengthOrder.indexOf(String(originRoster));
+    const slotMult = 0.80 + (weakIdx >= 0 ? (1 - weakIdx / Math.max(strengthOrder.length - 1, 1)) : 0.5) * 0.45;
+    // A pick from a season already past does not appreciate; clamping keeps
+    // the discount a discount rather than a multiplier.
+    const yearMult = Math.pow(0.88, Math.max(0, sea - seasonNum));
+    const origSlot = slotOfRoster[originRoster];
+    const ex = mk && origSlot ? mk.exact[sea + '-' + round + '-' + origSlot] : null;
+    if (ex != null) return ex / 100;                                        // this draft's exact slot
+    if (mk && mk.picks[sea + '-' + round] != null) return mk.picks[sea + '-' + round] / 100; // market discounts the year
+    return (BASE_ROUND_VALUE[round] || 2) * slotMult * yearMult;            // last resort
+  };
+
   const picksByOwner: Record<number, PickAsset[]> = {};
   if (isDynasty) {
     [seasonNum, seasonNum + 1, seasonNum + 2].forEach(sea => {
@@ -934,9 +957,6 @@ export function buildModel(input: ModelInput): Model {
           (d.traded || [])
             .filter(t => Number(t.season) === sea && Number(t.round) === r && Number(t.roster_id) === orig.roster_id)
             .forEach(t => { owner = Number(t.owner_id); });
-          const weakIdx = strengthOrder.indexOf(String(orig.roster_id));
-          const slotMult = 0.80 + (weakIdx >= 0 ? (1 - weakIdx / Math.max(strengthOrder.length - 1, 1)) : 0.5) * 0.45;
-          const yearMult = Math.pow(0.88, sea - seasonNum);
           const own = orig.roster_id === owner;
           const origSlot = slotOfRoster[orig.roster_id];
 
@@ -949,12 +969,7 @@ export function buildModel(input: ModelInput): Model {
           const named = origSlot && sea === seasonNum
             ? sea + ' pick ' + r + '.' + String(origSlot).padStart(2, '0')
             : sea + ' round ' + r;
-          const value = (() => {
-            const ex = mk && origSlot ? mk.exact[sea + '-' + r + '-' + origSlot] : null;
-            if (ex != null) return ex / 100;                                     // this draft's exact slot
-            if (mk && mk.picks[sea + '-' + r] != null) return mk.picks[sea + '-' + r] / 100; // market already discounts the year
-            return (BASE_ROUND_VALUE[r] || 2) * slotMult * yearMult;             // last resort
-          })();
+          const value = pickValueOf(sea, r, orig.roster_id);
 
           (picksByOwner[owner] = picksByOwner[owner] || []).push({
             id: 'pick-' + sea + '-' + r + '-' + orig.roster_id,
@@ -986,8 +1001,26 @@ export function buildModel(input: ModelInput): Model {
   Object.keys(picksByOwner).forEach(k => {
     picksByOwner[Number(k)].forEach(p => { allPicks[p.id] = p; });
   });
-  const pickWorth = (season: number, round: number, origin: number): PickAsset | null =>
-    allPicks['pick-' + season + '-' + round + '-' + origin] || null;
+  const pickWorth = (season: number, round: number, origin: number): PickAsset | null => {
+    const known = allPicks['pick-' + season + '-' + round + '-' + origin];
+    if (known) return known;
+    if (!Number.isFinite(season) || !(round >= 1)) return null;
+    /* Not in the tradeable list, and there are three ordinary reasons for it:
+     * a redraft league, which lists none; a season past the three the list
+     * covers; and a pick already spent in a draft, which stops being an asset
+     * the moment it is used. A trade that moved one still happened, and what
+     * it was worth is the same formula. Returning null here is what left every
+     * pick trade in the league without a winner. */
+    return {
+      id: 'pick-' + season + '-' + round + '-' + origin,
+      pos: 'PICK', team: '—', age: null, isPick: true,
+      name: season + ' round ' + round,
+      label: 'Round ' + round,
+      origin: 'From ' + teamName(((d.rosters || []).find(r => r.roster_id === origin) || {} as SleeperRoster).owner_id),
+      q: pickValueOf(season, round, origin),
+      season, round,
+    };
+  };
 
   const mapRoster = (ids: string[] | null | undefined): OppPlayer[] => (ids || []).map(id => {
     const pl = players[id];

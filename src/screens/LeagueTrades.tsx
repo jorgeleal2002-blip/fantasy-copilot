@@ -81,7 +81,8 @@ export function LeagueTrades({ app, m }: { app: App; m: Model }) {
       <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
         {trades.length === 1 ? '1 trade' : trades.length + ' trades'} this season
         {mine ? ', ' + mine + ' of them yours' : ''}. Judged at today&apos;s market, not the market on the day
-        — whether a deal was fair when it was made is answered by both managers having accepted it.
+        — whether a deal was fair when it was made is answered by both managers having accepted it. A pick is
+        worth what its round fetches now, including one already spent in a draft.
       </div>
       {trades.map(t => <TradeCard key={t.id} t={t} />)}
     </>
@@ -109,6 +110,12 @@ function TradeCard({ t }: { t: LeagueTrade }) {
       <div style={{ fontSize: 12.5, fontWeight: 500, color: tone, marginTop: 4, textWrap: 'pretty' }}>
         {tradeOutcome(t)}
       </div>
+      {/* Said out loud where it changes the number, rather than quietly. */}
+      {t.faab && t.verdict ? (
+        <div style={{ fontSize: 10, color: dim(0.35), marginTop: 3 }}>
+          waiver budget not counted
+        </div>
+      ) : null}
 
       {/* A column per team saying what it walked away with. Columns rather than
           "gives / gets": sides only exist when there are two of them, and a
