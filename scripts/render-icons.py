@@ -1,16 +1,28 @@
 #!/usr/bin/env python3
-"""Render the app icon to the PNGs the home screen actually uses.
+"""Render the app icon, and publish it under a name that cannot go stale.
 
 iOS reads `apple-touch-icon`, which is a PNG, so an identity change that only
-touches `public/icon.svg` leaves every installed copy showing the old mark.
-There is no rasteriser on this machine and none in the dependency tree, so
-this is one: flatten the curves, scanline-fill with a non-zero winding rule,
-supersample, and write the PNG with zlib, which is in the standard library.
+touches the SVG leaves every installed copy showing the old mark. There is no
+rasteriser on this machine and none in the dependency tree, so this is one:
+flatten the curves, scanline-fill with a non-zero winding rule, supersample,
+and write the PNG with zlib, which is in the standard library.
 
-THE GEOMETRY HERE MIRRORS `public/icon.svg` AND MUST BE KEPT IN STEP WITH IT.
+Vite fingerprints everything it bundles, but `public/` is copied through
+verbatim — so an icon at a fixed filename is the one asset in the app that can
+be replaced and still be served from a cache under its old bytes. The files
+are therefore published with a content hash in the name, and `index.html` and
+the manifest are rewritten to point at them. A new drawing is a new URL, which
+is the only version of "the icon updated" that survives a CDN.
+
+That does not reach a home screen. iOS snapshots the icon and the name when
+the app is added and never looks again; changing them means removing the app
+from the home screen and adding it back. Nothing in a repository can fix that.
+
+THE GEOMETRY HERE MIRRORS `assets/icon.svg` AND MUST BE KEPT IN STEP WITH IT.
 That is two sources for one drawing, which is a cost; it buys an icon that can
 be regenerated from the repository instead of one pasted in from a design tool
-that nobody here can run.
+that nobody here can run. The hash covers both, so editing either one alone
+still lands on a fresh URL.
 
     python3 scripts/render-icons.py
 """
@@ -320,7 +332,57 @@ def png(path, size):
     print(path, size, len(out), 'bytes')
 
 
+def publish():
+    """Write the icons under a content hash and point the app at them."""
+    import hashlib
+    import re
+    import shutil
+
+    root = Path(__file__).resolve().parent.parent
+    pub = root / 'public'
+    src = root / 'assets' / 'icon.svg'
+
+    tmp180, tmp512 = pub / '.icon-180.tmp', pub / '.icon-512.tmp'
+    png(tmp180, 180)
+    png(tmp512, 512)
+    stamp = hashlib.sha1(
+        tmp512.read_bytes() + tmp180.read_bytes() + src.read_bytes()
+    ).hexdigest()[:8]
+
+    names = {
+        'svg': 'icon-%s.svg' % stamp,
+        'p180': 'icon-%s-180.png' % stamp,
+        'p512': 'icon-%s-512.png' % stamp,
+    }
+    # Anything published by an earlier run is now unreachable; leaving it
+    # behind would grow the deploy by one dead icon per edit.
+    for old in list(pub.glob('icon-*.png')) + list(pub.glob('icon-*.svg')):
+        if old.name not in names.values():
+            old.unlink()
+    tmp180.replace(pub / names['p180'])
+    tmp512.replace(pub / names['p512'])
+    shutil.copyfile(src, pub / names['svg'])
+
+    for f, patterns in (
+        (root / 'index.html', [
+            (r'href="\./icon-[0-9a-f]+\.svg"', 'href="./%s"' % names['svg']),
+            (r'href="\./icon-[0-9a-f]+-180\.png"', 'href="./%s"' % names['p180']),
+        ]),
+        (pub / 'manifest.webmanifest', [
+            (r'"\./icon-[0-9a-f]+\.svg"', '"./%s"' % names['svg']),
+            (r'"\./icon-[0-9a-f]+-180\.png"', '"./%s"' % names['p180']),
+            (r'"\./icon-[0-9a-f]+-512\.png"', '"./%s"' % names['p512']),
+        ]),
+    ):
+        text = f.read_text()
+        for pat, rep in patterns:
+            text, n = re.subn(pat, rep, text)
+            assert n, 'no reference matched %s in %s' % (pat, f.name)
+        f.write_text(text)
+
+    for name in names.values():
+        print(name, (pub / name).stat().st_size, 'bytes')
+
+
 if __name__ == '__main__':
-    here = Path(__file__).resolve().parent.parent / 'public'
-    png(here / 'icon-180.png', 180)
-    png(here / 'icon-512.png', 512)
+    publish()

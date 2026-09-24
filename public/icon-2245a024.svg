@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Doctor x stein app icon">
+  <!-- Square cut of the badge for the home screen: the ring sits on black so
+       the icon fills its tile instead of leaving the corners empty.
+
+       Two of them, because the league is two of them. The badge splits down
+       the middle — Carolina blue for the Doctor, Steelers gold for stein —
+       and each side carries its own face. What tells them apart at sixty
+       pixels is not a likeness, which is mud at that size, but two
+       silhouettes: a moustache and a parting one way against a bare lip and
+       a parting the other.
+
+       Each face is the SAME drawing at another centre, which is what the two
+       transforms are for: inside a group the head is always at (256, 266)
+       with rx 100, so there is one set of coordinates rather than two to keep
+       in step. Kept in step with `scripts/render-icons.py`, which draws this
+       into the PNGs iOS actually uses for a home-screen icon. -->
+  <defs>
+    <clipPath id="head-a"><ellipse cx="256" cy="266" rx="100" ry="119"/></clipPath>
+    <clipPath id="badge-a"><circle cx="256" cy="256" r="202"/></clipPath>
+    <path id="tache-a" d="M256 285
+             C280 283, 298 276, 315 266
+             C327 259, 342 258, 344 268
+             C345 279, 338 289, 326 297
+             C309 306, 285 313, 256 313 Z"/>
+  </defs>
+
+  <rect width="512" height="512" fill="#0B0B0F"/>
+  <circle cx="256" cy="256" r="212" fill="#FFFFFF"/>
+  <g clip-path="url(#badge-a)">
+    <rect x="0" y="0" width="256" height="512" fill="#0085CA"/>
+    <rect x="256" y="0" width="256" height="512" fill="#FFB612"/>
+  </g>
+
+  <!-- The Doctor -->
+  <g transform="translate(-56.16 34.24) scale(0.86)">
+    <ellipse cx="256" cy="266" rx="100" ry="119" fill="#C98A55"/>
+    <g clip-path="url(#head-a)">
+      <path d="M256 249 C263 263, 269 278, 269 286 C269 291, 243 291, 243 286 C243 278, 249 263, 256 249 Z" fill="#B67846"/>
+      <path d="M234 327 Q256 333 278 327" stroke="#8B5A32" stroke-width="6" stroke-linecap="round" fill="none"/>
+      <path d="M363 120 H149 V212 Q212 232 226 196 Q262 236 363 214 Z" fill="#FFFFFF"/>
+    </g>
+    <path d="M204 236 L240 231 L240 241 L204 245 Z" fill="#4A2C17"/>
+    <path d="M308 236 L272 231 L272 241 L308 245 Z" fill="#4A2C17"/>
+    <ellipse cx="225" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+    <ellipse cx="287" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+    <g fill="#FFFFFF">
+      <use href="#tache-a"/>
+      <use href="#tache-a" transform="translate(512,0) scale(-1,1)"/>
+    </g>
+  </g>
+
+  <!-- stein -->
+  <g transform="translate(127.84 34.24) scale(0.86)">
+    <ellipse cx="256" cy="266" rx="100" ry="119" fill="#E2B08A"/>
+    <g clip-path="url(#head-a)">
+      <path d="M256 249 C263 263, 269 278, 269 286 C269 291, 243 291, 243 286 C243 278, 249 263, 256 249 Z" fill="#D09B74"/>
+      <path d="M234 327 Q256 333 278 327" stroke="#A8744E" stroke-width="6" stroke-linecap="round" fill="none"/>
+      <!-- Same band as the cap, parted rather than flat: a fringe swept to one
+           side is what reads as hair where a straight edge reads as a cap. -->
+      <path d="M149 120 H363 V212 Q300 232 286 196 Q250 236 149 214 Z" fill="#F0F0F4"/>
+    </g>
+    <path d="M204 236 L240 231 L240 241 L204 245 Z" fill="#9A9AA4"/>
+    <path d="M308 236 L272 231 L272 241 L308 245 Z" fill="#9A9AA4"/>
+    <ellipse cx="225" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+    <ellipse cx="287" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+  </g>
+</svg>
