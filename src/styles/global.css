@@ -760,17 +760,15 @@ button { font-family: inherit; }
 }
 
 /* Squashed onto the line the eyes already sit on: scaleY alone means only the
-   y of that centre matters, and both eyes share it. */
+   y of that centre matters, and both eyes share it.
+
+   256 rather than the two numbers this used to carry, because both faces are
+   now drawn in one head-centred space and blink on the same line — the eyes
+   sit inside a transformed group, so the y here is that group's, not the
+   badge's, and it is the same in either cut. */
 @keyframes markBlink {
   0%, 8%, 12%, 17%, 21%, 100% { transform: none }
-  10%, 19% { transform: translate(0, 284px) scaleY(0.08) translate(0, -284px) }
-}
-.mk-eyes-sm {
-  animation-name: markBlinkSm;
-}
-@keyframes markBlinkSm {
-  0%, 8%, 12%, 17%, 21%, 100% { transform: none }
-  10%, 19% { transform: translate(0, 280px) scaleY(0.08) translate(0, -280px) }
+  10%, 19% { transform: translate(0, 256px) scaleY(0.08) translate(0, -256px) }
 }
 
 /* ── The brainrot card ──────────────────────────────────────────────────────

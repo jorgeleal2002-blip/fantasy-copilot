@@ -1,20 +1,84 @@
 import { useId } from 'react';
 
 /**
- * The app mark. Two cuts of one drawing: below 64px the detailed portrait
- * turns to mud, so the simplified sibling takes over automatically — the same
- * handoff rule the identity sheet documents.
+ * The app mark: the two of them, on a badge split down the middle — Carolina
+ * blue for the Doctor, Steelers gold for stein.
+ *
+ * Two cuts of one drawing. Below 64px the detail turns to mud, so the
+ * simplified sibling takes over automatically — the same handoff rule the
+ * identity sheet documents. What survives into the small cut is only what
+ * still tells the two apart at that size: a flat white cap and a moustache
+ * against parted white hair and a bare lip.
+ *
+ * Each face is the SAME drawing at another centre. Inside a face group the
+ * head is always at (256, 266) with rx 100, so there is one set of
+ * coordinates to keep in step rather than two — and `public/icon.svg` and
+ * `scripts/render-icons.py` draw that same head for the home-screen icon.
  */
+
+const SKIN = { doctor: '#C98A55', stein: '#E2B08A' };
+const SHADE = { doctor: '#B67846', stein: '#D09B74' };
+const LIP = { doctor: '#8B5A32', stein: '#A8744E' };
+const BROW = { doctor: '#4A2C17', stein: '#9A9AA4' };
+/** The cap is flat and pure white; the hair is parted and a shade off it, so
+ *  two white heads next to each other still read as two different things. */
+const TOP = { doctor: '#FFFFFF', stein: '#F0F0F4' };
+
+type Who = 'doctor' | 'stein';
+
 export function Mark({ size = 44, title, alive }: { size?: number; title?: string; alive?: boolean }) {
   // ids have to be unique per instance or a second <Mark> steals the first's clip
   const uid = useId().replace(/:/g, '');
   const head = 'h-' + uid;
+  const badge = 'b-' + uid;
   const tache = 't-' + uid;
   const detailed = size >= 64;
   // Grouped only when he is meant to move: an extra <g> around every mark in
   // the app would be noise in the markup for the sake of one screen.
   const face = alive ? 'mk-alive' : undefined;
   const eyes = alive ? 'mk-eyes' : undefined;
+
+  // A face group's transform is what `x' = cx + (x − 256)·s` comes out as.
+  const at = (cx: number, cy: number, s: number) =>
+    `translate(${(cx - 256 * s).toFixed(2)} ${(cy - 266 * s).toFixed(2)}) scale(${s})`;
+
+  const Face = ({ who, small }: { who: Who; small?: boolean }) => (
+    <>
+      <ellipse cx="256" cy="266" rx="100" ry="119" fill={SKIN[who]} />
+      <g clipPath={`url(#${head})`}>
+        {small ? null : (
+          <>
+            <path
+              d="M256 249 C263 263, 269 278, 269 286 C269 291, 243 291, 243 286 C243 278, 249 263, 256 249 Z"
+              fill={SHADE[who]}
+            />
+            <path d="M234 327 Q256 333 278 327" stroke={LIP[who]} strokeWidth="6" strokeLinecap="round" fill="none" />
+          </>
+        )}
+        {who === 'doctor'
+          ? <path d="M149 130 H363 V205 Q256 227 149 205 Z" fill={TOP.doctor} />
+          /* Same band, parted rather than flat: a fringe swept to one side is
+             what reads as hair where a straight edge reads as a cap. */
+          : <path d="M149 120 H363 V212 Q300 232 286 196 Q250 236 149 214 Z" fill={TOP.stein} />}
+      </g>
+      {small ? null : (
+        <>
+          <path d="M204 236 L240 231 L240 241 L204 245 Z" fill={BROW[who]} />
+          <path d="M308 236 L272 231 L272 241 L308 245 Z" fill={BROW[who]} />
+        </>
+      )}
+      <g className={eyes}>
+        <ellipse cx="225" cy="256" rx={small ? 14 : 11} ry={small ? 12 : 9} fill="#2B2B33" />
+        <ellipse cx="287" cy="256" rx={small ? 14 : 11} ry={small ? 12 : 9} fill="#2B2B33" />
+      </g>
+      {who === 'doctor' ? (
+        <g fill="#FFFFFF">
+          <use href={`#${tache}`} />
+          <use href={`#${tache}`} transform="translate(512,0) scale(-1,1)" />
+        </g>
+      ) : null}
+    </>
+  );
 
   return (
     <svg
@@ -26,60 +90,27 @@ export function Mark({ size = 44, title, alive }: { size?: number; title?: strin
       aria-hidden={title ? undefined : true}
       style={{ display: 'block', flex: 'none' }}
     >
+      <defs>
+        <clipPath id={head}><ellipse cx="256" cy="266" rx="100" ry="119" /></clipPath>
+        <clipPath id={badge}><circle cx="256" cy="256" r={detailed ? 228 : 236} /></clipPath>
+        <path
+          id={tache}
+          d="M256 285 C280 283, 298 276, 315 266 C327 259, 342 258, 344 268 C345 279, 338 289, 326 297 C309 306, 285 313, 256 313 Z"
+        />
+      </defs>
+
       <g className={face}>
-      {detailed ? (
-        <>
-          <defs>
-            <clipPath id={head}><ellipse cx="256" cy="296" rx="118" ry="140" /></clipPath>
-            <path id={tache} d="M256 318 C284 315, 306 307, 326 295 C340 286, 358 284, 360 296 C362 309, 353 322, 338 331 C318 342, 290 350, 256 351 Z" />
-          </defs>
-          <circle cx="256" cy="256" r="248" fill="#00205B" />
-          <circle cx="256" cy="256" r="236" fill="#FFFFFF" />
-          <circle cx="256" cy="256" r="228" fill="#C8102E" />
-          <circle cx="368" cy="210" r="19" fill="#E4E4EA" />
-          <path d="M362 216 C392 230, 404 260, 398 286 C388 270, 372 248, 352 234 Z" fill="#E4E4EA" />
-          <g clipPath={`url(#${head})`}>
-            <ellipse cx="256" cy="296" rx="118" ry="140" fill="#C98A55" />
-            <path d="M256 276 C264 292, 271 310, 271 320 C271 326, 241 326, 241 320 C241 310, 248 292, 256 276 Z" fill="#B67846" />
-            <path d="M230 368 Q256 375 282 368" stroke="#8B5A32" strokeWidth="7" strokeLinecap="round" fill="none" />
-            <path d="M130 140 H382 V228 Q256 254 130 228 Z" fill="#FFFFFF" />
-          </g>
-          <path d="M198 260 L240 254 L240 266 L198 270 Z" fill="#4A2C17" />
-          <path d="M314 260 L272 254 L272 266 L314 270 Z" fill="#4A2C17" />
-          <g className={eyes}>
-            <ellipse cx="220" cy="284" rx="13" ry="10" fill="#2B2B33" />
-            <ellipse cx="292" cy="284" rx="13" ry="10" fill="#2B2B33" />
-          </g>
-          <g fill="#FFFFFF">
-            <use href={`#${tache}`} />
-            <use href={`#${tache}`} transform="translate(512,0) scale(-1,1)" />
-          </g>
-          <path d="M232 170 H280 V182 L257 228 H236 L259 182 H232 Z" fill="#00205B" />
-        </>
-      ) : (
-        <>
-          <defs>
-            <clipPath id={head}><ellipse cx="256" cy="300" rx="152" ry="176" /></clipPath>
-            <path id={tache} d="M256 330 C292 326, 322 316, 348 300 C366 289, 389 286, 392 302 C395 319, 383 337, 363 349 C337 364, 300 374, 256 375 Z" />
-          </defs>
-          <circle cx="256" cy="256" r="252" fill="#00205B" />
-          <circle cx="256" cy="256" r="240" fill="#C8102E" />
-          <g clipPath={`url(#${head})`}>
-            <ellipse cx="256" cy="300" rx="152" ry="176" fill="#C98A55" />
-            <path d="M256 288 C265 304, 273 322, 273 330 C273 335, 239 335, 239 330 C239 322, 247 304, 256 288 Z" fill="#B67846" />
-            <path d="M96 110 H416 V236 Q256 268 96 236 Z" fill="#FFFFFF" />
-          </g>
-          <g className={eyes ? eyes + ' mk-eyes-sm' : undefined}>
-            <ellipse cx="204" cy="280" rx="17" ry="14" fill="#2B2B33" />
-            <ellipse cx="308" cy="280" rx="17" ry="14" fill="#2B2B33" />
-          </g>
-          <g fill="#FFFFFF">
-            <use href={`#${tache}`} />
-            <use href={`#${tache}`} transform="translate(512,0) scale(-1,1)" />
-          </g>
-          <path d="M225 148 H291 V164 L259 226 H231 L263 164 H225 Z" fill="#00205B" />
-        </>
-      )}
+        <circle cx="256" cy="256" r={detailed ? 248 : 252} fill="#0B0B0F" />
+        <circle cx="256" cy="256" r={detailed ? 236 : 244} fill="#FFFFFF" />
+        <g clipPath={`url(#${badge})`}>
+          <rect x="0" y="0" width="256" height="512" fill="#0085CA" />
+          <rect x="256" y="0" width="256" height="512" fill="#FFB612" />
+        </g>
+
+        {/* The same centres in both cuts. Anything larger crosses the split
+            line, and two heads that touch stop being two heads. */}
+        <g transform={at(164, 263, 0.86)}><Face who="doctor" small={!detailed} /></g>
+        <g transform={at(348, 263, 0.86)}><Face who="stein" small={!detailed} /></g>
       </g>
     </svg>
   );

@@ -1,45 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Number seven moustache badge">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Doctor x stein badge">
+  <!-- The two of them, on a badge split down the middle. Kept in step with
+       src/ui/Mark.tsx, public/icon.svg and scripts/render-icons.py. -->
   <defs>
-    <clipPath id="head">
-      <ellipse cx="256" cy="296" rx="118" ry="140"></ellipse>
-    </clipPath>
-    
-    <path id="tache-half" d="M256 318&#xA;             C284 315, 306 307, 326 295&#xA;             C340 286, 358 284, 360 296&#xA;             C362 309, 353 322, 338 331&#xA;             C318 342, 290 350, 256 351 Z"></path>
+    <clipPath id="head"><ellipse cx="256" cy="266" rx="100" ry="119"/></clipPath>
+    <clipPath id="badge"><circle cx="256" cy="256" r="228"/></clipPath>
+    <path id="tache" d="M256 285 C280 283, 298 276, 315 266 C327 259, 342 258, 344 268 C345 279, 338 289, 326 297 C309 306, 285 313, 256 313 Z"/>
   </defs>
-
-  
-  <circle cx="256" cy="256" r="248" fill="#00205B"></circle>
-  <circle cx="256" cy="256" r="236" fill="#FFFFFF"></circle>
-  <circle cx="256" cy="256" r="228" fill="#C8102E"></circle>
-
-  
-  <circle cx="368" cy="210" r="19" fill="#E4E4EA"></circle>
-  <path d="M362 216 C392 230, 404 260, 398 286 C388 270, 372 248, 352 234 Z" fill="#E4E4EA"></path>
-
-  <g clip-path="url(#head)">
-    <ellipse cx="256" cy="296" rx="118" ry="140" fill="#C98A55"></ellipse>
-    
-    <path d="M256 276 C264 292, 271 310, 271 320 C271 326, 241 326, 241 320 C241 310, 248 292, 256 276 Z" fill="#B67846"></path>
-    
-    <path d="M230 368 Q256 375 282 368" stroke="#8B5A32" stroke-width="7" stroke-linecap="round" fill="none"></path>
-    
-    <ellipse cx="256" cy="392" rx="34" ry="12" fill="#BF8049" opacity="0.55"></ellipse>
-    
-    <path d="M130 140 H382 V228 Q256 254 130 228 Z" fill="#FFFFFF"></path>
+  <circle cx="256" cy="256" r="248" fill="#0B0B0F"/>
+  <circle cx="256" cy="256" r="236" fill="#FFFFFF"/>
+  <g clip-path="url(#badge)">
+    <rect x="0" y="0" width="256" height="512" fill="#0085CA"/>
+    <rect x="256" y="0" width="256" height="512" fill="#FFB612"/>
   </g>
-
-  
-  <path d="M198 260 L240 254 L240 266 L198 270 Z" fill="#4A2C17"></path>
-  <path d="M314 260 L272 254 L272 266 L314 270 Z" fill="#4A2C17"></path>
-  <ellipse cx="220" cy="284" rx="13" ry="10" fill="#2B2B33"></ellipse>
-  <ellipse cx="292" cy="284" rx="13" ry="10" fill="#2B2B33"></ellipse>
-
-  
-  <g fill="#FFFFFF">
-    <use href="#tache-half"></use>
-    <use href="#tache-half" transform="translate(512,0) scale(-1,1)"></use>
+  <g transform="translate(-56.16 34.24) scale(0.86)">
+    <ellipse cx="256" cy="266" rx="100" ry="119" fill="#C98A55"/>
+    <g clip-path="url(#head)">
+      <path d="M256 249 C263 263, 269 278, 269 286 C269 291, 243 291, 243 286 C243 278, 249 263, 256 249 Z" fill="#B67846"/>
+      <path d="M234 327 Q256 333 278 327" stroke="#8B5A32" stroke-width="6" stroke-linecap="round" fill="none"/>
+      <path d="M149 130 H363 V205 Q256 227 149 205 Z" fill="#FFFFFF"/>
+    </g>
+    <path d="M204 236 L240 231 L240 241 L204 245 Z" fill="#4A2C17"/>
+    <path d="M308 236 L272 231 L272 241 L308 245 Z" fill="#4A2C17"/>
+    <ellipse cx="225" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+    <ellipse cx="287" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+    <g fill="#FFFFFF">
+      <use href="#tache"/>
+      <use href="#tache" transform="translate(512,0) scale(-1,1)"/>
+    </g>
   </g>
-
-  
-  <path d="M232 170 H280 V182 L257 228 H236 L259 182 H232 Z" fill="#00205B"></path>
+  <g transform="translate(127.84 34.24) scale(0.86)">
+    <ellipse cx="256" cy="266" rx="100" ry="119" fill="#E2B08A"/>
+    <g clip-path="url(#head)">
+      <path d="M256 249 C263 263, 269 278, 269 286 C269 291, 243 291, 243 286 C243 278, 249 263, 256 249 Z" fill="#D09B74"/>
+      <path d="M234 327 Q256 333 278 327" stroke="#A8744E" stroke-width="6" stroke-linecap="round" fill="none"/>
+      <path d="M149 120 H363 V212 Q300 232 286 196 Q250 236 149 214 Z" fill="#F0F0F4"/>
+    </g>
+    <path d="M204 236 L240 231 L240 241 L204 245 Z" fill="#9A9AA4"/>
+    <path d="M308 236 L272 231 L272 241 L308 245 Z" fill="#9A9AA4"/>
+    <ellipse cx="225" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+    <ellipse cx="287" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+  </g>
 </svg>

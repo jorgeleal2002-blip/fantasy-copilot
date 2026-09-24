@@ -5,7 +5,7 @@
  * installed iOS web app will happily serve a months-old index.html and its
  * long-gone bundle. So the entry is fetched with revalidation forced on every
  * launch, and the cached copy exists only for a phone with no signal. */
-const CACHE = 'copilot-shell-v1';
+const CACHE = 'copilot-shell-v2';
 const SHELL = './index.html';
 
 self.addEventListener('install', event => {

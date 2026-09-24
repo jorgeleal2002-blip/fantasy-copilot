@@ -30,7 +30,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
       <div className="splash-mark">
         <Mark size={96} alive />
       </div>
-      <div className="splash-word">Doctors Fantasy</div>
+      <div className="splash-word">Doctor x stein</div>
     </div>
   );
 }

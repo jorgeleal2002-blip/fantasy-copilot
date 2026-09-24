@@ -1,29 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Number seven moustache mark">
-  
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Doctor x stein mark, simplified">
+  <!-- The two of them, on a badge split down the middle. Kept in step with
+       src/ui/Mark.tsx, public/icon.svg and scripts/render-icons.py. -->
   <defs>
-    <clipPath id="head-s">
-      <ellipse cx="256" cy="300" rx="152" ry="176"></ellipse>
-    </clipPath>
-    <path id="tache-s" d="M256 330&#xA;             C292 326, 322 316, 348 300&#xA;             C366 289, 389 286, 392 302&#xA;             C395 319, 383 337, 363 349&#xA;             C337 364, 300 374, 256 375 Z"></path>
+    <clipPath id="head"><ellipse cx="256" cy="266" rx="100" ry="119"/></clipPath>
+    <clipPath id="badge"><circle cx="256" cy="256" r="236"/></clipPath>
+    <path id="tache" d="M256 285 C280 283, 298 276, 315 266 C327 259, 342 258, 344 268 C345 279, 338 289, 326 297 C309 306, 285 313, 256 313 Z"/>
   </defs>
-
-  <circle cx="256" cy="256" r="252" fill="#00205B"></circle>
-  <circle cx="256" cy="256" r="240" fill="#C8102E"></circle>
-
-  <g clip-path="url(#head-s)">
-    <ellipse cx="256" cy="300" rx="152" ry="176" fill="#C98A55"></ellipse>
-    
-    <path d="M256 288 C265 304, 273 322, 273 330 C273 335, 239 335, 239 330 C239 322, 247 304, 256 288 Z" fill="#B67846"></path>
-    <path d="M96 110 H416 V236 Q256 268 96 236 Z" fill="#FFFFFF"></path>
+  <circle cx="256" cy="256" r="252" fill="#0B0B0F"/>
+  <circle cx="256" cy="256" r="244" fill="#FFFFFF"/>
+  <g clip-path="url(#badge)">
+    <rect x="0" y="0" width="256" height="512" fill="#0085CA"/>
+    <rect x="256" y="0" width="256" height="512" fill="#FFB612"/>
   </g>
-
-  <ellipse cx="204" cy="280" rx="17" ry="14" fill="#2B2B33"></ellipse>
-  <ellipse cx="308" cy="280" rx="17" ry="14" fill="#2B2B33"></ellipse>
-
-  <g fill="#FFFFFF">
-    <use href="#tache-s"></use>
-    <use href="#tache-s" transform="translate(512,0) scale(-1,1)"></use>
+  <g transform="translate(-56.16 34.24) scale(0.86)">
+    <ellipse cx="256" cy="266" rx="100" ry="119" fill="#C98A55"/>
+    <g clip-path="url(#head)">
+      <path d="M149 130 H363 V205 Q256 227 149 205 Z" fill="#FFFFFF"/>
+    </g>
+    <ellipse cx="225" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+    <ellipse cx="287" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+    <g fill="#FFFFFF">
+      <use href="#tache"/>
+      <use href="#tache" transform="translate(512,0) scale(-1,1)"/>
+    </g>
   </g>
-
-  <path d="M225 148 H291 V164 L259 226 H231 L263 164 H225 Z" fill="#00205B"></path>
+  <g transform="translate(127.84 34.24) scale(0.86)">
+    <ellipse cx="256" cy="266" rx="100" ry="119" fill="#E2B08A"/>
+    <g clip-path="url(#head)">
+      <path d="M149 120 H363 V212 Q300 232 286 196 Q250 236 149 214 Z" fill="#F0F0F4"/>
+    </g>
+    <ellipse cx="225" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+    <ellipse cx="287" cy="256" rx="11" ry="9" fill="#2B2B33"/>
+  </g>
 </svg>
