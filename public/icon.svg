@@ -6,8 +6,8 @@
        the middle — Carolina blue for the Doctor, Steelers gold for stein —
        and each side carries its own face. What tells them apart at sixty
        pixels is not a likeness, which is mud at that size, but two
-       silhouettes: a flat white cap and a moustache against parted white hair
-       and a bare lip.
+       silhouettes: a moustache and a parting one way against a bare lip and
+       a parting the other.
 
        Each face is the SAME drawing at another centre, which is what the two
        transforms are for: inside a group the head is always at (256, 266)
@@ -37,7 +37,7 @@
     <g clip-path="url(#head-a)">
       <path d="M256 249 C263 263, 269 278, 269 286 C269 291, 243 291, 243 286 C243 278, 249 263, 256 249 Z" fill="#B67846"/>
       <path d="M234 327 Q256 333 278 327" stroke="#8B5A32" stroke-width="6" stroke-linecap="round" fill="none"/>
-      <path d="M149 130 H363 V205 Q256 227 149 205 Z" fill="#FFFFFF"/>
+      <path d="M363 120 H149 V212 Q212 232 226 196 Q262 236 363 214 Z" fill="#FFFFFF"/>
     </g>
     <path d="M204 236 L240 231 L240 241 L204 245 Z" fill="#4A2C17"/>
     <path d="M308 236 L272 231 L272 241 L308 245 Z" fill="#4A2C17"/>

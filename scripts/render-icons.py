@@ -105,7 +105,7 @@ def thick(pts, width):
 # middle — Carolina blue for the Doctor, Steelers gold for stein — and each
 # side carries its own face. What tells them apart at sixty pixels on a home
 # screen is not a likeness, which is mud at that size, but two silhouettes:
-# a white surgical cap and a moustache against blond hair and a bare lip.
+# a moustache and a parting one way against a bare lip and a parting the other.
 
 def xform(pts, cx, cy, s):
     """The original drawing is one head at (256, 266) with rx 100. Every part
@@ -116,12 +116,6 @@ def xform(pts, cx, cy, s):
 
 def head_at(cx, cy, s):
     return xform(ellipse(256, 266, 100, 119), cx, cy, s)
-
-
-def cap_at(cx, cy, s):
-    p = [(149, 130), (363, 130), (363, 205)]
-    p += quad((363, 205), (256, 227), (149, 205))
-    return xform(p, cx, cy, s)
 
 
 def hair_at(cx, cy, s):
@@ -170,8 +164,8 @@ def brows_at(cx, cy, s):
 
 def face(cx, cy, s, kind):
     """One manager. `kind` is the only thing that differs, and it differs in
-    the two places a small icon can still show: what is on his head, and
-    whether anything is under his nose."""
+    the two places a small icon can still show: which way the hair is parted,
+    and whether anything sits under his nose."""
     doc = kind == 'doctor'
     skin = SKIN if doc else SKIN_B
     shade = SHADE if doc else SHADE_B
@@ -180,7 +174,9 @@ def face(cx, cy, s, kind):
         ([head], skin, None),
         ([nose_at(cx, cy, s)], shade, head),
         ([mouth_at(cx, cy, s)], LIP if doc else LIP_B, head),
-        ([cap_at(cx, cy, s) if doc else hair_at(cx, cy, s)], WHITE if doc else HAIR, head),
+        # Both have white hair; the parting runs the other way on the Doctor so
+        # two white heads side by side are still two different silhouettes.
+        ([flip(hair_at(cx, cy, s), cx) if doc else hair_at(cx, cy, s)], WHITE if doc else HAIR, head),
         (brows_at(cx, cy, s), BROW if doc else BROW_B, None),
         (eyes_at(cx, cy, s), EYE, None),
     ]

@@ -15,7 +15,7 @@
   <g transform="translate(-56.16 34.24) scale(0.86)">
     <ellipse cx="256" cy="266" rx="100" ry="119" fill="#C98A55"/>
     <g clip-path="url(#head)">
-      <path d="M149 130 H363 V205 Q256 227 149 205 Z" fill="#FFFFFF"/>
+      <path d="M363 120 H149 V212 Q212 232 226 196 Q262 236 363 214 Z" fill="#FFFFFF"/>
     </g>
     <ellipse cx="225" cy="256" rx="11" ry="9" fill="#2B2B33"/>
     <ellipse cx="287" cy="256" rx="11" ry="9" fill="#2B2B33"/>

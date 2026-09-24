@@ -7,8 +7,8 @@ import { useId } from 'react';
  * Two cuts of one drawing. Below 64px the detail turns to mud, so the
  * simplified sibling takes over automatically — the same handoff rule the
  * identity sheet documents. What survives into the small cut is only what
- * still tells the two apart at that size: a flat white cap and a moustache
- * against parted white hair and a bare lip.
+ * still tells the two apart at that size: a moustache and a parting one way
+ * against a bare lip and a parting the other.
  *
  * Each face is the SAME drawing at another centre. Inside a face group the
  * head is always at (256, 266) with rx 100, so there is one set of
@@ -20,8 +20,8 @@ const SKIN = { doctor: '#C98A55', stein: '#E2B08A' };
 const SHADE = { doctor: '#B67846', stein: '#D09B74' };
 const LIP = { doctor: '#8B5A32', stein: '#A8744E' };
 const BROW = { doctor: '#4A2C17', stein: '#9A9AA4' };
-/** The cap is flat and pure white; the hair is parted and a shade off it, so
- *  two white heads next to each other still read as two different things. */
+/** Both white, one a shade off the other and parted the other way, so two
+ *  white heads side by side still read as two different things. */
 const TOP = { doctor: '#FFFFFF', stein: '#F0F0F4' };
 
 type Who = 'doctor' | 'stein';
@@ -55,10 +55,11 @@ export function Mark({ size = 44, title, alive }: { size?: number; title?: strin
             <path d="M234 327 Q256 333 278 327" stroke={LIP[who]} strokeWidth="6" strokeLinecap="round" fill="none" />
           </>
         )}
+        {/* One band, mirrored about the head's centre for the Doctor: a fringe
+            swept to one side is what reads as hair, and swept the other way it
+            is what keeps him from being the same head twice. */}
         {who === 'doctor'
-          ? <path d="M149 130 H363 V205 Q256 227 149 205 Z" fill={TOP.doctor} />
-          /* Same band, parted rather than flat: a fringe swept to one side is
-             what reads as hair where a straight edge reads as a cap. */
+          ? <path d="M363 120 H149 V212 Q212 232 226 196 Q262 236 363 214 Z" fill={TOP.doctor} />
           : <path d="M149 120 H363 V212 Q300 232 286 196 Q250 236 149 214 Z" fill={TOP.stein} />}
       </g>
       {small ? null : (
