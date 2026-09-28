@@ -148,3 +148,26 @@ export function projectSide(
 export function sideProjectionIsSound(p: SideProjection | null): p is SideProjection {
   return !!p && p.slots > 0 && p.counted >= Math.ceil(p.slots * 0.7);
 }
+
+/**
+ * Whether to go back to the feed for a week's projections.
+ *
+ * They are not a fact about the week, they are Sleeper's current opinion of
+ * it, and it moves — hardest on a Sunday morning, when a starter is ruled out
+ * and his projection goes to nothing. That is the moment the number on the
+ * card matters most, and under a cache with no age on it the first read of a
+ * week was the last: the scoreboard poll asked every forty-five seconds and
+ * was handed the same hours-old answer every time.
+ *
+ * `force` is somebody pressing refresh, which is a request for the number now
+ * rather than for whatever is in hand.
+ */
+export function projectionsAreStale(
+  hit: { at: number } | undefined,
+  now: number,
+  ttl: number,
+  force = false,
+): boolean {
+  if (!hit || force) return true;
+  return now - hit.at >= ttl;
+}

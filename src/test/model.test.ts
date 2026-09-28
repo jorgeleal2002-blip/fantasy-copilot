@@ -17,7 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
-import { readProjections, scoreProjection, scoringKind } from '../model/projections';
+import { projectionsAreStale, readProjections, scoreProjection, scoringKind } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
@@ -2789,6 +2789,23 @@ describe('Sleeper\'s weekly projections', () => {
     expect(nestedMap['4046']).toBe(21);
     const viaPlayer = readProjections([{ player: { player_id: '9' }, stats: { pts_half_ppr: 8 } }], null);
     expect(viaPlayer['9']).toBe(8);
+  });
+
+  /* The projections are not a fact about the week, they are Sleeper's current
+     opinion of it. Under a cache with no age on it the first read of a week
+     was the last, and a starter ruled out on Sunday morning never moved the
+     number on the card. */
+  it('goes back to the feed once its answer has aged out', () => {
+    const TTL = 300000;
+    expect(projectionsAreStale(undefined, 1000, TTL)).toBe(true);
+    expect(projectionsAreStale({ at: 1000 }, 1000 + TTL - 1, TTL)).toBe(false);
+    expect(projectionsAreStale({ at: 1000 }, 1000 + TTL, TTL)).toBe(true);
+    expect(projectionsAreStale({ at: 1000 }, 1000 + TTL * 9, TTL)).toBe(true);
+  });
+
+  it('asks again straight away when somebody presses refresh', () => {
+    // A button is a request for the number now, not for whatever is in hand.
+    expect(projectionsAreStale({ at: 1000 }, 1001, 300000, true)).toBe(true);
   });
 
   it('leaves out what it cannot read instead of falling over', () => {

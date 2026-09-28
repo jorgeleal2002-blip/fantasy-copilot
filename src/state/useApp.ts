@@ -7,7 +7,7 @@ import {
 import type {
   LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup, SleeperTransaction,
 } from '../api/types';
-import { DRAFT_POLL_MS, MATCHUP_POLL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import { DRAFT_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
   EMPTY_ROOM, claimSeat, createRoom as createRoomAt, liveEnabled, liveReason, newRoomId,
   pushPick, readRoom, restartRoom, startRoom, watchRoom, type Room,
@@ -19,7 +19,7 @@ import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
-import { readProjections } from '../model/projections';
+import { projectionsAreStale, readProjections } from '../model/projections';
 import { nextDetailStack, topDetail } from './detail-stack';
 
 export type Stage = 'connect' | 'leagues' | 'app';
@@ -39,9 +39,9 @@ export const BOOT_STEPS = [
  *  actually depend on — the market is format-specific, usage is per season. */
 const marketCache = new Map<string, Market>();
 const usageCache = new Map<string, UsageMap>();
-/** Sleeper's projections for one week of one season. They move during the week
- *  as news breaks, but not between two looks at the same scoreboard. */
-const projCache = new Map<string, Record<string, number>>();
+/** Sleeper's projections for one week of one season, with when they were
+ *  read: they move as news breaks, so the entry ages out — see `PROJ_TTL_MS`. */
+const projCache = new Map<string, { at: number; map: Record<string, number> }>();
 /** A league's transactions, keyed by how many weeks of them were asked for. */
 const txCache = new Map<string, SleeperTransaction[]>();
 const seasonCache = new Map<string, string>();
@@ -187,19 +187,29 @@ export function useApp() {
    * come from an undocumented endpoint, so everything downstream treats "no
    * projection" as an ordinary answer rather than an error.
    */
-  const fetchProjections = useCallback(async (wk: number) => {
+  const fetchProjections = useCallback(async (wk: number, force = false) => {
     const d = dataRef.current;
     if (!d || !wk) return;
     const season = d.league.season || String(new Date().getFullYear());
     const key = season + ':' + wk;
-    if (projCache.has(key)) { setProjections(projCache.get(key)!); return; }
+
+    /* Show what is already known at once — a refresh must never blank a
+     * scoreboard — and only then decide whether to go back to the feed. The
+     * cache used to have no age on it at all, so the first read of a week was
+     * the last: the poll called this every forty-five seconds and returned
+     * here every time, and a starter ruled out on Sunday morning never moved
+     * the number. */
+    const hit = projCache.get(key);
+    if (hit) setProjections(hit.map);
+    if (!projectionsAreStale(hit, Date.now(), PROJ_TTL_MS, force)) return;
+
     try {
       const raw = await getWeekProjections(season, wk);
       const map = readProjections(raw, d.league.scoring_settings);
       // An empty map is an answer that did not arrive, not a league where
       // nobody is projected to score: it must not replace one that did.
       if (!Object.keys(map).length) return;
-      projCache.set(key, map);
+      projCache.set(key, { at: Date.now(), map });
       setProjections(map);
     } catch {
       /* the scoreboard is a scoreboard without them */
@@ -234,7 +244,7 @@ export function useApp() {
     setTradeLogState('ok');
   }, [leagueId]);
 
-  const fetchMatchups = useCallback(async (lid: string, wk: number, quiet = false) => {
+  const fetchMatchups = useCallback(async (lid: string, wk: number, quiet = false, force = false) => {
     // A poll must not blank the scores it is refreshing, so it stays quiet and
     // only a first load or a week change shows the loading state.
     if (!quiet) setMatchupState('loading');
@@ -245,7 +255,7 @@ export function useApp() {
     } catch {
       setMatchupState('fail');
     }
-    void fetchProjections(wk);
+    void fetchProjections(wk, force);
   }, [fetchProjections]);
 
   const setWeek = useCallback((w: number) => {
@@ -804,13 +814,16 @@ export function useApp() {
       setData({ ...d, rosters, users, traded, picks, me: matchMe(users, username) });
       setSyncedAt(Date.now());
       await fetchMarket(d.league, true);
+      if (week != null) void fetchMatchups(leagueId, week, true, true);
       showToast('Updated: rosters, picks and market values.');
     } catch {
       showToast('Could not update right now. Try again.');
     } finally {
       setSyncing(false);
     }
-  }, [fetchMarket, leagueId, showToast, username]);
+    // `week` is read here, so it belongs in the list: without it a refresh
+    // would keep asking for whatever week was showing when this was built.
+  }, [fetchMarket, fetchMatchups, leagueId, showToast, username, week]);
 
   /** Cheaper refresh used by the draft board: picks only. */
   const refreshPicks = useCallback(async () => {
@@ -1023,7 +1036,7 @@ export function useApp() {
     setBoardMode, setRankMode, setPickSel, setStrat, setDetail,
     setQuery, setTopPos, setTopLens, setTopOpen, setWeek,
     toggleTradeTeam, toggleTradeAsset, cycleTradeTo, clearTrade,
-    refreshMatchups: () => { if (leagueId && week != null) void fetchMatchups(leagueId, week); },
+    refreshMatchups: () => { if (leagueId && week != null) void fetchMatchups(leagueId, week, false, true); },
     passOffer: (key: string) => setPassed(p => p.concat(key)),
     resetOffers: () => setPassed([]),
 

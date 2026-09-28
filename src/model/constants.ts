@@ -238,6 +238,17 @@ export const DRAFT_POLL_MS = 20000;
 /** Scores move while games are on; a minute is often enough to feel live
  *  without asking Sleeper for the same numbers every few seconds. */
 export const MATCHUP_POLL_MS = 45000;
+/**
+ * How long a week's projections stand before they are re-read.
+ *
+ * They are not static. Sleeper revises them all week and hardest on a Sunday
+ * morning, when a starter is ruled out and his projection goes to nothing —
+ * which is the moment the number on the card matters most and the moment it
+ * was most likely to be hours old. Not the scores' own cadence, though: a
+ * projection that moves on news does not need asking for every forty-five
+ * seconds, and this is an undocumented endpoint to be polite to.
+ */
+export const PROJ_TTL_MS = 5 * 60 * 1000;
 
 export const STORAGE_SESSION = 'fc.session';
 export const STORAGE_PHOTOS = 'fc.photos';
