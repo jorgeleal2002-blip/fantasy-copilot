@@ -83,6 +83,8 @@ export function aheadBy(rows: CmpRow[]): { side: 'a' | 'b'; rows: number } | nul
  * snaps he is on the field for, what he does per touch, how often he scores.
  */
 export type CmpUse = {
+  /** the app's own Rating — the headline the two of them are ordered by */
+  rating: number | null;
   /** what the market pays */
   value: number | null;
   /** share of his team's snaps, 0..1 */
@@ -106,6 +108,10 @@ export function compareNumbers(a: CmpUse, b: CmpUse): CmpRow[] {
     rows.push({ key, label, a: av, b: bv, win });
   };
 
+  /* First, because it is the number that put one of them above the other on
+     the list they were opened from — and the rows under it are most of what
+     goes into it, so this is where "why is he ahead" gets answered. */
+  add('rating', 'Rating', a.rating, b.rating);
   add('value', 'Market value', a.value, b.value);
   add('snap', 'Snap share', pct(a.snap), pct(b.snap));
   /* Only where both sides mean the same thing by it. Comparing a passer's

@@ -138,7 +138,7 @@ function Side({ a, b, app, m }: { a: PlayerFit; b: PlayerFit; app: App; m: Model
 }
 
 /** How a figure is written, which the row cannot know from its value alone. */
-const DIGITS: Record<string, number> = { games: 0, value: 0, td: 2 };
+const DIGITS: Record<string, number> = { games: 0, value: 0, rating: 0, td: 2 };
 const SUFFIX: Record<string, string> = { snap: '%', rz: '%' };
 
 function Rows({ rows }: { rows: CmpRow[] }) {
@@ -163,6 +163,7 @@ function useOf(m: Model, id: string): CmpUse {
   const u = sheet?.use;
   const val = m.marketValue(id);
   return {
+    rating: sheet ? sheet.fit : null,
     value: val ? val.pts : null,
     snap: u?.snap ?? null,
     share: u && Number.isFinite(u.tgt) ? (u.tgt as number) : null,

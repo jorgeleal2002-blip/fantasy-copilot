@@ -4160,8 +4160,14 @@ describe('two seasons against each other', () => {
    together — which is not all of it. */
 describe('two players\' numbers against each other', () => {
   const use = (o: Partial<CmpUse>): CmpUse => ({
-    value: 6000, snap: 0.9, share: 20, shareLabel: 'Target share',
+    rating: 80, value: 6000, snap: 0.9, share: 20, shareLabel: 'Target share',
     eff: 7.0, tdPerGame: 0.5, rzShare: 0.2, ...o,
+  });
+
+  it('leads with the Rating, which is what put one above the other', () => {
+    const rows = compareNumbers(use({ rating: 84 }), use({ rating: 71 }));
+    expect(rows[0]?.key).toBe('rating');
+    expect(rows[0]?.win).toBe('a');
   });
 
   it('compares what both of them measure the same way', () => {
