@@ -37,15 +37,63 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
 
   const lead = leaderOf(game);
   const players = app.data?.players || {};
+
+  /* Where each of them sits in the standings, which is the one number a
+   * scoreboard header is missing: a record says how a team has done and a
+   * place says what that is worth in this league. Wins, then points scored,
+   * which is how a league breaks its own ties. */
+  const order = m.leagueRows.slice().sort((a, b) =>
+    b.record.wins - a.record.wins || b.record.pointsFor - a.record.pointsFor);
+  const placeOf = (rosterId: number) => {
+    const i = order.findIndex(r => r.id === rosterId);
+    const row = order[i];
+    if (i < 0 || !row || (row.record.wins + row.record.losses + row.record.ties) === 0) return 0;
+    return i + 1;
+  };
+
+  /* The bar is the two projections against each other and nothing more. It is
+   * not a win probability: that needs the spread of what is left to be played,
+   * which nothing here measures, and a confident "100% WIN" that is wrong is
+   * the worst number a scoreboard can carry. */
+  const pa = game.a.projected;
+  const pb = game.b?.projected ?? null;
+  const split = pa != null && pb != null && pa + pb > 0 ? pa / (pa + pb) : null;
+  const edge = pa != null && pb != null ? pa - pb : null;
   const starters = lineupRows(game, m.league.roster_positions, players, app.projections);
   const bench = benchRows(game, players, app.projections);
 
   return (
     <Overlay onClose={() => app.setDetail(null)} label={app.week ? 'Week ' + app.week : 'Week'} z={6}>
       <div className="ms-head">
-        <Side s={game.a} winning={lead === 'a'} />
-        <div className="ms-vs">{game.b ? 'vs' : 'bye'}</div>
-        {game.b ? <Side s={game.b} winning={lead === 'b'} align="right" /> : <div style={{ flex: 1 }} />}
+        <div className="ms-scores">
+          <Av s={game.a} />
+          <div className="ms-score">
+            <div className={'ms-pts' + (lead === 'a' ? ' is-up' : '')}>{score(game.a.points)}</div>
+            {game.a.projected != null ? <div className="ms-proj">{game.a.projected.toFixed(1)}</div> : null}
+          </div>
+          <div className="ms-vs">{game.b ? 'vs' : 'bye'}</div>
+          <div className="ms-score is-right">
+            <div className={'ms-pts' + (lead === 'b' ? ' is-up' : '')}>{score(game.b?.points ?? null)}</div>
+            {game.b?.projected != null ? <div className="ms-proj">{game.b.projected.toFixed(1)}</div> : null}
+          </div>
+          {game.b ? <Av s={game.b} /> : <div style={{ width: 42, flex: 'none' }} />}
+        </div>
+
+        {split != null ? (
+          <div className="ms-bar" role="img" aria-label="projected split">
+            <div className="ms-bar-fill" style={{ width: (split * 100).toFixed(1) + '%' }} />
+          </div>
+        ) : null}
+        {edge != null ? (
+          <div className={'ms-edge' + (edge < 0 ? ' is-right' : '')}>
+            {(edge >= 0 ? '+' : '') + edge.toFixed(1) + ' projected'}
+          </div>
+        ) : null}
+
+        <div className="ms-names">
+          <Who s={game.a} place={placeOf(game.a.rosterId)} />
+          {game.b ? <Who s={game.b} place={placeOf(game.b.rosterId)} align="right" /> : <div style={{ flex: 1 }} />}
+        </div>
       </div>
 
       {starters.length ? (
@@ -69,18 +117,19 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
 
 const score = (p: number | null) => (p == null ? '—' : p.toFixed(2));
 
-function Side({ s, winning, align }: { s: MatchupSide; winning: boolean; align?: 'right' }) {
-  const right = align === 'right';
-  const sub = [s.user ? '@' + s.user : '', s.record].filter(Boolean).join(' · ');
+function Av({ s }: { s: MatchupSide }) {
+  return s.avatar
+    ? <img className="ms-av" src={s.avatar} alt="" />
+    : <div className="ms-av ms-av-blank" />;
+}
+
+function Who({ s, place, align }: { s: MatchupSide; place: number; align?: 'right' }) {
+  const sub = [s.record + (place ? ' (#' + place + ')' : ''), s.user ? '@' + s.user : '']
+    .filter(Boolean);
   return (
-    <div className={'ms-side' + (right ? ' is-right' : '')}>
-      {s.avatar
-        ? <img className="ms-av" src={s.avatar} alt="" />
-        : <div className="ms-av ms-av-blank" />}
+    <div className={'ms-who-team' + (align === 'right' ? ' is-right' : '')}>
       <div className={'ms-name' + (s.isMe ? ' is-me' : '')}>{s.name}</div>
-      {sub ? <div className="ms-sub">{sub}</div> : null}
-      <div className={'ms-pts' + (winning ? ' is-up' : '')}>{score(s.points)}</div>
-      {s.projected != null ? <div className="ms-proj">{s.projected.toFixed(1)}</div> : null}
+      {sub.length ? <div className="ms-sub">{(align === 'right' ? sub : sub.slice().reverse()).join(' · ')}</div> : null}
     </div>
   );
 }

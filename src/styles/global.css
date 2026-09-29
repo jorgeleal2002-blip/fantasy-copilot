@@ -1008,70 +1008,98 @@ button { font-family: inherit; }
    ──────────────────────────────────────────────────────────────────────── */
 .ms-head {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding-bottom: 14px;
-}
-.ms-side {
-  flex: 1;
-  min-width: 0;
-  display: flex;
   flex-direction: column;
+  gap: 6px;
+  padding-bottom: 12px;
+}
+/* Avatars outside, scores inside, the way a scoreboard puts the two numbers
+   next to each other so they can be compared without crossing the card. */
+.ms-scores {
+  display: flex;
   align-items: center;
-  text-align: center;
-  gap: 2px;
+  gap: 8px;
 }
 .ms-av {
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
   object-fit: cover;
   border: 1px solid var(--color-divider);
-  margin-bottom: 4px;
 }
 .ms-av-blank { background: rgba(233, 233, 237, 0.06); }
+.ms-score { flex: 1; min-width: 0; }
+.ms-score.is-right { text-align: right; }
+.ms-pts {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  color: rgba(233, 233, 237, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+.ms-pts.is-up { color: var(--color-text); }
+/* The forecast under the fact, and smaller than it. */
+.ms-proj {
+  font-size: 12px;
+  margin-top: 1px;
+  color: rgba(233, 233, 237, 0.32);
+  font-variant-numeric: tabular-nums;
+}
+.ms-vs {
+  flex: none;
+  width: 22px;
+  text-align: center;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(233, 233, 237, 0.28);
+}
+
+/* The two projections against each other. Deliberately not a win probability
+   — that needs the spread of what is left to play, which nothing here
+   measures, and a confident "100%" that is wrong is the worst number a
+   scoreboard can carry. */
+.ms-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(233, 233, 237, 0.1);
+  overflow: hidden;
+}
+.ms-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  /* The same green the rest of the app calls good. */
+  background: #8ec9a8;
+  transition: width .5s ease;
+}
+.ms-edge {
+  font-size: 10px;
+  color: rgba(233, 233, 237, 0.4);
+  font-variant-numeric: tabular-nums;
+}
+.ms-edge.is-right { text-align: right; }
+
+.ms-names { display: flex; align-items: flex-start; gap: 10px; }
+.ms-who-team { flex: 1; min-width: 0; }
+.ms-who-team.is-right { text-align: right; }
 .ms-name {
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.25;
-  max-width: 100%;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .ms-name.is-me { color: var(--color-accent); }
 .ms-sub {
-  font-size: 10px;
-  color: rgba(242, 253, 254, 0.35);
-  max-width: 100%;
+  font-size: 10.5px;
+  margin-top: 2px;
+  color: rgba(242, 253, 254, 0.4);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.ms-pts {
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  margin-top: 4px;
-  color: rgba(233, 233, 237, 0.55);
-  font-variant-numeric: tabular-nums;
-}
-.ms-pts.is-up { color: var(--color-text); }
-/* The forecast under the fact, and smaller than it. */
-.ms-proj {
-  font-size: 11px;
-  color: rgba(233, 233, 237, 0.3);
-  font-variant-numeric: tabular-nums;
-}
-.ms-vs {
-  flex: none;
-  width: 24px;
-  text-align: center;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(233, 233, 237, 0.3);
-  margin-top: 60px;
 }
 
 .ms-block { display: flex; flex-direction: column; }
@@ -1312,133 +1340,6 @@ button { font-family: inherit; }
   font-variant-numeric: tabular-nums;
 }
 
-
-/* ── One game, on its own screen ──────────────────────────────────────────
-   The scoreboard card is two names and two numbers in a 390px row; here there
-   is a whole screen, so the two teams stand as columns with their score under
-   them and the lineup runs slot against slot underneath. Nothing is squeezed,
-   which is the entire reason it stopped opening inside the card.
-   ──────────────────────────────────────────────────────────────────────── */
-.ms-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--color-divider);
-}
-.ms-side {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 2px;
-}
-.ms-av {
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
-  object-fit: cover;
-  border: 1px solid var(--color-divider);
-  margin-bottom: 4px;
-}
-.ms-av-blank { background: rgba(233, 233, 237, 0.06); }
-.ms-name {
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.25;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ms-name.is-me { color: var(--color-accent); }
-.ms-sub {
-  font-size: 10px;
-  color: rgba(242, 253, 254, 0.35);
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ms-pts {
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  margin-top: 4px;
-  color: rgba(233, 233, 237, 0.55);
-  font-variant-numeric: tabular-nums;
-}
-.ms-pts.is-up { color: var(--color-text); }
-/* The forecast under the fact, and smaller than it. */
-.ms-proj {
-  font-size: 10.5px;
-  color: rgba(233, 233, 237, 0.3);
-  font-variant-numeric: tabular-nums;
-}
-.ms-vs {
-  flex: none;
-  width: 24px;
-  text-align: center;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(233, 233, 237, 0.3);
-  margin-top: 60px;
-}
-
-.ms-lineup { display: flex; flex-direction: column; }
-.ms-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--color-divider);
-}
-.ms-row:last-child { border-bottom: none; }
-.ms-slot {
-  flex: none;
-  width: 40px;
-  text-align: center;
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  color: rgba(233, 233, 237, 0.34);
-}
-.ms-cell {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 7px;
-  padding: 3px 4px;
-}
-.ms-cell.is-right { flex-direction: row-reverse; text-align: right; }
-.ms-cell.is-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.ms-cell.is-tap:active { background: rgba(233, 233, 237, 0.06); }
-.ms-cell.is-tap:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
-.ms-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; }
-.ms-pl-name {
-  font-size: 12px;
-  color: rgba(233, 233, 237, 0.82);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ms-pl-sub {
-  font-size: 9.5px;
-  color: rgba(233, 233, 237, 0.32);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ms-pl-pts {
-  flex: none;
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-  color: rgba(233, 233, 237, 0.62);
-}
 
 /* ── Trade builder ────────────────────────────────────────────────────────
    A column per team saying what it walks away with, and one bar across the
