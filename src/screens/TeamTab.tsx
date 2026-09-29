@@ -470,7 +470,7 @@ function Roster({ app, m }: { app: App; m: Model }) {
           style={{ background: 'var(--color-surface)', borderRadius: 11, padding: '11px 12px', cursor: 'pointer' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-            <Face photo={app.photoFor(p.id)} pos={p.pos} />
+            <Face {...app.photoSet(p.id)} pos={p.pos} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{

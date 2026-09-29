@@ -255,7 +255,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                     background: 'var(--color-surface)', borderRadius: 11, padding: '11px 12px', cursor: 'pointer',
                   }}
                 >
-                  <Face photo={app.photoFor(p.id)} pos={p.pos} />
+                  <Face {...app.photoSet(p.id)} pos={p.pos} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{p.name}</div>
                     <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 2 }}>
@@ -369,7 +369,7 @@ function JoinByCode({ app }: { app: App }) {
           aria-label="Room code"
           style={{
             flex: 1, minWidth: 0, background: 'var(--color-surface)',
-            border: '1px solid var(--color-divider)', borderRadius: 10,
+            border: 'var(--hairline) solid var(--color-divider)', borderRadius: 10,
             padding: '11px 12px', outline: 'none', color: 'var(--color-text)',
             // Monospaced and spaced out, because this is read one character at
             // a time off somebody else's screen.
@@ -454,7 +454,7 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
           {st.myTeam.map((o, i) => (
             <div key={o.id} style={{
               display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5,
-              paddingTop: 8, borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+              paddingTop: 8, borderTop: i === 0 ? 'none' : 'var(--hairline) solid var(--color-divider)',
             }}>
               <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{o.name}</span>
               <span style={{ color: dim(0.42), flex: 'none' }}>{o.pos} · fit {o.fit}</span>
@@ -486,7 +486,7 @@ function PickMoves({ app, m }: { app: App; m: Model }) {
       {m.bestDeals.map((dd, i) => (
         <div key={dd.kind + dd.partner + i} style={{
           padding: '11px 0',
-          borderTop: i === 0 ? '1px solid transparent' : '1px solid var(--color-divider)',
+          borderTop: i === 0 ? '1px solid transparent' : 'var(--hairline) solid var(--color-divider)',
           marginTop: i === 0 ? 0 : 9,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>

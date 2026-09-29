@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   findUser, getDraftPicks, getRosters, getSeasonStats, getTradedPicks, getUsers,
-  loadLeague, matchMe, userLeagues, playerPhoto, getMatchups, getNflState, getTransactions,
+  loadLeague, matchMe, userLeagues, playerPhoto, playerPhotoSet, type PhotoSet, getMatchups, getNflState, getTransactions,
   getWeekProjections, getWeekStats,
 } from '../api/sleeper';
 import type {
@@ -20,6 +20,7 @@ import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
+import { pickEncoding } from '../model/photo';
 import { type HeldStats, projectionsAreStale, readProjections, statsForWeek } from '../model/projections';
 import type { WeekScore } from '../model/power';
 import { nextDetailStack, topDetail } from './detail-stack';
@@ -48,6 +49,51 @@ const projCache = new Map<string, { at: number; map: Record<string, number> }>()
 /** One week of every player's stats. Big, and only wanted where a stat line
  *  is drawn, so it ages out rather than polling with the scores. */
 const statCache = new Map<string, { at: number; map: Record<string, SleeperStatLine> }>();
+
+/**
+ * WebP if the browser will encode it, JPEG if it will not.
+ *
+ * At the byte ceiling a photo has to live under, the format is worth as much
+ * as the size is: WebP carries roughly twice the picture per kilobyte, which
+ * is a whole step of the ladder in `model/photo`. A browser that cannot make
+ * one hands back a PNG data URL instead of saying no, so the answer is read
+ * off what comes out rather than asked for.
+ */
+let photoType: string | null = null;
+function bestPhotoType(): string {
+  if (photoType) return photoType;
+  const c = document.createElement('canvas');
+  c.width = c.height = 1;
+  photoType = c.toDataURL('image/webp', 0.9).startsWith('data:image/webp') ? 'image/webp' : 'image/jpeg';
+  return photoType;
+}
+
+/** A square crop of an upload, as large as the ceiling allows. */
+function encodePhoto(img: HTMLImageElement): string {
+  const type = bestPhotoType();
+  const side = Math.min(img.width, img.height);
+  const drawn = new Map<number, HTMLCanvasElement>();
+  const at = (px: number, q: number): number => {
+    let c = drawn.get(px);
+    if (!c) {
+      c = document.createElement('canvas');
+      c.width = c.height = px;
+      const ctx = c.getContext('2d');
+      if (!ctx) return Infinity;
+      // Downscaling a phone photo by a factor of ten is where a cheap resample
+      // shows: the browser's own high setting is the difference between a face
+      // and a sharpened mess of it.
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, px, px);
+      drawn.set(px, c);
+    }
+    return c.toDataURL(type, q).length;
+  };
+  const pick = pickEncoding(at, PHOTO_MAX_BYTES);
+  const c = pick && drawn.get(pick.px);
+  return c && pick ? c.toDataURL(type, pick.q) : '';
+}
 /** A league's transactions, keyed by how many weeks of them were asked for. */
 const txCache = new Map<string, SleeperTransaction[]>();
 /** Every team's score in every FINISHED week, for the all-play record. A week
@@ -1075,6 +1121,18 @@ export function useApp() {
   );
 
   /**
+   * A face and, where there is a choice, both resolutions of it.
+   *
+   * A photo somebody uploaded has exactly one resolution, so it is handed over
+   * plain; Sleeper's are published twice and the screen gets to choose.
+   */
+  const photoSet = useCallback(
+    (id: string): PhotoSet =>
+      (photos[id] ? { photo: photos[id] } : playerPhotoSet(id) || { photo: null }),
+    [photos],
+  );
+
+  /**
    * What a player has averaged this season, in this league's scoring.
    *
    * Byes and weeks he did not play are left out rather than averaged in as
@@ -1106,16 +1164,11 @@ export function useApp() {
       img.onload = () => {
         // Square-crop and downscale before storing: a camera-roll photo would
         // blow localStorage's quota on its own, and it is worse than that in a
-        // database the whole league reads on every launch.
-        const size = 160;
-        const c = document.createElement('canvas');
-        c.width = size;
-        c.height = size;
-        const ctx = c.getContext('2d');
-        if (!ctx) return;
-        const side = Math.min(img.width, img.height);
-        ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
-        const data = c.toDataURL('image/jpeg', 0.82);
+        // database the whole league reads on every launch. How far down is not
+        // a constant — the encoder is asked, and the biggest square that fits
+        // under the ceiling wins. See `model/photo`.
+        const data = encodePhoto(img);
+        if (!data) return;
 
         const lid = leagueId;
         const who = dataRef.current?.me?.display_name || username || 'someone';
@@ -1365,7 +1418,7 @@ export function useApp() {
     resetOffers: () => setPassed([]),
 
     saved, isSaved, toggleSaved, unsaveTrade,
-    showToast, hideToast, photoFor, setPhoto, clearPhoto,
+    showToast, hideToast, photoFor, photoSet, setPhoto, clearPhoto,
   };
 }
 

@@ -45,7 +45,7 @@ export function ConnectScreen({ app }: { app: App }) {
       <div
         style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
+          background: 'var(--color-surface)', border: 'var(--hairline) solid var(--color-divider)',
           borderRadius: 11, padding: '13px 14px',
         }}
       >
@@ -93,7 +93,7 @@ export function ConnectScreen({ app }: { app: App }) {
                   className="row-tap"
                   style={{
                     flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10,
-                    background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
+                    background: 'var(--color-surface)', border: 'var(--hairline) solid var(--color-divider)',
                     borderRadius: 11, padding: '12px 14px', cursor: 'pointer',
                     font: "500 14px 'Inter', system-ui", color: 'var(--color-text)', textAlign: 'left',
                   }}
@@ -169,7 +169,7 @@ export function LeaguesScreen({ app }: { app: App }) {
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px',
                 borderRadius: 12, background: 'var(--color-surface)',
-                border: '1px solid var(--color-divider)', cursor: 'pointer',
+                border: 'var(--hairline) solid var(--color-divider)', cursor: 'pointer',
                 color: 'inherit', textAlign: 'left', font: 'inherit',
               }}
             >

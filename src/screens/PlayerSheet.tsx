@@ -288,11 +288,11 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
               ? {
                 width: 64, height: 64, flex: 'none', borderRadius: 14,
                 background: `color-mix(in srgb, var(--color-accent) 12%, transparent) url(${photo}) center/cover no-repeat`,
-                border: '1px solid var(--color-divider)',
+                border: 'var(--hairline) solid var(--color-divider)',
               }
               : {
                 width: 64, height: 64, flex: 'none', borderRadius: 14,
-                background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)', border: '1px solid var(--color-divider)',
+                background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)', border: 'var(--hairline) solid var(--color-divider)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: ACCENT, fontSize: 13, fontWeight: 600,
               }}

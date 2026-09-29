@@ -147,7 +147,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
                 onKeyDown={e => { if (e.key === 'Enter') app.setDetail('team-' + t.id); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px',
-                  borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+                  borderTop: i === 0 ? 'none' : 'var(--hairline) solid var(--color-divider)',
                   cursor: 'pointer',
                   background: t.isMe ? 'color-mix(in srgb, var(--color-accent) 9%, transparent)' : 'transparent',
                 }}
@@ -159,7 +159,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
                     alt=""
                     style={{
                       width: 28, height: 28, borderRadius: 8, flex: 'none', objectFit: 'cover',
-                      border: '1px solid var(--color-divider)',
+                      border: 'var(--hairline) solid var(--color-divider)',
                     }}
                   />
                 ) : null}
@@ -309,7 +309,7 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
                 onKeyDown={e => { if (e.key === 'Enter') app.setDetail(x.id); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px',
-                  borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+                  borderTop: i === 0 ? 'none' : 'var(--hairline) solid var(--color-divider)',
                   cursor: 'pointer',
                   background: x.mine ? 'color-mix(in srgb, var(--color-accent) 9%, transparent)' : 'transparent',
                 }}

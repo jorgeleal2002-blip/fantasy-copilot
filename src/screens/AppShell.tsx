@@ -71,7 +71,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
             onKeyDown={e => { if (e.key === 'Enter') void app.switchLeague(); }}
             style={{
               width: 34, height: 34, borderRadius: 9, flex: 'none', objectFit: 'cover',
-              border: '1px solid var(--color-divider)', cursor: 'pointer',
+              border: 'var(--hairline) solid var(--color-divider)', cursor: 'pointer',
             }}
           />
         ) : null}
@@ -89,7 +89,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
           onClick={() => app.setTab('settings')}
           style={{
             width: 34, height: 34, flex: 'none', borderRadius: '50%', overflow: 'hidden', padding: 0,
-            background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
+            background: 'var(--color-surface)', border: 'var(--hairline) solid var(--color-divider)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 12, fontWeight: 600, color: 'var(--color-accent)', cursor: 'pointer',
           }}

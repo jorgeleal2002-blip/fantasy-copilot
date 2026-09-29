@@ -3,6 +3,7 @@ import { ACCENT, BAD, GOOD, POS, cellOf, colorOf } from '../model/constants';
 import { inviteUrl, shareInvite } from '../model/invite';
 import { pickLabel } from '../model/math';
 import { sfxFor } from '../model/sfx-map';
+import type { PhotoSet } from '../api/sleeper';
 import type { Pos } from '../api/types';
 import type { MockOption, MockPick, MockState, Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -395,7 +396,7 @@ function PlayerList({ st, m, app, pos, q, canTake, onTake }: {
       key={o.id}
       o={o}
       teams={m.teamCount}
-      photo={app.photoFor(o.id)}
+      face={app.photoSet(o.id)}
       canTake={canTake}
       onTake={onTake}
       again={again}
@@ -413,10 +414,10 @@ function PlayerList({ st, m, app, pos, q, canTake, onTake }: {
 }
 
 /** One name, with his face and the button that drafts him. */
-function PlayerRow({ o, teams, photo, canTake, onTake, again }: {
+function PlayerRow({ o, teams, face, canTake, onTake, again }: {
   o: MockOption; teams: number; canTake: boolean; onTake: (id: string) => void;
-  /** his portrait, or null — the badge falls back to his position */
-  photo?: string | null;
+  /** his portrait at both resolutions, or none — the badge falls back to his position */
+  face: PhotoSet;
   /** when this seat really picks again, so the row can say what waiting costs */
   again?: string | null;
 }) {
@@ -426,7 +427,7 @@ function PlayerRow({ o, teams, photo, canTake, onTake, again }: {
       {/* A face reads faster than a name in a list you are scanning under a
           clock, and where there is no portrait the badge says the position
           instead — never an empty square. */}
-      <Face photo={photo} pos={o.pos} />
+      <Face {...face} pos={o.pos} />
       <button
         type="button"
         className="pl-draft"
@@ -475,9 +476,9 @@ function MyTeam({ st, m, app }: { st: MockState; m: Model; app: App }) {
       {st.myTeam.length ? st.myTeam.map((o, i) => (
         <div key={o.id} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 13,
-          padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+          padding: '9px 0', borderTop: i === 0 ? 'none' : 'var(--hairline) solid var(--color-divider)',
         }}>
-          <Face photo={app.photoFor(o.id)} pos={o.pos} size={28} />
+          <Face {...app.photoSet(o.id)} pos={o.pos} size={28} />
           <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{o.name}</span>
           <span style={{ color: dim(0.42), flex: 'none' }}>
             <span style={{ color: colorOf(o.pos) }}>{o.pos}</span>{' · rating ' + o.fit}
@@ -576,7 +577,7 @@ function InvitePanel({ app, m, finished, onClose }: {
             <div style={{
               display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 9,
               marginTop: 10, padding: '9px 10px', borderRadius: 10,
-              background: 'rgba(242,253,254,.05)', border: '1px solid var(--color-divider)',
+              background: 'rgba(242,253,254,.05)', border: 'var(--hairline) solid var(--color-divider)',
             }}>
               <span style={{ fontSize: 10.5, color: dim(0.42) }}>or read them</span>
               <span style={{

@@ -51,6 +51,30 @@ export const playerPhoto = (id: string, size: 'thumb' | 'full' = 'thumb'): strin
     ? 'https://sleepercdn.com/content/nfl/players/' + (size === 'full' ? '' : 'thumb/') + id + '.jpg'
     : null;
 
+/** Roughly how wide each of the two images Sleeper publishes actually is. */
+export const THUMB_W = 130;
+export const FULL_W = 512;
+
+/**
+ * Both portraits offered at once, with their widths, so the browser picks.
+ *
+ * Guessing which one a face needs means guessing the screen it is on, and the
+ * same 34px row is 34 real pixels on a laptop and 102 on a phone. Handing over
+ * both and saying how wide the face will be drawn moves the arithmetic to the
+ * one place that knows the answer: a 1× screen takes the thumbnail, a 3× phone
+ * takes it too for a roster row and reaches for the full image only where the
+ * face is big enough that the thumbnail would be stretched. Nothing heavier is
+ * downloaded than the screen can actually show.
+ */
+export type PhotoSet = { photo: string | null; srcSet?: string };
+
+export function playerPhotoSet(id: string): { photo: string; srcSet: string } | null {
+  const thumb = playerPhoto(id, 'thumb');
+  const full = playerPhoto(id, 'full');
+  if (!thumb || !full) return null;
+  return { photo: thumb, srcSet: thumb + ' ' + THUMB_W + 'w, ' + full + ' ' + FULL_W + 'w' };
+}
+
 export async function findUser(name: string): Promise<SleeperUser> {
   const user = await get<SleeperUser | null>('/user/' + encodeURIComponent(name));
   if (!user || !user.user_id) throw new Error('nouser');

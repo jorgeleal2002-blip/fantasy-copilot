@@ -17,6 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
+import { PHOTO_PX, PHOTO_Q, PHOTO_Q_FLOOR, pickEncoding } from '../model/photo';
 import { projectionsAreStale, readProjections, scoreProjection, scoringKind, statsForWeek } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
@@ -3803,5 +3804,51 @@ describe('the trade on the screen', () => {
     expect(v.ledgers.find(l => l.isMe)!.net).toBe(58);
     expect(v.ledgers.find(l => l.name === 'Third')!.net).toBe(-104);
     expect(v.winner?.isMe).toBe(true);
+  });
+});
+
+/* A photo lives under a hard byte ceiling — one database record the whole
+   league reads on every launch — and used to be squashed to a flat 160 square
+   to get there. That is fine behind a 34px roster face and visibly soft behind
+   the 64px portrait on a card, which on a phone is 192 real pixels of a
+   160-pixel picture. */
+describe('how big an uploaded photo is stored', () => {
+  /** Bytes roughly as an encoder makes them: with the area, and with quality. */
+  const like = (k: number) => (px: number, q: number) => Math.round(px * px * q * k);
+
+  it('takes the biggest square that fits under the ceiling', () => {
+    expect(pickEncoding(like(0.2), 20000)).toEqual({ px: 288, q: 0.9 });
+  });
+
+  it('drops the quality before it drops the pixels', () => {
+    // 288 at 0.9 is over, 288 at 0.82 is not: more picture beats more fidelity.
+    const fit = pickEncoding(like(0.2), 288 * 288 * 0.85 * 0.2);
+    expect(fit).toEqual({ px: 288, q: 0.82 });
+  });
+
+  it('steps down a square rather than encoding one to mush', () => {
+    // Nothing at 288 fits above the quality floor, so the 224 square takes it
+    // at a quality worth having instead of a big blocky 288.
+    const cap = 288 * 288 * 0.6 * 0.2;
+    const fit = pickEncoding(like(0.2), cap);
+    expect(fit?.px).toBe(224);
+    expect(fit?.q).toBeGreaterThanOrEqual(PHOTO_Q_FLOOR);
+  });
+
+  it('lets the smallest square go rough rather than store nothing', () => {
+    // A tight ceiling no square clears at a decent quality: a rough photo is
+    // still a photo, and the alternative on screen is a grey badge.
+    const fit = pickEncoding(like(0.2), 160 * 160 * 0.5 * 0.2);
+    expect(fit).toEqual({ px: 160, q: 0.45 });
+  });
+
+  it('gives up when even the smallest square cannot fit', () => {
+    expect(pickEncoding(like(0.2), 10)).toBe(null);
+  });
+
+  it('never picks a size or quality it was not offered', () => {
+    const fit = pickEncoding(like(0.2), 20000);
+    expect(PHOTO_PX).toContain(fit?.px);
+    expect(PHOTO_Q).toContain(fit?.q);
   });
 });

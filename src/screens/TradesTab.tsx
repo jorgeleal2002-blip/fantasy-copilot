@@ -170,7 +170,7 @@ function Block({ app, m }: { app: App; m: Model }) {
             style={{
               display: 'flex', alignItems: 'center', gap: 10, fontSize: 13,
               paddingTop: i === 0 ? 0 : 9, marginTop: i === 0 ? 0 : 9,
-              borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+              borderTop: i === 0 ? 'none' : 'var(--hairline) solid var(--color-divider)',
             }}
           >
             <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{p.name}</span>
@@ -191,7 +191,7 @@ function Block({ app, m }: { app: App; m: Model }) {
         )}
 
         {adding ? (
-          <div style={{ marginTop: 10, borderTop: '1px solid var(--color-divider)', paddingTop: 10 }}>
+          <div style={{ marginTop: 10, borderTop: 'var(--hairline) solid var(--color-divider)', paddingTop: 10 }}>
             <div style={{ ...cardNote, marginBottom: 8 }}>Tap anyone from your roster.</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 260, overflow: 'auto' }}>
               {rest.map(p => (
@@ -442,7 +442,7 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
         </div>
       </div>
 
-      <div style={{ display: 'flex', borderTop: '1px solid var(--color-divider)' }}>
+      <div style={{ display: 'flex', borderTop: 'var(--hairline) solid var(--color-divider)' }}>
         <button
           type="button"
           className="ghost-tap"

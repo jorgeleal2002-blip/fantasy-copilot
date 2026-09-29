@@ -76,7 +76,7 @@ export function PlayerSearch(
     <>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 9,
-        background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
+        background: 'var(--color-surface)', border: 'var(--hairline) solid var(--color-divider)',
         borderRadius: 10, padding: '9px 11px',
       }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(233,233,237,.4)" strokeWidth="1.8" style={{ flex: 'none' }}>
@@ -123,7 +123,7 @@ export function PlayerSearch(
                 : 'Nobody by that name in the catalog.'}
             </div>
           ) : results.map((r, i) => (
-            <div key={r.id} style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)' }}>
+            <div key={r.id} style={{ borderTop: i === 0 ? 'none' : 'var(--hairline) solid var(--color-divider)' }}>
               <div
                 role="button"
                 tabIndex={0}

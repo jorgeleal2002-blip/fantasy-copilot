@@ -132,8 +132,8 @@ button { font-family: inherit; }
 }
 @media (min-width: 520px) {
   .app-column {
-    border-left: 1px solid var(--color-divider);
-    border-right: 1px solid var(--color-divider);
+    border-left: var(--hairline) solid var(--color-divider);
+    border-right: var(--hairline) solid var(--color-divider);
   }
 }
 
@@ -159,7 +159,7 @@ button { font-family: inherit; }
   padding: 5px 10px calc(var(--safe-bottom) + 3px);
   gap: 4px;
   background: linear-gradient(to top, var(--color-bg) 60%, rgba(5, 8, 27, 0.4));
-  border-top: 1px solid var(--color-divider);
+  border-top: var(--hairline) solid var(--color-divider);
 }
 .tab-btn {
   flex: 1;
@@ -225,7 +225,7 @@ button { font-family: inherit; }
     gap: 2px;
     padding: 20px 12px;
     border-top: 0;
-    border-right: 1px solid var(--color-divider);
+    border-right: var(--hairline) solid var(--color-divider);
     background: linear-gradient(to bottom, rgba(38, 42, 96, 0.22), transparent 40%);
   }
   .tab-btn {
@@ -333,7 +333,7 @@ button { font-family: inherit; }
   align-items: center;
   gap: 12px;
   padding: calc(var(--safe-top) + 12px) 15px 8px;
-  border-bottom: 1px solid var(--color-divider);
+  border-bottom: var(--hairline) solid var(--color-divider);
 }
 /* The invite panel sits in the lobby, above the board. It is capped and
    scrolls: a twelve-team league would otherwise push the board off screen. */
@@ -341,7 +341,7 @@ button { font-family: inherit; }
   margin: 10px 15px 0;
   padding: 12px 13px;
   background: var(--color-surface);
-  border: 1px solid var(--color-divider);
+  border: var(--hairline) solid var(--color-divider);
   border-radius: 12px;
   max-height: 46vh;
   overflow-y: auto;
@@ -536,7 +536,7 @@ button { font-family: inherit; }
   flex-direction: column;
   min-height: 0;
   background: var(--color-surface);
-  border-top: 1px solid var(--color-divider);
+  border-top: var(--hairline) solid var(--color-divider);
   border-radius: 16px 16px 0 0;
   padding-bottom: var(--safe-bottom);
 }
@@ -567,7 +567,7 @@ button { font-family: inherit; }
   padding: 9px 15px;
   overflow-x: auto;
   flex: none;
-  border-bottom: 1px solid var(--color-divider);
+  border-bottom: var(--hairline) solid var(--color-divider);
 }
 .pos-chip {
   font: inherit;
@@ -606,7 +606,7 @@ button { font-family: inherit; }
   border-radius: 10px;
   color: var(--color-text);
   background: rgba(242, 253, 254, 0.06);
-  border: 1px solid var(--color-divider);
+  border: var(--hairline) solid var(--color-divider);
 }
 .dock-list {
   flex: 1;
@@ -619,7 +619,7 @@ button { font-family: inherit; }
   align-items: center;
   gap: 10px;
   padding: 9px 15px;
-  border-bottom: 1px solid var(--color-divider);
+  border-bottom: var(--hairline) solid var(--color-divider);
 }
 .pl-draft {
   font: inherit;
@@ -920,7 +920,7 @@ button { font-family: inherit; }
   letter-spacing: .11em;
   text-transform: uppercase;
   color: rgba(242, 253, 254, .32);
-  border-top: 1px solid var(--color-divider);
+  border-top: var(--hairline) solid var(--color-divider);
 }
 
 /* ── Matchups ─────────────────────────────────────────────────────────────
@@ -972,7 +972,7 @@ button { font-family: inherit; }
   flex: none;
   border-radius: 8px;
   object-fit: cover;
-  border: 1px solid var(--color-divider);
+  border: var(--hairline) solid var(--color-divider);
 }
 .mu-av-blank { background: rgba(233, 233, 237, 0.06); }
 
@@ -1029,7 +1029,7 @@ button { font-family: inherit; }
   flex: none;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid var(--color-divider);
+  border: var(--hairline) solid var(--color-divider);
 }
 .ms-av-blank { background: rgba(233, 233, 237, 0.06); }
 .ms-score { flex: 1; min-width: 0; }
@@ -1113,14 +1113,14 @@ button { font-family: inherit; }
   letter-spacing: -0.01em;
   padding: 14px 0 8px;
   color: rgba(233, 233, 237, 0.75);
-  border-top: 1px solid var(--color-divider);
+  border-top: var(--hairline) solid var(--color-divider);
 }
 .ms-row {
   display: flex;
   align-items: center;
   gap: 5px;
   padding: 10px 0;
-  border-top: 1px solid var(--color-divider);
+  border-top: var(--hairline) solid var(--color-divider);
 }
 /* The slot is the spine the two sides hang off, so it keeps its width
    whatever is beside it and never gives any of it up. */
@@ -1233,7 +1233,7 @@ button { font-family: inherit; }
   text-overflow: ellipsis;
   scroll-snap-align: start;
   color: rgba(242, 253, 254, 0.55);
-  border: 1px solid var(--color-divider);
+  border: var(--hairline) solid var(--color-divider);
   background: transparent;
 }
 .tb-team.is-on {
@@ -1244,7 +1244,7 @@ button { font-family: inherit; }
 
 .tb-card {
   background: var(--color-surface);
-  border: 1px solid var(--color-divider);
+  border: var(--hairline) solid var(--color-divider);
   border-radius: 14px;
   padding: 14px 13px;
 }
@@ -1546,7 +1546,7 @@ button { font-family: inherit; }
   padding: 9px 2px;
   background: transparent;
   border: 0;
-  border-top: 1px solid var(--color-divider);
+  border-top: var(--hairline) solid var(--color-divider);
 }
 .fb-pick-row.is-on { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .fb-on { flex: none; font-size: 10px; color: var(--color-accent); }
@@ -1565,7 +1565,7 @@ button { font-family: inherit; }
   color: var(--color-accent);
 }
 .fb-rows { display: flex; flex-direction: column; gap: 12px; margin-top: 11px; }
-.fb-row { border-top: 1px solid var(--color-divider); padding-top: 9px; }
+.fb-row { border-top: var(--hairline) solid var(--color-divider); padding-top: 9px; }
 .fb-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .fb-row-name {
   font-size: 12.5px;

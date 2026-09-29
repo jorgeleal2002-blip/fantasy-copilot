@@ -68,7 +68,7 @@ export function TradePackages(
         return (
           <div key={key} style={{
             paddingTop: 11,
-            borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+            borderTop: i === 0 ? 'none' : 'var(--hairline) solid var(--color-divider)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <div style={{ minWidth: 0 }}>

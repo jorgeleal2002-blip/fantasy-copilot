@@ -38,7 +38,7 @@ export function Segmented<T extends string>({
     <div style={{
       display: 'flex',
       gap: size === 'sm' ? 5 : 6,
-      borderBottom: '1px solid var(--color-divider)',
+      borderBottom: 'var(--hairline) solid var(--color-divider)',
       overflowX: 'auto',
     }}>
       {options.map(o => (
@@ -76,7 +76,7 @@ export function DividedRow({
       onKeyDown={onClick ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
       style={{
         padding: '9px 0',
-        borderTop: first ? '1px solid transparent' : '1px solid var(--color-divider)',
+        borderTop: first ? '1px solid transparent' : 'var(--hairline) solid var(--color-divider)',
         cursor: onClick ? 'pointer' : undefined,
         ...style,
       }}
@@ -152,8 +152,10 @@ export function Screen({ children, animation = 'fadeUp .3s ease backwards' }: { 
  * which is every kicker, every defence and a long tail of the rest. The letters
  * only give way once the image has actually loaded, and come back if it fails.
  */
-export function Face({ photo, pos, size = 34 }: {
+export function Face({ photo, srcSet, pos, size = 34 }: {
   photo?: string | null;
+  /** Both of Sleeper's portraits with their widths, where there are two. */
+  srcSet?: string;
   pos: string;
   size?: number;
 }) {
@@ -175,8 +177,13 @@ export function Face({ photo, pos, size = 34 }: {
       {photo ? (
         <img
           src={photo}
+          // The width it will be drawn at, which is what turns the widths in
+          // srcSet into a choice: the browser multiplies by the screen.
+          srcSet={srcSet || undefined}
+          sizes={srcSet ? size + 'px' : undefined}
           alt=""
           loading="lazy"
+          decoding="async"
           onLoad={() => setOk(true)}
           onError={() => setOk(false)}
           style={{

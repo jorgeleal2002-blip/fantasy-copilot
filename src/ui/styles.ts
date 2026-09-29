@@ -123,6 +123,6 @@ export const trackStyle: CSSProperties = {
   overflow: 'hidden',
 };
 
-export const rowDivider = '1px solid var(--color-divider)';
+export const rowDivider = 'var(--hairline) solid var(--color-divider)';
 
 export { ACCENT, GOOD, BAD, MID };

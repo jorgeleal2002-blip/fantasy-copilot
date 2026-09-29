@@ -196,7 +196,7 @@ function SideDetail({ app, m, t, s }: { app: App; m: Model; t: LeagueTrade; s: T
   }, t.verdict?.band ?? 0);
 
   return (
-    <div style={{ borderTop: '1px solid var(--color-divider)', paddingTop: 8 }}>
+    <div style={{ borderTop: 'var(--hairline) solid var(--color-divider)', paddingTop: 8 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11 }}>
         <span style={{
           fontWeight: 500, color: s.isMe ? 'var(--color-accent)' : 'var(--color-text)', ...ellipsis,

@@ -45,7 +45,7 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
             alt=""
             style={{
               width: 46, height: 46, borderRadius: 11, flex: 'none', objectFit: 'cover',
-              border: '1px solid var(--color-divider)',
+              border: 'var(--hairline) solid var(--color-divider)',
             }}
           />
         ) : null}
