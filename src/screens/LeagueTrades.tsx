@@ -84,11 +84,12 @@ export function LeagueTrades({ app, m }: { app: App; m: Model }) {
 
   return (
     <>
-      <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
+      {/* Judged at today's market rather than the market on the day: whether a
+          deal was fair when it was made is answered by both managers having
+          accepted it. */}
+      <div style={{ fontSize: 12, color: dim(0.5) }}>
         {trades.length === 1 ? '1 trade' : trades.length + ' trades'} this season
-        {mine ? ', ' + mine + ' of them yours' : ''}. Judged at today&apos;s market, not the market on the day
-        — whether a deal was fair when it was made is answered by both managers having accepted it. A pick is
-        worth what its round fetches now, including one already spent in a draft.
+        {mine ? ', ' + mine + ' yours' : ''}
       </div>
       {trades.map(t => <TradeCard key={t.id} app={app} m={m} t={t} />)}
     </>

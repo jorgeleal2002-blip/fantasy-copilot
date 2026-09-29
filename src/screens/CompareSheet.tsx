@@ -65,9 +65,8 @@ function Pick({ app, m, a }: { app: App; m: Model; a: PlayerFit }) {
       <div style={{ fontSize: 19, fontWeight: 500, letterSpacing: '-0.02em' }}>
         Compare {a.name} with
       </div>
-      <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 4, marginBottom: 12, textWrap: 'pretty' }}>
-        This league's players, by what they have averaged.
-        {pos !== a.pos ? ' Across positions the points still compare; what does not is what they cost and who you can start instead of whom.' : ''}
+      <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 4, marginBottom: 12 }}>
+        By points a game
       </div>
       <Segmented options={options} value={pos} onChange={setPos} size="sm" />
       <div style={{ marginTop: 14 }}>

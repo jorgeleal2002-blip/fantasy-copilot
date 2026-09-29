@@ -174,18 +174,15 @@ function Summary({ app, m }: { app: App; m: Model }) {
             <div style={kicker}>
               {m.foundMyTeam ? 'Nothing on your roster yet' : 'We could not find your team'}
             </div>
-            <div style={{ fontSize: 13, lineHeight: 1.55, color: dim(0.62), marginTop: 9, textWrap: 'pretty' }}>
+            <div style={{ fontSize: 13, lineHeight: 1.5, color: dim(0.62), marginTop: 9, textWrap: 'pretty' }}>
               {!m.foundMyTeam
-                ? 'No roster in ' + m.league.name + ' is registered to this Sleeper account, as owner or '
-                  + 'co-owner, so there is no team to read. The rest of the league is on the League tab.'
+                ? 'No roster in ' + m.league.name + ' is registered to this Sleeper account.'
                 : m.draft?.status === 'drafting'
-                  ? 'The draft is running and none of your picks have landed. Strength, holes and lineup quality all come from players you own, so they stay empty until one does.'
-                  : 'This league has not drafted. Strength, holes and lineup quality are all measured off players you own, so there is nothing to rank until the picks are in.'}
+                  ? 'The draft is running and none of your picks have landed yet.'
+                  : 'This league has not drafted yet.'}
             </div>
             <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.45), marginTop: 8, textWrap: 'pretty' }}>
-              {m.foundMyTeam
-                ? 'The board is already rated and ready — every available player carries a Rating for the roster you are about to build.'
-                : 'If you are in this league under a different username, name your team by hand from the You tab — it is remembered for this league.'}
+              {m.foundMyTeam ? 'The board is rated and ready.' : 'Name your team by hand from the You tab.'}
             </div>
             <button
               type="button"

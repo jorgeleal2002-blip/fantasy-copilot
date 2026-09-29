@@ -36,12 +36,6 @@ import { type Tone, placing, toneOf, toneOfRank } from '../model/standing';
 import { TradePackages } from '../ui/TradePackages';
 import { cardTitle, dim, fitColor } from '../ui/styles';
 
-const DATA_NOTE =
-  'Live from Sleeper: league, managers, draft order, picks and the NFL catalog (position, age, team, experience). ' +
-  'Market values come from FantasyCalc, priced for this league\'s format. ' +
-  'Fixtures and last season\'s points allowed by each defence ship with the app, from nflverse. ' +
-  'The Rating, floor and upside are the app\'s own model on top of those.';
-
 export interface Sheet {
   id: string;
   name: string;
@@ -509,9 +503,9 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           omits one reads as a broken screen rather than as an absence. */}
       {fill ? (
         <Card style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 13.5, lineHeight: 1.55, textWrap: 'pretty' }}>
-            No Rating for a {p.pos === 'DEF' ? 'team defence' : 'kicker'}. The number above is
-            where the consensus drafts him, which is the only real signal there is. Take one late.
+          <div style={{ fontSize: 13, color: dim(0.55) }}>
+            No Rating for a {p.pos === 'DEF' ? 'team defence' : 'kicker'} — the number above is
+            where the consensus drafts him.
           </div>
         </Card>
       ) : null}
@@ -588,7 +582,6 @@ function ThisSeason(
 
   const hs = barHeights(games);
   const top = Math.max(...games.map(g => g.pts));
-  const field = ranks?.ppg?.of ?? 0;
 
   return (
     <Card style={{ marginTop: 16 }}>
@@ -608,11 +601,6 @@ function ThisSeason(
           Compare ›
         </button>
       </div>
-      <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 3, textWrap: 'pretty' }}>
-        In this league's own scoring. Byes and the weeks he did not play are
-        left out rather than averaged in as nothing.
-      </div>
-
       <div className="ps-grid">
         {cells.map(c => (
           <div className="ps-cell" key={c.k}>
@@ -622,15 +610,6 @@ function ThisSeason(
           </div>
         ))}
       </div>
-
-      {field > 1 ? (
-        <div style={{ fontSize: 11, color: dim(0.4), marginTop: 12, textWrap: 'pretty' }}>
-          Ranked among the {field} {pos}s rostered in this league — the men who
-          could be started instead of him. <b>Floor</b> is what he clears three
-          weeks in four and <b>ceiling</b> what he reaches one in four, which is
-          the difference between a safe start and one you need a big week from.
-        </div>
-      ) : null}
 
       <div className="ps-bars" role="img" aria-label={'points by week: ' + games.map(g => 'week ' + g.week + ', ' + g.pts.toFixed(1)).join('; ')}>
         {games.map((g, i) => (
@@ -657,9 +636,6 @@ function ThisSeason(
         <Tiles rows={stats} />
         <More label="More numbers">
           <Tiles rows={deeper} />
-          <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), marginTop: 14, textWrap: 'pretty' }}>
-            {DATA_NOTE}
-          </div>
         </More>
       </div>
 

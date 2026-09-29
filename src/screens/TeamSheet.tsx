@@ -148,14 +148,14 @@ function angle(info: Sheet, m: Model): string {
   const w = info.row.window;
   if (!m.isDynasty) {
     return w === 'contender'
-      ? 'Strong roster: they only move for a clear upgrade to their starting lineup.'
+      ? 'Strong roster — only a clear lineup upgrade moves them.'
       : w === 'rebuild'
-        ? 'Weak roster: they accept almost any upgrade, even giving up their best piece for two starters.'
-        : 'Balanced roster: they trade on pure value, position for position.';
+        ? 'Weak roster — takes almost any upgrade.'
+        : 'Balanced — trades position for position.';
   }
   return w === 'contender'
-    ? 'They want to win now. They buy immediate production and let go of future picks. Offer veterans with a role; ask for draft capital.'
+    ? 'Buying now. Offer veterans with a role; ask for picks.'
     : w === 'rebuild'
-      ? 'They are accumulating. They will let veterans go cheap and they want youth and picks. Offer picks; ask for their 27-and-older producers.'
-      : 'No clear direction: they move on pure value. Even offers with a slight premium work here.';
+      ? 'Accumulating. Offer picks; ask for their 27-and-older.'
+      : 'No clear direction. Trades on pure value.';
 }

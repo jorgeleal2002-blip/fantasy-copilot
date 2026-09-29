@@ -75,9 +75,8 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
         <Block app={app} m={m} />
       ) : (
         <>
-          <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
-            {m.offers.length === 1 ? '1 trade' : m.offers.length + ' trades'} simulated with your bench and your picks —
-            never with your starters. Some raise your lineup immediately; others turn pieces that never play into draft capital.
+          <div style={{ fontSize: 12, color: dim(0.5) }}>
+            {m.offers.length === 1 ? '1 trade' : m.offers.length + ' trades'}
           </div>
 
           {visible.map(o => (
@@ -97,10 +96,6 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
             />
           ) : null}
 
-          <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), textWrap: 'pretty' }}>
-            Every offer is simulated: your optimal lineup and theirs are recomputed with the swap applied. An offer only shows
-            up if you gain and the other manager would plausibly accept — rookie picks included, on both sides.
-          </div>
         </>
       )}
     </Screen>
@@ -144,12 +139,6 @@ function Block({ app, m }: { app: App; m: Model }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
-        Name the players you would move and the search runs on them — starters
-        included. Every offer is still simulated on both sides, so what you see
-        is what a rival would plausibly accept.
-      </div>
-
       <Card>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
           <div style={cardTitle}>On the block</div>
@@ -295,9 +284,10 @@ function Shortlist({ app, m }: { app: App; m: Model }) {
 
   return (
     <>
-      <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
-        {app.saved.length === 1 ? '1 trade' : app.saved.length + ' trades'} you marked as interesting. Sleeper has no
-        API for sending offers, so propose them there — this is the list to work from.
+      {/* Sleeper has no API for sending an offer, so this stays a list to work
+          from rather than a thing you can send. */}
+      <div style={{ fontSize: 12, color: dim(0.5) }}>
+        {app.saved.length === 1 ? '1 trade' : app.saved.length + ' trades'} saved
       </div>
 
       {app.saved.map(t => {
@@ -331,7 +321,7 @@ function Shortlist({ app, m }: { app: App; m: Model }) {
             <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.55), marginTop: 10, textWrap: 'pretty' }}>
               {live
                 ? t.note
-                : 'The rosters moved since you saved this, so the model no longer builds this exact deal. Open the player to see what he costs now.'}
+                : 'The rosters moved — this deal no longer builds.'}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>

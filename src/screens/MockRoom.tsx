@@ -546,15 +546,6 @@ function InvitePanel({ app, m, finished, onClose }: {
           Close
         </button>
       </div>
-      <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.5), marginTop: 6, textWrap: 'pretty' }}>
-        {app.liveOn
-          ? 'Two ways in. A room puts everybody in one draft, picking in turn. '
-            + 'Sharing the board sends the same players and the same bots to '
-            + 'each of you to draft alone, and you compare teams after.'
-          : 'When this board is drafted out you can send it on. Whoever opens the '
-            + 'link gets the same players, the same bots and the same order, drafts '
-            + 'it from their own seat, and then the two teams can be compared.'}
-      </div>
 
       {app.liveOn ? (
         <>
@@ -588,11 +579,8 @@ function InvitePanel({ app, m, finished, onClose }: {
               </span>
             </div>
           ) : null}
-          <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.45), marginTop: 7, textWrap: 'pretty' }}>
-            {app.roomId
-              ? 'They pick in turn with you, on this board — from the link, or by '
-                + 'typing that code under Draft → Mock. Seats nobody claims are drafted by the app.'
-              : 'One room, everyone picking in turn. Seats nobody takes are drafted by the app.'}
+          <div style={{ fontSize: 11, color: dim(0.45), marginTop: 7 }}>
+            Seats nobody takes are drafted by the app.
           </div>
           {app.roomError ? (
             <div style={{ fontSize: 11.5, color: BAD, marginTop: 6 }} role="alert">{app.roomError}</div>
@@ -632,10 +620,8 @@ function InvitePanel({ app, m, finished, onClose }: {
           Share this board
         </button>
       ) : (
-        <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.4), marginTop: app.liveOn ? 0 : 11, textWrap: 'pretty' }}>
-          Once the board is drafted out, this is where you send it — the same
-          players and the same bots, for somebody else to draft against, and a
-          team to hold yours up next to.
+        <div style={{ fontSize: 11.5, color: dim(0.4), marginTop: app.liveOn ? 0 : 11 }}>
+          Send this board on: the same players, bots and order.
         </div>
       )}
 
