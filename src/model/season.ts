@@ -98,3 +98,9 @@ export function barHeights(games: Game[], min = 0.06): number[] {
   if (!(top > 0)) return games.map(() => min);
   return games.map(g => Math.max(min, g.pts / top));
 }
+
+/** What he scored in one particular week, or nothing if he did not play it. */
+export function pointsInWeek(games: Game[] | undefined, week: number): number | null {
+  const g = games?.find(x => x.week === week);
+  return g ? g.pts : null;
+}

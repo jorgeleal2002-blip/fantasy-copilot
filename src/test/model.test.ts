@@ -17,7 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
-import { barHeights, ordinal, quantile, rankAmong, seasonLine } from '../model/season';
+import { barHeights, ordinal, pointsInWeek, quantile, rankAmong, seasonLine } from '../model/season';
 import { SCREEN_TRUST, bestHeight } from '../model/viewport';
 import { FULL_SQ, THUMB_SQ, playerPhotoSet } from '../api/sleeper';
 import { PULL_MAX, PULL_RESIST, PULL_SLOP, PULL_TRIGGER, edgeAt, pullArmed, pullFrom, pullProgress } from '../model/pull';
@@ -4073,5 +4073,33 @@ describe('a player\'s season in fantasy points', () => {
     expect(hs[1]).toBe(1);
     // And does not divide by zero when no week scored at all.
     expect(barHeights(g(0, 0)).every(h => h > 0)).toBe(true);
+  });
+});
+
+/* A week's score is asked as a placing: "19.5" is a number, "QB7" is a week.
+   Which needs picking one week out of a season that only holds the weeks he
+   played — there is no row for a bye, so an index is not a week. */
+describe('what he scored in one week', () => {
+  const season = [{ week: 1, pts: 35.7 }, { week: 3, pts: 19.5 }, { week: 4, pts: 40.8 }];
+
+  it('finds a week by its number, not by where it sits', () => {
+    expect(pointsInWeek(season, 1)).toBe(35.7);
+    expect(pointsInWeek(season, 3)).toBe(19.5);
+    expect(pointsInWeek(season, 4)).toBe(40.8);
+  });
+
+  it('says nothing for a week he did not play', () => {
+    // Week 2 is his bye: absent, not zero, and the difference is the whole
+    // reason the weeks carry their own number.
+    expect(pointsInWeek(season, 2)).toBe(null);
+    expect(pointsInWeek(season, 9)).toBe(null);
+    expect(pointsInWeek(undefined, 1)).toBe(null);
+    expect(pointsInWeek([], 1)).toBe(null);
+  });
+
+  it('places him in that week against the field that played it', () => {
+    const field = [40.8, 19.5, 28.0, 12.1];
+    expect(rankAmong(pointsInWeek(season, 3) as number, field)).toEqual({ rank: 3, of: 4 });
+    expect(rankAmong(pointsInWeek(season, 4) as number, field)).toEqual({ rank: 1, of: 4 });
   });
 });

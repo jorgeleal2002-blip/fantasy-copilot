@@ -21,7 +21,7 @@ import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
 import { pickEncoding } from '../model/photo';
-import { type Game, type SeasonLine, rankAmong, seasonLine } from '../model/season';
+import { type Game, type SeasonLine, pointsInWeek, rankAmong, seasonLine } from '../model/season';
 import { type HeldStats, projectionsAreStale, readProjections, statsForWeek } from '../model/projections';
 import type { WeekScore } from '../model/power';
 import { nextDetailStack, topDetail } from './detail-stack';
@@ -1225,6 +1225,31 @@ export function useApp() {
   const seasonOf = useCallback((id: string) => seasonLine(seasonPoints[id] || []), [seasonPoints]);
 
   /**
+   * Where he finished that week among the men at his position.
+   *
+   * The same field as the season ranks: everybody rostered in THIS league who
+   * played that week, because that is who could have been started instead of
+   * him. An NFL-wide finish would be the more familiar number and a less
+   * useful one — it counts thirty quarterbacks nobody here can start, and it
+   * would have to be recomputed from raw stats where this is Sleeper's own
+   * total under this league's settings.
+   */
+  const weekRank = useCallback((id: string, pos: string, week: number) => {
+    const mine = pointsInWeek(seasonPoints[id], week);
+    if (mine == null) return null;
+    const players = dataRef.current?.players || {};
+    const field: number[] = [];
+    for (const r of dataRef.current?.rosters || []) {
+      for (const pid of r.players || []) {
+        if (players[pid]?.position !== pos) continue;
+        const p = pointsInWeek(seasonPoints[pid], week);
+        if (p != null) field.push(p);
+      }
+    }
+    return rankAmong(mine, field);
+  }, [seasonPoints]);
+
+  /**
    * Where each of those numbers puts him among the men at his position who
    * could be started instead of him.
    *
@@ -1432,7 +1457,7 @@ export function useApp() {
     gameStats, fetchGameStats,
     tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,
-    weekScores, powerState, fetchWeekScores, seasonPpg, seasonLog, seasonOf, seasonRanks,
+    weekScores, powerState, fetchWeekScores, seasonPpg, seasonLog, seasonOf, seasonRanks, weekRank,
 
     accounts, switchAccount, forgetAccount,
     block: (leagueId ? blocks[username + '/' + leagueId] : undefined) || [],

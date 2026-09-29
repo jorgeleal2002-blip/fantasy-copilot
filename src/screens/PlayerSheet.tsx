@@ -613,6 +613,7 @@ function ThisSeason(
           const bits = statBits(app.gameStats[g.week]?.[id], pos).slice(0, FEED_STATS);
           const opp = OPPONENTS[team]?.[g.week - 1] || '';
           const d = Math.round((g.pts - line.ppg) * 10) / 10;
+          const fin = app.weekRank(id, pos, g.week);
           return (
             <div className="ps-feed" key={g.week}>
               <Face {...app.photoSet(id)} pos={pos} size={44} round />
@@ -622,7 +623,13 @@ function ThisSeason(
                     Week {g.week}
                     <span className="ps-feed-pts">{' · ' + g.pts.toFixed(1) + ' pts'}</span>
                   </div>
-                  {line.games > 1 ? (
+                  {/* Where he finished that week among the men at his
+                      position — the question a week's score is actually
+                      asked in. "19.5" is a number; "QB7" is a week. Worn in
+                      the accent, as every other placement on this card is. */}
+                  {fin ? (
+                    <div className="ps-feed-rk">{pos + fin.rank}</div>
+                  ) : line.games > 1 ? (
                     <div className={'ps-feed-d' + (d >= 0 ? ' is-up' : '')}>
                       {(d >= 0 ? '▲ ' : '▼ ') + Math.abs(d).toFixed(1)}
                     </div>

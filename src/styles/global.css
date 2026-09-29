@@ -1868,6 +1868,16 @@ button { font-family: inherit; }
   color: rgba(233, 233, 237, 0.4);
 }
 .ps-feed-d.is-up { color: #8ec9a8; }
+/* His finish that week. A placement, so it is the accent — the same colour
+   every other "where does he come" on this card is written in. */
+.ps-feed-rk {
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
 
 .ps-feed-stats {
   display: flex;
