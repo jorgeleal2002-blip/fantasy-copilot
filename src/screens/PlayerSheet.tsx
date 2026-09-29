@@ -386,8 +386,6 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </div>
       </div>
 
-      {fill ? null : <ThisSeason app={app} pos={p.pos} team={p.team} id={p.id} />}
-
       {/* First, because it is the answer. It used to sit under a paragraph
           about how a projection is built and a nine-row breakdown — below the
           fold on the one thing somebody opened the card to find out. */}
@@ -473,6 +471,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </More>
       </Card>
       )}
+
+      {fill ? null : <ThisSeason app={app} pos={p.pos} team={p.team} id={p.id} />}
 
       {fill || m.isDynasty ? null : <Schedule pos={p.pos} team={p.team} league={m.league} />}
 
