@@ -56,6 +56,77 @@ const POLL_MS = 4000;
 
 const roomPath = (id: string) => LIVE_URL + '/rooms/' + encodeURIComponent(id) + '.json';
 
+/* ── Player photos the whole league sees ──────────────────────────────────
+ *
+ * A photo somebody uploads replaces Sleeper's portrait, and until now it did
+ * so on one phone: the joke was on the person who made it and nobody else.
+ * They live under the league rather than globally, so the same player can
+ * carry a different face in two leagues — which is the only sane answer when
+ * two sets of people are each renaming him.
+ *
+ * Kept deliberately small. A 160px JPEG is around ten kilobytes and a league
+ * will collect a few dozen of them; a camera-roll original would be megabytes
+ * and is refused rather than truncated, because half a photo is not a photo.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+export interface SharedPhoto {
+  /** a data URL, already square-cropped and downscaled by the uploader */
+  data: string;
+  at: number;
+  /** who set it, so a card can say whose joke it is */
+  by: string;
+}
+
+/** Past this a photo is not a thumbnail any more and does not belong in a
+ *  database everybody in the league reads on every launch. */
+export const PHOTO_MAX_BYTES = 48 * 1024;
+
+const photoPath = (leagueId: string, playerId?: string) =>
+  LIVE_URL + '/photos/' + encodeURIComponent(leagueId)
+  + (playerId ? '/' + encodeURIComponent(playerId) : '') + '.json';
+
+/**
+ * What of a photos payload is safe to put on a card.
+ *
+ * Anyone with the league id can write here — that is the feature — so what
+ * comes back is somebody else's input and goes straight into an `img src`.
+ * A value has to be an inline image and nothing else: `javascript:` and
+ * `http:` are both perfectly good `src` values and neither is a photo
+ * somebody uploaded. Oversized entries are dropped rather than rendered,
+ * since the cap is what keeps a launch from pulling megabytes.
+ */
+export function keepPhotos(raw: unknown): Record<string, SharedPhoto> {
+  const out: Record<string, SharedPhoto> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [id, v] of Object.entries(raw as Record<string, unknown>)) {
+    const p = v as Partial<SharedPhoto>;
+    if (!p || typeof p.data !== 'string') continue;
+    if (!p.data.startsWith('data:image/')) continue;
+    if (p.data.length > PHOTO_MAX_BYTES) continue;
+    out[id] = { data: p.data, at: Number(p.at) || 0, by: String(p.by || '') };
+  }
+  return out;
+}
+
+/** Every photo this league has set. Empty when there is no database, which is
+ *  the feature being off rather than broken. */
+export async function readPhotos(leagueId: string): Promise<Record<string, SharedPhoto>> {
+  if (!LIVE_URL || !leagueId) return {};
+  return keepPhotos(await send(photoPath(leagueId), 'GET'));
+}
+
+export async function putPhoto(leagueId: string, playerId: string, photo: SharedPhoto): Promise<void> {
+  if (!LIVE_URL || !leagueId) return;
+  if (photo.data.length > PHOTO_MAX_BYTES) throw new Error('photo too large');
+  await send(photoPath(leagueId, playerId), 'PUT', photo);
+}
+
+/** Put the real portrait back for everybody, not only for whoever asked. */
+export async function dropPhoto(leagueId: string, playerId: string): Promise<void> {
+  if (!LIVE_URL || !leagueId) return;
+  await send(photoPath(leagueId, playerId), 'DELETE');
+}
+
 /** Six characters a person can read down a phone line. No l/1/O/0. */
 export function newRoomId(): string {
   let out = '';
@@ -90,9 +161,10 @@ async function send(url: string, method: string, body?: unknown): Promise<unknow
 export function liveReason(e: unknown, what: string): string {
   const msg = String((e as Error)?.message || e);
   if (/40[13]/.test(msg)) {
-    return 'The database refused it — your rules are not published. Firebase '
-      + 'console → Realtime Database → Rules → Publish (the rules playground '
-      + 'only simulates, it does not publish). The README has the rules to paste.';
+    return 'The database refused it — your rules do not cover this, or were '
+      + 'never published. Firebase console → Realtime Database → Rules → '
+      + 'Publish (the rules playground only simulates, it does not publish). '
+      + 'The README has the rules to paste; photos need a newer set than rooms.';
   }
   return 'Could not ' + what + '. The database did not answer (' + msg + ').';
 }

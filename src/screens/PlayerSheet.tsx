@@ -79,6 +79,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const conf = proj != null ? projectConfidence(p.use) : null;
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
+  const setter = app.photoBy(p.id);
   const u = p.use;
 
   /**
@@ -228,14 +229,21 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
               .concat([p.ownerLabel]).join(' · ')}
           </div>
           {custom ? (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => app.clearPhoto(p.id)}
-              style={{ fontSize: 11, marginTop: 6, padding: 0 }}
-            >
-              Restore original photo
-            </button>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => app.clearPhoto(p.id)}
+                style={{ fontSize: 11, padding: 0 }}
+              >
+                Restore original photo
+              </button>
+              {/* Whose joke it is, and that it is not only yours. A photo the
+                  league can see should say so before somebody finds out. */}
+              {setter ? (
+                <span style={{ fontSize: 10.5, color: dim(0.35) }}>set by {setter} · the league sees it</span>
+              ) : null}
+            </div>
           ) : null}
         </div>
 

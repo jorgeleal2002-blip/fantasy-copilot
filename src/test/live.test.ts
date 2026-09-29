@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { EMPTY_ROOM, newRoomId } from '../api/live';
+import { EMPTY_ROOM, PHOTO_MAX_BYTES, keepPhotos, newRoomId } from '../api/live';
 import { caretAfterClean, cleanRoomCode, isRoomCode, roomCodeProblem } from '../model/invite';
 import { LOOKS } from '../ui/brainrot';
 import type { ClipName } from '../ui/sfx';
@@ -211,5 +211,38 @@ describe('the brainrot cards', () => {
     const moves = new Set(CLIP_NAMES.map(n => LOOKS[n].move));
     CLIP_NAMES.forEach(n => expect(LOOKS[n].move).toBeTruthy());
     expect(moves.size).toBeGreaterThan(3);
+  });
+});
+
+/**
+ * A photo the whole league can set is a photo anybody in it can set, and what
+ * comes back goes straight into an `img src`. That makes the read the boundary.
+ */
+describe('photos the league shares', () => {
+  const ok = 'data:image/jpeg;base64,abc';
+
+  it('keeps an inline image and normalises what came with it', () => {
+    expect(keepPhotos({ '4046': { data: ok, at: 12, by: 'jorge' } }))
+      .toEqual({ '4046': { data: ok, at: 12, by: 'jorge' } });
+    // A row with the bookkeeping missing is still a photo.
+    expect(keepPhotos({ x: { data: ok } })).toEqual({ x: { data: ok, at: 0, by: '' } });
+  });
+
+  it('refuses anything that is not an inline image', () => {
+    // Both of these are perfectly good `src` values and neither is a photo.
+    expect(keepPhotos({ a: { data: 'javascript:alert(1)' } })).toEqual({});
+    expect(keepPhotos({ a: { data: 'https://example.com/x.png' } })).toEqual({});
+    expect(keepPhotos({ a: { data: 42 } })).toEqual({});
+    expect(keepPhotos({ a: null })).toEqual({});
+  });
+
+  it('drops one too big to be a thumbnail', () => {
+    const huge = 'data:image/jpeg;base64,' + 'a'.repeat(PHOTO_MAX_BYTES);
+    expect(keepPhotos({ a: { data: huge } })).toEqual({});
+  });
+
+  it('has nothing to say about a payload that never arrived', () => {
+    expect(keepPhotos(null)).toEqual({});
+    expect(keepPhotos('nope')).toEqual({});
   });
 });

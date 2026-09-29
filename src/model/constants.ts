@@ -252,6 +252,10 @@ export const PROJ_TTL_MS = 5 * 60 * 1000;
 
 export const STORAGE_SESSION = 'fc.session';
 export const STORAGE_PHOTOS = 'fc.photos';
+/** Leagues this device has already handed its own photos over to. Once per
+ *  league and never again, so a photo the league takes down is not pushed
+ *  back up by whoever still had it cached. */
+export const STORAGE_PHOTOS_SENT = 'fc.photos.sent';
 /** Trades you marked as interesting, kept per league across launches. */
 export const STORAGE_SAVED = 'fc.saved';
 /** "username/leagueId" → roster_id, for when your team is not under the

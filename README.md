@@ -241,7 +241,8 @@ Turning it on takes about two minutes and costs nothing:
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com).
 2. Build → **Realtime Database** → Create database. Any region. Start in
    **locked mode**.
-3. Under **Rules**, allow reads and writes to rooms only:
+3. Under **Rules**, allow reads and writes to rooms and to league photos, and
+   to nothing else:
 
    ```json
    {
@@ -252,15 +253,32 @@ Turning it on takes about two minutes and costs nothing:
            ".write": true,
            ".validate": "newData.hasChildren(['seed','leagueId'])"
          }
+       },
+       "photos": {
+         "$league": {
+           ".read": true,
+           "$player": {
+             ".write": true,
+             ".validate": "newData.hasChildren(['data','at','by']) && newData.child('data').isString() && newData.child('data').val().length <= 49152"
+           }
+         }
        }
      }
    }
    ```
 
-   Anyone holding a room code can read and write that room. For a mock draft
-   among friends that is the right trade; it is not a place for anything you
-   would mind a stranger seeing, and there is nothing personal in a room — a
-   seed, a league id, some seat names and a list of player ids.
+   Anyone holding a room code can read and write that room, and anyone with a
+   league id can read and write that league's photos. For a mock draft and a
+   set of in-jokes among friends that is the right trade; neither is a place
+   for anything you would mind a stranger seeing. A room holds a seed, a
+   league id, some seat names and a list of player ids. A photo is a 160px
+   thumbnail somebody chose to put on a card — the 49152 is the same cap the
+   app enforces before it uploads, so the rule and the code agree about what
+   counts as a thumbnail.
+
+   **If you set this up before league photos existed, republish.** The old
+   rules covered `rooms` and nothing else, so photos will be refused until
+   this set is published over them.
 4. Copy the database URL from the top of that page. It looks like
    `https://your-project-default-rtdb.firebaseio.com`.
 5. Locally, put it in `.env`:

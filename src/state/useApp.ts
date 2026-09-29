@@ -7,10 +7,11 @@ import {
 import type {
   LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup, SleeperTransaction,
 } from '../api/types';
-import { DRAFT_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import { DRAFT_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
-  EMPTY_ROOM, claimSeat, createRoom as createRoomAt, liveEnabled, liveReason, newRoomId,
-  pushPick, readRoom, restartRoom, startRoom, watchRoom, type Room,
+  EMPTY_ROOM, PHOTO_MAX_BYTES, claimSeat, createRoom as createRoomAt, dropPhoto, liveEnabled,
+  liveReason, newRoomId, pushPick, putPhoto, readPhotos, readRoom, restartRoom, startRoom,
+  watchRoom, type Room, type SharedPhoto,
 } from '../api/live';
 import {
   ROOM_LEN, cleanRoomCode, clearInvite, isRoomCode, parseInvite, roomCodeProblem, type Invite,
@@ -180,7 +181,12 @@ export function useApp() {
 
   // ── ephemera
   const [toast, setToast] = useState('');
-  const [photos, setPhotos] = useState<Record<string, string>>({});
+  /** Photos this device set before there was anywhere to share them, and the
+   *  fallback whenever there is no database. */
+  const [localPhotos, setLocalPhotos] = useState<Record<string, string>>({});
+  /** What the league has set, mirrored from the database — replaced wholesale
+   *  on every read, so a photo somebody DELETES stops showing here too. */
+  const [leaguePhotos, setLeaguePhotos] = useState<Record<string, SharedPhoto>>({});
   const toastTimer = useRef<number | undefined>(undefined);
   const poll = useRef<number | undefined>(undefined);
   const dataRef = useRef<LeagueBundle | null>(null);
@@ -492,7 +498,7 @@ export function useApp() {
 
   // ── boot: resume the saved session, or ask for a username.
   useEffect(() => {
-    setPhotos(readJson<Record<string, string>>(STORAGE_PHOTOS, {}));
+    setLocalPhotos(readJson<Record<string, string>>(STORAGE_PHOTOS, {}));
     setSavedAll(readJson<SavedTrade[]>(STORAGE_SAVED, []));
     setTeamPick(readJson<Record<string, number>>(STORAGE_TEAM, {}));
     setAccounts(readJson<{ username: string; leagueId: string }[]>(STORAGE_ACCOUNTS, []));
@@ -888,19 +894,40 @@ export function useApp() {
     if (leagueId) void load(leagueId, username);
   }, [leagueId, load, username]);
 
-  // ── Player photos: whatever you upload wins over Sleeper's portrait.
+  /* ── Player photos ──────────────────────────────────────────────────────
+   *
+   * Whatever somebody uploads wins over Sleeper's portrait, and it wins for
+   * the whole league rather than for the phone it was uploaded from — the
+   * joke was previously on its author and nobody else.
+   *
+   * The league's copy is the truth and the local one is the fallback, in that
+   * order, so a photo somebody takes down disappears for everybody on the
+   * next read instead of living on in whoever had already cached it. With no
+   * database configured the local copy is all there is, which is the app
+   * exactly as it behaved before.
+   * ──────────────────────────────────────────────────────────────────────── */
+  const photos = useMemo(() => {
+    const out: Record<string, string> = { ...localPhotos };
+    for (const [id, p] of Object.entries(leaguePhotos)) out[id] = p.data;
+    return out;
+  }, [localPhotos, leaguePhotos]);
+
   const photoFor = useCallback(
     (id: string, size?: 'thumb' | 'full') => photos[id] || playerPhoto(id, size),
     [photos],
   );
+
+  /** Who set the photo on screen, where the league set it. */
+  const photoBy = useCallback((id: string) => leaguePhotos[id]?.by || '', [leaguePhotos]);
 
   const setPhoto = useCallback((id: string, file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        // Square-crop and downscale before storing: localStorage is small and a
-        // camera roll photo would blow the quota on its own.
+        // Square-crop and downscale before storing: a camera-roll photo would
+        // blow localStorage's quota on its own, and it is worse than that in a
+        // database the whole league reads on every launch.
         const size = 160;
         const c = document.createElement('canvas');
         c.width = size;
@@ -909,27 +936,94 @@ export function useApp() {
         if (!ctx) return;
         const side = Math.min(img.width, img.height);
         ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
-        setPhotos(prev => {
-          const next = { ...prev, [id]: c.toDataURL('image/jpeg', 0.82) };
+        const data = c.toDataURL('image/jpeg', 0.82);
+
+        const lid = leagueId;
+        const who = dataRef.current?.me?.display_name || username || 'someone';
+        if (liveEnabled() && lid) {
+          const shared = { data, at: Date.now(), by: who };
+          // Shown at once and sent behind it: a photo that waits on a round
+          // trip to appear feels like it did not take.
+          setLeaguePhotos(prev => ({ ...prev, [id]: shared }));
+          void putPhoto(lid, id, shared)
+            .then(() => showToast('Photo updated for the league'))
+            .catch(e => {
+              setLeaguePhotos(prev => { const n = { ...prev }; delete n[id]; return n; });
+              showToast(liveReason(e, 'share that photo'));
+            });
+          return;
+        }
+
+        setLocalPhotos(prev => {
+          const next = { ...prev, [id]: data };
           writeJson(STORAGE_PHOTOS, next);
           return next;
         });
-        showToast('Photo updated');
+        showToast('Photo updated on this device');
       };
       img.src = String(reader.result);
     };
     reader.readAsDataURL(file);
-  }, [showToast]);
+  }, [leagueId, showToast, username]);
 
   const clearPhoto = useCallback((id: string) => {
-    setPhotos(prev => {
+    // Both copies, always: clearing only the league's would let this device's
+    // own stale one take over the moment the read came back empty.
+    setLocalPhotos(prev => {
+      if (!(id in prev)) return prev;
       const next = { ...prev };
       delete next[id];
       writeJson(STORAGE_PHOTOS, next);
       return next;
     });
+    const lid = leagueId;
+    if (liveEnabled() && lid && leaguePhotos[id]) {
+      setLeaguePhotos(prev => { const n = { ...prev }; delete n[id]; return n; });
+      void dropPhoto(lid, id).catch(e => showToast(liveReason(e, 'remove that photo')));
+    }
     showToast('Original photo restored');
-  }, [showToast]);
+  }, [leagueId, leaguePhotos, showToast]);
+
+  /**
+   * Read the league's photos, and hand over this device's own the first time.
+   *
+   * The one-time handover is what makes the feature arrive with the photos
+   * already in it rather than asking everybody to upload theirs again. It runs
+   * once per league and never again, so a photo the league later takes down is
+   * not pushed back up by whoever still had it cached.
+   */
+  const syncPhotos = useCallback(async (lid: string) => {
+    if (!liveEnabled() || !lid) return;
+    let shared: Record<string, SharedPhoto>;
+    try {
+      shared = await readPhotos(lid);
+    } catch {
+      return; /* no database reachable: the local copies still show */
+    }
+    setLeaguePhotos(shared);
+
+    const handed = readJson<Record<string, true>>(STORAGE_PHOTOS_SENT, {});
+    if (handed[lid]) return;
+    const mine = readJson<Record<string, string>>(STORAGE_PHOTOS, {});
+    const who = dataRef.current?.me?.display_name || username || 'someone';
+    const added: Record<string, SharedPhoto> = {};
+    for (const [id, data] of Object.entries(mine)) {
+      if (shared[id] || data.length > PHOTO_MAX_BYTES) continue;
+      const photo = { data, at: Date.now(), by: who };
+      try {
+        await putPhoto(lid, id, photo);
+        added[id] = photo;
+      } catch {
+        return; /* leave the flag unset so the next launch tries again */
+      }
+    }
+    if (Object.keys(added).length) setLeaguePhotos(prev => ({ ...prev, ...added }));
+    writeJson(STORAGE_PHOTOS_SENT, { ...handed, [lid]: true });
+  }, [username]);
+
+  useEffect(() => {
+    if (leagueId) void syncPhotos(leagueId);
+  }, [leagueId, syncPhotos]);
 
   // ── The shortlist: trades you said you were interested in.
   const saved = useMemo(
@@ -986,7 +1080,7 @@ export function useApp() {
     /** A refusal is about the code that was refused — see the join box. */
     clearRoomError: () => setRoomError(''),
     filter, rosterFilter, rosterSort, boardMode, rankMode,
-    pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
+    pickSel, strat, detail, passed, toast, photos, photoBy, query, topPos, topLens, topOpen,
     week, matchups, matchupState, projections, tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,
     weekScores, powerState, fetchWeekScores,
