@@ -52,7 +52,7 @@ const statCache = new Map<string, { at: number; map: Record<string, SleeperStatL
 const txCache = new Map<string, SleeperTransaction[]>();
 /** Every team's score in every FINISHED week, for the all-play record. A week
  *  that has closed cannot change, so this needs no age on it. */
-const scoreCache = new Map<string, WeekScore[]>();
+const scoreCache = new Map<string, { scores: WeekScore[]; players: Record<string, number> }>();
 const seasonCache = new Map<string, string>();
 
 function readJson<T>(key: string, fallback: T): T {
@@ -189,6 +189,16 @@ export function useApp() {
   const [tradeLogState, setTradeLogState] = useState<FeedState>('idle');
   /** Scores from the weeks that have finished — see `model/power`. */
   const [weekScores, setWeekScores] = useState<WeekScore[]>([]);
+  /**
+   * What each player has actually scored, week by week, in THIS league's
+   * scoring — out of the same payload the team scores come from.
+   *
+   * The stats feed would give a points-per-game too, and it would be in
+   * half-PPR: the model's currency and almost nobody's league. These are
+   * Sleeper's own totals under this league's settings, which is the number
+   * somebody means when they ask what a player is averaging.
+   */
+  const [seasonPoints, setSeasonPoints] = useState<Record<string, number[]>>({});
   const [powerState, setPowerState] = useState<FeedState>('idle');
   const [matchups, setMatchups] = useState<SleeperMatchup[]>([]);
   const [matchupState, setMatchupState] = useState<FeedState>('idle');
@@ -296,7 +306,7 @@ export function useApp() {
     const lid = leagueId;
     if (!lid) return;
     const last = Math.max(0, Math.min(18, upTo));
-    if (!last) { setWeekScores([]); setPowerState('ok'); return; }
+    if (!last) { setWeekScores([]); setSeasonPoints({}); setPowerState('ok'); return; }
     const teams = (dataRef.current?.rosters || []).length;
 
     setPowerState('loading');
@@ -311,25 +321,40 @@ export function useApp() {
       } catch {
         return null;
       }
-      const out: WeekScore[] = [];
+      const scores: WeekScore[] = [];
+      const players: Record<string, number> = {};
       for (const r of rows || []) {
         // Sleeper reports 0 for a week it has a row but no result for, which
         // is a score; null means no row, and a team with no row did not play.
         if (r.points == null || !Number.isFinite(r.points)) continue;
-        out.push({ rosterId: r.roster_id, week: wk, points: r.points });
+        scores.push({ rosterId: r.roster_id, week: wk, points: r.points });
+        /* The same payload carries what every man on the roster scored, in
+         * this league's own scoring. A zero is a bye or a week he did not
+         * play, and averaging it in would say he is worse than he is. */
+        for (const [pid, pts] of Object.entries(r.players_points || {})) {
+          if (Number.isFinite(pts) && pts !== 0) players[pid] = pts;
+        }
       }
       /* Kept only once the week is over. A week still being played changes
        * every few minutes, and a cache that froze the first partial read of
        * it would hold those half-scores for the rest of the session. */
-      const over = teams > 0 && out.length >= teams && out.every(x => x.points > 0);
-      if (over) scoreCache.set(key, out);
-      return out;
+      const over = teams > 0 && scores.length >= teams && scores.every(x => x.points > 0);
+      if (over) scoreCache.set(key, { scores, players });
+      return { scores, players };
     }));
 
-    const got = weeks.filter((w): w is WeekScore[] => !!w);
+    const got = weeks.filter((w): w is { scores: WeekScore[]; players: Record<string, number> } => !!w);
     // A week that failed is a week; every week failing is the feed being down.
     if (!got.length) { setPowerState('fail'); return; }
-    setWeekScores(got.flat());
+
+    const perPlayer: Record<string, number[]> = {};
+    for (const w of got) {
+      for (const [pid, pts] of Object.entries(w.players)) {
+        (perPlayer[pid] = perPlayer[pid] || []).push(pts);
+      }
+    }
+    setWeekScores(got.flatMap(w => w.scores));
+    setSeasonPoints(perPlayer);
     setPowerState('ok');
   }, [leagueId]);
 
@@ -632,7 +657,12 @@ export function useApp() {
     } else if (showing === wk) {
       void fetchMatchups(lid, wk, true);
     }
-  }, [fetchMatchups]);
+    /* Every finished week of the season, read here rather than from a screen:
+     * the rankings want the team scores and every player's card wants what he
+     * has averaged, and both are in the same payload. Cached a week at a time,
+     * so this is a handful of requests once and nothing after. */
+    void fetchWeekScores(wk);
+  }, [fetchMatchups, fetchWeekScores]);
 
   useEffect(() => {
     if (leagueId) void syncClock(leagueId);
@@ -1033,6 +1063,19 @@ export function useApp() {
     [photos],
   );
 
+  /**
+   * What a player has averaged this season, in this league's scoring.
+   *
+   * Byes and weeks he did not play are left out rather than averaged in as
+   * zeroes — a man who has played twice and sat out once has scored twice.
+   */
+  const seasonPpg = useCallback((id: string): { ppg: number; games: number } | null => {
+    const weeks = seasonPoints[id];
+    if (!weeks || !weeks.length) return null;
+    const total = weeks.reduce((a, b) => a + b, 0);
+    return { ppg: Math.round((total / weeks.length) * 10) / 10, games: weeks.length };
+  }, [seasonPoints]);
+
   /** Who set the photo on screen, where the league set it. */
   const photoBy = useCallback((id: string) => leaguePhotos[id]?.by || '', [leaguePhotos]);
   /**
@@ -1210,7 +1253,7 @@ export function useApp() {
     week, matchups, matchupState, projections, projState, weekStats, fetchWeekStats,
     tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,
-    weekScores, powerState, fetchWeekScores,
+    weekScores, powerState, fetchWeekScores, seasonPpg,
 
     accounts, switchAccount, forgetAccount,
     block: (leagueId ? blocks[username + '/' + leagueId] : undefined) || [],

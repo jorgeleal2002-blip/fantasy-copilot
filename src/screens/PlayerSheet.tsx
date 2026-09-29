@@ -142,6 +142,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const custom = !!app.photos[p.id];
   const setter = app.photoBy(p.id);
   const shared = app.photoShared(p.id);
+  const season = app.seasonPpg(p.id);
   const u = p.use;
 
   /**
@@ -200,7 +201,16 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         return state + (role ? ' · ' + role : '');
       })(),
     },
-    { label: 'Points per game', value: u && u.ppg != null ? u.ppg.toFixed(1) : 'no data' },
+    {
+      /* This season, in this league's scoring — which is what somebody means
+       * when they ask what a player is averaging. `Usage.ppg` is a blend of
+       * four seasons measured in half-PPR, and was neither. It still has a
+       * job: it is what the projection is built out of, on its own card. */
+      label: 'Points per game',
+      value: season
+        ? season.ppg.toFixed(1) + ' · ' + season.games + (season.games === 1 ? ' game' : ' games') + ' this season'
+        : u && u.ppg != null ? u.ppg.toFixed(1) + ' · half-PPR, last seasons' : 'no data',
+    },
     {
       label: 'On the field',
       value: u && u.snap != null ? Math.round(u.snap * 100) + '% of his team\'s snaps' : 'no data',
