@@ -101,7 +101,6 @@ const txCache = new Map<string, SleeperTransaction[]>();
 /** Every team's score in every FINISHED week, for the all-play record. A week
  *  that has closed cannot change, so this needs no age on it. */
 const scoreCache = new Map<string, { scores: WeekScore[]; players: Record<string, number> }>();
-const seasonCache = new Map<string, string>();
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -147,7 +146,6 @@ export function useApp() {
   // ── side feeds
   const [usage, setUsage] = useState<UsageMap>({});
   const [usageState, setUsageState] = useState<FeedState>('idle');
-  const [usageSeasons, setUsageSeasons] = useState('');
   const [market, setMarket] = useState<Market | null>(null);
   const [marketState, setMarketState] = useState<FeedState>('idle');
 
@@ -609,7 +607,6 @@ export function useApp() {
     const key = USAGE_V + ':' + latest + ':' + wk;
     if (usageCache.has(key)) {
       setUsage(usageCache.get(key)!);
-      setUsageSeasons(seasonCache.get(key) || '');
       setUsageState('ok');
       return;
     }
@@ -627,7 +624,6 @@ export function useApp() {
         }
       }
       let u = blendSeasons(loaded, bundle.players);
-      let label = loaded.map(l => l.year).join(' · ');
 
       if (wk > 0) {
         try {
@@ -637,9 +633,6 @@ export function useApp() {
             const played = Object.keys(cur.usage).reduce((n, id) => Math.max(n, cur.usage[id].gp || 0), 0);
             if (played > 0) {
               u = withCurrentSeason(u, cur, bundle.players);
-              // Said out loud, because a number standing on two games and one
-              // standing on a season print the same and are not the same claim.
-              label = season + ' (' + played + ' gm' + (played === 1 ? '' : 's') + ') · ' + label;
             }
           }
         } catch {
@@ -648,9 +641,7 @@ export function useApp() {
       }
 
       usageCache.set(key, u);
-      seasonCache.set(key, label);
       setUsage(u);
-      setUsageSeasons(label);
       setUsageState('ok');
     } catch {
       setUsageState('fail');
@@ -1466,7 +1457,7 @@ export function useApp() {
   return {
     stage, username, leagues, authBusy, authError, error,
     data, step, model, syncing, syncedAt,
-    usageState, usageSeasons, marketState,
+    usageState, marketState,
     tab, teamView, draftView, tradeView, mockSlot, mockOpen, mockStarted,
     // A room owns the seed, the picks and the seat once one is open.
     mockSeed: room ? room.seed : mockSeed,

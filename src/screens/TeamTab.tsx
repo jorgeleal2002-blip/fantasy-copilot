@@ -39,14 +39,15 @@ function Summary({ app, m }: { app: App; m: Model }) {
   const me = m.leagueRows.find(x => x.isMe);
   const shift = me?.shift ?? 0;
 
-  // Naming the seasons matters: the numbers below blend the year being played
-  // with the three before it, and a reader who assumes they are last season's
-  // — or this one's — will misread every one of them.
-  const usageBadge = app.usageState === 'ok'
-    ? `Real usage connected (${app.usageSeasons || 'last season'}): snap %, ball share, yards per touch and expected TDs`
-    : app.usageState === 'loading' ? 'Loading this season and the three before it…'
-      : app.usageState === 'fail' ? 'No real usage: floor and explosiveness fall back to the model' : '';
-  const usageColor = app.usageState === 'ok' ? GOOD : app.usageState === 'fail' ? BAD : MID;
+  /* Only when something is wrong with it. The working case used to announce
+     itself — two lines naming the four seasons and the four metrics, at the top
+     of the screen, every time — and a feed behaving exactly as intended is not
+     news. Failing and still loading are, because both mean the numbers below
+     are not the ones the screen is for. */
+  const usageBadge = app.usageState === 'loading'
+    ? 'Loading this season and the three before it…'
+    : app.usageState === 'fail' ? 'No real usage: floor and explosiveness fall back to the model' : '';
+  const usageColor = app.usageState === 'fail' ? BAD : MID;
 
   const drafted = m.draft?.status === 'complete' || m.picks.length >= m.rounds * m.teamCount;
   const oldest = m.myPlayers.filter(p => (p.age || 25) >= 28).length;
