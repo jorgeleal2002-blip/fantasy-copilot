@@ -236,24 +236,42 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
  * the league has not priced yet show up.
  */
 function TopPlayers({ app, m }: { app: App; m: Model }) {
-  const lens = app.topLens;
-  const valueOf = (x: PlayerFit) => (lens === 'me' ? x.fitMe : lens === 'fut' ? x.fit2 : x.fit);
+  /* The Points lens only exists once somebody has played: a board of dashes
+     ordered by nothing is worse than not offering it, so before kickoff the
+     option is not there and anyone left on it falls back to the rating. */
+  const played = m.allFits.some(x => app.seasonPpg(x.id));
+  const lens = app.topLens === 'pts' && !played ? 'neutral' : app.topLens;
+
+  const season = (x: PlayerFit) => app.seasonPpg(x.id);
+  /* Sorted on a number, worn as text: points a game reads 18.4, not 18. */
+  const rankBy = (x: PlayerFit) => (
+    lens === 'me' ? x.fitMe
+      : lens === 'fut' ? x.fit2
+        : lens === 'pts' ? (season(x)?.ppg ?? -1)
+          : x.fit);
+  const valueOf = (x: PlayerFit) => (
+    lens === 'pts' ? (season(x)?.ppg.toFixed(1) ?? '—') : String(rankBy(x)));
 
   const list = m.allFits
     .filter(x => app.topPos === 'ALL' || x.pos === app.topPos)
     .slice()
-    .sort((a, b) => valueOf(b) - valueOf(a))
+    .sort((a, b) => rankBy(b) - rankBy(a))
     .slice(0, 15);
 
-  const lensOptions: SegOption<'neutral' | 'me' | 'fut'>[] = m.isDynasty
-    ? [{ key: 'neutral', label: 'Today' }, { key: 'me', label: 'For you' }, { key: 'fut', label: 'In 2 yrs' }]
-    : [{ key: 'neutral', label: 'Today' }, { key: 'me', label: 'For you' }];
+  const lensOptions: SegOption<'neutral' | 'pts' | 'me' | 'fut'>[] = [
+    { key: 'neutral', label: 'Rating' },
+    ...(played ? [{ key: 'pts' as const, label: 'Points' }] : []),
+    { key: 'me', label: 'For you' },
+    ...(m.isDynasty ? [{ key: 'fut' as const, label: 'In 2 yrs' }] : []),
+  ];
 
   const lensNote = lens === 'me'
     ? 'With YOUR positional need and the stack against your roster: how much having him would actually help you.'
     : lens === 'fut'
       ? 'Every player aged two seasons, his quality discounted by his position\'s curve and his metrics recomputed at that age. The ones that climb are the ones the league has not priced yet.'
-      : 'No need term, and the stack measured inside his owner\'s roster: how good he is, full stop. The same for everybody.';
+      : lens === 'pts'
+        ? 'Points a game this season, in this league\'s own scoring. Byes and the weeks he did not play are left out rather than averaged in as nothing.'
+        : 'No need term, and the stack measured inside his owner\'s roster: how good he is, full stop. The same for everybody.';
 
   if (!m.allFits.length) return null;
 
@@ -303,7 +321,11 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
                   <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{x.name}</div>
                   <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2, ...ellipsis }}>
                     {x.pos} · {x.team || 'FA'} ·{' '}
-                    {lens === 'fut' ? `${x.age ?? '?'}→${(x.age || 25) + 2} yrs` : `${x.age ?? '?'} yrs`} ·{' '}
+                    {lens === 'fut'
+                      ? `${x.age ?? '?'}→${(x.age || 25) + 2} yrs`
+                      : lens === 'pts'
+                        ? `${season(x)?.games ?? 0} ${season(x)?.games === 1 ? 'game' : 'games'}`
+                        : `${x.age ?? '?'} yrs`} ·{' '}
                     {x.mine ? 'yours' : x.owner}
                     {lens === 'fut'
                       ? ` · today ${x.fit}${x.fit2 - x.fit > 1 ? ' ↑' : x.fit - x.fit2 > 1 ? ' ↓' : ''}`
