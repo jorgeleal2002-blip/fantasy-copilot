@@ -19,7 +19,7 @@ import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { projectionsAreStale, readProjections, scoreProjection, scoringKind } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
-import { allPlayRecords, powerRankings } from '../model/power';
+import { allPlayRecords, powerRankings, WEIGHTS } from '../model/power';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -2834,12 +2834,68 @@ describe('power rankings', () => {
     expect(power.find(t => t.id === 4)!.rosterRank).toBe(1);
   });
 
-  it('is the roster before a week has finished', () => {
-    const power = powerRankings([row(1), row(2)], []);
+  it('is the roster before a week has finished, not a third of it', () => {
+    // Weights renormalise over what is there. Scoring the two missing parts as
+    // zero would rank every team in the league at a third of its roster.
+    const power = powerRankings([row(1, { now: 20 }), row(2, { now: 10 })], []);
     expect(power).toHaveLength(2);
     expect(power[0].weeks).toBe(0);
+    expect(power[0].score).toBe(100);
+    expect(power[1].score).toBe(50);
     expect(power[0].read).toContain('Nothing played yet');
     expect(power[0].luck).toBe(0);
+  });
+
+  it('is the three parts weighted, and says so on the row', () => {
+    const scores = [
+      ...wk(1, { 1: 120, 2: 80 }), ...wk(2, { 1: 120, 2: 80 }),
+    ];
+    const power = powerRankings([
+      row(1, { now: 20, wins: 2, losses: 0 }),
+      row(2, { now: 10, wins: 0, losses: 2 }),
+    ], scores);
+    const top = power[0];
+    // Beat everyone, best roster, won everything: every part at its maximum.
+    expect(top.parts).toEqual({ points: 1, roster: 1, record: 1 });
+    expect(top.score).toBe(100);
+    // Lost every all-play, half the roster, lost every game.
+    expect(power[1].parts).toEqual({ points: 0, roster: 0.5, record: 0 });
+    expect(power[1].score).toBeCloseTo(WEIGHTS.roster * 0.5 * 100, 6);
+  });
+
+  it('lets the record move a team when the scoring is level', () => {
+    // Identical every week, so points and roster cancel and only the record
+    // is left to separate them — which is the whole of what it is for.
+    const scores = [...Array(4)].flatMap((_, i) => wk(i + 1, { 1: 100, 2: 100 }));
+    const power = powerRankings([
+      row(1, { wins: 1, losses: 3 }),
+      row(2, { wins: 3, losses: 1 }),
+    ], scores);
+    expect(power.map(t => t.id)).toEqual([2, 1]);
+  });
+
+  it('lets the roster move a team when the results are level', () => {
+    // A trade lands the day it happens; the scoring catches up weeks later.
+    const scores = [...Array(4)].flatMap((_, i) => wk(i + 1, { 1: 100, 2: 100 }));
+    const power = powerRankings([
+      row(1, { now: 10, wins: 2, losses: 2 }),
+      row(2, { now: 30, wins: 2, losses: 2 }),
+    ], scores);
+    expect(power.map(t => t.id)).toEqual([2, 1]);
+  });
+
+  it('still puts the team that outscored the league over the one that won', () => {
+    /* The record is in the score now and it is the smallest share of it, so a
+       3-0 built on the soft half of the schedule must not outrank a 0-3 that
+       has outscored everybody every week. */
+    const scores = [
+      ...wk(1, { 1: 140, 2: 90 }), ...wk(2, { 1: 138, 2: 88 }), ...wk(3, { 1: 136, 2: 86 }),
+    ];
+    const power = powerRankings([
+      row(1, { wins: 0, losses: 3 }),
+      row(2, { wins: 3, losses: 0 }),
+    ], scores);
+    expect(power.map(t => t.id)).toEqual([1, 2]);
   });
 
   it('reads a team that is heating up', () => {

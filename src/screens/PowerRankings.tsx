@@ -1,16 +1,18 @@
 import { useEffect, useMemo } from 'react';
 import { BAD, GOOD } from '../model/constants';
-import { powerRankings, RECENT_WEEKS, type PowerTeam } from '../model/power';
+import { powerRankings, RECENT_WEEKS, WEIGHTS, type PowerTeam } from '../model/power';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { Card, Empty } from '../ui/primitives';
 import { cardNote, dim, ellipsis } from '../ui/styles';
 
 /**
- * The league by who has actually been the best, with the schedule taken out.
+ * The league by how good each team actually is.
  *
- * Ordered by the all-play record and nothing else — see `model/power` for why
- * the roster and the recent form are in the sentence rather than in the sort.
+ * Points, roster and record, weighted — see `model/power`. Every part of the
+ * score is printed on the row it produced, because a power ranking is for
+ * arguing with and a number nobody can take apart is a number nobody can
+ * argue with.
  */
 export function PowerRankings({ app, m }: { app: App; m: Model }) {
   // Strictly before the week on the clock: a week in progress is not a result.
@@ -39,26 +41,38 @@ export function PowerRankings({ app, m }: { app: App; m: Model }) {
       <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
         {weeks
           ? <>
-              Every team against every other team, every week — {weeks === 1 ? '1 week' : weeks + ' weeks'} of
-              it, so the schedule has nothing left to say. Losing 130 to the league&apos;s best week and beating
-              78 with 81 count the same in the standings; they do not count the same here.
+              Points {Math.round(WEIGHTS.points * 100)}%, roster {Math.round(WEIGHTS.roster * 100)}%,
+              record {Math.round(WEIGHTS.record * 100)}%. Points is the all-play
+              record — every team against every other team, every week,
+              {' '}{weeks === 1 ? '1 week' : weeks + ' weeks'} of it — so the schedule has nothing left to say.
+              Losing 130 to the league&apos;s best week and beating 78 with 81 count the same in the standings;
+              they do not count the same here.
             </>
-          : <>Nothing has finished yet, so this is the roster. It becomes a record the week after week one.</>}
+          : <>Nothing has finished yet, so this is the roster alone. Points and record join it after week one.</>}
       </div>
 
       {teams.map(t => <Row key={t.id} t={t} />)}
 
       {weeks ? (
         <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), textWrap: 'pretty' }}>
-          Ordered by the all-play record alone, which is a fact rather than a model — no weights, no market
-          values, just who outscored whom. What the roster is worth and how a team has scored over the
-          last {RECENT_WEEKS} weeks are in the line under each row, where they say what is about to change
-          without quietly moving anybody up the page.
+          Points leads because it is the best thing anyone has for what a team does next, and because it is
+          a fact rather than a model — no market, nothing this app believes, just who outscored whom. The
+          roster is the only part that looks forward: a trade or a starter back off injury is in it the day
+          it happens. The record is the weakest of the three at saying how good a team is — over a season
+          roughly half of it is who you were scheduled against — and the only one that banks a playoff
+          place, so it gets the smallest share rather than none. Form over the last {RECENT_WEEKS} weeks
+          stays in the sentence, where it says what is about to change without moving anybody up the page.
         </div>
       ) : null}
     </div>
   );
 }
+
+const ordinal = (n: number) => {
+  const rest = n % 100;
+  if (rest >= 11 && rest <= 13) return n + 'th';
+  return n + (['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+};
 
 function Row({ t }: { t: PowerTeam }) {
   const pct = Math.round(t.allPlay.pct * 100);
@@ -85,17 +99,21 @@ function Row({ t }: { t: PowerTeam }) {
           }}>
             {t.name}
           </div>
-          <div style={{ fontSize: 10, color: dim(0.4), marginTop: 1 }}>
+          {/* The score taken apart, in the order it is weighted. Three figures
+              anybody can put back together rather than one to be trusted. */}
+          <div style={{ fontSize: 10, color: dim(0.4), marginTop: 1, ...ellipsis }}>
             {t.weeks
-              ? `${t.allPlay.wins}-${t.allPlay.losses}${t.allPlay.ties ? '-' + t.allPlay.ties : ''} all-play · ${pct}%`
-              : 'no weeks played'}
+              ? `${pct}% all-play · roster ${ordinal(t.rosterRank)} · ${t.record.label}`
+              : `roster ${ordinal(t.rosterRank)} · no weeks played`}
           </div>
         </div>
 
-        {/* The real record beside the honest one, so the gap between them is
-            something you can see rather than something you have to be told. */}
         <div style={{ flex: 'none', textAlign: 'right' }}>
-          <div style={{ fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{t.record.label}</div>
+          <div style={{ fontSize: 16, fontWeight: 500, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+            {Math.round(t.score)}
+          </div>
+          {/* The gap between the record and what the scoring earned, where
+              there is one: something you can see rather than be told. */}
           {lucky || unlucky ? (
             <div style={{ fontSize: 9.5, marginTop: 1, color: lucky ? BAD : GOOD }}>
               {(t.luck > 0 ? '+' : '−') + Math.abs(t.luck).toFixed(1) + ' vs earned'}

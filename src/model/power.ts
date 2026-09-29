@@ -1,27 +1,32 @@
 import type { LeagueRow, TeamRecord } from './types';
 
 /**
- * Who has actually been the best, with the schedule taken out.
+ * How good each team actually is, out of the three things that say so.
  *
- * A record is two numbers about a team and one about its luck. Losing 130–134
- * to the league's best week and beating 78 with 81 count the same in the
- * standings, so a 6-1 built on soft weeks and a 2-5 built on hard ones read as
- * opposites when they may be the same team. Everybody knows this and nobody
- * can see it, because the number that would show it is not on the page.
+ * POINTS, as the all-play record. Every week, every team is scored against
+ * every other team that played, not only against the one the schedule gave it.
+ * Over ten weeks in a twelve-team league that is a hundred and ten results per
+ * team rather than ten, and the schedule has nothing left to say. It carries
+ * the most weight because it is the best thing anyone has for what a team will
+ * do next — and because it is a fact rather than a model: no market, nothing
+ * this app believes, just who outscored whom.
  *
- * So the ranking is the ALL-PLAY record: every week, every team is scored
- * against every other team that played, not only against the one the schedule
- * gave it. Over ten weeks in a twelve-team league that is a hundred and ten
- * results per team rather than ten, and the schedule has nothing left to say.
- * It is the one measure here that is a fact rather than a model: no weights,
- * no market, nothing this app believes — just who outscored whom.
+ * THE ROSTER, as the model's own strength. It is the only one of the three
+ * that looks forward: a trade, a waiver claim or a starter coming back off
+ * injury is in it the day it happens and in the other two weeks later.
  *
- * WHAT DELIBERATELY DOES NOT MOVE A ROW: the roster's market value, the
- * lineup Rating, and how the team has scored lately. All three are here, in
- * the sentence under the row, because they are what says whether the record is
- * about to change. None of them sorts the list. A ranking ordered by a blend
- * nobody can recompute is a ranking nobody can argue with, and arguing with it
- * is the entire point of a power ranking.
+ * THE RECORD. Weakest of the three at saying how good a team is — over a
+ * fourteen-game season roughly half of it is who you were scheduled against —
+ * but it is not nothing, and it is the thing that actually banks a playoff
+ * place. It gets the smallest share rather than none.
+ *
+ * The score is spelled out on the row beside it, all three parts of it, so it
+ * can be recomputed by eye. A power ranking is for arguing with, and a number
+ * nobody can take apart is a number nobody can argue with.
+ *
+ * Weights are renormalised over whatever is actually there, the same rule the
+ * usage blend uses: before a week has finished the points and the record have
+ * nothing to say and the roster is the whole of the answer.
  */
 
 export interface WeekScore {
@@ -45,6 +50,10 @@ export interface PowerTeam {
   isMe: boolean;
   avatar: string | null;
   rank: number;
+  /** 0..100, the three parts weighted — see `WEIGHTS` */
+  score: number;
+  /** each part as it went in, 0..1, or null where there is nothing to say yet */
+  parts: { points: number | null; roster: number | null; record: number | null };
   allPlay: AllPlay;
   record: TeamRecord;
   /** points per game over the weeks that have finished */
@@ -111,15 +120,18 @@ export function allPlayRecords(scores: WeekScore[]): Map<number, AllPlay> {
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+/**
+ * What each part of the score is worth.
+ *
+ * Measured out is too strong a word for these — a league season is not a
+ * sample you can fit against — but the ordering is not arbitrary: points beat
+ * the roster beat the record at saying what a team does next, and these follow
+ * that order rather than flattening it.
+ */
+export const WEIGHTS = { points: 0.45, roster: 0.35, record: 0.2 };
+
 export function powerRankings(rows: LeagueRow[], scores: WeekScore[]): PowerTeam[] {
   const all = allPlayRecords(scores);
-  const byTeam = new Map<number, number[]>();
-  for (const s of scores) {
-    if (!Number.isFinite(s.points)) continue;
-    const list = byTeam.get(s.rosterId);
-    if (list) list.push(s.points);
-    else byTeam.set(s.rosterId, [s.points]);
-  }
   // Most recent last, so "lately" is the tail.
   const weeksOf = (id: number) => scores
     .filter(s => s.rosterId === id && Number.isFinite(s.points))
@@ -127,6 +139,10 @@ export function powerRankings(rows: LeagueRow[], scores: WeekScore[]): PowerTeam
     .map(s => s.points);
 
   const rosterOrder = rows.slice().sort((a, b) => b.now - a.now).map(r => r.id);
+  /* A share of the league's best roster rather than a place in a line. A rank
+   * says the twelfth roster is as far behind the eleventh as the second is
+   * behind the first, which is exactly what a power ranking should not say. */
+  const bestRoster = Math.max(...rows.map(r => r.now), 0);
 
   const teams: PowerTeam[] = rows.map(row => {
     const mine = weeksOf(row.id);
@@ -136,12 +152,21 @@ export function powerRankings(rows: LeagueRow[], scores: WeekScore[]): PowerTeam
       ? round1(mean(mine.slice(-RECENT_WEEKS)) as number)
       : null;
     const games = row.record.wins + row.record.losses + row.record.ties;
+
+    const parts = {
+      points: mine.length ? allPlay.pct : null,
+      roster: bestRoster > 0 ? Math.max(0, row.now) / bestRoster : null,
+      record: games ? (row.record.wins + row.record.ties / 2) / games : null,
+    };
+
     return {
       id: row.id,
       name: row.name,
       isMe: row.isMe,
       avatar: row.avatar,
       rank: 0,
+      score: blend(parts),
+      parts,
       allPlay,
       record: row.record,
       ppg,
@@ -153,12 +178,32 @@ export function powerRankings(rows: LeagueRow[], scores: WeekScore[]): PowerTeam
     };
   });
 
-  /* All-play first, and points per game to break it — two teams that have
-   * beaten the same share of the league are separated by how they did it. */
-  teams.sort((a, b) => b.allPlay.pct - a.allPlay.pct || (b.ppg ?? 0) - (a.ppg ?? 0));
+  /* The score, then the all-play record to break it: two teams a point apart
+   * on a composite are separated by the part of it that is a fact. */
+  teams.sort((a, b) => b.score - a.score || b.allPlay.pct - a.allPlay.pct || (b.ppg ?? 0) - (a.ppg ?? 0));
   teams.forEach((t, i) => { t.rank = i + 1; });
   for (const t of teams) t.read = readOf(t, teams.length);
   return teams;
+}
+
+/**
+ * The three parts, weighted — over whatever is present.
+ *
+ * A missing part is not a zero. Before a week has finished there is no
+ * all-play record and no result, and scoring those as nothing would rank
+ * every team in the league at a third of its roster rather than at its roster.
+ */
+function blend(parts: PowerTeam['parts']): number {
+  let total = 0;
+  let used = 0;
+  for (const key of ['points', 'roster', 'record'] as const) {
+    const v = parts[key];
+    if (v == null || !Number.isFinite(v)) continue;
+    total += v * WEIGHTS[key];
+    used += WEIGHTS[key];
+  }
+  if (!used) return 0;
+  return Math.round((total / used) * 1000) / 10;
 }
 
 /**
