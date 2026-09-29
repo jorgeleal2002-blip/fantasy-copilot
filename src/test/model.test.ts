@@ -4395,12 +4395,15 @@ describe('which metric put one player above the other', () => {
   const label = (k: string) => k.toUpperCase();
   const keys = ['talent', 'rz', 'age', 'sos'];
 
-  it('puts the reason on the first line', () => {
-    const rows = compareMetrics(keys, label,
+  it('puts the reason on the first line, wherever it sits in the input', () => {
+    // `talent` is given last on purpose: the row order has to come from how
+    // far apart the two men are, not from the order the metrics arrive in.
+    const rows = compareMetrics(['rz', 'age', 'sos', 'talent'], label,
       side({ talent: 0.9, rz: 0.5, age: 0.5, sos: 1 }),
       side({ talent: 0.4, rz: 0.52, age: 0.5, sos: 1 }));
     expect(rows[0]?.key).toBe('talent');
     expect(rows[0]?.win).toBe('a');
+    expect(rows.map(r => r.key)).toEqual(['talent', 'rz', 'age']);
   });
 
   it('compares contributions, not raw metrics', () => {
