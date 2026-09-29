@@ -17,6 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
+import { barHeights, ordinal, quantile, rankAmong, seasonLine } from '../model/season';
 import { SCREEN_TRUST, bestHeight } from '../model/viewport';
 import { FULL_SQ, THUMB_SQ, playerPhotoSet } from '../api/sleeper';
 import { PULL_MAX, PULL_RESIST, PULL_SLOP, PULL_TRIGGER, edgeAt, pullArmed, pullFrom, pullProgress } from '../model/pull';
@@ -3996,5 +3997,81 @@ describe('how tall the app thinks the window is', () => {
 
   it('never returns something out of nothing', () => {
     expect(bestHeight({ inner: 0, dvh: 0, screen: 852, screenW: 393, innerW: 393, standalone: true })).toBe(0);
+  });
+});
+
+/* Passing yards are a quarterback's season; they are not a fantasy season.
+   What a lineup decision turns on is what he put on the board, over how many
+   games, and how low it goes on his bad weeks against how high on his good
+   ones — the average alone hides the difference between 13, 14, 15 and
+   2, 6, 34. */
+describe('a player\'s season in fantasy points', () => {
+  const g = (...pts: number[]) => pts.map((p, i) => ({ week: i + 1, pts: p }));
+
+  it('averages, totals and bounds a season', () => {
+    const l = seasonLine(g(10, 20, 30));
+    expect(l).toMatchObject({ games: 3, total: 60, ppg: 20, low: 10, high: 30 });
+  });
+
+  it('separates two men who average the same', () => {
+    const steady = seasonLine(g(13, 14, 15, 14, 14));
+    const swingy = seasonLine(g(2, 6, 34, 18, 10));
+    expect(steady?.ppg).toBe(14);
+    expect(swingy?.ppg).toBe(14);
+    // Same average, and nothing else the same: that is the whole point of
+    // carrying the quartiles.
+    expect(steady?.floor).toBeGreaterThan(swingy?.floor as number);
+    expect(swingy?.ceiling).toBeGreaterThan(steady?.ceiling as number);
+  });
+
+  it('puts the floor below the average and the ceiling above it', () => {
+    const l = seasonLine(g(4, 9, 12, 18, 25));
+    expect(l?.floor).toBeLessThanOrEqual(l?.ppg as number);
+    expect(l?.ceiling).toBeGreaterThanOrEqual(l?.ppg as number);
+    expect(l?.low).toBeLessThanOrEqual(l?.floor as number);
+    expect(l?.high).toBeGreaterThanOrEqual(l?.ceiling as number);
+  });
+
+  it('has nothing to say about a man who has not played', () => {
+    expect(seasonLine([])).toBe(null);
+  });
+
+  it('reads one game as its own floor and ceiling', () => {
+    expect(seasonLine(g(21))).toMatchObject({ games: 1, ppg: 21, floor: 21, ceiling: 21 });
+  });
+
+  it('interpolates a quartile rather than picking the nearest', () => {
+    expect(quantile([0, 10], 0.5)).toBe(5);
+    expect(quantile([0, 10, 20, 30], 0.25)).toBeCloseTo(7.5, 5);
+    expect(quantile([], 0.5)).toBe(0);
+    expect(quantile([7], 0.9)).toBe(7);
+  });
+
+  it('counts a rank from the best, and lets ties share it', () => {
+    expect(rankAmong(20, [30, 20, 10])).toEqual({ rank: 2, of: 3 });
+    // Two men at 18.4 are both second, and nobody is third.
+    expect(rankAmong(18.4, [20, 18.4, 18.4, 9])).toEqual({ rank: 2, of: 4 });
+    expect(rankAmong(99, [30, 20])).toEqual({ rank: 1, of: 2 });
+    expect(rankAmong(1, [30, 20])).toEqual({ rank: 3, of: 2 });
+    expect(rankAmong(5, [])).toBe(null);
+  });
+
+  it('writes an ordinal the way it is said', () => {
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 101].map(ordinal))
+      .toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '101st']);
+  });
+
+  it('scales the bars to his own best week, not to the league', () => {
+    // A chart of one player is a chart about him.
+    const hs = barHeights(g(5, 10, 20));
+    expect(hs).toEqual([0.25, 0.5, 1]);
+  });
+
+  it('still draws a bar for a week he scored nothing on', () => {
+    const hs = barHeights(g(0, 20));
+    expect(hs[0]).toBeGreaterThan(0);
+    expect(hs[1]).toBe(1);
+    // And does not divide by zero when no week scored at all.
+    expect(barHeights(g(0, 0)).every(h => h > 0)).toBe(true);
   });
 });

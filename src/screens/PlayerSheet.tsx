@@ -12,8 +12,9 @@ import { Card, Overlay } from '../ui/primitives';
 import { ALLOWED_SEASON, OPPONENTS, SCHEDULE_SEASON } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { projectConfidence, projectPPG } from '../model/project';
+import { barHeights, ordinal, type Ranked } from '../model/season';
 import { TradePackages } from '../ui/TradePackages';
-import { dim, fitColor } from '../ui/styles';
+import { cardTitle, dim, fitColor } from '../ui/styles';
 
 const DATA_NOTE =
   'Live from Sleeper: league, managers, draft order, picks and the NFL catalog (position, age, team, experience). ' +
@@ -384,6 +385,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </div>
       </div>
 
+      {fill ? null : <ThisSeason app={app} pos={p.pos} id={p.id} />}
+
       {/* First, because it is the answer. It used to sit under a paragraph
           about how a projection is built and a nine-row breakdown — below the
           fold on the one thing somebody opened the card to find out. */}
@@ -499,6 +502,85 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
  *
  * Redraft only. A dynasty roster outlives this table.
  */
+/**
+ * What he has actually done this season, in this league's points.
+ *
+ * Every football app draws a stat grid; this is the same grid with the columns
+ * a lineup decision turns on. Passing yards are a quarterback's season, not a
+ * fantasy season — what matters is what he put on the board, over how many
+ * games, and how low it goes on his bad weeks against how high on his good
+ * ones. The average alone hides that: two men at 14 a game are not the same
+ * player if one goes 13, 14, 15 and the other goes 2, 6, 34.
+ *
+ * Each number carries where it puts him among the men at his position who
+ * could be started instead of him — rostered in THIS league, since that is who
+ * the choice is between. A rank against every quarterback in the NFL counts
+ * thirty nobody here can start.
+ */
+function ThisSeason({ app, pos, id }: { app: App; pos: string; id: string }) {
+  const line = app.seasonOf(id);
+  const games = app.seasonLog(id);
+  const ranks = app.seasonRanks(id, pos);
+  // Before he has played there is nothing here but zeroes pretending to be
+  // facts, and the projection above is the whole of what is known.
+  if (!line || !games.length) return null;
+
+  const cells: { k: string; v: string; r?: Ranked | null }[] = [
+    { k: 'Games', v: String(line.games), r: ranks?.games },
+    { k: 'Pts/gm', v: line.ppg.toFixed(1), r: ranks?.ppg },
+    { k: 'Total', v: line.total.toFixed(1), r: ranks?.total },
+    { k: 'Best', v: line.high.toFixed(1), r: ranks?.high },
+    { k: 'Floor', v: line.floor.toFixed(1), r: ranks?.floor },
+    { k: 'Ceiling', v: line.ceiling.toFixed(1), r: ranks?.ceiling },
+    { k: 'Worst', v: line.low.toFixed(1), r: ranks?.low },
+  ];
+
+  const hs = barHeights(games);
+  const top = Math.max(...games.map(g => g.pts));
+  const field = ranks?.ppg?.of ?? 0;
+
+  return (
+    <Card style={{ marginTop: 16 }}>
+      <div style={cardTitle}>This season</div>
+      <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 3, textWrap: 'pretty' }}>
+        In this league's own scoring. Byes and the weeks he did not play are
+        left out rather than averaged in as nothing.
+      </div>
+
+      <div className="ps-grid">
+        {cells.map(c => (
+          <div className="ps-cell" key={c.k}>
+            <div className="ps-k">{c.k}</div>
+            <div className="ps-v">{c.v}</div>
+            <div className={'ps-r' + (c.r ? '' : ' is-none')}>{c.r ? ordinal(c.r.rank) : '—'}</div>
+          </div>
+        ))}
+      </div>
+
+      {field > 1 ? (
+        <div style={{ fontSize: 11, color: dim(0.4), marginTop: 12, textWrap: 'pretty' }}>
+          Ranked among the {field} {pos}s rostered in this league — the men who
+          could be started instead of him. <b>Floor</b> is what he clears three
+          weeks in four and <b>ceiling</b> what he reaches one in four, which is
+          the difference between a safe start and one you need a big week from.
+        </div>
+      ) : null}
+
+      <div className="ps-bars" role="img" aria-label={'points by week: ' + games.map(g => 'week ' + g.week + ', ' + g.pts.toFixed(1)).join('; ')}>
+        {games.map((g, i) => (
+          <div className={'ps-bar' + (g.pts === top ? ' is-top' : '')} key={g.week}>
+            <div className="ps-bar-n">{g.pts.toFixed(1)}</div>
+            <div className="ps-bar-fill" style={{ height: ((hs[i] as number) * 100) + '%' }} />
+          </div>
+        ))}
+      </div>
+      <div className="ps-wks" aria-hidden="true">
+        {games.map(g => <div className="ps-wk" key={g.week}>W{g.week}</div>)}
+      </div>
+    </Card>
+  );
+}
+
 function Schedule(
   { pos, team, league }: { pos: string; team: string | null | undefined; league: SleeperLeague },
 ) {

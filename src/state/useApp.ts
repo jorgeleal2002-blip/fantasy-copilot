@@ -21,6 +21,7 @@ import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
 import { pickEncoding } from '../model/photo';
+import { type Game, type SeasonLine, rankAmong, seasonLine } from '../model/season';
 import { type HeldStats, projectionsAreStale, readProjections, statsForWeek } from '../model/projections';
 import type { WeekScore } from '../model/power';
 import { nextDetailStack, topDetail } from './detail-stack';
@@ -252,7 +253,7 @@ export function useApp() {
    * Sleeper's own totals under this league's settings, which is the number
    * somebody means when they ask what a player is averaging.
    */
-  const [seasonPoints, setSeasonPoints] = useState<Record<string, number[]>>({});
+  const [seasonPoints, setSeasonPoints] = useState<Record<string, Game[]>>({});
   const [powerState, setPowerState] = useState<FeedState>('idle');
   const [matchups, setMatchups] = useState<SleeperMatchup[]>([]);
   const [matchupState, setMatchupState] = useState<FeedState>('idle');
@@ -368,7 +369,7 @@ export function useApp() {
       const wk = i + 1;
       const key = lid + ':' + wk;
       const held = scoreCache.get(key);
-      if (held) return held;
+      if (held) return { week: wk, ...held };
       let rows: SleeperMatchup[];
       try {
         rows = await getMatchups(lid, wk);
@@ -394,17 +395,17 @@ export function useApp() {
        * it would hold those half-scores for the rest of the session. */
       const over = teams > 0 && scores.length >= teams && scores.every(x => x.points > 0);
       if (over) scoreCache.set(key, { scores, players });
-      return { scores, players };
+      return { week: wk, scores, players };
     }));
 
-    const got = weeks.filter((w): w is { scores: WeekScore[]; players: Record<string, number> } => !!w);
+    const got = weeks.filter((w): w is { week: number; scores: WeekScore[]; players: Record<string, number> } => !!w);
     // A week that failed is a week; every week failing is the feed being down.
     if (!got.length) { setPowerState('fail'); return; }
 
-    const perPlayer: Record<string, number[]> = {};
+    const perPlayer: Record<string, Game[]> = {};
     for (const w of got) {
       for (const [pid, pts] of Object.entries(w.players)) {
-        (perPlayer[pid] = perPlayer[pid] || []).push(pts);
+        (perPlayer[pid] = perPlayer[pid] || []).push({ week: w.week, pts });
       }
     }
     setWeekScores(got.flatMap(w => w.scores));
@@ -1161,10 +1162,51 @@ export function useApp() {
    * zeroes — a man who has played twice and sat out once has scored twice.
    */
   const seasonPpg = useCallback((id: string): { ppg: number; games: number } | null => {
-    const weeks = seasonPoints[id];
-    if (!weeks || !weeks.length) return null;
-    const total = weeks.reduce((a, b) => a + b, 0);
-    return { ppg: Math.round((total / weeks.length) * 10) / 10, games: weeks.length };
+    const line = seasonLine(seasonPoints[id] || []);
+    return line ? { ppg: line.ppg, games: line.games } : null;
+  }, [seasonPoints]);
+
+  /** Every week he has played, in order, for the chart on his card. */
+  const seasonLog = useCallback(
+    (id: string): Game[] => (seasonPoints[id] || []).slice().sort((a, b) => a.week - b.week),
+    [seasonPoints],
+  );
+
+  /** His whole season as one line: average, total, floor, ceiling. */
+  const seasonOf = useCallback((id: string) => seasonLine(seasonPoints[id] || []), [seasonPoints]);
+
+  /**
+   * Where each of those numbers puts him among the men at his position who
+   * could be started instead of him.
+   *
+   * The field is everybody rostered in THIS league at THIS position who has
+   * played, because that is who the choice is actually between. A rank against
+   * every quarterback in the NFL includes thirty nobody here can start.
+   */
+  const seasonRanks = useCallback((id: string, pos: string) => {
+    const mine = seasonLine(seasonPoints[id] || []);
+    if (!mine) return null;
+    const players = dataRef.current?.players || {};
+    const rostered = new Set<string>();
+    for (const r of dataRef.current?.rosters || []) {
+      for (const pid of r.players || []) rostered.add(pid);
+    }
+    const field: SeasonLine[] = [];
+    for (const pid of rostered) {
+      if (players[pid]?.position !== pos) continue;
+      const line = seasonLine(seasonPoints[pid] || []);
+      if (line) field.push(line);
+    }
+    const of = (pick: (l: SeasonLine) => number) => rankAmong(pick(mine), field.map(pick));
+    return {
+      ppg: of(l => l.ppg),
+      total: of(l => l.total),
+      high: of(l => l.high),
+      low: of(l => l.low),
+      floor: of(l => l.floor),
+      ceiling: of(l => l.ceiling),
+      games: of(l => l.games),
+    };
   }, [seasonPoints]);
 
   /** Who set the photo on screen, where the league set it. */
@@ -1340,7 +1382,7 @@ export function useApp() {
     weekStats: statsForWeek(weekStats, week),
     tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,
-    weekScores, powerState, fetchWeekScores, seasonPpg,
+    weekScores, powerState, fetchWeekScores, seasonPpg, seasonLog, seasonOf, seasonRanks,
 
     accounts, switchAccount, forgetAccount,
     block: (leagueId ? blocks[username + '/' + leagueId] : undefined) || [],

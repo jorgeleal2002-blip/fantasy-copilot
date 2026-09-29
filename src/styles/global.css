@@ -1695,3 +1695,87 @@ button { font-family: inherit; }
   -webkit-mask: radial-gradient(circle, transparent 54%, #000 56%);
 }
 .pull-ring.is-busy { animation: spin .8s linear infinite; }
+
+/* ── A player's season, in fantasy points ─────────────────────────────────
+   Modelled on the stat grid every football app has, with the columns swapped
+   for the ones a lineup decision turns on: not passing yards, but what he put
+   on the board, how often, and how low and high it goes. Each number carries
+   where it puts him among the men at his position who could be started
+   instead, because in a closed league that is the only comparison that can
+   act on anything.
+   ──────────────────────────────────────────────────────────────────────── */
+.ps-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 6px;
+  margin-top: 12px;
+}
+.ps-cell { text-align: center; min-width: 0; }
+.ps-k {
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(233, 233, 237, 0.38);
+}
+.ps-v {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.ps-r {
+  font-size: 10px;
+  margin-top: 2px;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+.ps-r.is-none { color: rgba(233, 233, 237, 0.25); }
+
+/* One bar a week, scaled to his own best week. A chart of one player is a
+   chart about him: scaling it to the league's ceiling flattens his season
+   into a stripe along the bottom to make a point nobody asked about. */
+.ps-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 92px;
+  margin-top: 14px;
+}
+.ps-bar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 4px;
+}
+.ps-bar-n {
+  font-size: 9.5px;
+  text-align: center;
+  color: rgba(233, 233, 237, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+.ps-bar-fill {
+  border-radius: 4px 4px 2px 2px;
+  background: color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+/* His best week, so the shape of the season has a peak to read it against. */
+.ps-bar.is-top .ps-bar-fill { background: var(--color-accent); }
+.ps-bar.is-top .ps-bar-n { color: var(--color-text); }
+.ps-wks {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+.ps-wk {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: rgba(233, 233, 237, 0.32);
+}
