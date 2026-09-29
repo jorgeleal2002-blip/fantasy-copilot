@@ -29,7 +29,7 @@ body { overflow: hidden; }
 
 body {
   margin: 0;
-  background: var(--color-bg);
+  background: var(--bg-base);
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: 15px;
@@ -110,6 +110,21 @@ button { font-family: inherit; }
   }
 }
 
+/* Everything that IS the ground, painted once. The header is in here because
+   it has to be opaque — the body slides under it on a pull — and an opaque
+   header in a flat colour is a visible strip across a graded background. */
+.app-frame,
+.app-column,
+.mock-room,
+.splash,
+.overlay-panel,
+.overlay-head {
+  background-color: var(--bg-base);
+  background-image: var(--bg-grain), var(--bg-field);
+  background-size: 180px 180px, auto;
+  background-repeat: repeat, no-repeat;
+}
+
 /* Phone-shaped up to a laptop, where it becomes a laptop app: see the
    desktop block at the end of this file. */
 /* `height: 100%` resolves against a viewport iOS keeps frozen while its chrome
@@ -123,7 +138,6 @@ button { font-family: inherit; }
   height: var(--app-h, 100dvh);
   display: flex;
   justify-content: center;
-  background: radial-gradient(1200px 600px at 50% -10%, #101a33 0%, #04060f 70%);
 }
 .app-column {
   position: relative;
@@ -133,7 +147,6 @@ button { font-family: inherit; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-bg);
   color: var(--color-text);
 }
 @media (min-width: 520px) {
@@ -164,7 +177,7 @@ button { font-family: inherit; }
   display: flex;
   padding: 5px 10px calc(var(--safe-bottom) + 3px);
   gap: 4px;
-  background: linear-gradient(to top, var(--color-bg) 60%, rgba(5, 8, 27, 0.4));
+  background: linear-gradient(to top, var(--bg-base) 62%, transparent);
   border-top: var(--hairline) solid var(--color-divider);
 }
 .tab-btn {
@@ -255,7 +268,6 @@ button { font-family: inherit; }
 .overlay-panel {
   position: absolute;
   inset: 0;
-  background: var(--color-bg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -268,7 +280,6 @@ button { font-family: inherit; }
   padding: calc(var(--safe-top) + 18px) 16px 10px;
   position: relative;
   z-index: 3;
-  background: var(--color-bg);
 }
 .overlay-body {
   flex: 1;
@@ -343,7 +354,6 @@ button { font-family: inherit; }
   z-index: 8;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg);
   animation: fadeIn 0.16s ease backwards;
 }
 .mock-head {
@@ -728,7 +738,6 @@ button { font-family: inherit; }
   align-items: center;
   justify-content: center;
   gap: 18px;
-  background: radial-gradient(1200px 600px at 50% -10%, #101a33 0%, #04060f 70%);
   opacity: 1;
   transition: opacity 320ms ease;
 }
