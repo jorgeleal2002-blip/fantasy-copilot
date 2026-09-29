@@ -1,5 +1,5 @@
 import type { PlayerCatalog, Pos, SleeperStatLine } from '../api/types';
-import { CURRENT_SEASON_K, PRIME, USAGE_WEIGHTS, POS } from './constants';
+import { CURRENT_K, CURRENT_SEASON_K, PRIME, USAGE_WEIGHTS, POS } from './constants';
 
 export interface Usage {
   /** offensive snaps played / team offensive snaps */
@@ -533,6 +533,10 @@ export function withCurrentSeason(
     // progress has nothing to say about him yet, and a zero-game "season"
     // dragging his numbers toward nothing would be worse than silence.
     if (!gp) continue;
+    /* How much of this year to believe, per metric — see `CURRENT_K`. The
+       plain one is still what the card reports, because "33% this year" is a
+       statement about the player and not about one of his columns. */
+    const weight = (k: string) => gp / (gp + (CURRENT_K[k] ?? CURRENT_SEASON_K));
     const w = gp / (gp + CURRENT_SEASON_K);
     const prior = blend[id];
 
@@ -552,8 +556,9 @@ export function withCurrentSeason(
       // Where only one side has the metric it stands alone: a rookie's first
       // snap share is not worth less for having no 2023 to average against.
       if (!hasA) continue;
+      const wk = weight(k as string);
       (prior as unknown as Record<string, number>)[k as string] =
-        hasB ? (a as number) * w + (b as number) * (1 - w) : (a as number);
+        hasB ? (a as number) * wk + (b as number) * (1 - wk) : (a as number);
     }
 
     prior.curYear = current.year;

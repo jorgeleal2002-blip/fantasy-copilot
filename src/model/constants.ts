@@ -175,13 +175,40 @@ export const USAGE_WEIGHTS: [number, number, number] = [0.5, 0.3, 0.2];
  * The finished seasons are a big sample of a player who may no longer exist —
  * new team, new coordinator, new depth chart — and the season in progress is a
  * small sample of the one who does. So the current year is weighted by how
- * much of it there is, `gp / (gp + K)`: a third of the number after three
- * games, half after six, two thirds by week thirteen. Six is where per-game
- * production stops being mostly noise, and it is deliberately not lower — one
- * big Sunday should not repaint a player, which is the whole failure mode of
- * looking at the current season at all.
+ * much of it there is, `gp / (gp + K)`.
+ *
+ * One K for every metric was the crude part, and it is what held a breakout
+ * down: a receiver who has taken over an offence shows it in his snaps and his
+ * targets within a month, and those were being shrunk as hard as his yards per
+ * catch. They do not stabilise at the same speed and should not be trusted at
+ * the same speed.
+ *
+ * Role first, because it is both the fastest to settle and the most predictive
+ * thing here: three games of a man playing every snap is most of what there is
+ * to know about whether he plays every snap. Efficiency next, which needs a
+ * while before it is about him rather than about two broken tackles. Scoring
+ * last, because touchdown rate is the noisiest number in the sport — one big
+ * Sunday should not repaint a player, which is the whole failure mode of
+ * looking at the season in progress at all.
  */
 export const CURRENT_SEASON_K = 6;
+
+/** Per metric, because they do not settle at the same rate. */
+export const CURRENT_K: Record<string, number> = {
+  /* Role: half the answer by game three. */
+  snap: 3,
+  tgt: 3,
+  vol: 3,
+  /* What he does with it: half by game eight. */
+  eff: 8,
+  ppg: 6,
+  ppgAdj: 6,
+  /* Scoring: half by game twelve, and still regressed hard before that. */
+  ltr: 12,
+  tdPerGame: 12,
+  rzPerGame: 8,
+  xtdPerGame: 10,
+};
 
 export type MetricKey =
   | 'talent' | 'need' | 'value' | 'floor' | 'boom' | 'combo' | 'age' | 'stack' | 'rz'

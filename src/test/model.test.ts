@@ -9,6 +9,7 @@ import { REACH, sfxFor } from '../model/sfx-map';
 import type { MockPick } from '../model/types';
 import { ownedWeights, pickValue, redraftWeights, scorePlayer } from '../model/score';
 import { blendSeasons, buildUsage, seasonUsage, withCurrentSeason, type Usage, type UsageMap } from '../model/usage';
+import type { PlayerCatalog } from '../api/types';
 import { projectConfidence, projectPPG } from '../model/project';
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
@@ -4291,5 +4292,57 @@ describe('a season out of two sources', () => {
     expect(gapsIn([{ week: 6, pts: 1 }], 7)).toEqual([1, 2, 3, 4, 5, 7]);
     expect(gapsIn(undefined, 3)).toEqual([1, 2, 3]);
     expect(gapsIn([], 0)).toEqual([]);
+  });
+});
+
+/* One shrinkage constant for every metric was what held a breakout down: a
+   receiver who has taken over an offence shows it in his snaps and his targets
+   within a month, and those were being trusted as slowly as his yards per
+   catch. They do not settle at the same speed. */
+describe('how fast the season in progress is believed', () => {
+  const CAT = { a: { position: 'WR', team: 'SEA' } } as unknown as PlayerCatalog;
+  const base = (o: Partial<Usage>): UsageMap =>
+    ({ a: { gp: 16, snap: 0.5, tgt: 0.15, eff: 7, tdPerGame: 0.3, ...o } } as unknown as UsageMap);
+
+  /** A man whose role has doubled and whose scoring has tripled, in 3 games. */
+  const after = (gp: number) => withCurrentSeason(
+    base({}),
+    { year: 2026, usage: base({ gp, snap: 1.0, tgt: 0.30, eff: 14, tdPerGame: 0.9 }) },
+    CAT,
+  ).a;
+
+  it('believes a changed role faster than a hot streak', () => {
+    const u = after(3);
+    // Role: half the answer by game three, so three games move it halfway.
+    expect((u.snap as number)).toBeCloseTo(0.5 + 0.5 * (3 / 6), 6);
+    // Scoring: a twelfth-game constant, so three games move it a fifth.
+    expect((u.tdPerGame as number)).toBeCloseTo(0.3 + 0.6 * (3 / 15), 6);
+  });
+
+  it('moves every metric in the right direction', () => {
+    const u = after(3);
+    for (const k of ['snap', 'tgt', 'eff', 'tdPerGame'] as const) {
+      expect(u[k] as number).toBeGreaterThan(base({}).a[k] as number);
+    }
+  });
+
+  it('trusts the role more than the efficiency at every point of a season', () => {
+    for (const gp of [1, 3, 6, 10, 16]) {
+      const u = after(gp);
+      const roleShare = ((u.snap as number) - 0.5) / 0.5;
+      const effShare = ((u.eff as number) - 7) / 7;
+      expect(roleShare).toBeGreaterThan(effShare);
+    }
+  });
+
+  it('still reports one number for how much of the year is counted', () => {
+    // The card says "33% this year" about the player, not about one column.
+    expect(after(3).curWeight as number).toBeCloseTo(3 / 9, 6);
+  });
+
+  it('never lets one Sunday repaint a player', () => {
+    const u = after(1);
+    expect(u.tdPerGame as number).toBeLessThan(0.35);
+    expect(u.eff as number).toBeLessThan(8);
   });
 });
