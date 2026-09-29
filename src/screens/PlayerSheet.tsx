@@ -93,17 +93,34 @@ function More({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-function Tiles({ rows }: { rows: { label: string; value: string }[] }) {
+/**
+ * The numbers, as numbers.
+ *
+ * Each of these used to be a sentence in a box — "36.2 · well above average",
+ * "6,823 · QB1 at his position" — two boxes to a row, each three lines tall,
+ * so eleven facts filled a screen and a half of scrolling. The prose was
+ * saying what the number already says to anyone reading a column of them: a
+ * rank is above average by being a low rank, and "well above average" is a
+ * restatement, not a second fact.
+ *
+ * So the sentence is cut back to the figure, with at most a short token beside
+ * it where that token is itself data — QB1, the games it is averaged over, the
+ * share of the team. Three to a row, and the whole set fits where four tiles
+ * used to.
+ */
+export type Tile = { label: string; value: string; note?: string };
+
+function Tiles({ rows }: { rows: Tile[] }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+    <div className="ps-grid is-tiles">
       {rows.map(r => (
-        <div key={r.label} style={{ background: 'var(--color-surface)', borderRadius: 11, padding: 12 }}>
-          <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.42) }}>
-            {r.label}
-          </div>
-          <div style={{ fontSize: 15, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 5, lineHeight: 1.3 }}>
-            {r.value}
-          </div>
+        <div className="ps-cell" key={r.label}>
+          <div className="ps-k">{r.label}</div>
+          {/* A word is not a figure: "Questionable" set at the size of "36.2"
+              is wider than its third of the row and shoulders the columns
+              either side of it out of line. */}
+          <div className={'ps-v' + (/\d/.test(r.value) || r.value.length < 7 ? '' : ' is-word')}>{r.value}</div>
+          <div className={'ps-r' + (r.note ? ' is-note' : ' is-none')}>{r.note || ''}</div>
         </div>
       ))}
     </div>
@@ -171,36 +188,33 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
    * somebody would use out loud, and the middle one says nothing at all
    * because being ordinary is not news.
    */
-  const standing = (pct: number | null | undefined): string => {
-    if (!fin(pct)) return '';
-    const n = Math.round((pct as number) * 100);
-    return n >= 90 ? ' · among the best at his position'
-      : n >= 70 ? ' · well above average'
-        : n <= 20 ? ' · below average'
-          : '';
-  };
+  /* Where a number sits among his position, as a number. It used to be a
+     clause — "well above average" — which is longer than the fact it reports
+     and cannot be compared between two tiles at a glance. */
+  const pctOf = (pct: number | null | undefined): string | undefined =>
+    (fin(pct) ? ord(Math.max(1, 100 - Math.round((pct as number) * 100))) + ' pct' : undefined);
 
   /* What a person reads. Price, whether he plays, how much of the offence he
    * is, and what he does with it — in that order, because that is the order
    * the questions come in. */
-  const stats = [
+  const stats: Tile[] = [
     {
       // The first thing anyone wants before proposing a trade: the price, and
       // whether that price is the market's or the model's stand-in for it.
-      label: val && !val.real ? 'Value (modelled)' : 'Market value',
-      value: val
-        ? num(val.pts) + (val.posRank ? ' · ' + val.pos + val.posRank + ' at his position' : '')
-        : 'no data',
+      label: val && !val.real ? 'Value (est)' : 'Market value',
+      value: val ? num(val.pts) : '—',
+      note: val?.posRank ? val.pos + val.posRank : undefined,
     },
     {
       label: 'Availability',
       value: (() => {
         const status = String(p.raw.status || '');
         const inj = String(p.raw.injury_status || '');
+        return inj || (status && status.toLowerCase() !== 'active' ? status : 'Healthy');
+      })(),
+      note: (() => {
         const dco = Number(p.raw.depth_chart_order);
-        const role = fin(dco) ? (dco === 1 ? 'starter on his depth chart' : ord(dco) + ' on his depth chart') : null;
-        const state = inj || (status && status.toLowerCase() !== 'active' ? status : 'healthy');
-        return state + (role ? ' · ' + role : '');
+        return fin(dco) ? (dco === 1 ? 'starter' : ord(dco) + ' on depth') : undefined;
       })(),
     },
     {
@@ -208,78 +222,73 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
        * when they ask what a player is averaging. `Usage.ppg` is a blend of
        * four seasons measured in half-PPR, and was neither. It still has a
        * job: it is what the projection is built out of, on its own card. */
-      label: 'Points per game',
-      value: season
-        ? season.ppg.toFixed(1) + ' · ' + season.games + (season.games === 1 ? ' game' : ' games') + ' this season'
-        : u && u.ppg != null ? u.ppg.toFixed(1) + ' · half-PPR, last seasons' : 'no data',
+      label: 'Points/gm',
+      value: season ? season.ppg.toFixed(1) : u && u.ppg != null ? u.ppg.toFixed(1) : '—',
+      note: season ? season.games + ' gm' : u && u.ppg != null ? 'half-PPR' : undefined,
     },
     {
-      label: 'On the field',
-      value: u && u.snap != null ? Math.round(u.snap * 100) + '% of his team\'s snaps' : 'no data',
+      label: 'Snaps',
+      value: u && u.snap != null ? Math.round(u.snap * 100) + '%' : '—',
     },
     {
-      label: u?.shareLabel || 'Target share',
-      value: u && u.shareText ? u.shareText + standing(u.volPct) : 'no data',
+      // Three to a row leaves no space for "Attempts per game" spelled out.
+      label: (u?.shareLabel || 'Target share').replace('Attempts per game', 'Att/gm').replace(' share', ' shr'),
+      value: u && u.shareText ? u.shareText : '—',
+      note: u && u.shareText ? pctOf(u.volPct) : undefined,
     },
     {
-      label: u?.effLabel || 'Yards per touch',
-      value: u && fin(u.eff) ? (u.eff as number).toFixed(1) + standing(u.effPct) : 'no data',
+      label: u?.effLabel || 'Yds/touch',
+      value: u && fin(u.eff) ? (u.eff as number).toFixed(1) : '—',
+      note: u && fin(u.eff) ? pctOf(u.effPct) : undefined,
     },
     {
-      label: 'TDs per game',
-      value: u && u.tdPerGame != null
-        ? u.tdPerGame.toFixed(2) + (u.tdShare != null ? ` · ${Math.round(u.tdShare * 100)}% of the team\'s` : '')
-        : 'no data',
+      label: 'TDs/gm',
+      value: u && u.tdPerGame != null ? u.tdPerGame.toFixed(2) : '—',
+      note: u && u.tdShare != null ? Math.round(u.tdShare * 100) + '% tm' : undefined,
     },
   ];
 
-  /* The rest. Not wrong and not what anybody opened the card for: two of them
-   * are the model talking about itself, and the others are the kind of number
-   * you go looking for rather than one you want put in front of you. */
-  const deeper = [
+  const deeper: Tile[] = [
     {
-      label: 'Red-zone share',
-      value: u && u.rzShare != null ? (u.rzShare * 100).toFixed(1) + '% of his team\'s' : 'no data',
+      label: 'Red zone',
+      value: u && u.rzShare != null ? (u.rzShare * 100).toFixed(1) + '%' : '—',
+      note: u && u.rzShare != null ? 'of team' : undefined,
     },
     {
       label: 'Expected TDs',
-      value: u && u.xtd != null
-        ? u.xtd.toFixed(1) + ' expected vs ' + Math.round(u.xtd + (u.tdLuck || 0)) + ' scored' +
-          (Math.abs(u.tdLuck || 0) < 1.5 ? ' · in line' : (u.tdLuck || 0) > 0 ? ' · scored above it' : ' · scored below it')
-        : 'no data',
+      value: u && u.xtd != null ? u.xtd.toFixed(1) : '—',
+      note: u && u.xtd != null ? 'scored ' + Math.round(u.xtd + (u.tdLuck || 0)) : undefined,
     },
     {
       label: 'Long TDs',
-      value: u && fin(u.longTd)
-        ? (u.longTd as number).toFixed(1) + ' of ' + Math.round((u.xtd || 0) + (u.tdLuck || 0)) + standing(u.ltrPct)
-        : 'no data',
+      value: u && fin(u.longTd) ? (u.longTd as number).toFixed(1) : '—',
+      note: u && fin(u.longTd) ? pctOf(u.ltrPct) : undefined,
     },
     {
-      label: 'Market vs production',
+      /* Signed, because the direction is the whole finding: over is the market
+       * paying more than he produces, under is him being cheap for what he
+       * does. It read as a sentence and could not be compared with anything. */
+      label: 'Market vs prod',
       value: (() => {
-        if (!diverge) return 'no data';
+        if (!diverge) return '—';
         const d = Math.round((diverge.mkt - diverge.prod) * 100);
-        return Math.abs(d) < 12 ? 'the two agree'
-          : d > 0 ? 'the market pays more than he produces'
-            : 'he produces more than he costs';
+        return (d > 0 ? '+' : '') + d + '%';
       })(),
+      note: diverge && Math.abs(Math.round((diverge.mkt - diverge.prod) * 100)) < 12 ? 'in line' : undefined,
     },
     // The market's own order across every player it prices — not a search
     // index dressed up as an ADP.
-    { label: 'Market rank', value: p.rank ? '#' + p.rank : 'unranked' },
+    { label: 'Market rank', value: p.rank ? '#' + p.rank : '—' },
     {
-      label: 'Seasons measured',
-      value: u && u.seasons
-        ? (u.seasons === 1
-          ? '1 · ' + u.seasonList + ' (small sample)'
-          : u.seasons + ' · ' + u.seasonList
-            /* How much of the number is the year you are watching. Two games
-             * and a full season print the same and are not the same claim. */
-            + (u.curWeight != null ? ' · ' + Math.round(u.curWeight * 100) + '% this year' : ''))
-        : 'no data',
+      label: 'Seasons',
+      value: u && u.seasons ? String(u.seasons) : '—',
+      /* How much of the number is the year you are watching. Two games and a
+       * full season print the same and are not the same claim. */
+      note: u && u.seasons
+        ? (u.seasons === 1 ? 'small' : u.curWeight != null ? Math.round(u.curWeight * 100) + '% this yr' : undefined)
+        : undefined,
     },
   ];
-
 
   return (
     <Overlay onClose={() => app.setDetail(null)}>

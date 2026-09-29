@@ -1731,7 +1731,19 @@ button { font-family: inherit; }
   color: var(--color-accent);
   font-variant-numeric: tabular-nums;
 }
-.ps-r.is-none { color: rgba(233, 233, 237, 0.25); }
+.ps-r.is-none { color: transparent; }
+/* On a tile the second line is a qualifier, not a rank, so it is not worn in
+   the accent — the accent on this card means "where he places". */
+.ps-r.is-note { color: rgba(233, 233, 237, 0.4); }
+
+/* Three to a row rather than two, and a tile's label may be two words, so it
+   is allowed to wrap where the grid's own labels are single tokens. */
+.ps-grid.is-tiles {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 8px;
+}
+.ps-grid.is-tiles .ps-v { font-size: 16px; }
+.ps-grid.is-tiles .ps-v.is-word { font-size: 12.5px; letter-spacing: -0.01em; padding-top: 3px; }
 
 /* One bar a week, scaled to his own best week. A chart of one player is a
    chart about him: scaling it to the league's ceiling flattens his season
