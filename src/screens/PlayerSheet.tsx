@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ACCENT, METRIC_LABEL, PEAK, POS, type Weights } from '../model/constants';
 import { num } from '../model/math';
 import type { Metrics } from '../model/score';
@@ -64,6 +65,32 @@ function resolve(m: Model, id: string, strat: Weights): Sheet | null {
   };
 }
 
+/**
+ * Something the card says only when asked.
+ *
+ * The sheet had two long blocks — how a projection is built, and the nine-row
+ * breakdown of a Rating — sitting above the things somebody opened it to read.
+ * Both are worth keeping and neither is worth scrolling past every time, which
+ * is what a disclosure is for.
+ */
+function More({ label, children }: { label: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="btn btn-ghost"
+        aria-expanded={open}
+        onClick={() => setOpen(v => !v)}
+        style={{ fontSize: 11.5, padding: 0, marginTop: 12 }}
+      >
+        {open ? 'Less' : label + ' \u203a'}
+      </button>
+      {open ? children : null}
+    </>
+  );
+}
+
 export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId: string }) {
   const p = resolve(m, playerId, m.wUsed);
 
@@ -75,8 +102,25 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
     );
   }
 
-  const proj = projectPPG(p.use);
-  const conf = proj != null ? projectConfidence(p.use) : null;
+  /*
+   * The headline number, in the points this league actually pays.
+   *
+   * `projectPPG` is the model's own, and it is measured in half-PPR — which
+   * almost no league scores in. This one pays a full point a catch, so every
+   * receiver on the page read three or four light under a label that said
+   * "half-PPR" as though that settled it.
+   *
+   * The team scale would be the wrong fix for one player: it maps a whole
+   * skill lineup onto a whole team score, so it would hand him a ninth of the
+   * kicker and the defence. Sleeper's own projection for the week is already
+   * totalled against this league's `scoring_settings` — exact, per player, and
+   * in the right units — so it leads, and the model's number keeps its own
+   * card below rather than being converted into something it is not.
+   */
+  const weekProj = Number.isFinite(app.projections[p.id]) ? app.projections[p.id] : null;
+  const modelProj = projectPPG(p.use);
+  const proj = weekProj ?? modelProj;
+  const conf = modelProj != null ? projectConfidence(p.use) : null;
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
   const setter = app.photoBy(p.id);
@@ -247,43 +291,64 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           ) : null}
         </div>
 
-        <div style={{ textAlign: 'right', flex: 'none', display: 'flex', gap: 14 }}>
-          {/* Two numbers, because they answer two questions and the app was
-              only ever answering one of them. The Rating says who to take at
-              this pick — it prices your hole, the replacement at his position
-              and where the board has him. The projection says how many points
-              he scores, and knows nothing about your roster. Measured against
-              the following season the projection is the better predictor of
-              points (0.806 to the Rating's 0.783) and the Rating is the better
-              draft board, and printing one of them under both labels was the
-              thing that made the model look wrong. */}
-          {proj != null ? (
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-0.03em' }}>
-                {proj.toFixed(1)}
-              </div>
-              <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
-                proj pts/gm
-              </div>
+      </div>
+
+      {/* Under the name rather than beside it. Squeezed into the strip left
+          over by a 64px photo, "Jaxon Smith-Njigba" wrapped onto three lines
+          and the numbers still had to shrink; across the full width each one
+          gets a tile and the name gets a line.
+
+          Two of them, because they answer two questions and the app was only
+          ever answering one. The Rating says who to take at this pick — it
+          prices your hole, the replacement at his position and where the board
+          has him. The projection says how many points he scores and knows
+          nothing about your roster. Against the following season the
+          projection is the better predictor (0.806 to 0.783) and the Rating is
+          the better draft board, and printing one under both labels is what
+          made the model look wrong. */}
+      <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+        {proj != null ? (
+          <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 11, padding: '10px 12px' }}>
+            <div style={{ fontSize: 22, fontWeight: 500, letterSpacing: '-0.03em' }}>{proj.toFixed(1)}</div>
+            <div style={{ fontSize: 9.5, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45), marginTop: 3 }}>
+              {weekProj != null ? 'proj this week' : 'proj pts/gm'}
             </div>
-          ) : null}
-          <div>
-            <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-0.03em', color: fitColor(p.fit) }}>{p.fit}</div>
-            <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
-              {/* Never call it a Rating when it is not one. */}
-              {fill ? 'consensus' : 'rating'}
-            </div>
+          </div>
+        ) : null}
+        <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 11, padding: '10px 12px' }}>
+          <div style={{ fontSize: 22, fontWeight: 500, letterSpacing: '-0.03em', color: fitColor(p.fit) }}>{p.fit}</div>
+          <div style={{ fontSize: 9.5, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45), marginTop: 3 }}>
+            {/* Never call it a Rating when it is not one. */}
+            {fill ? 'consensus' : 'rating'}
           </div>
         </div>
       </div>
 
-      {proj != null ? (
+      {/* First, because it is the answer. It used to sit under a paragraph
+          about how a projection is built and a nine-row breakdown — below the
+          fold on the one thing somebody opened the card to find out. */}
+      {fill ? null : (
+      <div style={{
+        border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)', borderRadius: 12, padding: '14px 13px', marginTop: 14,
+        background: 'color-mix(in srgb, var(--color-accent) 6%, transparent)',
+      }}>
+        <div style={{
+          fontSize: 10, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--color-accent)', marginBottom: 8,
+        }}>
+          Read
+        </div>
+        <div style={{ fontSize: 14, lineHeight: 1.5, textWrap: 'pretty' }}>{verdict(p)}</div>
+      </div>
+      )}
+
+      {modelProj != null ? (
         <Card style={{ marginTop: 16 }}>
           <div style={{ fontSize: 13.5, lineHeight: 1.55, textWrap: 'pretty' }}>
-            About <b>{proj.toFixed(1)}</b> half-PPR points a game next season
+            The model has him at <b>{modelProj.toFixed(1)}</b> half-PPR points a game next season
             {conf ? <span style={{ color: dim(0.5) }}>{' — ' + CONF[conf]}</span> : null}.
           </div>
-          <div style={{ fontSize: 12, color: dim(0.5), lineHeight: 1.55, marginTop: 8, textWrap: 'pretty' }}>
+          <More label="How this is worked out">
+          <div style={{ fontSize: 12, color: dim(0.5), lineHeight: 1.55, marginTop: 10, textWrap: 'pretty' }}>
             Built from his volume rather than his points — the season being played,
             weighted by how much of it there is, over his last three finished ones: his
             real touches, priced at rates pulled from his own toward what is ordinary at
@@ -292,6 +357,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
             about your roster or this pick — that is the Rating's job, and the two
             disagreeing on a player is information rather than a bug.
           </div>
+          </More>
         </Card>
       ) : null}
 
@@ -312,12 +378,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </Card>
       ) : (
       <Card style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, color: dim(0.45), marginBottom: 12 }}>
-          Breakdown — metric × weight, biggest contribution first
+        <div style={{ fontSize: 13, fontWeight: 500 }}>Why {p.fit}</div>
+        <More label="Metric by metric">
+        <div style={{ fontSize: 11.5, color: dim(0.42), margin: '10px 0 12px', textWrap: 'pretty' }}>
+          Metric × weight, biggest contribution first — sorted by what each one actually put on the
+          board, so the first row is the answer.
         </div>
-        {/* Ordered by what each metric actually put on the board. In fixed
-            metric order the reader has to find the big ones themselves; sorted,
-            the first row is the answer to "why is this number what it is". */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {m.metricKeys
             .filter(k => p.weights[k] > 0)
@@ -340,21 +406,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
               </div>
             ))}
         </div>
+        </More>
       </Card>
-      )}
-
-      {fill ? null : (
-      <div style={{
-        border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)', borderRadius: 12, padding: '14px 13px', marginTop: 12,
-        background: 'color-mix(in srgb, var(--color-accent) 6%, transparent)',
-      }}>
-        <div style={{
-          fontSize: 10, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--color-accent)', marginBottom: 8,
-        }}>
-          Read
-        </div>
-        <div style={{ fontSize: 14, lineHeight: 1.5, textWrap: 'pretty' }}>{verdict(p)}</div>
-      </div>
       )}
 
       {fill || m.isDynasty ? null : <Schedule pos={p.pos} team={p.team} league={m.league} />}
