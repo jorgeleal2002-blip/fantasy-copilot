@@ -66,7 +66,7 @@ export function Meter({
             // the mark visible where the fill passes beneath it.
             borderLeft: `2px solid ${MARK_GAP}`,
             borderRight: `2px solid ${MARK_GAP}`,
-            background: dim(0.6),
+            background: dim(0.75),
             backgroundClip: 'padding-box',
           }}
         />

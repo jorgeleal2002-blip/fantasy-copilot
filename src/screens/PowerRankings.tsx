@@ -60,7 +60,7 @@ function Row({ t }: { t: PowerTeam }) {
         <div style={{ flex: 'none', width: 26, textAlign: 'center' }}>
           <div style={{
             fontSize: 15, fontWeight: 500, letterSpacing: '-0.02em',
-            color: t.isMe ? 'var(--color-accent)' : dim(0.48),
+            color: t.isMe ? 'var(--color-accent)' : dim(0.62),
           }}>
             {t.rank}
           </div>
@@ -71,7 +71,7 @@ function Row({ t }: { t: PowerTeam }) {
               {(t.move > 0 ? '▲' : '▼') + Math.abs(t.move)}
             </div>
           ) : t.was != null ? (
-            <div style={{ fontSize: 10, marginTop: 1, color: dim(0.28) }}>–</div>
+            <div style={{ fontSize: 10, marginTop: 1, color: dim(0.52) }}>–</div>
           ) : null}
         </div>
         {t.avatar
@@ -87,7 +87,7 @@ function Row({ t }: { t: PowerTeam }) {
           </div>
           {/* The score taken apart, in the order it is weighted. Three figures
               anybody can put back together rather than one to be trusted. */}
-          <div style={{ fontSize: 10, color: dim(0.38), marginTop: 1, ...ellipsis }}>
+          <div style={{ fontSize: 10, color: dim(0.52), marginTop: 1, ...ellipsis }}>
             {t.weeks
               ? `${pct}% all-play · roster ${ordinal(t.rosterRank)} · ${t.record.label}`
               : `roster ${ordinal(t.rosterRank)} · no weeks played`}
@@ -95,7 +95,7 @@ function Row({ t }: { t: PowerTeam }) {
           {/* The record the scoring earned, and how far a normal week lands
               from their average. Two numbers a standings table cannot hold. */}
           {t.weeks ? (
-            <div style={{ fontSize: 10, color: dim(0.28), marginTop: 1, ...ellipsis }}>
+            <div style={{ fontSize: 10, color: dim(0.52), marginTop: 1, ...ellipsis }}>
               {[
                 t.expected ? `earned ${t.expected.wins}-${t.expected.losses}` : '',
                 t.swing != null ? `±${t.swing.toFixed(0)} a week` : '',

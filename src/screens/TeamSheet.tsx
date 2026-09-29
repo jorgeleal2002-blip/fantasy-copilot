@@ -12,14 +12,14 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
   if (!info) {
     return (
       <Overlay onClose={() => app.setDetail(null)} label="The league" z={6}>
-        <div style={{ fontSize: 13, color: dim(0.6) }}>No data for this team.</div>
+        <div style={{ fontSize: 13, color: dim(0.75) }}>No data for this team.</div>
       </Overlay>
     );
   }
 
   const { row } = info;
   const w = row.window;
-  const windowColor = !m.leagueHasRosters ? dim(0.38) : w === 'contender' ? GOOD : w === 'rebuild' ? BAD : MID;
+  const windowColor = !m.leagueHasRosters ? dim(0.52) : w === 'contender' ? GOOD : w === 'rebuild' ? BAD : MID;
   const windowLabel = !m.leagueHasRosters ? 'No roster'
     : !m.isDynasty ? (w === 'contender' ? 'Strong roster' : w === 'rebuild' ? 'Weak roster' : 'Average roster')
       : w === 'contender' ? 'Contending now' : w === 'rebuild' ? 'Rebuilding' : 'Mid-table';
@@ -51,7 +51,7 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
         ) : null}
         <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.025em' }}>{row.name}</div>
       </div>
-      <div style={{ fontSize: 12, color: dim(0.48), marginTop: 4 }}>{sub}</div>
+      <div style={{ fontSize: 12, color: dim(0.62), marginTop: 4 }}>{sub}</div>
       <div style={{
         display: 'inline-flex', marginTop: 10, fontSize: 10, padding: '4px 10px', borderRadius: 8,
         color: windowColor, border: '1px solid ' + windowColor, background: 'rgba(242,253,254,0.04)',
@@ -112,11 +112,11 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
         >
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</div>
-            <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2 }}>
+            <div style={{ fontSize: 10, color: dim(0.52), marginTop: 2 }}>
               {p.pos} · {p.age ?? '?'} yrs · {p.team}
             </div>
           </div>
-          <div style={{ fontSize: 12, color: dim(0.6), flex: 'none' }}>{num(p.q * 100)}</div>
+          <div style={{ fontSize: 12, color: dim(0.75), flex: 'none' }}>{num(p.q * 100)}</div>
         </div>
       ))}
 
@@ -132,7 +132,7 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
               style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '7px 0', fontSize: 12 }}
             >
               <span>{p.name}</span>
-              <span style={{ color: dim(0.48) }}>{num(p.q * 100)}</span>
+              <span style={{ color: dim(0.62) }}>{num(p.q * 100)}</span>
             </DividedRow>
           ))}
         </Card>

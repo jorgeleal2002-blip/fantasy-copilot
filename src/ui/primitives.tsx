@@ -94,7 +94,7 @@ export function Empty({ title, body, action }: { title: string; body: string; ac
   return (
     <div style={{ ...surface, padding: '26px 18px', textAlign: 'center' }}>
       <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>{title}</div>
-      <div style={{ fontSize: 12, lineHeight: '18px', color: 'rgba(242,253,254,0.48)', marginBottom: action ? 16 : 0 }}>{body}</div>
+      <div style={{ fontSize: 12, lineHeight: '18px', color: 'rgba(242,253,254,0.62)', marginBottom: action ? 16 : 0 }}>{body}</div>
       {action}
     </div>
   );

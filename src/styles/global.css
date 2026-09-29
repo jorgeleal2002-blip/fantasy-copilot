@@ -437,7 +437,7 @@ button { font-family: inherit; }
   letter-spacing: 0.03em;
   text-align: center;
   padding: 2px 2px 5px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   min-width: 0;
   overflow: hidden;
 }
@@ -463,7 +463,7 @@ button { font-family: inherit; }
 }
 .bd-round {
   font-size: 10px;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -525,10 +525,10 @@ button { font-family: inherit; }
   justify-content: space-between;
   font-size: 10px;
   letter-spacing: 0.03em;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
   font-variant-numeric: tabular-nums;
 }
-.bd-cell.is-filled .bd-tag { color: rgba(242, 253, 254, 0.48); }
+.bd-cell.is-filled .bd-tag { color: rgba(242, 253, 254, 0.62); }
 .bd-live { color: var(--color-accent); font-size: 10px; }
 .bd-name {
   font-size: 12px;
@@ -544,7 +544,7 @@ button { font-family: inherit; }
   font-size: 10px;
   letter-spacing: 0.05em;
   margin-top: 1px;
-  color: var(--pos, rgba(242, 253, 254, 0.38));
+  color: var(--pos, rgba(242, 253, 254, 0.52));
 }
 /* Everything inside a filled cell reads against the fill, not against the
    board. The position keeps its own weight by going quieter, not by staying
@@ -562,7 +562,7 @@ button { font-family: inherit; }
   justify-content: flex-end;
   font-size: 10px;
   line-height: 10px;
-  color: rgba(242, 253, 254, 0.2);
+  color: rgba(242, 253, 254, 0.52);
 }
 .bd-cell.is-clock .bd-arrow {
   font-size: 10px;
@@ -603,7 +603,7 @@ button { font-family: inherit; }
   background: none;
   border: 0;
   border-bottom: 2px solid transparent;
-  color: rgba(242, 253, 254, 0.48);
+  color: rgba(242, 253, 254, 0.62);
   cursor: pointer;
 }
 .dock-tab.is-on {
@@ -631,7 +631,7 @@ button { font-family: inherit; }
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  color: rgba(242, 253, 254, 0.6);
+  color: rgba(242, 253, 254, 0.75);
   background: rgba(242, 253, 254, 0.04);
   border: 1px solid transparent;
 }
@@ -642,11 +642,11 @@ button { font-family: inherit; }
 }
 .pos-count {
   font-size: 10px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   font-variant-numeric: tabular-nums;
 }
-.pos-chip.is-on .pos-count { color: rgba(242, 253, 254, 0.6); }
-.pos-chip.is-icon { padding: 8px 10px; color: rgba(242, 253, 254, 0.48); }
+.pos-chip.is-on .pos-count { color: rgba(242, 253, 254, 0.75); }
+.pos-chip.is-icon { padding: 8px 10px; color: rgba(242, 253, 254, 0.62); }
 .dock-search {
   flex: 1;
   min-width: 0;
@@ -688,7 +688,7 @@ button { font-family: inherit; }
    move every row the moment your turn came round. */
 .pl-draft:disabled {
   cursor: default;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
   background: rgba(242, 253, 254, 0.04);
   border-color: transparent;
 }
@@ -707,7 +707,7 @@ button { font-family: inherit; }
 }
 .pl-meta {
   font-size: 10px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   margin-top: 1px;
   white-space: nowrap;
   overflow: hidden;
@@ -718,7 +718,7 @@ button { font-family: inherit; }
   font-size: 10px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
 }
 .pl-stat-v {
   font-size: 13px;
@@ -968,7 +968,7 @@ button { font-family: inherit; }
   font-size: 10px;
   letter-spacing: .11em;
   text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
   border-top: var(--hairline) solid var(--color-divider);
 }
 
@@ -1028,7 +1028,7 @@ button { font-family: inherit; }
 .mu-name {
   font-size: 12px;
   line-height: 15px;
-  color: rgba(242, 253, 254, 0.72);
+  color: rgba(242, 253, 254, 0.9);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1040,7 +1040,7 @@ button { font-family: inherit; }
   font-weight: 500;
   letter-spacing: -0.02em;
   margin-top: 1px;
-  color: rgba(242, 253, 254, 0.6);
+  color: rgba(242, 253, 254, 0.75);
 }
 .mu-pts.is-up { color: var(--color-text); }
 
@@ -1051,7 +1051,7 @@ button { font-family: inherit; }
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
 }
 
 /* ── One game, on its own screen ──────────────────────────────────────────
@@ -1088,7 +1088,7 @@ button { font-family: inherit; }
   font-weight: 600;
   letter-spacing: -0.035em;
   line-height: 23px;
-  color: rgba(242, 253, 254, 0.48);
+  color: rgba(242, 253, 254, 0.62);
   font-variant-numeric: tabular-nums;
 }
 .ms-pts.is-up { color: var(--color-text); }
@@ -1096,7 +1096,7 @@ button { font-family: inherit; }
 .ms-proj {
   font-size: 10px;
   margin-top: 2px;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
   font-variant-numeric: tabular-nums;
 }
 .ms-vs {
@@ -1106,7 +1106,7 @@ button { font-family: inherit; }
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
 }
 
 /* The two projections against each other. Deliberately not a win probability
@@ -1128,7 +1128,7 @@ button { font-family: inherit; }
 }
 .ms-edge {
   font-size: 10px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   font-variant-numeric: tabular-nums;
 }
 .ms-edge.is-right { text-align: right; }
@@ -1149,7 +1149,7 @@ button { font-family: inherit; }
 .ms-sub {
   font-size: 10px;
   margin-top: 3px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1161,7 +1161,7 @@ button { font-family: inherit; }
   font-weight: 500;
   letter-spacing: -0.01em;
   padding: 14px 0 8px;
-  color: rgba(242, 253, 254, 0.72);
+  color: rgba(242, 253, 254, 0.9);
   border-top: var(--hairline) solid var(--color-divider);
 }
 /* Pulled out past the sheet's gutters. Sideways is the scarce direction here
@@ -1187,7 +1187,7 @@ button { font-family: inherit; }
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.04em;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   background: rgba(242, 253, 254, 0.04);
 }
 
@@ -1217,7 +1217,7 @@ button { font-family: inherit; }
 
 .ms-pl-name {
   font-size: 13px;
-  color: rgba(242, 253, 254, 0.72);
+  color: rgba(242, 253, 254, 0.9);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1225,7 +1225,7 @@ button { font-family: inherit; }
 .ms-pl-sub {
   font-size: 10px;
   margin-top: 2px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1238,7 +1238,7 @@ button { font-family: inherit; }
 .ms-pl-did {
   font-size: 10px;
   line-height: 14px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1256,7 +1256,7 @@ button { font-family: inherit; }
   font-size: 10px;
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
 }
 
 /* ── Trade builder ────────────────────────────────────────────────────────
@@ -1286,7 +1286,7 @@ button { font-family: inherit; }
   overflow: hidden;
   text-overflow: ellipsis;
   scroll-snap-align: start;
-  color: rgba(242, 253, 254, 0.6);
+  color: rgba(242, 253, 254, 0.75);
   border: var(--hairline) solid var(--color-divider);
   background: transparent;
 }
@@ -1311,7 +1311,7 @@ button { font-family: inherit; }
 }
 .tb-sub {
   font-size: 12px;
-  color: rgba(242, 253, 254, 0.48);
+  color: rgba(242, 253, 254, 0.62);
   margin-top: 3px;
 }
 
@@ -1343,7 +1343,7 @@ button { font-family: inherit; }
   top: -2px;
   bottom: -2px;
   width: 1px;
-  background: rgba(242, 253, 254, 0.2);
+  background: rgba(242, 253, 254, 0.28);
 }
 .tb-fill {
   position: absolute;
@@ -1356,13 +1356,13 @@ button { font-family: inherit; }
 .tb-gets {
   font-size: 10px;
   line-height: 14px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   margin-top: 5px;
   text-wrap: pretty;
 }
 .tb-fit {
   font-size: 12px;
-  color: rgba(242, 253, 254, 0.6);
+  color: rgba(242, 253, 254, 0.75);
   margin-top: 12px;
   text-wrap: pretty;
 }
@@ -1370,7 +1370,7 @@ button { font-family: inherit; }
 .tb-band {
   font-size: 10px;
   line-height: 14px;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
   margin-top: 10px;
   text-wrap: pretty;
 }
@@ -1385,7 +1385,7 @@ button { font-family: inherit; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
 }
 /* Green where the deal is there to be made, amber where it costs you. */
 .tb-why.is-surplus { color: #8ec9a8; }
@@ -1398,7 +1398,7 @@ button { font-family: inherit; }
   font-size: 10px;
   line-height: 12px;
   margin-top: 1px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   /* It carries the handle as well as the record now, and a long one has to cut
      rather than push the card wider than the phone. */
   overflow: hidden;
@@ -1415,7 +1415,7 @@ button { font-family: inherit; }
   font-size: 10px;
   font-weight: 400;
   letter-spacing: 0;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1465,10 +1465,10 @@ button { font-family: inherit; }
   gap: 10px;
   margin-top: 5px;
   font-size: 10px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
 }
 .fb-bal-legs span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fb-fit { font-size: 12px; color: rgba(242, 253, 254, 0.6); margin-top: 10px; text-wrap: pretty; }
+.fb-fit { font-size: 12px; color: rgba(242, 253, 254, 0.75); margin-top: 10px; text-wrap: pretty; }
 .fb-problem { font-size: 10px; color: #d9a08e; margin-top: 7px; text-wrap: pretty; }
 
 /* Two columns fit a phone; a third and fourth scroll rather than squeeze, so
@@ -1505,7 +1505,7 @@ button { font-family: inherit; }
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
 }
 
 .fb-card {
@@ -1545,8 +1545,8 @@ button { font-family: inherit; }
   border-radius: 4px;
   color: #04060f;
 }
-.fb-val { font-size: 10px; color: rgba(242, 253, 254, 0.48); }
-.fb-from { font-size: 10px; color: rgba(242, 253, 254, 0.28); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-val { font-size: 10px; color: rgba(242, 253, 254, 0.62); }
+.fb-from { font-size: 10px; color: rgba(242, 253, 254, 0.52); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .fb-x {
   flex: none;
@@ -1558,7 +1558,7 @@ button { font-family: inherit; }
   font: inherit;
   font-size: 13px;
   line-height: 13px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   background: transparent;
 }
 .fb-add {
@@ -1579,14 +1579,14 @@ button { font-family: inherit; }
   border-radius: 12px;
   padding: 14px 13px;
   font-size: 12px;
-  color: rgba(242, 253, 254, 0.48);
+  color: rgba(242, 253, 254, 0.62);
 }
 
 .fb-pick-title {
   font-size: 10px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   margin-bottom: 8px;
 }
 .fb-pick-row {
@@ -1636,7 +1636,7 @@ button { font-family: inherit; }
   gap: 6px;
   font-size: 10px;
   line-height: 14px;
-  color: rgba(242, 253, 254, 0.48);
+  color: rgba(242, 253, 254, 0.62);
   margin-top: 3px;
   text-wrap: pretty;
 }
@@ -1644,7 +1644,7 @@ button { font-family: inherit; }
 .fb-row-tag {
   flex: none;
   width: 40px;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 10px;
@@ -1653,7 +1653,7 @@ button { font-family: inherit; }
 .fb-note {
   font-size: 10px;
   line-height: 14px;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
   text-wrap: pretty;
 }
 
@@ -1718,7 +1718,7 @@ button { font-family: inherit; }
   font-size: 10px;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
 }
 .ps-v {
   font-size: 17px;
@@ -1737,7 +1737,7 @@ button { font-family: inherit; }
 .ps-r.is-none { color: transparent; }
 /* On a tile the second line is a qualifier, not a rank, so it is not worn in
    the accent — the accent on this card means "where he places". */
-.ps-r.is-note { color: rgba(242, 253, 254, 0.38); }
+.ps-r.is-note { color: rgba(242, 253, 254, 0.52); }
 
 /* Three to a row rather than two, and a tile's label may be two words, so it
    is allowed to wrap where the grid's own labels are single tokens. */
@@ -1770,7 +1770,7 @@ button { font-family: inherit; }
 .ps-bar-n {
   font-size: 10px;
   text-align: center;
-  color: rgba(242, 253, 254, 0.6);
+  color: rgba(242, 253, 254, 0.75);
   font-variant-numeric: tabular-nums;
 }
 .ps-bar-fill {
@@ -1792,7 +1792,7 @@ button { font-family: inherit; }
   font-size: 10px;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
 }
 
 /* One row a game: which week and who against on the left, what he scored on
@@ -1814,10 +1814,10 @@ button { font-family: inherit; }
 }
 .ps-log-when {
   font-size: 12px;
-  color: rgba(242, 253, 254, 0.72);
+  color: rgba(242, 253, 254, 0.9);
   letter-spacing: -0.01em;
 }
-.ps-log-opp { color: rgba(242, 253, 254, 0.38); }
+.ps-log-opp { color: rgba(242, 253, 254, 0.52); }
 .ps-log-pts {
   font-size: 15px;
   font-weight: 500;
@@ -1829,7 +1829,7 @@ button { font-family: inherit; }
   font-size: 10px;
   line-height: 14px;
   margin-top: 3px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   text-wrap: pretty;
 }
 
@@ -1858,9 +1858,9 @@ button { font-family: inherit; }
 .ps-feed-wk {
   font-size: 13px;
   letter-spacing: -0.01em;
-  color: rgba(242, 253, 254, 0.72);
+  color: rgba(242, 253, 254, 0.9);
 }
-.ps-feed-pts { color: rgba(242, 253, 254, 0.38); }
+.ps-feed-pts { color: rgba(242, 253, 254, 0.52); }
 /* How the week compared with his own average, which is the question a log is
    scrolled to answer: was that a good one for him. */
 .ps-feed-d {
@@ -1868,7 +1868,7 @@ button { font-family: inherit; }
   font-size: 12px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
 }
 .ps-feed-d.is-up { color: #8ec9a8; }
 /* His finish that week. A placement, so it is the accent — the same colour
@@ -1900,20 +1900,20 @@ button { font-family: inherit; }
 .ps-feed-u {
   font-size: 10px;
   text-transform: lowercase;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
 }
 /* The tail of the line, under the figures that are set large. */
 .ps-feed-rest {
   font-size: 10px;
   line-height: 14px;
   margin-top: 4px;
-  color: rgba(242, 253, 254, 0.48);
+  color: rgba(242, 253, 254, 0.62);
   text-wrap: pretty;
 }
 .ps-feed-opp {
   font-size: 10px;
   margin-top: 5px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
 }
 
 /* Sections inside one card. They were separate cards because the numbers in
@@ -1967,7 +1967,7 @@ button { font-family: inherit; }
 .cmp-sub {
   font-size: 10px;
   margin-top: 3px;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1978,7 +1978,7 @@ button { font-family: inherit; }
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.28);
+  color: rgba(242, 253, 254, 0.52);
 }
 .cmp-verdict {
   font-size: 12px;
@@ -1986,7 +1986,7 @@ button { font-family: inherit; }
   padding: 11px 12px;
   border-radius: 12px;
   background: color-mix(in srgb, var(--color-accent) 7%, transparent);
-  color: rgba(242, 253, 254, 0.72);
+  color: rgba(242, 253, 254, 0.9);
   text-wrap: pretty;
 }
 
@@ -2004,7 +2004,7 @@ button { font-family: inherit; }
   font-weight: 500;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
-  color: rgba(242, 253, 254, 0.48);
+  color: rgba(242, 253, 254, 0.62);
 }
 .cmp-val.is-right { text-align: right; }
 /* Only the winner is lit. Both sides in full white is two numbers to compare
@@ -2017,7 +2017,7 @@ button { font-family: inherit; }
   font-size: 10px;
   letter-spacing: .04em;
   text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.38);
+  color: rgba(242, 253, 254, 0.52);
 }
 
 /* A heading inside the comparison, so the two tables are not read as one
@@ -2035,7 +2035,7 @@ button { font-family: inherit; }
 .cmp-chart-h {
   font-size: 10px;
   margin-bottom: 4px;
-  color: rgba(242, 253, 254, 0.48);
+  color: rgba(242, 253, 254, 0.62);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2051,6 +2051,6 @@ button { font-family: inherit; }
   border-radius: 4px;
   font-size: 10px;
   letter-spacing: .01em;
-  color: rgba(242, 253, 254, 0.6);
+  color: rgba(242, 253, 254, 0.75);
   background: rgba(242, 253, 254, 0.07);
 }

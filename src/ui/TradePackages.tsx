@@ -53,7 +53,7 @@ export function TradePackages(
 
   if (!deals.length) {
     return (
-      <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.48), marginTop: 8 }}>
+      <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.62), marginTop: 8 }}>
         Nothing you own gets there at a price his manager would take. Either he is worth more than
         any package you can build, or his team is short at exactly his position.
       </div>
@@ -72,7 +72,7 @@ export function TradePackages(
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.38) }}>
+                <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.52) }}>
                   You send
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', marginTop: 3 }}>
@@ -80,23 +80,23 @@ export function TradePackages(
                 </div>
               </div>
               <div style={{ flex: 'none', textAlign: 'right' }}>
-                <div style={{ fontSize: 15, fontWeight: 500, color: t.accept >= 70 ? GOOD : t.accept >= 50 ? ACCENT : dim(0.6) }}>
+                <div style={{ fontSize: 15, fontWeight: 500, color: t.accept >= 70 ? GOOD : t.accept >= 50 ? ACCENT : dim(0.75) }}>
                   {t.accept}
                 </div>
-                <div style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: dim(0.38) }}>
+                <div style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: dim(0.52) }}>
                   they accept
                 </div>
               </div>
             </div>
 
             {compact ? null : (
-              <div style={{ fontSize: 12, color: dim(0.48), marginTop: 5, lineHeight: '18px' }}>
+              <div style={{ fontSize: 12, color: dim(0.62), marginTop: 5, lineHeight: '18px' }}>
                 {t.give.map(g => (g.isPick ? g.label : g.pos + ' · ' + (g.age ?? '?') + ' yrs')).join(' · ')}
                 {' · '}{num(t.cost * 100)} vs his {num(t.target.q * 100)}
               </div>
             )}
 
-            <div style={{ fontSize: 12, marginTop: 5, lineHeight: '18px', color: dim(0.6) }}>
+            <div style={{ fontSize: 12, marginTop: 5, lineHeight: '18px', color: dim(0.75) }}>
               {priceRead(t)}
             </div>
 

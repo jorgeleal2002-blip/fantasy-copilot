@@ -33,7 +33,7 @@ export const WARN = '#eedaa0';
  * salmon, 29.6 from the accent itself, so it never reads as any of them.
  */
 export const MID = '#6783ec';
-export const MUTED = 'rgba(242,253,254,0.48)';
+export const MUTED = 'rgba(242,253,254,0.62)';
 
 /**
  * One hue per position, taken from the app this look comes from.
@@ -100,7 +100,7 @@ export const CELL_INK = '#0a1024';
 export const cellOf = (pos: DraftPos): string => POS_CELL[pos] || '#8ea3c8';
 /** The colour for anything a draft board can hold. */
 export const colorOf = (pos: DraftPos): string =>
-  POS_COLOR[pos as Pos] || FILL_COLOR[pos as FillPos] || 'rgba(242,253,254,0.38)';
+  POS_COLOR[pos as Pos] || FILL_COLOR[pos as FillPos] || 'rgba(242,253,254,0.52)';
 
 /** What Sleeper may call the team-defence slot. */
 export const DEF_SLOTS = ['DEF', 'DST', 'D/ST'];

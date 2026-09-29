@@ -37,7 +37,7 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
   if (!game) {
     return (
       <Overlay onClose={() => app.setDetail(null)} label="Week" z={6}>
-        <div style={{ fontSize: 13, color: dim(0.6) }}>This game is not on the board any more.</div>
+        <div style={{ fontSize: 13, color: dim(0.75) }}>This game is not on the board any more.</div>
       </Overlay>
     );
   }
@@ -111,7 +111,7 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
       {starters.length ? (
         <Block app={app} title="Starters" rows={starters} />
       ) : (
-        <div style={{ fontSize: 12, color: dim(0.48), textWrap: 'pretty' }}>
+        <div style={{ fontSize: 12, color: dim(0.62), textWrap: 'pretty' }}>
           Sleeper has not published the lineups for this week yet.
         </div>
       )}
@@ -119,7 +119,7 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
       {bench.length ? <Block app={app} title="Bench" rows={bench} /> : null}
 
       {app.projState === 'fail' ? (
-        <div style={{ fontSize: 10, color: dim(0.28), textWrap: 'pretty' }}>
+        <div style={{ fontSize: 10, color: dim(0.52), textWrap: 'pretty' }}>
           Sleeper did not return projections for this week. It retries on its own.
         </div>
       ) : null}

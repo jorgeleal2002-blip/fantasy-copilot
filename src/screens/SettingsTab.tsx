@@ -43,7 +43,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{m.me.teamName}</div>
-          <div style={{ fontSize: 12, color: dim(0.48), marginTop: 2, ...ellipsis }}>{m.league.name}</div>
+          <div style={{ fontSize: 12, color: dim(0.62), marginTop: 2, ...ellipsis }}>{m.league.name}</div>
         </div>
       </div>
 
@@ -73,19 +73,19 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
 
       <div>
         <div style={{
-          fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.38), marginBottom: 9,
+          fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.52), marginBottom: 9,
         }}>
           Algorithm strategy
         </div>
         <Segmented options={STRAT_OPTIONS} value={app.strat} onChange={app.setStrat} />
-        <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.48), marginTop: 10, textWrap: 'pretty' }}>
+        <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.62), marginTop: 10, textWrap: 'pretty' }}>
           {strat.copy}
         </div>
       </div>
 
       <Card>
         <div style={{ ...cardTitle, marginBottom: 4 }}>Rating weights</div>
-        <div style={{ fontSize: 12, color: dim(0.48), marginBottom: 12 }}>Rating = Σ wᵢ × metricᵢ</div>
+        <div style={{ fontSize: 12, color: dim(0.62), marginBottom: 12 }}>Rating = Σ wᵢ × metricᵢ</div>
         {/* Heaviest first, scaled against this profile's own largest weight:
             ordered by size, the chart answers "what is this profile actually
             buying?" without the reader ranking nine numbers by eye. */}
@@ -93,8 +93,8 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           {[...m.metricKeys].sort((a, b) => strat.w[b] - strat.w[a]).map(k => (
             <div key={k}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
-                <span style={{ color: strat.w[k] ? undefined : dim(0.38) }}>{METRIC_LABEL[k]}</span>
-                <span style={{ color: strat.w[k] ? ACCENT : dim(0.38) }}>{Math.round(strat.w[k] * 100)}%</span>
+                <span style={{ color: strat.w[k] ? undefined : dim(0.52) }}>{METRIC_LABEL[k]}</span>
+                <span style={{ color: strat.w[k] ? ACCENT : dim(0.52) }}>{Math.round(strat.w[k] * 100)}%</span>
               </div>
               <Meter
                 pct={strat.w[k] / Math.max(...m.metricKeys.map(x => strat.w[x])) * 100}
@@ -155,7 +155,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {rules.map(r => (
             <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12 }}>
-              <span style={{ color: dim(0.48) }}>{r.label}</span>
+              <span style={{ color: dim(0.62) }}>{r.label}</span>
               <span style={{ textAlign: 'right' }}>{r.value}</span>
             </div>
           ))}
@@ -262,7 +262,7 @@ function TeamPicker({ app, m }: { app: App; m: Model }) {
                     type="button"
                     onClick={() => app.forgetAccount(a.username)}
                     className="btn btn-ghost"
-                    style={{ flex: 'none', fontSize: 10, padding: '0 10px 0 0', color: dim(0.38) }}
+                    style={{ flex: 'none', fontSize: 10, padding: '0 10px 0 0', color: dim(0.52) }}
                   >
                     Forget
                   </button>
@@ -297,7 +297,7 @@ function TeamPicker({ app, m }: { app: App; m: Model }) {
               }}
             >
               <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{r.name}</span>
-              <span style={{ flex: 'none', fontSize: 10, color: r.isMe ? ACCENT : dim(0.38) }}>
+              <span style={{ flex: 'none', fontSize: 10, color: r.isMe ? ACCENT : dim(0.52) }}>
                 {r.isMe ? 'yours' : (r.now > 0 ? 'drafted' : 'no roster')}
               </span>
             </button>
@@ -321,7 +321,7 @@ function TeamPicker({ app, m }: { app: App; m: Model }) {
 function Row({ label, value, bad }: { label: string; value: string; bad?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12 }}>
-      <span style={{ color: dim(0.48) }}>{label}</span>
+      <span style={{ color: dim(0.62) }}>{label}</span>
       <span style={{ textAlign: 'right', color: bad ? BAD : undefined }}>{value}</span>
     </div>
   );

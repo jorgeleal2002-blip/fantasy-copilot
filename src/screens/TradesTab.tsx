@@ -42,7 +42,7 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: badgeColor, flex: 'none' }} />
             <span style={ellipsis}>{badge}</span>
           </div>
-          <div style={{ fontSize: 10, color: dim(0.38), marginTop: 4 }}>
+          <div style={{ fontSize: 10, color: dim(0.52), marginTop: 4 }}>
             Data from {clockTime(app.syncedAt || Date.now())} · rosters, traded picks and market
           </div>
         </div>
@@ -75,7 +75,7 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
         <Block app={app} m={m} />
       ) : (
         <>
-          <div style={{ fontSize: 12, color: dim(0.48) }}>
+          <div style={{ fontSize: 12, color: dim(0.62) }}>
             {m.offers.length === 1 ? '1 trade' : m.offers.length + ' trades'}
           </div>
 
@@ -163,7 +163,7 @@ function Block({ app, m }: { app: App; m: Model }) {
             }}
           >
             <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{p.name}</span>
-            <span style={{ flex: 'none', fontSize: 10, color: dim(0.38) }}>
+            <span style={{ flex: 'none', fontSize: 10, color: dim(0.52) }}>
               {p.pos}{m.optIds.indexOf(p.id) >= 0 ? ' · starter' : ''}
             </span>
             <button
@@ -176,7 +176,7 @@ function Block({ app, m }: { app: App; m: Model }) {
             </button>
           </div>
         )) : (
-          <div style={{ fontSize: 12, color: dim(0.48) }}>Nobody yet.</div>
+          <div style={{ fontSize: 12, color: dim(0.62) }}>Nobody yet.</div>
         )}
 
         {adding ? (
@@ -196,7 +196,7 @@ function Block({ app, m }: { app: App; m: Model }) {
                   }}
                 >
                   <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{p.name}</span>
-                  <span style={{ flex: 'none', fontSize: 10, color: dim(0.38) }}>
+                  <span style={{ flex: 'none', fontSize: 10, color: dim(0.52) }}>
                     {p.pos}{m.optIds.indexOf(p.id) >= 0 ? ' · starter' : ''}
                   </span>
                 </button>
@@ -236,23 +236,23 @@ function ReturnCard({ r }: { r: BlockReturn }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...cardNote, marginBottom: 3 }}>You send</div>
           <div style={{ fontSize: 13, fontWeight: 500, ...ellipsis }}>{r.send.name}</div>
-          <div style={{ fontSize: 10, color: dim(0.38) }}>
+          <div style={{ fontSize: 10, color: dim(0.52) }}>
             {r.send.pos} · {num(r.send.q * 100)} market
           </div>
         </div>
-        <div style={{ flex: 'none', color: dim(0.38), fontSize: 15 }}>⇄</div>
+        <div style={{ flex: 'none', color: dim(0.52), fontSize: 15 }}>⇄</div>
         <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
           <div style={{ ...cardNote, marginBottom: 3 }}>You get</div>
           {r.get.map(g => (
             <div key={g.id} style={{ fontSize: 13, fontWeight: 500, ...ellipsis }}>{g.name}</div>
           ))}
-          <div style={{ fontSize: 10, color: dim(0.38) }}>
+          <div style={{ fontSize: 10, color: dim(0.52) }}>
             {r.get.map(g => g.pos).join(' + ')} · {num(r.back * 100)} market
           </div>
         </div>
       </div>
 
-      <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.6), marginTop: 10, textWrap: 'pretty' }}>
+      <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), marginTop: 10, textWrap: 'pretty' }}>
         {under
           ? `You get back ${Math.round(r.edge * 100)}% more than he is worth.`
           : `You take ${Math.round(-r.edge * 100)}% under his market price.`}
@@ -286,7 +286,7 @@ function Shortlist({ app, m }: { app: App; m: Model }) {
     <>
       {/* Sleeper has no API for sending an offer, so this stays a list to work
           from rather than a thing you can send. */}
-      <div style={{ fontSize: 12, color: dim(0.48) }}>
+      <div style={{ fontSize: 12, color: dim(0.62) }}>
         {app.saved.length === 1 ? '1 trade' : app.saved.length + ' trades'} saved
       </div>
 
@@ -297,7 +297,7 @@ function Shortlist({ app, m }: { app: App; m: Model }) {
         return (
           <Card key={t.key}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <div style={{ fontSize: 12, color: dim(0.6), ...ellipsis }}>
+              <div style={{ fontSize: 12, color: dim(0.75), ...ellipsis }}>
                 with <span style={{ color: 'var(--color-text)' }}>{t.partner}</span>
               </div>
               <span style={{
@@ -314,11 +314,11 @@ function Shortlist({ app, m }: { app: App; m: Model }) {
                 own label out of line with the other's. */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 20px 1fr', gap: 8, alignItems: 'start', marginTop: 11 }}>
               <SavedSide label="Receive" color={GOOD} text={t.getText} onOpen={() => app.setDetail(t.getIds[0])} />
-              <div style={{ color: dim(0.28), fontSize: 15, textAlign: 'center', paddingTop: 17 }}>⇄</div>
+              <div style={{ color: dim(0.52), fontSize: 15, textAlign: 'center', paddingTop: 17 }}>⇄</div>
               <SavedSide label="Send" color={BAD} text={t.giveText} onOpen={undefined} />
             </div>
 
-            <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.6), marginTop: 10, textWrap: 'pretty' }}>
+            <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), marginTop: 10, textWrap: 'pretty' }}>
               {live
                 ? t.note
                 : 'The rosters moved — this deal no longer builds.'}
@@ -333,7 +333,7 @@ function Shortlist({ app, m }: { app: App; m: Model }) {
               >
                 Remove
               </button>
-              <span style={{ fontSize: 10, color: dim(0.38) }}>
+              <span style={{ fontSize: 10, color: dim(0.52) }}>
                 saved {clockTime(t.savedAt)} · {t.kind === 'offer' ? 'fit ' + t.score : t.score + '% they accept'}
               </span>
             </div>
@@ -364,7 +364,7 @@ function SavedSide({ label, color, text, onOpen }: {
 }
 
 function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty: boolean }) {
-  const fitTint = o.fit >= 75 ? GOOD : o.fit >= 62 ? MID : dim(0.6);
+  const fitTint = o.fit >= 75 ? GOOD : o.fit >= 62 ? MID : dim(0.75);
   const kind = o.edge > 0.04 ? 'Buying under market' : o.edge < -0.04 ? 'Justified overpay' : 'Fair price';
   const kindStyle = o.edge > 0.04
     ? { background: 'rgba(142,201,168,.16)', color: GOOD }
@@ -378,7 +378,7 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
     }}>
       <div style={{ padding: '14px 14px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: dim(0.6), ...ellipsis }}>
+          <div style={{ fontSize: 12, color: dim(0.75), ...ellipsis }}>
             with <span style={{ color: 'var(--color-text)' }}>{o.partner}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flex: 'none' }}>
@@ -404,7 +404,7 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
             asset={o.get}
             onOpen={o.get.isPick ? undefined : () => app.setDetail(o.get.id)}
           />
-          <div style={{ color: dim(0.28), fontSize: 15, textAlign: 'center' }}>⇄</div>
+          <div style={{ color: dim(0.52), fontSize: 15, textAlign: 'center' }}>⇄</div>
           <Side
             label="Send"
             color={BAD}
@@ -418,17 +418,17 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
             ? `${o.gain >= 0 ? '+' : ''}${num(o.gain * 100)} in market value`
             : `${o.gain >= 0 ? '+' : ''}${o.gain.toFixed(1)} lineup pts`}
         </div>
-        <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.6), marginTop: 4, textWrap: 'pretty' }}>
+        <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), marginTop: 4, textWrap: 'pretty' }}>
           {whyMe(o)}
         </div>
 
         <div style={{ marginTop: 10, padding: '10px 11px', borderRadius: 8, background: 'rgba(242,253,254,0.04)' }}>
           <div style={{
-            fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.38), marginBottom: 5,
+            fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.52), marginBottom: 5,
           }}>
             Why it works for them
           </div>
-          <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.6), textWrap: 'pretty' }}>{whyThem(o, dynasty)}</div>
+          <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), textWrap: 'pretty' }}>{whyThem(o, dynasty)}</div>
         </div>
       </div>
 
@@ -438,7 +438,7 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
           className="ghost-tap"
           onClick={() => app.passOffer(o.partner + o.get.id)}
           style={{
-            flex: 1, textAlign: 'center', padding: 12, fontSize: 13, color: dim(0.48),
+            flex: 1, textAlign: 'center', padding: 12, fontSize: 13, color: dim(0.62),
             background: 'transparent', border: 0, cursor: 'pointer',
           }}
         >
@@ -482,8 +482,8 @@ function Side({
         {label}
       </div>
       <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', lineHeight: '16px' }}>{asset.name}</div>
-      <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2 }}>{assetMeta(asset)}</div>
-      <div style={{ fontSize: 10, color: dim(0.28), marginTop: 3 }}>{num(asset.q * 100)} market</div>
+      <div style={{ fontSize: 10, color: dim(0.52), marginTop: 2 }}>{assetMeta(asset)}</div>
+      <div style={{ fontSize: 10, color: dim(0.52), marginTop: 3 }}>{num(asset.q * 100)} market</div>
     </div>
   );
 }

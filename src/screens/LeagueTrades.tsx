@@ -87,7 +87,7 @@ export function LeagueTrades({ app, m }: { app: App; m: Model }) {
       {/* Judged at today's market rather than the market on the day: whether a
           deal was fair when it was made is answered by both managers having
           accepted it. */}
-      <div style={{ fontSize: 12, color: dim(0.48) }}>
+      <div style={{ fontSize: 12, color: dim(0.62) }}>
         {trades.length === 1 ? '1 trade' : trades.length + ' trades'} this season
         {mine ? ', ' + mine + ' yours' : ''}
       </div>
@@ -103,13 +103,13 @@ const WHEN = (at: number) => (at
 function TradeCard({ app, m, t }: { app: App; m: Model; t: LeagueTrade }) {
   const [open, setOpen] = useState(false);
   const winner = t.verdict?.winner || null;
-  const tone = !winner ? dim(0.48) : winner.isMe ? GOOD : ACCENT;
+  const tone = !winner ? dim(0.62) : winner.isMe ? GOOD : ACCENT;
 
   return (
     <Card>
       <div style={{
         display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8,
-        fontSize: 10, color: dim(0.38),
+        fontSize: 10, color: dim(0.52),
       }}>
         <span>{t.week ? 'Week ' + t.week : 'Preseason'}</span>
         <span>{WHEN(t.at)}</span>
@@ -120,7 +120,7 @@ function TradeCard({ app, m, t }: { app: App; m: Model; t: LeagueTrade }) {
       </div>
       {/* Said out loud where it changes the number, rather than quietly. */}
       {t.faab && t.verdict ? (
-        <div style={{ fontSize: 10, color: dim(0.38), marginTop: 3 }}>
+        <div style={{ fontSize: 10, color: dim(0.52), marginTop: 3 }}>
           waiver budget not counted
         </div>
       ) : null}
@@ -142,11 +142,11 @@ function TradeCard({ app, m, t }: { app: App; m: Model; t: LeagueTrade }) {
             </div>
             {s.got.length
               ? s.got.map(mv => <Piece key={mv.id} mv={mv} />)
-              : <div style={{ fontSize: 10, color: dim(0.28) }}>nothing</div>}
+              : <div style={{ fontSize: 10, color: dim(0.52) }}>nothing</div>}
             {s.net != null ? (
               <div style={{
                 fontSize: 10, marginTop: 5,
-                color: s.net > 0 ? GOOD : s.net < 0 ? BAD : dim(0.38),
+                color: s.net > 0 ? GOOD : s.net < 0 ? BAD : dim(0.52),
               }}>
                 {(s.net > 0 ? '+' : s.net < 0 ? '−' : '') + Math.abs(Math.round(s.net)) + ' in value'}
               </div>
@@ -204,12 +204,12 @@ function SideDetail({ app, m, t, s }: { app: App; m: Model; t: LeagueTrade; s: T
         }}>
           {s.name}
         </span>
-        <span style={{ fontSize: 10, color: dim(0.38), flex: 'none' }}>
+        <span style={{ fontSize: 10, color: dim(0.52), flex: 'none' }}>
           {[row?.record.label, row ? ord(row.rankNow) + ' in the league' : ''].filter(Boolean).join(' · ')}
         </span>
       </div>
 
-      <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.72), marginTop: 4, textWrap: 'pretty' }}>
+      <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.9), marginTop: 4, textWrap: 'pretty' }}>
         {read}
       </div>
 
@@ -225,7 +225,7 @@ function SideDetail({ app, m, t, s }: { app: App; m: Model; t: LeagueTrade; s: T
 function Column({ app, label, list }: { app: App; label: string; list: TradeMove[] }) {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 10, letterSpacing: '0.06em', color: dim(0.28), marginBottom: 3 }}>
+      <div style={{ fontSize: 10, letterSpacing: '0.06em', color: dim(0.52), marginBottom: 3 }}>
         {label.toUpperCase()}
       </div>
       {list.length ? list.map(mv => (
@@ -244,7 +244,7 @@ function Column({ app, label, list }: { app: App; label: string; list: TradeMove
         >
           {mv.name}
         </div>
-      )) : <div style={{ fontSize: 10, color: dim(0.28) }}>—</div>}
+      )) : <div style={{ fontSize: 10, color: dim(0.52) }}>—</div>}
     </div>
   );
 }
@@ -253,7 +253,7 @@ function Piece({ mv }: { mv: TradeMove }) {
   return (
     <div style={{ marginBottom: 4 }}>
       <div style={{ fontSize: 12, ...ellipsis }}>{mv.name}</div>
-      {mv.note ? <div style={{ fontSize: 10, color: dim(0.38), ...ellipsis }}>{mv.note}</div> : null}
+      {mv.note ? <div style={{ fontSize: 10, color: dim(0.52), ...ellipsis }}>{mv.note}</div> : null}
     </div>
   );
 }

@@ -32,13 +32,13 @@ export function ConnectScreen({ app }: { app: App }) {
       <h1 style={{ fontSize: 31, lineHeight: '34px', fontWeight: 500, letterSpacing: '-0.025em', margin: '26px 0 8px' }}>
         Doctor x stein
       </h1>
-      <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.48), margin: '0 0 28px', maxWidth: '30ch' }}>
+      <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 28px', maxWidth: '30ch' }}>
         Connect your Sleeper account. Read-only.
       </p>
 
       <label
         htmlFor="sleeper-user"
-        style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: dim(0.38), marginBottom: 8 }}
+        style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: dim(0.52), marginBottom: 8 }}
       >
         Sleeper username
       </label>
@@ -49,7 +49,7 @@ export function ConnectScreen({ app }: { app: App }) {
           borderRadius: 12, padding: '13px 14px',
         }}
       >
-        <span style={{ color: dim(0.28), fontSize: 15 }}>@</span>
+        <span style={{ color: dim(0.52), fontSize: 15 }}>@</span>
         <input
           id="sleeper-user"
           value={app.username}
@@ -80,7 +80,7 @@ export function ConnectScreen({ app }: { app: App }) {
         <div style={{ marginTop: 26 }}>
           <div style={{
             fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase',
-            color: dim(0.38), marginBottom: 9,
+            color: dim(0.52), marginBottom: 9,
           }}>
             Or carry on as
           </div>
@@ -114,7 +114,7 @@ export function ConnectScreen({ app }: { app: App }) {
                   aria-label={'Forget ' + a.username}
                   style={{
                     flex: 'none', background: 'none', border: 0, cursor: 'pointer',
-                    color: dim(0.38), font: "400 12px 'Inter', system-ui", padding: '0 2px',
+                    color: dim(0.52), font: "400 12px 'Inter', system-ui", padding: '0 2px',
                   }}
                 >
                   Forget
@@ -178,7 +178,7 @@ export function LeaguesScreen({ app }: { app: App }) {
               ) : null}
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{l.name}</div>
-                <div style={{ fontSize: 12, color: dim(0.48), marginTop: 3 }}>{leagueMeta(l)}</div>
+                <div style={{ fontSize: 12, color: dim(0.62), marginTop: 3 }}>{leagueMeta(l)}</div>
               </div>
               <span style={{ color: 'var(--color-accent)', fontSize: 15, flex: 'none' }}>›</span>
             </button>
@@ -204,7 +204,7 @@ export function BootScreen({ app }: { app: App }) {
       <Mark size={72} alive />
       <div>
         <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.02em', marginBottom: 6 }}>Reading your league</div>
-        <div style={{ fontSize: 13, color: dim(0.48) }}>
+        <div style={{ fontSize: 13, color: dim(0.62) }}>
           {error ? 'Loading stopped' : BOOT_STEPS[Math.min(step, 4)] + '…'}
         </div>
       </div>
@@ -212,7 +212,7 @@ export function BootScreen({ app }: { app: App }) {
         {BOOT_STEPS.map((label, i) => (
           <div
             key={label}
-            style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, color: i <= step ? dim(0.72) : dim(0.28) }}
+            style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, color: i <= step ? dim(0.9) : dim(0.52) }}
           >
             <span style={{ width: 14, color: 'var(--color-accent)' }}>{i < step ? '✓' : i === step ? '›' : '·'}</span>
             {label}

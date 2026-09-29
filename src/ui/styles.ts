@@ -5,11 +5,11 @@ import { FS } from './scale';
 /** Text tints used all over the prototype, named once. */
 export const dim = (a: number) => `rgba(242,253,254,${a})`;
 
-export const fitColor = (f: number) => (f >= 75 ? GOOD : f >= 60 ? MID : dim(0.6));
+export const fitColor = (f: number) => (f >= 75 ? GOOD : f >= 60 ? MID : dim(0.75));
 
 /** The pill that carries a Rating next to a heading. */
 export function fitStyle(fit: number): CSSProperties {
-  const c = fit >= 75 ? GOOD : fit >= 60 ? MID : dim(0.6);
+  const c = fit >= 75 ? GOOD : fit >= 60 ? MID : dim(0.75);
   return {
     fontSize: 12, fontWeight: 500, padding: '2px 9px', borderRadius: 8, flex: 'none',
     color: c,
@@ -47,7 +47,7 @@ export function seg(active: boolean, size: SegSize = 'md'): CSSProperties {
     borderRadius: 0,
     fontWeight: active ? 600 : 400,
     letterSpacing: active ? '.01em' : 0,
-    color: active ? ACCENT : dim(0.48),
+    color: active ? ACCENT : dim(0.62),
     background: 'transparent',
     userSelect: 'none',
   };
@@ -56,7 +56,7 @@ export function seg(active: boolean, size: SegSize = 'md'): CSSProperties {
 /** Only the part that changes with state — the layout lives in `.tab-btn`,
  *  because it has to become a row on a laptop and inline styles cannot. */
 export function tabStyle(on: boolean): CSSProperties {
-  return { color: on ? ACCENT : dim(0.38) };
+  return { color: on ? ACCENT : dim(0.52) };
 }
 
 
@@ -87,15 +87,29 @@ export const kicker: CSSProperties = {
   fontSize: 10,
   letterSpacing: '.11em',
   textTransform: 'uppercase',
-  color: '#b3a9e6',
+  /* The one lilac left in the app, from the violet palette the cyan replaced —
+     a colour belonging to no ramp here, and an inlined hex in a system whose
+     tokens file says never to inline one. The accent's light step is the same
+     job in this palette's own family. */
+  color: 'var(--color-accent-300)',
 };
 
-export const cardTitle: CSSProperties = { fontSize: 13, fontWeight: 500 };
+/**
+ * A card's heading, measured against the app this look comes from.
+ *
+ * Sleeper draws the equivalent — the name of the thing the row is about — at
+ * about 17px and weight 700; this was 13 and 500, two steps of size and one of
+ * weight lighter. Small and light is most of what "not as sharp" turns out to
+ * mean: a 500 at 13px lays down barely more ink than the antialiasing around
+ * it. Not all the way to theirs, because these cards are denser than their
+ * list rows, but the same direction.
+ */
+export const cardTitle: CSSProperties = { fontSize: 15, fontWeight: 600 };
 
 export const cardNote: CSSProperties = {
   fontSize: 10,
   lineHeight: '14px',
-  color: dim(0.38),
+  color: dim(0.52),
   textWrap: 'pretty' as CSSProperties['textWrap'],
 };
 
@@ -112,7 +126,7 @@ export const capsule: CSSProperties = {
   gap: 6,
   fontSize: 10,
   letterSpacing: '.04em',
-  color: dim(0.48),
+  color: dim(0.62),
   background: 'rgba(242,253,254,0.04)',
   borderRadius: 4,
   padding: '4px 8px',

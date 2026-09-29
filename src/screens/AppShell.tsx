@@ -81,7 +81,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
           />
         ) : null}
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: dim(0.48), ...ellipsis }}>
+          <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: dim(0.62), ...ellipsis }}>
             {HEADER[app.tab].kicker(model)}
           </div>
           <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 2, ...ellipsis }}>

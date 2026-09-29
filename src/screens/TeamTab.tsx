@@ -174,14 +174,14 @@ function Summary({ app, m }: { app: App; m: Model }) {
             <div style={kicker}>
               {m.foundMyTeam ? 'Nothing on your roster yet' : 'We could not find your team'}
             </div>
-            <div style={{ fontSize: 13, lineHeight: '20px', color: dim(0.6), marginTop: 9, textWrap: 'pretty' }}>
+            <div style={{ fontSize: 13, lineHeight: '20px', color: dim(0.75), marginTop: 9, textWrap: 'pretty' }}>
               {!m.foundMyTeam
                 ? 'No roster in ' + m.league.name + ' is registered to this Sleeper account.'
                 : m.draft?.status === 'drafting'
                   ? 'The draft is running and none of your picks have landed yet.'
                   : 'This league has not drafted yet.'}
             </div>
-            <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.48), marginTop: 8, textWrap: 'pretty' }}>
+            <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.62), marginTop: 8, textWrap: 'pretty' }}>
               {m.foundMyTeam ? 'The board is rated and ready.' : 'Name your team by hand from the You tab.'}
             </div>
             <button
@@ -211,17 +211,17 @@ function Summary({ app, m }: { app: App; m: Model }) {
                 <div style={{
                   fontSize: 26, fontWeight: 500, letterSpacing: '-0.035em', lineHeight: '26px',
                   fontVariantNumeric: 'tabular-nums',
-                  color: m.leagueHasRosters && me ? h.color : dim(0.28),
+                  color: m.leagueHasRosters && me ? h.color : dim(0.52),
                 }}>
                   {m.leagueHasRosters && me ? ord(h.rank) : '—'}
                 </div>
-                <div style={{ fontSize: 10, color: dim(0.48), marginTop: 3 }}>{h.label}</div>
-                <div style={{ fontSize: 10, color: dim(0.38), marginTop: 1 }}>{h.value}</div>
+                <div style={{ fontSize: 10, color: dim(0.62), marginTop: 3 }}>{h.label}</div>
+                <div style={{ fontSize: 10, color: dim(0.52), marginTop: 1 }}>{h.value}</div>
               </div>
             ))}
           </div>
           {m.isDynasty && m.leagueHasRosters ? (
-            <div style={{ fontSize: 12, lineHeight: '17px', color: dim(0.48), marginTop: 11, textWrap: 'pretty' }}>
+            <div style={{ fontSize: 12, lineHeight: '17px', color: dim(0.62), marginTop: 11, textWrap: 'pretty' }}>
               {heroNote}
             </div>
           ) : null}
@@ -258,7 +258,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
                     <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.06em', color: POS_COLOR[p] }}>{p}</span>
                     <span style={{ fontSize: 12, fontWeight: 500, color }}>{mine ? ord(mine) : '—'}</span>
                   </div>
-                  <span style={{ fontSize: 10, color: dim(0.38) }}>best: {best ? best.name : 'not drafted'}</span>
+                  <span style={{ fontSize: 10, color: dim(0.52) }}>best: {best ? best.name : 'not drafted'}</span>
                 </div>
                 <Meter
                   pct={width}
@@ -283,9 +283,9 @@ function Summary({ app, m }: { app: App; m: Model }) {
               gridColumn: i === stats.length - 1 && stats.length % 2 ? 'span 2' : undefined,
             }}
           >
-            <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.38) }}>{s.label}</div>
+            <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.52) }}>{s.label}</div>
             <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.03em', marginTop: 4, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 10, color: dim(0.38), marginTop: 3 }}>{s.sub}</div>
+            <div style={{ fontSize: 10, color: dim(0.52), marginTop: 3 }}>{s.sub}</div>
           </div>
         ))}
       </div>
@@ -334,13 +334,13 @@ function Lineup({ app, m }: { app: App; m: Model }) {
               <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>
                 {o.player ? o.player.name : 'empty'}
               </div>
-              <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2 }}>
+              <div style={{ fontSize: 10, color: dim(0.52), marginTop: 2 }}>
                 {o.player ? `${o.player.pos} · ${o.player.team} · ${o.player.age ?? '?'} yrs` : 'nobody eligible'}
               </div>
             </div>
             <div style={{
               fontSize: 12, fontWeight: 500, flex: 'none',
-              color: o.player && o.player.fit >= 72 ? GOOD : o.player && o.player.fit >= 55 ? MID : dim(0.48),
+              color: o.player && o.player.fit >= 72 ? GOOD : o.player && o.player.fit >= 55 ? MID : dim(0.62),
             }}>
               {o.player ? grade(o.player.fit / 100) : '—'}
             </div>
@@ -366,7 +366,7 @@ function Lineup({ app, m }: { app: App; m: Model }) {
             >
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 5 }}>
                 <span style={{ fontSize: 12, fontWeight: 500 }}>{p.name}</span>
-                <span style={{ fontSize: 10, color: dim(0.48) }}>{Math.round(p.m.boom * 100)} boom</span>
+                <span style={{ fontSize: 10, color: dim(0.62) }}>{Math.round(p.m.boom * 100)} boom</span>
               </div>
               <Meter
                 pct={p.m.boom * 100}
@@ -374,7 +374,7 @@ function Lineup({ app, m }: { app: App; m: Model }) {
                 mark={boomAvg * 100}
                 markLabel="your roster average"
               />
-              <div style={{ fontSize: 10, color: dim(0.38), marginTop: 4 }}>
+              <div style={{ fontSize: 10, color: dim(0.52), marginTop: 4 }}>
                 {p.pos} · {p.age ?? '?'} yrs · {p.team}
               </div>
             </div>
@@ -438,7 +438,7 @@ function Roster({ app, m }: { app: App; m: Model }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginTop: 2 }}>
         <div style={cardTitle}>Your roster ({m.myPlayers.length})</div>
-        <div style={{ fontSize: 10, color: dim(0.38) }}>accent = optimal starter</div>
+        <div style={{ fontSize: 10, color: dim(0.52) }}>accent = optimal starter</div>
       </div>
       <Segmented options={POS_FILTERS} value={app.rosterFilter} onChange={app.setRosterFilter} />
       <Segmented
@@ -450,7 +450,7 @@ function Roster({ app, m }: { app: App; m: Model }) {
       {m.myPlayers.length === 0 ? (
         <div style={{ background: 'var(--color-surface)', borderRadius: 12, padding: '24px 16px', textAlign: 'center' }}>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>You haven't drafted yet</div>
-          <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.48) }}>
+          <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.62) }}>
             As soon as the draft starts, every pick of yours lands here and the Rating recomputes against your real holes.
           </div>
         </div>
@@ -476,9 +476,9 @@ function Roster({ app, m }: { app: App; m: Model }) {
                 }} />
                 <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{p.name}</span>
               </div>
-              <div style={{ fontSize: 12, color: dim(0.48), marginTop: 2 }}>{rosterMeta(p)}</div>
+              <div style={{ fontSize: 12, color: dim(0.62), marginTop: 2 }}>{rosterMeta(p)}</div>
             </div>
-            <div style={{ fontSize: 12, color: dim(0.48), flex: 'none' }}>{grade(p.fit / 100)}</div>
+            <div style={{ fontSize: 12, color: dim(0.62), flex: 'none' }}>{grade(p.fit / 100)}</div>
           </div>
           <div style={{ height: 4, borderRadius: 4, background: 'rgba(242,253,254,0.07)', marginTop: 9, overflow: 'hidden' }}>
             <div style={{
@@ -515,15 +515,15 @@ function Assets({ app, m }: { app: App; m: Model }) {
             <DividedRow key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
                 width: 38, flex: 'none', fontSize: 10, fontWeight: 600, letterSpacing: '.02em',
-                color: p.season === m.seasonNum ? ACCENT : dim(0.38),
+                color: p.season === m.seasonNum ? ACCENT : dim(0.52),
               }}>
                 {p.season}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 500 }}>{p.label}</div>
-                <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2 }}>{p.origin}</div>
+                <div style={{ fontSize: 10, color: dim(0.52), marginTop: 2 }}>{p.origin}</div>
               </div>
-              <div style={{ fontSize: 12, color: dim(0.6), flex: 'none' }}>{num(p.q * 100)}</div>
+              <div style={{ fontSize: 12, color: dim(0.75), flex: 'none' }}>{num(p.q * 100)}</div>
             </DividedRow>
           ))}
         </Card>
@@ -559,7 +559,7 @@ function Assets({ app, m }: { app: App; m: Model }) {
             >
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</div>
-                <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2 }}>
+                <div style={{ fontSize: 10, color: dim(0.52), marginTop: 2 }}>
                   {p.pos} · {p.age} yrs · past peak ({PEAK[p.pos]})
                 </div>
               </div>
@@ -578,7 +578,7 @@ function Assets({ app, m }: { app: App; m: Model }) {
           {m.buried.map(p => (
             <DividedRow key={p.id} onClick={() => app.setDetail(p.id)} style={{ padding: '8px 0' }}>
               <div style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</div>
-              <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2 }}>
+              <div style={{ fontSize: 10, color: dim(0.52), marginTop: 2 }}>
                 {p.pos} · {p.age ?? '?'} yrs · does not make your optimal lineup
               </div>
             </DividedRow>
@@ -601,7 +601,7 @@ function Assets({ app, m }: { app: App; m: Model }) {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.06em', color: POS_COLOR[p] }}>{p}</span>
-                    <span style={{ fontSize: 12, color: dim(0.6) }}>
+                    <span style={{ fontSize: 12, color: dim(0.75) }}>
                       {m.have[p]} on roster · comparing your best {m.slots[p]}
                     </span>
                   </div>

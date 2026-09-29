@@ -21,7 +21,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { ALPHA_STEPS, FS_STEPS, R_STEPS } from '../ui/scale';
+import { ALPHA_STEPS, FS_STEPS, GROUNDS, INK, R_STEPS, T, TEXT_CONTRAST_MIN, W } from '../ui/scale';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -158,6 +158,60 @@ describe('the app is drawn on its scales', () => {
       }
     }
     expect([...whites]).toEqual(['242,253,254']);
+  });
+
+  /* Contrast, computed rather than judged. Three of the six tints in the scale
+     before this one could not be read — 1.9, 2.4 and 3.2 to one against a hero
+     card, where 4.5 is the floor for body text — and they were the ones
+     carrying the numbers and names. A glyph edge at 2.4:1 has almost no range
+     for a screen to antialias into, so it smears into the ground however many
+     pixels the phone has, which is what "it doesn't look sharp" was. */
+  const luminance = ([r, g, b]: [number, number, number]) => {
+    const f = (v: number) => {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+  };
+  const contrast = (alpha: number, ground: [number, number, number]) => {
+    const over = ground.map((c, i) => INK[i] * alpha + c * (1 - alpha)) as [number, number, number];
+    const [hi, lo] = [luminance(over), luminance(ground)].sort((x, y) => y - x) as [number, number];
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  it('can be read on every ground the app paints on', () => {
+    const failing: string[] = [];
+    for (const [name, alpha] of Object.entries(T)) {
+      for (const ground of GROUNDS) {
+        const c = contrast(alpha, ground);
+        if (c < TEXT_CONTRAST_MIN) {
+          failing.push(`T.${name} (${alpha}) is ${c.toFixed(1)}:1 on rgb(${ground.join(',')})`);
+        }
+      }
+    }
+    expect(failing).toEqual([]);
+  });
+
+  it('keeps the marks below the text floor, so the split means something', () => {
+    // If a wash ever clears the floor it stops being a wash, and the next
+    // person to need a dim label will reach for it.
+    const tooBright = Object.entries(W).filter(
+      ([, a]) => contrast(a, GROUNDS[0] as [number, number, number]) >= TEXT_CONTRAST_MIN);
+    expect(tooBright).toEqual([]);
+    // And the dimmest text has to be brighter than the brightest mark.
+    expect(Math.min(...Object.values(T))).toBeGreaterThan(Math.max(...Object.values(W)));
+  });
+
+  it('never paints a word with a tint meant for a mark', () => {
+    const marks = Object.values(W) as number[];
+    const bad: string[] = [];
+    for (const f of FILES) {
+      for (const m of f.text.matchAll(
+        /\b(color|webkitTextFillColor): (?:dim\(|rgba\(242,\s*253,\s*254,\s*)([0-9.]+)/g)) {
+        if (marks.indexOf(Number(m[2])) >= 0) bad.push(`${m[0]} in ${f.path}`);
+      }
+    }
+    expect(bad).toEqual([]);
   });
 
   it('keeps the scales small enough to hold in your head', () => {

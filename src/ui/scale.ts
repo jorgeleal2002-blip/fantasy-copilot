@@ -71,40 +71,71 @@ export const R = {
 } as const;
 
 /**
- * Text tints, as alpha over the app's near-white. Six ranks, each about a fifth
- * darker than the one above — the smallest difference that reads as a different
- * rank on this ground.
+ * The grounds the app paints text on, darkest first. A tint is only as legible
+ * as the lightest thing behind it, so every step below is checked against all
+ * of them — see `src/test/scale.test.ts`.
+ */
+export const GROUNDS: [number, number, number][] = [
+  [5, 8, 27],    // --color-bg, the page
+  [21, 31, 62],  // --color-surface, a card
+  [27, 46, 75],  // --color-section, a hero card
+];
+
+/** The near-white everything is tinted from — `--color-text`. */
+export const INK: [number, number, number] = [242, 253, 254];
+
+/**
+ * Text tints, as alpha over `INK`, and every one of them chosen by measurement
+ * rather than by eye.
+ *
+ * The scale before this one ran .20 / .28 / .38 / .48 / .60 / .72, and the
+ * bottom half of it could not be read. Against a hero card those come out at
+ * 1.9, 2.4, 3.2, 4.2 to one — the floor for body text is 4.5, and for anything
+ * at all it is 3 — so three of the six steps were below the minimum and one was
+ * barely a shadow. That is not a subtle failure: a glyph edge drawn at 2.4:1
+ * has almost no range for the screen to antialias into, so the letters smear
+ * into the ground no matter how many pixels the phone has. It reads exactly the
+ * way "not sharp" reads.
+ *
+ * Worse, those steps were carrying DATA. Comparing this app against Sleeper's
+ * own screen, side by side, on the same phone: Sleeper draws "133.38" — the
+ * number you opened the app for — at 12.6:1, while the same figure here,
+ * "32,311", came out at 3.2:1, and a team's name next to it at 3.4:1. Sleeper
+ * dims its labels and keeps its numbers bright. This dimmed the numbers.
+ *
+ * So the floor is now 4.5:1 on the LIGHTEST ground, and what a step is for is
+ * written next to it. Nothing below that step is allowed to carry a word.
  */
 export const T = {
-  /** Almost the full text colour: something quiet that still has to be read. */
-  strong: 0.72,
-  /** A secondary line you are meant to read. */
-  mid: 0.6,
-  /** A secondary line you are meant to be able to read. */
-  soft: 0.48,
-  /** Supporting detail. */
-  faint: 0.38,
-  /** Present, not competing. */
-  ghost: 0.28,
-  /** A mark rather than a message — a chevron, a rule's label. */
-  trace: 0.2,
+  /** A figure, a name, a score — anything somebody came here to read. */
+  strong: 0.9,
+  /** Content that is not the headline: a second name, a secondary number. */
+  mid: 0.75,
+  /** A supporting line you are meant to read. */
+  soft: 0.62,
+  /** A label naming the thing beside it. The dimmest text the app may use. */
+  faint: 0.52,
 } as const;
 
 /**
- * Washes of the same near-white used as a FILL rather than as text: the ground
- * of a capsule, an empty track, a blank avatar. Kept apart from the text ramp
- * because they answer a different question and share only a colour.
+ * The same near-white used as a MARK or a FILL rather than as text: a rule, a
+ * dot, the ground of a capsule, an empty track. These sit below the legibility
+ * floor on purpose, which is exactly why none of them may carry words.
  */
 export const W = {
-  faint: 0.04,
-  soft: 0.07,
+  /** A rule, a chevron, a dot — a shape, never a letter. */
+  rule: 0.28,
   mid: 0.12,
+  soft: 0.07,
+  faint: 0.04,
 } as const;
 
 /** Every step, for the test that enforces them. */
 export const FS_STEPS: number[] = Object.values(FS);
 export const R_STEPS: number[] = [0, ...Object.values(R)];
 export const T_STEPS: number[] = Object.values(T);
+/** The floor every step that carries text has to clear, on every ground. */
+export const TEXT_CONTRAST_MIN = 4.5;
 export const W_STEPS: number[] = Object.values(W);
 export const ALPHA_STEPS: number[] = [...W_STEPS, ...T_STEPS];
 

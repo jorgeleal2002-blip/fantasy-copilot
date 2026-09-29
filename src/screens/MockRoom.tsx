@@ -174,7 +174,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
           ‹ Leave
         </button>
         <div style={{ minWidth: 0, flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 10, letterSpacing: '.11em', textTransform: 'uppercase', color: dim(0.38) }}>
+          <div style={{ fontSize: 10, letterSpacing: '.11em', textTransform: 'uppercase', color: dim(0.52) }}>
             Mock draft · seat {st.slot}
           </div>
           <div style={{
@@ -386,7 +386,7 @@ function PlayerList({ st, m, app, pos, q, canTake, onTake }: {
 
   if (!picks.length && !rest.length) {
     return (
-      <div style={{ fontSize: 12, color: dim(0.48), padding: '14px 15px' }}>
+      <div style={{ fontSize: 12, color: dim(0.62), padding: '14px 15px' }}>
         Nobody left matching that.
       </div>
     );
@@ -438,7 +438,7 @@ function PlayerRow({ o, teams, face, canTake, onTake, again }: {
       </button>
       <div style={{ minWidth: 0, flex: 1 }}>
         {o.title ? (
-          <div className="pl-lens" style={{ color: o.lens === 'need' ? GOOD : dim(0.48) }}>
+          <div className="pl-lens" style={{ color: o.lens === 'need' ? GOOD : dim(0.62) }}>
             {o.title}
           </div>
         ) : null}
@@ -453,7 +453,7 @@ function PlayerRow({ o, teams, face, canTake, onTake, again }: {
             pick only buys what your next one cannot. A man who is still going
             to be sitting there is not a reason to spend the round. */}
         {again ? (
-          <div className="pl-meta" style={{ color: o.goneBy ? BAD : dim(0.38) }}>
+          <div className="pl-meta" style={{ color: o.goneBy ? BAD : dim(0.52) }}>
             {o.goneBy ? 'gone before your ' + o.goneBy : 'still there at your ' + again}
           </div>
         ) : null}
@@ -480,16 +480,16 @@ function MyTeam({ st, m, app }: { st: MockState; m: Model; app: App }) {
         }}>
           <Face {...app.photoSet(o.id)} pos={o.pos} size={28} />
           <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{o.name}</span>
-          <span style={{ color: dim(0.38), flex: 'none' }}>
+          <span style={{ color: dim(0.52), flex: 'none' }}>
             <span style={{ color: colorOf(o.pos) }}>{o.pos}</span>{' · rating ' + o.fit}
           </span>
         </div>
       )) : (
-        <div style={{ fontSize: 12, color: dim(0.48), paddingTop: 10 }}>
+        <div style={{ fontSize: 12, color: dim(0.62), paddingTop: 10 }}>
           Nothing yet.
         </div>
       )}
-      <div style={{ fontSize: 10, color: dim(0.38), marginTop: 12, lineHeight: '15px' }}>
+      <div style={{ fontSize: 10, color: dim(0.52), marginTop: 12, lineHeight: '15px' }}>
         {POS.map(p => (st.shape[p] || 0) + '/' + (m.slots[p] || 0) + ' ' + p).join(' · ')}
         {' — counting what you already own'}
       </div>
@@ -570,7 +570,7 @@ function InvitePanel({ app, m, finished, onClose }: {
               marginTop: 10, padding: '9px 10px', borderRadius: 8,
               background: 'rgba(242,253,254,0.04)', border: 'var(--hairline) solid var(--color-divider)',
             }}>
-              <span style={{ fontSize: 10, color: dim(0.38) }}>or read them</span>
+              <span style={{ fontSize: 10, color: dim(0.52) }}>or read them</span>
               <span style={{
                 font: "600 20px ui-monospace, SFMono-Regular, Menlo, monospace",
                 letterSpacing: '.22em', color: ACCENT,
@@ -579,7 +579,7 @@ function InvitePanel({ app, m, finished, onClose }: {
               </span>
             </div>
           ) : null}
-          <div style={{ fontSize: 10, color: dim(0.48), marginTop: 7 }}>
+          <div style={{ fontSize: 10, color: dim(0.62), marginTop: 7 }}>
             Seats nobody takes are drafted by the app.
           </div>
           {app.roomError ? (
@@ -597,7 +597,7 @@ function InvitePanel({ app, m, finished, onClose }: {
           ) : null}
           <div style={{
             fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase',
-            color: dim(0.38), margin: '14px 0 4px',
+            color: dim(0.52), margin: '14px 0 4px',
           }}>
             Or just the same board
           </div>
@@ -620,7 +620,7 @@ function InvitePanel({ app, m, finished, onClose }: {
           Share this board
         </button>
       ) : (
-        <div style={{ fontSize: 12, color: dim(0.38), marginTop: app.liveOn ? 0 : 11 }}>
+        <div style={{ fontSize: 12, color: dim(0.52), marginTop: app.liveOn ? 0 : 11 }}>
           Send this board on: the same players, bots and order.
         </div>
       )}
