@@ -93,12 +93,13 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
     },
   ];
 
-  /* Three screens rather than one column. Everything here used to be stacked
-   * in reading order, which put the rankings six matchup cards below the fold
-   * and the format below those — a page you had to scroll to find out what was
-   * on it. One control at the top and each of the three is a tap away. */
+  /* The league's own screens, the way the Team page has its own: the week you
+   * are in, where everybody stands, and what the league is. They used to be
+   * one column in reading order, which put the rankings six matchup cards
+   * below the fold and the format below those — a page you had to scroll to
+   * find out what was on it. */
   const screens: SegOption<LeagueView>[] = [
-    { key: 'matchups', label: 'Matchups' },
+    { key: 'weeks', label: 'Weeks' },
     { key: 'rankings', label: 'Rankings' },
     { key: 'format', label: 'Format' },
   ];
@@ -110,7 +111,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
           is bigger on one tab than on another is two controls. */}
       <Segmented options={screens} value={app.leagueView} onChange={app.setLeagueView} size="sm" />
 
-      {app.leagueView === 'matchups' ? <Matchups app={app} m={m} /> : null}
+      {app.leagueView === 'weeks' ? <Matchups app={app} m={m} /> : null}
 
       {app.leagueView === 'rankings' ? (
         <>

@@ -27,7 +27,7 @@ import { nextDetailStack, topDetail } from './detail-stack';
 export type Stage = 'connect' | 'leagues' | 'app';
 export type Tab = 'team' | 'trades' | 'draft' | 'league' | 'settings';
 export type TeamView = 'resumen' | 'lineup' | 'roster' | 'activos';
-export type LeagueView = 'matchups' | 'rankings' | 'format';
+export type LeagueView = 'weeks' | 'rankings' | 'format';
 export type FeedState = 'idle' | 'loading' | 'ok' | 'fail';
 
 export const BOOT_STEPS = [
@@ -145,7 +145,7 @@ export function useApp() {
   const [rankMode, setRankMode] = useState<'power' | 'now' | 'future' | 'fit' | 'fitFut'>('power');
   /** Which of the league page's three screens is showing. They were one
    *  column and the rankings sat six matchup cards below the fold. */
-  const [leagueView, setLeagueView] = useState<LeagueView>('matchups');
+  const [leagueView, setLeagueView] = useState<LeagueView>('weeks');
   const [pickSel, setPickSel] = useState(0);
   const [strat, setStrat] = useState<StratKey>('balanced');
   /* Sheets stack: opening a player from a rival's team has to come back to
