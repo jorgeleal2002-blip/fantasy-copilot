@@ -22,6 +22,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { ALPHA_STEPS, FS_STEPS, GROUNDS, INK, R_STEPS, T, TEXT_CONTRAST_MIN, W } from '../ui/scale';
+import { ACCENT, BAD, GOOD, MID, WARN } from '../model/constants';
+import { placeColor, placeMark } from '../ui/styles';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -192,6 +194,25 @@ describe('the app is drawn on its scales', () => {
     expect(failing).toEqual([]);
   });
 
+  it('reads the meaning colours as well as the grey ones', () => {
+    /* The tint scale was checked and the hues were not, though green and salmon
+       carry the verdict on every figure the app has an opinion about. */
+    const hex = (h: string) =>
+      [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
+    const over = (c: [number, number, number], g: [number, number, number]) => {
+      const [hi, lo] = [luminance(c), luminance(g)].sort((x, y) => y - x) as [number, number];
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const failing: string[] = [];
+    for (const [name, h] of Object.entries({ GOOD, BAD, MID, WARN, ACCENT })) {
+      for (const ground of GROUNDS) {
+        const c = over(hex(h), ground);
+        if (c < TEXT_CONTRAST_MIN) failing.push(`${name} is ${c.toFixed(1)}:1 on rgb(${ground.join(',')})`);
+      }
+    }
+    expect(failing).toEqual([]);
+  });
+
   it('keeps the marks below the text floor, so the split means something', () => {
     // If a wash ever clears the floor it stops being a wash, and the next
     // person to need a dim label will reach for it.
@@ -272,5 +293,64 @@ describe('the app is drawn on its scales', () => {
       }
     }
     expect(bad).toEqual([]);
+  });
+});
+
+/* One screen showed the same blue-violet on "2nd of twelve" at the top and
+   "8th of twelve" four hundred pixels below, because four different places were
+   each deciding what colour a rank is and none of them agreed. */
+describe('what colour a placing is', () => {
+  it('is green near the top and salmon near the bottom', () => {
+    expect(placeColor(1, 12)).toBe(GOOD);
+    expect(placeColor(2, 12)).toBe(GOOD);
+    expect(placeColor(12, 12)).toBe(BAD);
+    expect(placeColor(11, 12)).toBe(BAD);
+  });
+
+  it('leaves the middle alone, because being ordinary is not news', () => {
+    expect(placeColor(6, 12)).toBeUndefined();
+    expect(placeColor(7, 12)).toBeUndefined();
+  });
+
+  it('never says the same thing about second and eighth', () => {
+    // The collision itself, in the league size it was found in.
+    expect(placeColor(2, 12)).not.toBe(placeColor(8, 12));
+  });
+
+  it('never paints a rank with the middle-of-a-category colour', () => {
+    // MID still means something real — a league table's contending / middling /
+    // rebuilding is a category, and its middle IS a state. A placing's middle
+    // is not, and this is what made one colour mean both.
+    for (const of of [4, 8, 10, 12, 14]) {
+      for (let r = 1; r <= of; r++) expect(placeColor(r, of)).not.toBe(MID);
+    }
+  });
+
+  it('answers with nothing rather than guessing', () => {
+    expect(placeColor(0, 12)).toBeUndefined();
+    expect(placeColor(null, 12)).toBeUndefined();
+    expect(placeColor(3, null)).toBeUndefined();
+    // A field of one: being the only one is neither good nor bad.
+    expect(placeColor(1, 1)).toBeUndefined();
+  });
+
+  it('gives a bar the same verdict, and a neutral where there is none', () => {
+    // A number in the middle band can go uncoloured. A bar cannot.
+    expect(placeMark(1, 12)).toBe('good');
+    expect(placeMark(12, 12)).toBe('bad');
+    expect(placeMark(6, 12)).toBe('none');
+    expect(placeMark(null, 12)).toBe('none');
+  });
+
+  it('is not re-decided anywhere else in the app', () => {
+    // The shape that was copied into three screens. If it comes back, so does
+    // the disagreement.
+    const bad: string[] = [];
+    for (const f of FILES) {
+      if (!/\.tsx?$/.test(f.path)) continue;
+      if (/leagueRows\.length - 2/.test(f.text)) bad.push(f.path);
+      if (/mine <= 3|rank <= 3/.test(f.text)) bad.push(f.path);
+    }
+    expect([...new Set(bad)]).toEqual([]);
   });
 });

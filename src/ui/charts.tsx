@@ -1,4 +1,4 @@
-import { MARK_BAD, MARK_GAP, MARK_GOOD, MARK_MID, TRACK } from '../model/constants';
+import { MARK_BAD, MARK_GAP, MARK_GOOD, MARK_MID, MARK_NONE, TRACK } from '../model/constants';
 import { dim } from './styles';
 import { R } from './scale';
 
@@ -6,8 +6,9 @@ import { R } from './scale';
  * Fill colour for a STATE — strong / middling / weak, premium / neutral /
  * discount. Only where the colour genuinely means good or bad.
  */
-export const markFor = (state: 'good' | 'mid' | 'bad') =>
-  state === 'good' ? MARK_GOOD : state === 'bad' ? MARK_BAD : MARK_MID;
+export const markFor = (state: 'good' | 'mid' | 'bad' | 'none') =>
+  state === 'good' ? MARK_GOOD : state === 'bad' ? MARK_BAD
+    : state === 'none' ? MARK_NONE : MARK_MID;
 
 /**
  * The one series colour, for every bar in a set.

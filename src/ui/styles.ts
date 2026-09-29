@@ -1,9 +1,48 @@
 import type { CSSProperties } from 'react';
 import { ACCENT, BAD, GOOD, MID } from '../model/constants';
 import { FS } from './scale';
+import { toneOfRank } from '../model/standing';
 
 /** Text tints used all over the prototype, named once. */
 export const dim = (a: number) => `rgba(242,253,254,${a})`;
+
+/**
+ * The colour a placing is written in. The ONE answer, everywhere.
+ *
+ * There were four copies of this decision, and none of them agreed. The hero
+ * tiles on the team screen coloured their rank by WHICH TILE IT WAS — cyan for
+ * strength, blue-violet for quality — so a 1st and a 2nd came out in different
+ * colours for reasons that had nothing to do with the ranks. "Rank by position"
+ * and the team sheet each had their own thresholds written inline, `<= 3` for
+ * good and `>= n - 2` for bad, with the middle painted blue-violet. And
+ * everything else in the app used `toneOfRank`, whose whole point is that the
+ * middle is UNCOLOURED.
+ *
+ * On one screen that meant the same blue-violet said "2nd of twelve" in the
+ * card at the top and "8th of twelve" four hundred pixels below it. A colour
+ * that means both very good and nearly worst is not a colour, and no amount of
+ * choosing prettier ones would have fixed it.
+ *
+ * So: green near the top, salmon near the bottom, and nothing in between —
+ * `undefined`, which leaves the figure in the text colour and is the honest
+ * answer for a rank that is simply ordinary.
+ */
+export const placeColor = (
+  rank: number | null | undefined,
+  of: number | null | undefined,
+): string | undefined => {
+  const t = toneOfRank(rank, of);
+  return t === 'good' ? GOOD : t === 'bad' ? BAD : undefined;
+};
+
+/** The same verdict for a bar, which has to be painted something. */
+export const placeMark = (
+  rank: number | null | undefined,
+  of: number | null | undefined,
+): 'good' | 'bad' | 'none' => {
+  const t = toneOfRank(rank, of);
+  return t === 'good' ? 'good' : t === 'bad' ? 'bad' : 'none';
+};
 
 export const fitColor = (f: number) => (f >= 75 ? GOOD : f >= 60 ? MID : dim(0.75));
 

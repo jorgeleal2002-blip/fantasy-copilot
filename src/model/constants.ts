@@ -29,10 +29,21 @@ export const WARN = '#eedaa0';
  * rebuilding down one line, so the neutral would have echoed the verdict above
  * it. Sleeper's own muted slate was worse still, ΔE 10.0 to the green.
  *
- * This is measured clear of all three: 24.9 from the green, 24.3 from the
- * salmon, 29.6 from the accent itself, so it never reads as any of them.
+ * This is measured clear of all three: 82 from the green, 74 from the salmon,
+ * 72 from the accent itself, so it never reads as any of them.
+ *
+ * Lightened from #6783ec, which measured 3.9:1 on a hero card — under the 4.5
+ * floor for text, on the ground where it appeared largest. Four and nine tenths
+ * of ΔE away from where it was, which is about the smallest move that clears
+ * it, and 4.6:1 there now.
+ *
+ * It is for a CATEGORY whose middle is a real state — a team contending,
+ * middling or rebuilding — never for a placing. The middle of a placing is not
+ * a state, it is the absence of one, and `toneOf` returns nothing for it. Using
+ * this there is what made one colour mean "2nd of twelve" on one card and "8th
+ * of twelve" on the next.
  */
-export const MID = '#6783ec';
+export const MID = '#7290fa';
 export const MUTED = 'rgba(242,253,254,0.62)';
 
 /**
@@ -125,6 +136,19 @@ export const MARK_GOOD = '#3fa877';
  *  against the 16.9 the violet managed. */
 export const MARK_MID = '#5671d8';
 export const MARK_BAD = '#cc6a4e';
+/**
+ * A bar with nothing to report.
+ *
+ * `MARK_MID` is a full third hue — ΔE 86 from the green and 77 from the salmon —
+ * so a bar painted with it announces a verdict as loudly as the two that have
+ * one. But the middle of a placing is not a verdict: `toneOf` deliberately
+ * returns nothing there, because a screen where everything is lit is a screen
+ * where nothing stands out. A number in the middle band simply goes uncoloured;
+ * a bar cannot go uncoloured, so it goes neutral instead. Low chroma, ΔE 34
+ * from the green and 33 from the salmon: far enough to never be mistaken for
+ * either, quiet enough to read as the absence of a claim.
+ */
+export const MARK_NONE = '#afb7ca';
 
 /** Recessive: the empty part of a meter is context, not data. */
 export const TRACK = 'rgba(242,253,254,0.07)';

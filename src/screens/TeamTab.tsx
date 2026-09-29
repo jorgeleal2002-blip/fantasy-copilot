@@ -5,7 +5,7 @@ import type { App, TeamView } from '../state/useApp';
 import { ord, pct } from '../ui/format';
 import { Meter, SERIES, markFor } from '../ui/charts';
 import { Card, CardHead, DividedRow, Screen, Segmented, type SegOption, Face } from '../ui/primitives';
-import { capsule, cardNote, cardTitle, dim, ellipsis, heroCard, kicker } from '../ui/styles';
+import { capsule, cardNote, cardTitle, dim, ellipsis, heroCard, kicker, placeColor, placeMark } from '../ui/styles';
 import {
   leagueProjectionScale, leagueScoringAverage, projectLineup, projectedPoints, scoringAverage,
 } from '../model/team-points';
@@ -64,14 +64,18 @@ function Summary({ app, m }: { app: App; m: Model }) {
   })();
 
   // Raw sums are shown at scale; the Rating columns are already 0..100.
+  /* The colour says how good the rank is — see `placeColor`. It used to say
+     which tile you were looking at, so a first place and a second came out in
+     two different colours, one of which is what "eighth" is painted further
+     down the same screen. */
   const heroRanks = [
-    { label: 'strength today', rank: me?.rankNow || 0, value: num((me?.now || 0) * 100), color: ACCENT },
-    { label: 'quality today', rank: me?.rankFit || 0, value: 'Rating ' + Math.round(me?.fit || 0), color: MID },
+    { label: 'strength today', rank: me?.rankNow || 0, value: num((me?.now || 0) * 100) },
+    { label: 'quality today', rank: me?.rankFit || 0, value: 'Rating ' + Math.round(me?.fit || 0) },
     ...(m.isDynasty ? [
-      { label: 'future value', rank: me?.rankFut || 0, value: num((me?.future || 0) * 100), color: GOOD },
-      { label: 'quality in 2 yrs', rank: me?.rankFitFut || 0, value: 'Rating ' + Math.round(me?.fitFut || 0), color: '#bfe0cd' },
+      { label: 'future value', rank: me?.rankFut || 0, value: num((me?.future || 0) * 100) },
+      { label: 'quality in 2 yrs', rank: me?.rankFitFut || 0, value: 'Rating ' + Math.round(me?.fitFut || 0) },
     ] : []),
-  ];
+  ].map(h => ({ ...h, color: placeColor(h.rank, m.teamCount) || 'var(--color-text)' }));
 
   // The interesting sentence is not the movement, it is the disagreement:
   // hoarding lifts future value without lifting the starters it will field.
@@ -135,7 +139,11 @@ function Summary({ app, m }: { app: App; m: Model }) {
           : avg == null ? 'your best lineup, league scoring'
             : 'best lineup, ' + (projPts >= avg ? '+' : '−') +
               Math.abs(projPts - avg).toFixed(1) + ' vs your average',
-        color: ACCENT,
+        /* Green when your best lineup beats what you have been scoring, plain
+           otherwise — the same rule as the tile above it. It was the accent,
+           which is the colour of things you can tap and says nothing about
+           whether the number is good. */
+        color: projPts != null && avg != null && projPts >= avg ? GOOD : 'var(--color-text)',
       },
     ] : []),
     ...(drafted ? [] : [{
@@ -237,7 +245,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
             const rows = m.leagueRows.slice().sort((a, b) => (b.posStrength[p] || 0) - (a.posStrength[p] || 0));
             const best = m.leagueHasRosters ? rows[0] : null;
             const mine = m.leagueHasRosters && me ? m.posRankOf(me.id, p) : 0;
-            const color = mine && mine <= 3 ? GOOD : mine >= m.leagueRows.length - 2 ? BAD : MID;
+            const color = placeColor(mine, m.leagueRows.length) || 'var(--color-text)';
             const top = Math.max(best?.posStrength[p] || 0, 0.01);
             const width = Math.round((me?.posStrength[p] || 0) / top * 100);
             // The bar alone cannot separate leading by a mile from leading by
@@ -262,7 +270,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
                 </div>
                 <Meter
                   pct={width}
-                  color={markFor(mine && mine <= 3 ? 'good' : mine >= m.leagueRows.length - 2 ? 'bad' : 'mid')}
+                  color={markFor(placeMark(mine, m.leagueRows.length))}
                   mark={(avg / top) * 100}
                   markLabel="league average"
                 />

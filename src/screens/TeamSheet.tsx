@@ -5,7 +5,7 @@ import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
 import { Meter, markFor } from '../ui/charts';
 import { Card, CardHead, DividedRow, Overlay } from '../ui/primitives';
-import { cardTitle, dim } from '../ui/styles';
+import { cardTitle, dim, placeColor, placeMark } from '../ui/styles';
 
 export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: number }) {
   const info = m.teamInfo(rosterId);
@@ -76,7 +76,7 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           {POS.map(p => {
             const rank = info.ranks[p];
-            const color = rank <= 3 ? GOOD : rank >= m.leagueRows.length - 2 ? BAD : MID;
+            const color = placeColor(rank, m.leagueRows.length) || 'var(--color-text)';
             return (
               <div key={p}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
@@ -85,7 +85,7 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
                 </div>
                 <Meter
                   pct={Math.round((row.posStrength[p] || 0) / maxPos(p) * 100)}
-                  color={markFor(rank <= 3 ? 'good' : rank >= m.leagueRows.length - 2 ? 'bad' : 'mid')}
+                  color={markFor(placeMark(rank, m.leagueRows.length))}
                   mark={(avgPos(p) / maxPos(p)) * 100}
                   markLabel="league average"
                 />
