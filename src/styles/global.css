@@ -1009,19 +1009,19 @@ button { font-family: inherit; }
 .ms-head {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-bottom: 12px;
+  gap: 10px;
+  padding: 4px 0 18px;
 }
 /* Avatars outside, scores inside, the way a scoreboard puts the two numbers
    next to each other so they can be compared without crossing the card. */
 .ms-scores {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 .ms-av {
-  width: 42px;
-  height: 42px;
+  width: 50px;
+  height: 50px;
   flex: none;
   border-radius: 50%;
   object-fit: cover;
@@ -1031,10 +1031,10 @@ button { font-family: inherit; }
 .ms-score { flex: 1; min-width: 0; }
 .ms-score.is-right { text-align: right; }
 .ms-pts {
-  font-size: 25px;
+  font-size: 27px;
   font-weight: 600;
   letter-spacing: -0.035em;
-  line-height: 1.05;
+  line-height: 1.1;
   color: rgba(233, 233, 237, 0.5);
   font-variant-numeric: tabular-nums;
 }
@@ -1042,7 +1042,7 @@ button { font-family: inherit; }
 /* The forecast under the fact, and smaller than it. */
 .ms-proj {
   font-size: 12px;
-  margin-top: 1px;
+  margin-top: 3px;
   color: rgba(233, 233, 237, 0.32);
   font-variant-numeric: tabular-nums;
 }
@@ -1061,8 +1061,8 @@ button { font-family: inherit; }
    measures, and a confident "100%" that is wrong is the worst number a
    scoreboard can carry. */
 .ms-bar {
-  height: 4px;
-  border-radius: 2px;
+  height: 5px;
+  border-radius: 3px;
   background: rgba(233, 233, 237, 0.1);
   overflow: hidden;
 }
@@ -1080,7 +1080,7 @@ button { font-family: inherit; }
 }
 .ms-edge.is-right { text-align: right; }
 
-.ms-names { display: flex; align-items: flex-start; gap: 10px; }
+.ms-names { display: flex; align-items: flex-start; gap: 12px; margin-top: 2px; }
 .ms-who-team { flex: 1; min-width: 0; }
 .ms-who-team.is-right { text-align: right; }
 .ms-name {
@@ -1095,7 +1095,7 @@ button { font-family: inherit; }
 .ms-name.is-me { color: var(--color-accent); }
 .ms-sub {
   font-size: 10.5px;
-  margin-top: 2px;
+  margin-top: 4px;
   color: rgba(242, 253, 254, 0.4);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1104,26 +1104,26 @@ button { font-family: inherit; }
 
 .ms-block { display: flex; flex-direction: column; }
 .ms-block-head {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
-  padding: 6px 0 4px;
+  padding: 14px 0 8px;
   color: rgba(233, 233, 237, 0.75);
   border-top: 1px solid var(--color-divider);
 }
 .ms-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 0;
+  gap: 5px;
+  padding: 10px 0;
   border-top: 1px solid var(--color-divider);
 }
 /* The slot is the spine the two sides hang off, so it keeps its width
    whatever is beside it and never gives any of it up. */
 .ms-slot {
   flex: none;
-  width: 32px;
-  padding: 3px 0;
+  width: 30px;
+  padding: 5px 0;
   border-radius: 7px;
   text-align: center;
   font-size: 9.5px;
@@ -1138,12 +1138,12 @@ button { font-family: inherit; }
   min-width: 0;
   display: flex;
   align-items: center;
-  /* Every pixel here is a pixel off a name, and the names are what run out
-     first: a face, a slot and two numbers are fixed, and "J. Smith-Njigba"
-     is not. */
-  gap: 6px;
+  /* Sideways, every pixel is a pixel off a name — a face, a slot and two
+     numbers are fixed width and "J. Smith-Njigba" is not — so the air goes
+     into the row's height, where nothing is competing for it. */
+  gap: 8px;
   border-radius: 8px;
-  padding: 2px 3px;
+  padding: 3px 2px;
 }
 .ms-cell.is-right { flex-direction: row-reverse; text-align: right; }
 .ms-cell.is-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -1151,15 +1151,15 @@ button { font-family: inherit; }
 .ms-cell.is-tap:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 .ms-who { flex: 1; min-width: 0; }
 .ms-pl-name {
-  font-size: 12px;
+  font-size: 12.5px;
   color: rgba(233, 233, 237, 0.85);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .ms-pl-sub {
-  font-size: 9.5px;
-  margin-top: 1px;
+  font-size: 10px;
+  margin-top: 2px;
   color: rgba(233, 233, 237, 0.34);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1167,15 +1167,15 @@ button { font-family: inherit; }
 }
 .ms-num { flex: none; }
 .ms-pl-pts {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
 .ms-pl-proj {
-  font-size: 9.5px;
-  margin-top: 1px;
+  font-size: 10px;
+  margin-top: 2px;
   font-variant-numeric: tabular-nums;
   color: rgba(233, 233, 237, 0.3);
 }

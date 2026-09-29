@@ -184,7 +184,7 @@ function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'righ
       onClick={tappable ? () => app.setDetail(c.id as string) : undefined}
       onKeyDown={tappable ? e => { if (e.key === 'Enter') app.setDetail(c.id as string); } : undefined}
     >
-      <Face photo={c.id ? app.photoFor(c.id, 'thumb') : null} pos={c.pos || '—'} size={28} />
+      <Face photo={c.id ? app.photoFor(c.id, 'thumb') : null} pos={c.pos || '—'} size={30} />
       <div className="ms-who">
         <div className="ms-pl-name">{c.name}</div>
         <div className="ms-pl-sub">
