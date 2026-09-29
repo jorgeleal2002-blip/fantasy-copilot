@@ -1035,6 +1035,15 @@ export function useApp() {
 
   /** Who set the photo on screen, where the league set it. */
   const photoBy = useCallback((id: string) => leaguePhotos[id]?.by || '', [leaguePhotos]);
+  /**
+   * Whether the photo on screen is the league's or only this phone's.
+   *
+   * Said on the card rather than in a toast that has already gone: "does
+   * everybody see this" is a question about a photo that outlives the moment
+   * it was set, and a photo with no answer beside it is one somebody has to
+   * ask about.
+   */
+  const photoShared = useCallback((id: string) => id in leaguePhotos, [leaguePhotos]);
 
   const setPhoto = useCallback((id: string, file: File) => {
     const reader = new FileReader();
@@ -1196,7 +1205,8 @@ export function useApp() {
     /** A refusal is about the code that was refused — see the join box. */
     clearRoomError: () => setRoomError(''),
     filter, rosterFilter, rosterSort, boardMode, rankMode,
-    pickSel, strat, detail, passed, toast, photos, photoBy, query, topPos, topLens, topOpen,
+    pickSel, strat, detail, passed, toast, photos, photoBy, photoShared,
+    query, topPos, topLens, topOpen,
     week, matchups, matchupState, projections, projState, weekStats, fetchWeekStats,
     tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,

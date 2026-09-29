@@ -124,6 +124,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
   const setter = app.photoBy(p.id);
+  const shared = app.photoShared(p.id);
   const u = p.use;
 
   /**
@@ -282,11 +283,15 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
               >
                 Restore original photo
               </button>
-              {/* Whose joke it is, and that it is not only yours. A photo the
-                  league can see should say so before somebody finds out. */}
-              {setter ? (
-                <span style={{ fontSize: 10.5, color: dim(0.35) }}>set by {setter} · the league sees it</span>
-              ) : null}
+              {/* Always, not only when it is shared. "Does everybody see
+                  this" is a question about a photo that outlives the toast
+                  that answered it, and a photo with nothing beside it is one
+                  somebody has to come and ask about. */}
+              <span style={{ fontSize: 10.5, color: dim(0.35) }}>
+                {shared
+                  ? (setter ? 'set by ' + setter + ' · the league sees it' : 'the league sees it')
+                  : 'only on this device'}
+              </span>
             </div>
           ) : null}
         </div>
