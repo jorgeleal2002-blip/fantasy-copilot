@@ -254,7 +254,30 @@ export function scorePlayer(
  * are actually true of him.
  */
 export function ownedWeights(w: Weights): Weights {
-  const dead: MetricKey[] = ['need', 'value'];
+  return without(w, ['need', 'value']);
+}
+
+/**
+ * How good he is, full stop — with everything about somebody's roster taken
+ * out of it.
+ *
+ * Three of the eleven terms are not about the player. Positional need and
+ * value against availability are about YOUR pick, and were already gone.
+ * The stack is about whoever happens to own him: it pays a receiver for his
+ * owner also rostering his quarterback, so two identical players rate
+ * differently depending on whose team they landed on. On a league-wide board
+ * that is not a statement about either of them, and it was worth nearly three
+ * Rating points between two receivers with the same age curve.
+ *
+ * It keeps its place in "for you", where it is measured against YOUR roster
+ * and is exactly the question being asked.
+ */
+export function leagueWeights(w: Weights): Weights {
+  return without(w, ['need', 'value', 'stack']);
+}
+
+/** The rest renormalised, so a Rating is still out of the same hundred. */
+function without(w: Weights, dead: MetricKey[]): Weights {
   const rest = 1 - dead.reduce((a, k) => a + w[k], 0);
   const out = {} as Weights;
   (Object.keys(w) as MetricKey[]).forEach(k => {

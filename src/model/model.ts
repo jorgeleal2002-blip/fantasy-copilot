@@ -6,7 +6,7 @@ import {
 import { ageCurve, clamp, modelVal, pickLabel, playerName, prodShare, rankScore, talentScale } from './math';
 import type { Market } from './market';
 import { sosFor, sosScore } from './sos';
-import { EMPTY_METRICS, ownedWeights, redraftWeights, scorePlayer } from './score';
+import { EMPTY_METRICS, leagueWeights, ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
   BlockReturn, MockOption, MockPick, MockState,
@@ -813,6 +813,8 @@ export function buildModel(input: ModelInput): Model {
 
   // Your own players are scored on the renormalised weights (see ownedWeights).
   const wOwn = ownedWeights(w);
+  // How good he is, full stop — see `leagueWeights`.
+  const wLeague = leagueWeights(w);
   myPlayers.forEach(p => {
     const s = scorePlayer(p.raw, {}, {
       dv: talentQ(p.raw, p.id), dvMax, stack: stackFor(p.raw, p.id), use: uFor(p.id),
@@ -1111,7 +1113,7 @@ export function buildModel(input: ModelInput): Model {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(list, p.raw, p.id),
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
         vor: vorOf(p.raw, p.id), sos: sosOf(p.raw),
-      }, wOwn);
+      }, wLeague);
       if (!Number.isFinite(neutral.fit)) return;
       const forMe = scorePlayer(p.raw, needScore, {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(myPlayers, p.raw, p.id),
@@ -1128,13 +1130,13 @@ export function buildModel(input: ModelInput): Model {
         // How deep his position runs in two years is not knowable, so this is
         // today's line — the age discount above already prices the decline.
         vor: vorOf(p.raw, p.id), sos: sosOf(p.raw),
-      }, wOwn);
+      }, wLeague);
       allFits.push({
         id: p.id, name: p.name, pos: p.pos, team: p.team, age: p.age,
         fit: neutral.fit,
         // The scoring that produced that Rating, not another one of him.
         m: neutral.m,
-        weights: wOwn,
+        weights: wLeague,
         fitMe: Number.isFinite(forMe.fit) ? forMe.fit : neutral.fit,
         fit2: Number.isFinite(ahead.fit) ? ahead.fit : neutral.fit,
         value: quality(p.raw) * 100,

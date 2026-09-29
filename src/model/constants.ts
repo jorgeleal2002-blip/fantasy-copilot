@@ -214,6 +214,8 @@ export const CURRENT_K: Record<string, number> = {
   ltr: 8,
   tdPerGame: 8,
   rzPerGame: 5,
+  rzShare: 5,
+  tdShare: 8,
   xtdPerGame: 6,
 };
 

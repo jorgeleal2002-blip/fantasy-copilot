@@ -4525,6 +4525,55 @@ describe('every player\'s rating equals what it is made of', () => {
     for (const p of model.allFits) {
       expect(p.weights.need).toBe(0);
       expect(p.weights.value).toBe(0);
+      // And the stack: it pays a player for who happens to own him.
+      expect(p.weights.stack).toBe(0);
     }
+  });
+});
+
+/* Two of the numbers describing a player were never averaged with anything.
+   `blendSeasons` starts from the most recent finished season and only walks
+   its own list, and those two were not on it — so they sat frozen at whatever
+   they were last January, through every week of the new year. Red-zone share
+   is a tenth of a Rating on its own. */
+describe('every number that describes a player gets blended', () => {
+  const CAT = { a: { position: 'WR', team: 'SEA' } } as unknown as PlayerCatalog;
+  const one = (o: Partial<Usage>): UsageMap => ({ a: { gp: 16, ...o } } as unknown as UsageMap);
+
+  it('moves a red-zone share with the season in progress', () => {
+    const after = withCurrentSeason(
+      one({ rzShare: 0.10, tdShare: 0.10 }),
+      { year: 2026, usage: one({ gp: 3, rzShare: 0.30, tdShare: 0.30 }) },
+      CAT,
+    ).a;
+    expect(after.rzShare as number).toBeGreaterThan(0.1);
+    expect(after.tdShare as number).toBeGreaterThan(0.1);
+  });
+
+  it('still trusts the scoring share more slowly than the opportunity share', () => {
+    // Where the ball goes near the goal line is a role; who ends up with the
+    // touchdown is the noisiest thing in the sport.
+    const after = withCurrentSeason(
+      one({ rzShare: 0.10, tdShare: 0.10 }),
+      { year: 2026, usage: one({ gp: 3, rzShare: 0.30, tdShare: 0.30 }) },
+      CAT,
+    ).a;
+    expect(after.rzShare as number).toBeGreaterThan(after.tdShare as number);
+  });
+
+  it('leaves no describing number out of the blend', () => {
+    // A guard against the next one being forgotten: a metric the model reads
+    // off a season and never averages is a metric stuck in a past one.
+    const described: (keyof Usage)[] = [
+      'snap', 'tgt', 'vol', 'eff', 'ltr', 'xtdPerGame', 'ppg', 'ppgAdj',
+      'tdPerGame', 'rzPerGame', 'rzShare', 'tdShare',
+    ];
+    const prior = one(Object.fromEntries(described.map(k => [k, 1])) as Partial<Usage>);
+    const after = withCurrentSeason(
+      prior,
+      { year: 2026, usage: one({ gp: 8, ...Object.fromEntries(described.map(k => [k, 3])) }) },
+      CAT,
+    ).a;
+    for (const k of described) expect(after[k] as number).toBeGreaterThan(1);
   });
 });

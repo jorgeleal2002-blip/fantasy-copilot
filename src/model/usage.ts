@@ -95,8 +95,15 @@ export type UsageMap = Record<string, Usage>;
  * number as each other for everyone but a quarterback, so blending one without
  * the other would only have made them disagree.
  */
+/* Every number that describes a player and can be averaged. Two were missing
+   — his share of his team's red-zone work and his share of its touchdowns —
+   so they were never blended across seasons and never touched by the year in
+   progress either: `blendSeasons` starts from the most recent finished season
+   and only walks this list, so those two sat frozen at whatever they were last
+   January. Red-zone share is a tenth of a Rating on its own. */
 const BLEND: (keyof Usage)[] = [
   'snap', 'tgt', 'vol', 'eff', 'ltr', 'xtdPerGame', 'ppg', 'ppgAdj', 'tdPerGame', 'rzPerGame',
+  'rzShare', 'tdShare',
 ];
 
 /**
