@@ -233,6 +233,15 @@ export function useApp() {
    * Sunday's yards from sitting under next Sunday's 0.00.
    */
   const [weekStats, setWeekStats] = useState<HeldStats<SleeperStatLine>>({ wk: 0, map: {} });
+  /**
+   * Stat lines for several weeks at once, keyed by week, for a game log.
+   *
+   * Separate from `weekStats` because that one is deliberately the single week
+   * on screen and nothing else — a scoreboard drawing last week's yards under
+   * this week's score is the bug it exists to prevent. A log is the opposite
+   * question: many weeks, each labelled with its own.
+   */
+  const [gameStats, setGameStats] = useState<Record<number, Record<string, SleeperStatLine>>>({});
   /** The week the NFL is on, as distinct from the one being looked at. */
   const [nflWeek, setNflWeek] = useState<number | null>(null);
   /** Said out loud when it fails. A projection that is simply absent, with no
@@ -441,6 +450,46 @@ export function useApp() {
     } catch {
       /* the line under a name is an extra; the score above it is not */
     }
+  }, []);
+
+  /**
+   * The stat lines behind a game log, for the weeks a player actually played.
+   *
+   * Sleeper publishes one week of stats per request, so a log costs one call
+   * per game — which is why it is asked for from the card that draws it, only
+   * for the weeks on that card, and never speculatively. Weeks already in hand
+   * cost nothing: the cache is the same one the scoreboard fills, so a game
+   * already looked at there is free here.
+   */
+  const fetchGameStats = useCallback(async (weeks: number[]) => {
+    const d = dataRef.current;
+    if (!d || !weeks.length) return;
+    const season = d.league.season || String(new Date().getFullYear());
+    const key = (wk: number) => season + ':' + wk;
+
+    // Whatever is already cached goes up in one pass, before any waiting.
+    setGameStats(prev => {
+      const next = { ...prev };
+      let grew = false;
+      for (const wk of weeks) {
+        const hit = statCache.get(key(wk));
+        if (hit && !next[wk]) { next[wk] = hit.map; grew = true; }
+      }
+      return grew ? next : prev;
+    });
+
+    const want = weeks.filter(wk => wk > 0 && !statCache.get(key(wk)));
+    if (!want.length) return;
+    await Promise.all(want.map(async wk => {
+      try {
+        const raw = await getWeekStats(season, wk);
+        if (!raw || typeof raw !== 'object' || !Object.keys(raw).length) return;
+        statCache.set(key(wk), { at: Date.now(), map: raw });
+        setGameStats(prev => ({ ...prev, [wk]: raw }));
+      } catch {
+        /* a line under a score is an extra; the score itself is not */
+      }
+    }));
   }, []);
 
   const fetchMatchups = useCallback(async (lid: string, wk: number, quiet = false, force = false) => {
@@ -1380,6 +1429,7 @@ export function useApp() {
     query, topPos, topLens, topOpen,
     week, matchups, matchupState, projections, projState, fetchWeekStats,
     weekStats: statsForWeek(weekStats, week),
+    gameStats, fetchGameStats,
     tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,
     weekScores, powerState, fetchWeekScores, seasonPpg, seasonLog, seasonOf, seasonRanks,

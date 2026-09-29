@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ACCENT, METRIC_LABEL, PEAK, POS, type Weights } from '../model/constants';
 import { num } from '../model/math';
 import type { Metrics } from '../model/score';
@@ -11,6 +11,7 @@ import { Meter, SERIES } from '../ui/charts';
 import { Card, Overlay } from '../ui/primitives';
 import { ALLOWED_SEASON, OPPONENTS, SCHEDULE_SEASON } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
+import { statLine } from '../model/stat-line';
 import { projectConfidence, projectPPG } from '../model/project';
 import { barHeights, ordinal, type Ranked } from '../model/season';
 import { TradePackages } from '../ui/TradePackages';
@@ -385,7 +386,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </div>
       </div>
 
-      {fill ? null : <ThisSeason app={app} pos={p.pos} id={p.id} />}
+      {fill ? null : <ThisSeason app={app} pos={p.pos} team={p.team} id={p.id} />}
 
       {/* First, because it is the answer. It used to sit under a paragraph
           about how a projection is built and a nine-row breakdown — below the
@@ -517,10 +518,22 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
  * the choice is between. A rank against every quarterback in the NFL counts
  * thirty nobody here can start.
  */
-function ThisSeason({ app, pos, id }: { app: App; pos: string; id: string }) {
+function ThisSeason({ app, pos, team, id }: { app: App; pos: string; team: string; id: string }) {
   const line = app.seasonOf(id);
   const games = app.seasonLog(id);
   const ranks = app.seasonRanks(id, pos);
+
+  /* The log costs one request a game, so it asks for the weeks it is about to
+     draw and no others. `logged` is a string because the array is rebuilt
+     every render and would otherwise re-fire the effect forever. */
+  const shown = games.slice(-LOG_GAMES);
+  const logged = shown.map(g => g.week).join(',');
+  const { fetchGameStats } = app;
+  useEffect(() => {
+    const weeks = logged ? logged.split(',').map(Number) : [];
+    if (weeks.length) void fetchGameStats(weeks);
+  }, [fetchGameStats, logged]);
+
   // Before he has played there is nothing here but zeroes pretending to be
   // facts, and the projection above is the whole of what is known.
   if (!line || !games.length) return null;
@@ -577,9 +590,41 @@ function ThisSeason({ app, pos, id }: { app: App; pos: string; id: string }) {
       <div className="ps-wks" aria-hidden="true">
         {games.map(g => <div className="ps-wk" key={g.week}>W{g.week}</div>)}
       </div>
+
+      {/* Game by game, newest first — the order somebody scrolls a log in,
+          because "what has he done lately" is the question being asked and
+          the answer to it is at the top. */}
+      <div style={{ marginTop: 18 }}>
+        {shown.slice().reverse().map(g => {
+          const did = statLine(app.gameStats[g.week]?.[id], pos);
+          const opp = OPPONENTS[team]?.[g.week - 1] || '';
+          return (
+            <div className="ps-log" key={g.week}>
+              <div className="ps-log-top">
+                <div className="ps-log-when">
+                  Week {g.week}
+                  {opp ? <span className="ps-log-opp">{' · ' + opp}</span> : null}
+                </div>
+                <div className="ps-log-pts">{g.pts.toFixed(1)}</div>
+              </div>
+              {did ? <div className="ps-log-did">{did}</div> : null}
+            </div>
+          );
+        })}
+      </div>
+      {games.length > shown.length ? (
+        <div style={{ fontSize: 10.5, color: dim(0.3), marginTop: 10 }}>
+          His last {LOG_GAMES} games. The chart above is the whole season.
+        </div>
+      ) : null}
     </Card>
   );
 }
+
+/* How far back the log goes. Every game on it is one more request for a week
+   of stats, and the chart above already carries the whole season — so this is
+   how much detail is worth paying for, not how much season there is. */
+const LOG_GAMES = 8;
 
 function Schedule(
   { pos, team, league }: { pos: string; team: string | null | undefined; league: SleeperLeague },

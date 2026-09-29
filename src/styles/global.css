@@ -1779,3 +1779,41 @@ button { font-family: inherit; }
   text-transform: uppercase;
   color: rgba(233, 233, 237, 0.32);
 }
+
+/* One row a game: which week and who against on the left, what he scored on
+   the right, and what he did underneath spanning the whole row. The stat line
+   gets the full width because "16/26 CMP, 204 YD, 2 INT, 8 CAR, 22 YD, 2 TD"
+   down a column beside a score is two truncated lines instead of one whole
+   one. */
+.ps-log {
+  display: flex;
+  flex-direction: column;
+  padding: 11px 0;
+  border-top: var(--hairline) solid var(--color-divider);
+}
+.ps-log-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ps-log-when {
+  font-size: 12px;
+  color: rgba(233, 233, 237, 0.8);
+  letter-spacing: -0.01em;
+}
+.ps-log-opp { color: rgba(233, 233, 237, 0.4); }
+.ps-log-pts {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.ps-log-did {
+  font-size: 10px;
+  line-height: 1.45;
+  margin-top: 3px;
+  color: rgba(233, 233, 237, 0.42);
+  text-wrap: pretty;
+}
