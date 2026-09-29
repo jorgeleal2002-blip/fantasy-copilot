@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { BAD, GOOD } from '../model/constants';
-import { powerRankings, RECENT_WEEKS, WEIGHTS, type PowerTeam } from '../model/power';
+import { HALF_LIFE_WEEKS, powerRankings, WEIGHTS, type PowerTeam } from '../model/power';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { Card, Empty } from '../ui/primitives';
@@ -46,7 +46,8 @@ export function PowerRankings({ app, m }: { app: App; m: Model }) {
               record — every team against every other team, every week,
               {' '}{weeks === 1 ? '1 week' : weeks + ' weeks'} of it — so the schedule has nothing left to say.
               Losing 130 to the league&apos;s best week and beating 78 with 81 count the same in the standings;
-              they do not count the same here.
+              they do not count the same here. Recent weeks count for more: a week is worth half of one
+              {' '}{HALF_LIFE_WEEKS} weeks newer than it.
             </>
           : <>Nothing has finished yet, so this is the roster alone. Points and record join it after week one.</>}
       </div>
@@ -60,8 +61,11 @@ export function PowerRankings({ app, m }: { app: App; m: Model }) {
           roster is the only part that looks forward: a trade or a starter back off injury is in it the day
           it happens. The record is the weakest of the three at saying how good a team is — over a season
           roughly half of it is who you were scheduled against — and the only one that banks a playoff
-          place, so it gets the smallest share rather than none. Form over the last {RECENT_WEEKS} weeks
-          stays in the sentence, where it says what is about to change without moving anybody up the page.
+          place, so it gets the smallest share rather than none. Beside the rank is where each team stood
+          before the newest week, worked out by running this same ranking without it rather than by
+          remembering — a ranking that remembers its own past can only be wrong about it. Under each row
+          is the record the scoring earned and how far a normal week lands from that team&apos;s average,
+          which is the difference between a team you can count on and a coin toss with the same average.
         </div>
       ) : null}
     </div>
@@ -82,11 +86,22 @@ function Row({ t }: { t: PowerTeam }) {
   return (
     <Card style={t.isMe ? { border: '1px solid rgba(145, 132, 217, 0.45)' } : undefined}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          flex: 'none', width: 22, textAlign: 'center', fontSize: 15, fontWeight: 500,
-          letterSpacing: '-0.02em', color: t.isMe ? 'var(--color-accent)' : dim(0.45),
-        }}>
-          {t.rank}
+        <div style={{ flex: 'none', width: 26, textAlign: 'center' }}>
+          <div style={{
+            fontSize: 15, fontWeight: 500, letterSpacing: '-0.02em',
+            color: t.isMe ? 'var(--color-accent)' : dim(0.45),
+          }}>
+            {t.rank}
+          </div>
+          {/* Where they came from. A power ranking is read for the movement as
+              much as for the order, and a rank with no history is a table. */}
+          {t.move ? (
+            <div style={{ fontSize: 9, marginTop: 1, color: t.move > 0 ? GOOD : BAD }}>
+              {(t.move > 0 ? '▲' : '▼') + Math.abs(t.move)}
+            </div>
+          ) : t.was != null ? (
+            <div style={{ fontSize: 9, marginTop: 1, color: dim(0.25) }}>–</div>
+          ) : null}
         </div>
         {t.avatar
           ? <img src={t.avatar} alt="" style={{ width: 26, height: 26, borderRadius: 7, flex: 'none', objectFit: 'cover' }} />
@@ -106,6 +121,17 @@ function Row({ t }: { t: PowerTeam }) {
               ? `${pct}% all-play · roster ${ordinal(t.rosterRank)} · ${t.record.label}`
               : `roster ${ordinal(t.rosterRank)} · no weeks played`}
           </div>
+          {/* The record the scoring earned, and how far a normal week lands
+              from their average. Two numbers a standings table cannot hold. */}
+          {t.weeks ? (
+            <div style={{ fontSize: 9.5, color: dim(0.28), marginTop: 1, ...ellipsis }}>
+              {[
+                t.expected ? `earned ${t.expected.wins}-${t.expected.losses}` : '',
+                t.swing != null ? `±${t.swing.toFixed(0)} a week` : '',
+                t.ppg ? `${t.ppg.toFixed(1)} pts/gm` : '',
+              ].filter(Boolean).join(' · ')}
+            </div>
+          ) : null}
         </div>
 
         <div style={{ flex: 'none', textAlign: 'right' }}>
@@ -118,8 +144,6 @@ function Row({ t }: { t: PowerTeam }) {
             <div style={{ fontSize: 9.5, marginTop: 1, color: lucky ? BAD : GOOD }}>
               {(t.luck > 0 ? '+' : '−') + Math.abs(t.luck).toFixed(1) + ' vs earned'}
             </div>
-          ) : t.ppg ? (
-            <div style={{ fontSize: 9.5, marginTop: 1, color: dim(0.35) }}>{t.ppg.toFixed(1)} pts/gm</div>
           ) : null}
         </div>
       </div>

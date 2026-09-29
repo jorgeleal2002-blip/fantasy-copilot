@@ -2898,6 +2898,81 @@ describe('power rankings', () => {
     expect(power.map(t => t.id)).toEqual([1, 2]);
   });
 
+  it('counts the recent weeks for more than the old ones', () => {
+    /* Two teams, mirror images: one started badly and finished well, the other
+       the reverse. Their raw all-play records are identical and their seasons
+       are not the same season. */
+    const scores = [
+      ...wk(1, { 1: 80, 2: 140 }), ...wk(2, { 1: 80, 2: 140 }),
+      ...wk(3, { 1: 80, 2: 140 }), ...wk(4, { 1: 80, 2: 140 }),
+      ...wk(5, { 1: 140, 2: 80 }), ...wk(6, { 1: 140, 2: 80 }),
+      ...wk(7, { 1: 140, 2: 80 }), ...wk(8, { 1: 140, 2: 80 }),
+    ];
+    const all = allPlayRecords(scores);
+    expect(all.get(1)!.pct).toBe(0.5);
+    expect(all.get(2)!.pct).toBe(0.5);
+    // The one winning now is ahead on form, and the ranking follows form.
+    expect(all.get(1)!.form).toBeGreaterThan(0.65);
+    expect(all.get(2)!.form).toBeLessThan(0.35);
+    const power = powerRankings([row(1, { wins: 4, losses: 4 }), row(2, { wins: 4, losses: 4 })], scores);
+    expect(power.map(t => t.id)).toEqual([1, 2]);
+  });
+
+  it('says where each team stood before the newest week', () => {
+    /* Team 1 took the first three and team 2 the last two, which under the
+       half-life is enough to have flipped them in week five and not in four.
+       Equal records and equal rosters, so only the form can move anybody. */
+    const scores = [
+      ...wk(1, { 1: 140, 2: 80 }), ...wk(2, { 1: 140, 2: 80 }), ...wk(3, { 1: 140, 2: 80 }),
+      ...wk(4, { 1: 80, 2: 140 }), ...wk(5, { 1: 80, 2: 140 }),
+    ];
+    const rows = [row(1, { wins: 2, losses: 3 }), row(2, { wins: 2, losses: 3 })];
+    expect(powerRankings(rows, scores.filter(x => x.week < 5)).map(t => t.id)).toEqual([1, 2]);
+
+    const power = powerRankings(rows, scores);
+    expect(power.map(t => t.id)).toEqual([2, 1]);
+    expect(power.find(t => t.id === 2)!.move).toBe(1);
+    expect(power.find(t => t.id === 2)!.was).toBe(2);
+    expect(power.find(t => t.id === 1)!.move).toBe(-1);
+  });
+
+  it('has no movement to report off a single week', () => {
+    const power = powerRankings([row(1), row(2)], wk(1, { 1: 120, 2: 80 }));
+    expect(power.every(t => t.was === null && t.move === 0)).toBe(true);
+  });
+
+  it('measures how far a normal week lands from a team\'s average', () => {
+    /* Same average, same record, opposite temperaments: one is 100 every week
+       and the other cycles 40/160/100. A standings table cannot tell them
+       apart and this is the column that can. */
+    const scores = [
+      ...wk(1, { 1: 100, 2: 40 }), ...wk(2, { 1: 100, 2: 160 }), ...wk(3, { 1: 100, 2: 100 }),
+      ...wk(4, { 1: 100, 2: 40 }), ...wk(5, { 1: 100, 2: 160 }), ...wk(6, { 1: 100, 2: 100 }),
+    ];
+    const power = powerRankings([row(1, { wins: 3, losses: 3 }), row(2, { wins: 3, losses: 3 })], scores);
+    const steady = power.find(t => t.id === 1)!;
+    const wild = power.find(t => t.id === 2)!;
+    expect(steady.ppg).toBe(100);
+    expect(wild.ppg).toBe(100);
+    expect(steady.swing).toBe(0);
+    expect(wild.swing).toBe(49);
+    expect(steady.steadiest).toBe(true);
+    expect(wild.swingiest).toBe(true);
+    expect(steady.read).toContain('same team every Sunday');
+    expect(wild.read).toContain('wildest week to week');
+  });
+
+  it('prints the record the scoring earned', () => {
+    const scores = [
+      ...wk(1, { 1: 140, 2: 80 }), ...wk(2, { 1: 140, 2: 80 }),
+      ...wk(3, { 1: 140, 2: 80 }), ...wk(4, { 1: 140, 2: 80 }),
+    ];
+    const power = powerRankings([row(1, { wins: 1, losses: 3 }), row(2, { wins: 3, losses: 1 })], scores);
+    // Outscored the league every week and lost three of four.
+    expect(power.find(t => t.id === 1)!.expected).toEqual({ wins: 4, losses: 0 });
+    expect(power.find(t => t.id === 2)!.expected).toEqual({ wins: 0, losses: 4 });
+  });
+
   it('reads a team that is heating up', () => {
     // Level all season, then three big weeks: the average hides it, the tail
     // does not, which is the only reason "lately" is a column at all.
