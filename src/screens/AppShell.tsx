@@ -37,11 +37,14 @@ const ICONS: Record<Tab, JSX.Element> = {
   ),
 };
 
+/* Your team, then the league it plays in, then the two things you do to your
+   team — which is the order the week is actually read in. League sat fourth,
+   past Draft, although in season it is opened far more often than either. */
 const TABS: { key: Tab; label: string }[] = [
   { key: 'team', label: 'Team' },
+  { key: 'league', label: 'League' },
   { key: 'trades', label: 'Trades' },
   { key: 'draft', label: 'Draft' },
-  { key: 'league', label: 'League' },
   { key: 'settings', label: 'You' },
 ];
 
