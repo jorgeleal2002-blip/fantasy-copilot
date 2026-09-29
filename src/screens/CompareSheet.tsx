@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { type CmpRow, type CmpUse, aheadBy, compareNumbers, compareSeasons } from '../model/compare';
+import { type CmpRow, type CmpUse, aheadBy, compareMetrics, compareNumbers, compareSeasons } from '../model/compare';
+import { METRIC_LABEL } from '../model/constants';
 import { POS } from '../model/constants';
 import type { Pos } from '../api/types';
 import { resolve } from './PlayerSheet';
@@ -102,6 +103,19 @@ function Side({ a, b, app, m }: { a: PlayerFit; b: PlayerFit; app: App; m: Model
   const rows = compareSeasons(sa, sb);
   const ahead = aheadBy(rows);
   const nums = compareNumbers(useOf(m, a.id), useOf(m, b.id));
+  /* What the Rating is made of, ordered by how far apart they are — so the
+     reason one of them is ahead is the first line rather than somewhere in
+     eleven rows of mostly nothing. */
+  const ra = resolve(m, a.id, m.wUsed);
+  const rb = resolve(m, b.id, m.wUsed);
+  const why = ra && rb
+    ? compareMetrics(
+      m.metricKeys as string[],
+      k => METRIC_LABEL[k as keyof typeof METRIC_LABEL] || k,
+      { m: ra.m as unknown as Record<string, number>, weights: ra.weights as unknown as Record<string, number> },
+      { m: rb.m as unknown as Record<string, number>, weights: rb.weights as unknown as Record<string, number> },
+    )
+    : [];
 
   return (
     <>
@@ -131,6 +145,13 @@ function Side({ a, b, app, m }: { a: PlayerFit; b: PlayerFit; app: App; m: Model
         <>
           <div className="cmp-sec">The numbers</div>
           <Rows rows={nums} />
+        </>
+      ) : null}
+
+      {why.length ? (
+        <>
+          <div className="cmp-sec">Why the Rating</div>
+          <Rows rows={why} />
         </>
       ) : null}
     </>

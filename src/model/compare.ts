@@ -128,3 +128,37 @@ export function compareNumbers(a: CmpUse, b: CmpUse): CmpRow[] {
 
 const pct = (n: number | null): number | null =>
   (n == null ? null : Math.round(n * 1000) / 10);
+
+/**
+ * Which metric actually put one of them above the other.
+ *
+ * A Rating is eleven numbers times eleven weights, and the difference between
+ * two players is almost never spread evenly across them — it is one or two
+ * terms and a lot of noise. Printing all eleven in their own order buries
+ * that; printing them by how far apart the two men are puts the reason on the
+ * first line.
+ *
+ * The figures are contributions, not raw metrics: 0.81 of something worth 6%
+ * of a Rating and 0.42 of something worth 27% are not comparable until they
+ * are both in the same units, and those units are Rating points.
+ */
+export function compareMetrics(
+  keys: string[],
+  label: (k: string) => string,
+  a: { m: Record<string, number>; weights: Record<string, number> },
+  b: { m: Record<string, number>; weights: Record<string, number> },
+): CmpRow[] {
+  const rows: CmpRow[] = [];
+  for (const k of keys) {
+    const wa = a.weights[k] ?? 0;
+    const wb = b.weights[k] ?? 0;
+    // A term neither of them is scored on says nothing about either.
+    if (!(wa > 0) && !(wb > 0)) continue;
+    const av = Math.round((a.m[k] ?? 0) * wa * 1000) / 10;
+    const bv = Math.round((b.m[k] ?? 0) * wb * 1000) / 10;
+    rows.push({ key: k, label: label(k), a: av, b: bv, win: av === bv ? null : av > bv ? 'a' : 'b' });
+  }
+  return rows.sort((x, y) => gap(y) - gap(x));
+}
+
+const gap = (r: CmpRow) => Math.abs((r.a ?? 0) - (r.b ?? 0));

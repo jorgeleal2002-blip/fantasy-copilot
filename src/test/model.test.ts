@@ -20,7 +20,7 @@ import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { PROD_SHARE_BASE, PROD_SHARE_MAX, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
-import { type CmpUse, aheadBy, compareNumbers, compareSeasons, tally } from '../model/compare';
+import { type CmpUse, aheadBy, compareMetrics, compareNumbers, compareSeasons, tally } from '../model/compare';
 import { gapsIn, mergeSeason } from '../model/season';
 import { barHeights, ordinal, pointsInWeek, quantile, rankAmong, seasonLine } from '../model/season';
 import { SCREEN_TRUST, bestHeight } from '../model/viewport';
@@ -4383,5 +4383,44 @@ describe('how much of quality is production', () => {
     // In the off-season the price still leads; by December the season does.
     expect(q(0)).toBeCloseTo(64, 6);
     expect(q(0.7)).toBeGreaterThan(q(0) + 6);
+  });
+});
+
+/* A Rating is eleven numbers times eleven weights, and the difference between
+   two players is never spread evenly across them — it is one or two terms and
+   a lot of noise. */
+describe('which metric put one player above the other', () => {
+  const W = { talent: 0.3, rz: 0.1, age: 0.06, sos: 0 };
+  const side = (m: Record<string, number>) => ({ m, weights: W as Record<string, number> });
+  const label = (k: string) => k.toUpperCase();
+  const keys = ['talent', 'rz', 'age', 'sos'];
+
+  it('puts the reason on the first line', () => {
+    const rows = compareMetrics(keys, label,
+      side({ talent: 0.9, rz: 0.5, age: 0.5, sos: 1 }),
+      side({ talent: 0.4, rz: 0.52, age: 0.5, sos: 1 }));
+    expect(rows[0]?.key).toBe('talent');
+    expect(rows[0]?.win).toBe('a');
+  });
+
+  it('compares contributions, not raw metrics', () => {
+    // 0.8 of something worth 6% and 0.3 of something worth 30% are not
+    // comparable until both are in Rating points.
+    const rows = compareMetrics(keys, label,
+      side({ talent: 0.3, rz: 0, age: 0.8, sos: 0 }),
+      side({ talent: 0.3, rz: 0, age: 0.1, sos: 0 }));
+    const age = rows.find(r => r.key === 'age');
+    expect(age?.a).toBeCloseTo(4.8, 5);
+    expect(age?.b).toBeCloseTo(0.6, 5);
+  });
+
+  it('leaves out a term neither of them is scored on', () => {
+    const rows = compareMetrics(keys, label, side({ sos: 1 }), side({ sos: 0 }));
+    expect(rows.find(r => r.key === 'sos')).toBeUndefined();
+  });
+
+  it('gives a row to nobody where the two land in the same place', () => {
+    const rows = compareMetrics(keys, label, side({ talent: 0.5 }), side({ talent: 0.5 }));
+    expect(rows.find(r => r.key === 'talent')?.win).toBe(null);
   });
 });
