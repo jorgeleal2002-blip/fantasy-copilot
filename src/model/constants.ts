@@ -249,6 +249,14 @@ export const MATCHUP_POLL_MS = 45000;
  * seconds, and this is an undocumented endpoint to be polite to.
  */
 export const PROJ_TTL_MS = 5 * 60 * 1000;
+/**
+ * How long away is long enough that coming back should re-read the league.
+ *
+ * A home-screen web app is not reloaded for days — iOS suspends it and hands
+ * it back exactly as it was. Switching apps for a minute should not cost a
+ * round of requests; coming back the next morning should not show yesterday.
+ */
+export const RESUME_REFRESH_MS = 10 * 60 * 1000;
 
 export const STORAGE_SESSION = 'fc.session';
 export const STORAGE_PHOTOS = 'fc.photos';

@@ -7,7 +7,7 @@ import {
 import type {
   LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup, SleeperTransaction,
 } from '../api/types';
-import { DRAFT_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import { DRAFT_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, RESUME_REFRESH_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
   EMPTY_ROOM, PHOTO_MAX_BYTES, claimSeat, createRoom as createRoomAt, dropPhoto, liveEnabled,
   liveReason, newRoomId, pushPick, putPhoto, readPhotos, readRoom, restartRoom, startRoom,
@@ -173,6 +173,8 @@ export function useApp() {
    * are looking at it. */
   const [week, setWeekState] = useState<number | null>(null);
   const [projections, setProjections] = useState<Record<string, number>>({});
+  /** The week the NFL is on, as distinct from the one being looked at. */
+  const [nflWeek, setNflWeek] = useState<number | null>(null);
   /** Said out loud when it fails. A projection that is simply absent, with no
    *  reason given, is the hardest kind of missing number to report. */
   const [projState, setProjState] = useState<FeedState>('idle');
@@ -198,6 +200,14 @@ export function useApp() {
   const poll = useRef<number | undefined>(undefined);
   const dataRef = useRef<LeagueBundle | null>(null);
   dataRef.current = data;
+  /* Read inside callbacks that outlive the render they were made in — a
+   * resume handler registered on Tuesday must not be holding Sunday's week. */
+  const weekRef = useRef<number | null>(null);
+  weekRef.current = week;
+  const nflWeekRef = useRef<number | null>(null);
+  nflWeekRef.current = nflWeek;
+  const syncedAtRef = useRef<number | null>(null);
+  syncedAtRef.current = syncedAt;
 
   /**
    * Sleeper's projections for the week, scored in this league's own settings.
@@ -543,26 +553,47 @@ export function useApp() {
     };
   }, [load]);
 
-  /* Which week to show, from the NFL's own clock rather than the calendar —
+  /**
+   * Which week to show, from the NFL's own clock rather than the calendar —
    * Sleeper's week rolls on Tuesday, and a date guess would be a day out for
-   * two days of every week. */
-  useEffect(() => {
-    if (!leagueId) return;
-    let cancelled = false;
-    void (async () => {
-      let wk = 1;
-      try {
-        const st = await getNflState();
-        wk = Math.max(1, Math.min(18, Number(st?.display_week || st?.week || 1)));
-      } catch {
-        /* week 1 is a truthful default when the state feed is down */
-      }
-      if (cancelled) return;
+   * two days of every week.
+   *
+   * Re-read rather than read once. This used to run only when a league loaded,
+   * and a home-screen web app does not load for days: open it in week three,
+   * leave it on the home screen, and in week four it is still polling week
+   * three's scores against week three's projections, under a header that says
+   * so. Nothing in the app noticed the season had moved.
+   */
+  const syncClock = useCallback(async (lid: string) => {
+    let wk: number;
+    try {
+      const st = await getNflState();
+      wk = Math.max(1, Math.min(18, Number(st?.display_week || st?.week || 1)));
+    } catch {
+      // Week one is a truthful default with nothing on screen yet, and a bad
+      // one once there is: a state feed that blinks must not throw you back
+      // to September.
+      if (weekRef.current != null) return;
+      wk = 1;
+    }
+    const was = nflWeekRef.current;
+    setNflWeek(wk);
+
+    /* Stepping back through the season is a thing people do, and the clock
+     * moving under them must not yank the screen out from under it. Follow it
+     * only for somebody who was on it. */
+    const showing = weekRef.current;
+    if (showing == null || was == null || showing === was) {
       setWeekState(wk);
-      void fetchMatchups(leagueId, wk);
-    })();
-    return () => { cancelled = true; };
-  }, [leagueId, fetchMatchups]);
+      void fetchMatchups(lid, wk, showing === wk);
+    } else if (showing === wk) {
+      void fetchMatchups(lid, wk, true);
+    }
+  }, [fetchMatchups]);
+
+  useEffect(() => {
+    if (leagueId) void syncClock(leagueId);
+  }, [leagueId, syncClock]);
 
   /* Scores move while games are on. Quietly, so the numbers change under you
    * instead of the section blinking through a loading state every minute. */
@@ -862,8 +893,14 @@ export function useApp() {
     setMarketState('idle');
   }, []);
 
-  /** Re-ask for rosters, traded picks and market values, then recompute. */
-  const refreshAll = useCallback(async () => {
+  /**
+   * Re-ask for rosters, traded picks, market values and usage, then recompute.
+   *
+   * `quiet` is the automatic one, which says nothing when it works: a toast
+   * for something nobody asked for is an interruption, and a toast for
+   * something that failed on its own is worse — the next one will try again.
+   */
+  const refreshAll = useCallback(async (quiet = false) => {
     const d = dataRef.current;
     if (!d || !leagueId) return;
     setSyncing(true);
@@ -874,19 +911,44 @@ export function useApp() {
         getTradedPicks(leagueId).catch(() => d.traded || []),
       ]);
       const picks = d.draft ? await getDraftPicks(d.draft.draft_id).catch(() => d.picks) : d.picks;
-      setData({ ...d, rosters, users, traded, picks, me: matchMe(users, username) });
+      const fresh = { ...d, rosters, users, traded, picks, me: matchMe(users, username) };
+      setData(fresh);
       setSyncedAt(Date.now());
       await fetchMarket(d.league, true);
       if (week != null) void fetchMatchups(leagueId, week, true, true);
-      showToast('Updated: rosters, picks and market values.');
+      // The season's own stats move every week, and the map is keyed by the
+      // week — so this is a no-op until one turns over, and the thing that
+      // makes the numbers current when it does.
+      void fetchUsage(fresh);
+      if (!quiet) showToast('Updated: rosters, picks, usage and market values.');
     } catch {
-      showToast('Could not update right now. Try again.');
+      if (!quiet) showToast('Could not update right now. Try again.');
     } finally {
       setSyncing(false);
     }
     // `week` is read here, so it belongs in the list: without it a refresh
     // would keep asking for whatever week was showing when this was built.
-  }, [fetchMarket, fetchMatchups, leagueId, showToast, username, week]);
+  }, [fetchMarket, fetchMatchups, fetchUsage, leagueId, showToast, username, week]);
+
+  /**
+   * Coming back to the app is the only moment it can notice time passed.
+   *
+   * iOS suspends a home-screen web app and hands it back exactly as it was —
+   * same week, same scores, same rosters, however many days later. So a
+   * return re-reads the clock every time, and everything else when the gap
+   * was long enough to be worth the requests.
+   */
+  useEffect(() => {
+    if (!leagueId || typeof document === 'undefined') return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      void syncClock(leagueId);
+      const at = syncedAtRef.current;
+      if (!at || Date.now() - at > RESUME_REFRESH_MS) void refreshAll(true);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [leagueId, refreshAll, syncClock]);
 
   /** Cheaper refresh used by the draft board: picks only. */
   const refreshPicks = useCallback(async () => {
