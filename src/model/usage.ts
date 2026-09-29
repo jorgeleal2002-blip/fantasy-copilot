@@ -1,5 +1,8 @@
 import type { PlayerCatalog, Pos, SleeperStatLine } from '../api/types';
-import { CURRENT_K, CURRENT_SEASON_K, PRIME, USAGE_WEIGHTS, POS } from './constants';
+import {
+  CURRENT_K, CURRENT_SEASON_K, PRIME, ROLE_BREAK, ROLE_BREAK_FULL, ROLE_BREAK_MIN_GP,
+  USAGE_WEIGHTS, POS,
+} from './constants';
 
 export interface Usage {
   /** offensive snaps played / team offensive snaps */
@@ -101,6 +104,30 @@ export type UsageMap = Record<string, Usage>;
    progress either: `blendSeasons` starts from the most recent finished season
    and only walks this list, so those two sat frozen at whatever they were last
    January. Red-zone share is a tenth of a Rating on its own. */
+/** The three that describe a role rather than what he did with it. */
+const ROLE: (keyof Usage)[] = ['snap', 'tgt', 'vol'];
+
+/**
+ * The weight on the season in progress, raised where a role has moved far
+ * enough that a small sample cannot explain it — see `ROLE_BREAK`.
+ */
+export function breakWeight(w: number, cur: number, prior: number, gp: number): number {
+  if (gp < ROLE_BREAK_MIN_GP) return w;
+  if (!(prior > 0) || !Number.isFinite(cur) || cur < 0) return w;
+  /* Measured as a ratio, not as a difference, because a difference is not
+     symmetric: against his old number a doubled role moves 100% and a halved
+     one only 50%, so a man who lost half his snaps was being shrunk back
+     toward the job he no longer has while a man who gained them was believed.
+     A share cannot fall below nothing; it can rise without limit. In log space
+     both are the same size of move, which is what they are. */
+  const move = Math.abs(Math.log(cur / prior));
+  const lo = Math.log(1 + ROLE_BREAK);
+  const hi = Math.log(1 + ROLE_BREAK_FULL);
+  if (!(move > lo)) return w;
+  const past = Math.min(1, (move - lo) / (hi - lo));
+  return w + (1 - w) * past;
+}
+
 const BLEND: (keyof Usage)[] = [
   'snap', 'tgt', 'vol', 'eff', 'ltr', 'xtdPerGame', 'ppg', 'ppgAdj', 'tdPerGame', 'rzPerGame',
   'rzShare', 'tdShare',
@@ -563,7 +590,11 @@ export function withCurrentSeason(
       // Where only one side has the metric it stands alone: a rookie's first
       // snap share is not worth less for having no 2023 to average against.
       if (!hasA) continue;
-      const wk = weight(k as string);
+      let wk = weight(k as string);
+      // A role that has moved, rather than drifted, is a new role — see
+      // `breakWeight`. Only the three that describe one.
+      if (hasB && ROLE.indexOf(k) >= 0) wk = breakWeight(wk, a as number, b as number, gp);
+
       (prior as unknown as Record<string, number>)[k as string] =
         hasB ? (a as number) * wk + (b as number) * (1 - wk) : (a as number);
     }

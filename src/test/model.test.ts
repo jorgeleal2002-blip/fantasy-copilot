@@ -8,7 +8,7 @@ import { buildModel } from '../model/model';
 import { REACH, sfxFor } from '../model/sfx-map';
 import type { MockPick } from '../model/types';
 import { ownedWeights, pickValue, redraftWeights, scorePlayer } from '../model/score';
-import { blendSeasons, buildUsage, seasonUsage, withCurrentSeason, type Usage, type UsageMap } from '../model/usage';
+import { blendSeasons, breakWeight, buildUsage, seasonUsage, withCurrentSeason, type Usage, type UsageMap } from '../model/usage';
 import type { PlayerCatalog } from '../api/types';
 import { projectConfidence, projectPPG } from '../model/project';
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
@@ -4314,17 +4314,18 @@ describe('how fast the season in progress is believed', () => {
   const base = (o: Partial<Usage>): UsageMap =>
     ({ a: { gp: 16, snap: 0.5, tgt: 0.15, eff: 7, tdPerGame: 0.3, ...o } } as unknown as UsageMap);
 
-  /** A man whose role has doubled and whose scoring has tripled, in 3 games. */
+  /** A man drifting upward — not far enough to be a different role. See the
+   *  block below for what happens when it IS one. */
   const after = (gp: number) => withCurrentSeason(
     base({}),
-    { year: 2026, usage: base({ gp, snap: 1.0, tgt: 0.30, eff: 14, tdPerGame: 0.9 }) },
+    { year: 2026, usage: base({ gp, snap: 0.6, tgt: 0.18, eff: 14, tdPerGame: 0.9 }) },
     CAT,
   ).a;
 
   it('believes a changed role faster than a hot streak', () => {
     const u = after(3);
     // Role: three fifths of the answer by game three.
-    expect((u.snap as number)).toBeCloseTo(0.5 + 0.5 * (3 / 5), 6);
+    expect((u.snap as number)).toBeCloseTo(0.5 + 0.1 * (3 / 5), 6);
     // Scoring: still the slowest of them, a little over a quarter.
     expect((u.tdPerGame as number)).toBeCloseTo(0.3 + 0.6 * (3 / 11), 6);
   });
@@ -4339,7 +4340,7 @@ describe('how fast the season in progress is believed', () => {
   it('trusts the role more than the efficiency at every point of a season', () => {
     for (const gp of [1, 3, 6, 10, 16]) {
       const u = after(gp);
-      const roleShare = ((u.snap as number) - 0.5) / 0.5;
+      const roleShare = ((u.snap as number) - 0.5) / 0.1;
       const effShare = ((u.eff as number) - 7) / 7;
       expect(roleShare).toBeGreaterThan(effShare);
     }
@@ -4700,5 +4701,74 @@ describe('how far back a season still counts', () => {
     // single season moves.
     expect(USAGE_WEIGHTS.length).toBe(3);
     expect(USAGE_WEIGHTS.every(w => w > 0)).toBe(true);
+  });
+});
+
+/* Shrinking the season in progress toward the ones behind it assumes both are
+   measuring the same thing. A receiver who has gone from third in a pecking
+   order to first breaks that: the old number is not a worse estimate of his
+   role, it is an accurate estimate of a role he no longer has. */
+describe('a role that moved rather than drifted', () => {
+  const CAT = { a: { position: 'WR', team: 'SEA' } } as unknown as PlayerCatalog;
+  const one = (o: Partial<Usage>): UsageMap => ({ a: { gp: 16, ...o } } as unknown as UsageMap);
+  const move = (gp: number, snap: number) => withCurrentSeason(
+    one({ snap: 0.45, eff: 7 }),
+    { year: 2026, usage: one({ gp, snap, eff: 14 }) },
+    CAT,
+  ).a;
+
+  it('leaves a drift alone', () => {
+    // A fifth up is inside what three games can throw up by chance.
+    const w = 3 / 5;
+    expect(move(3, 0.55).snap as number).toBeCloseTo(0.45 + 0.10 * w, 6);
+  });
+
+  it('reads a halving as the same size of move as a doubling', () => {
+    // Against his old number a doubled role moves 100% and a halved one 50%,
+    // so measuring the difference believed the man who gained snaps and
+    // shrank the one who lost them back toward a job he no longer has.
+    expect(breakWeight(0.6, 0.90, 0.45, 5)).toBeCloseTo(breakWeight(0.6, 0.45, 0.90, 5), 6);
+  });
+
+  it('believes a role that has doubled', () => {
+    expect(move(3, 0.90).snap as number).toBeCloseTo(0.90, 6);
+  });
+
+  it('scales between the two rather than flipping', () => {
+    const drift = move(3, 0.55).snap as number;
+    const some = move(3, 0.70).snap as number;
+    const gone = move(3, 0.90).snap as number;
+    expect(some).toBeGreaterThan(drift);
+    expect(gone).toBeGreaterThan(some);
+  });
+
+  it('works downward too — a man who lost his job', () => {
+    const lost = withCurrentSeason(
+      one({ snap: 0.90 }), { year: 2026, usage: one({ gp: 4, snap: 0.20 }) }, CAT,
+    ).a;
+    expect(lost.snap as number).toBeCloseTo(0.20, 6);
+  });
+
+  it('never fires off one Sunday', () => {
+    // A break needs a sample to be a break; two games of anything is not one.
+    const w = 2 / 4;
+    expect(move(2, 0.90).snap as number).toBeCloseTo(0.45 + 0.45 * w, 6);
+  });
+
+  it('leaves what he does with the ball to regress as before', () => {
+    // A jump in yards per catch over three games is exactly the noise this
+    // model exists to discount. A jump in snap share is a depth chart.
+    const u = move(3, 0.90);
+    expect(u.eff as number).toBeCloseTo(7 + 7 * (3 / 7), 6);
+    expect(u.eff as number).toBeLessThan(14);
+  });
+
+  it('is a plain weight with nothing to divide by zero', () => {
+    expect(breakWeight(0.6, 1, 0, 5)).toBe(0.6);
+    expect(breakWeight(0.6, NaN, 0.5, 5)).toBe(0.6);
+    expect(breakWeight(0.6, 0.5, 0.5, 5)).toBe(0.6);
+    expect(breakWeight(0.6, 5, 0.5, 5)).toBe(1);
+    // A role that went to nothing is a break, not a division by zero.
+    expect(breakWeight(0.6, 0, 0.5, 5)).toBe(1);
   });
 });

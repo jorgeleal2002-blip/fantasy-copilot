@@ -162,9 +162,10 @@ export const PEAK: Record<Pos, number> = { QB: 26, RB: 23, WR: 24, TE: 25 };
 /** Bumped when the MEANING of the usage map changes, not only its shape — a
  *  map blended under different weights is a different map, and one held over
  *  from an older build would answer with numbers this build did not produce.
- *  v6: two metrics joined the blend, the season in progress is weighted per
- *  metric, and each finished season back is now worth half the one in front. */
-export const USAGE_V = 6;
+ *  v7: two metrics joined the blend, the season in progress is weighted per
+ *  metric, each finished season back is worth half the one in front, and a
+ *  role that has moved rather than drifted stops being shrunk at all. */
+export const USAGE_V = 7;
 
 /**
  * How many seasons of usage to blend, and how much each is worth.
@@ -219,6 +220,30 @@ export const USAGE_WEIGHTS: [number, number, number] =
  * come down by about half, and by game three the year you are watching leads.
  */
 export const CURRENT_SEASON_K = 3;
+
+/**
+ * When a role has not drifted but MOVED.
+ *
+ * Shrinking the season in progress toward the seasons behind it assumes the
+ * two are measuring the same thing — a noisy reading of one player against a
+ * quiet one. A receiver who has gone from third in a pecking order to first
+ * breaks that assumption: the old number is not a better estimate of his role,
+ * it is an accurate estimate of a role he no longer has. Averaging them is
+ * wrong in kind, not in degree, and it is what keeps a man whose snaps and
+ * targets have doubled sitting behind players he has passed.
+ *
+ * So a move large enough that a small sample cannot explain it stops being
+ * shrunk. Below `ROLE_BREAK` nothing changes; by `ROLE_BREAK_FULL` — a role
+ * that has doubled or halved — the season in progress is simply believed.
+ *
+ * Role only. A jump in yards per catch or in touchdown rate over three games
+ * is exactly the noise this model exists to discount; a jump in snap share is
+ * a depth chart, and depth charts do not regress to last year.
+ */
+export const ROLE_BREAK = 0.35;
+export const ROLE_BREAK_FULL = 1.0;
+/** And never off one Sunday: a break needs a sample to be a break. */
+export const ROLE_BREAK_MIN_GP = 3;
 
 /** Per metric, because they do not settle at the same rate. */
 export const CURRENT_K: Record<string, number> = {
