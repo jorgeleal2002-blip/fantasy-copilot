@@ -173,6 +173,20 @@ export interface SleeperStatLine {
   rush_td?: number;
   rec_td?: number;
   pass_td?: number;
+  /* Only ever read off a WEEK's stat line, for the line under a player on the
+   * scoreboard. A season total has no use for a completion count. */
+  pass_cmp?: number;
+  pass_int?: number;
+  fum_lost?: number;
+  fgm?: number;
+  fga?: number;
+  xpm?: number;
+  xpa?: number;
+  /** points a defence gave up */
+  pts_allow?: number;
+  sack?: number;
+  int?: number;
+  def_st_td?: number;
   pts_half_ppr?: number;
   pos_rank_half_ppr?: number;
 }

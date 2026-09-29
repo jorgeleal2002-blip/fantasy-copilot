@@ -20,6 +20,7 @@ import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matc
 import { projectionsAreStale, readProjections, scoreProjection, scoringKind } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
+import { statLine } from '../model/stat-line';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -2736,6 +2737,53 @@ describe('the season\'s trades', () => {
     // "with" anybody and team 3 still walks away with the most.
     expect(t.sides.map(s => s.net)).toEqual([-3100, 1000, 2100]);
     expect(t.verdict!.winner!.name).toBe('Team 3');
+  });
+});
+
+/* ── what a player actually did ─────────────────────────────────────────────
+   A number of fantasy points says how much he was worth and nothing about how
+   he got there, and the second is most of what anybody wants from a
+   scoreboard: twenty off eight catches is a different week from twenty off one
+   eighty-yard touchdown. */
+describe('a player\'s stat line', () => {
+  it('reads a quarterback as passing first', () => {
+    expect(statLine({
+      pass_cmp: 16, pass_att: 26, pass_yd: 204, pass_td: 2, pass_int: 1,
+      rush_att: 8, rush_yd: 22, rush_td: 2,
+    }, 'QB')).toBe('16/26 CMP, 204 YD, 2 TD, 1 INT, 8 CAR, 22 YD, 2 TD');
+  });
+
+  it('reads a back as carrying first and catching second', () => {
+    expect(statLine({ rush_att: 19, rush_yd: 98, rush_td: 1, rec: 2, rec_tgt: 3, rec_yd: 5 }, 'RB'))
+      .toBe('19 CAR, 98 YD, 1 TD, 2/3 REC, 5 YD');
+  });
+
+  it('reads a receiver the other way round', () => {
+    expect(statLine({ rec: 6, rec_tgt: 10, rec_yd: 67 }, 'WR')).toBe('6/10 REC, 67 YD');
+  });
+
+  it('leaves out what did not happen', () => {
+    // "0 TD" on every row is a column of nothing pretending to be information.
+    expect(statLine({ rec: 3, rec_tgt: 4, rec_yd: 31, rec_td: 0, rush_att: 0 }, 'TE'))
+      .toBe('3/4 REC, 31 YD');
+    expect(statLine({}, 'WR')).toBe('');
+    expect(statLine(undefined, 'WR')).toBe('');
+  });
+
+  it('keeps a kicker\'s misses, which are the whole of his line', () => {
+    // What he was given and what he did with it: 1/3 has to be visible.
+    expect(statLine({ fgm: 1, fga: 3, xpm: 2, xpa: 2 }, 'K')).toBe('1/3 FG, 2/2 XP');
+  });
+
+  it('says a shutout rather than saying nothing', () => {
+    // The one place a zero is the story.
+    expect(statLine({ pts_allow: 0, sack: 4 }, 'DEF')).toBe('0 PTS ALLOW, 4 SACK');
+    expect(statLine({ pts_allow: 27, sack: 2 }, 'DEF')).toBe('27 PTS ALLOW, 2 SACK');
+  });
+
+  it('puts a lost fumble at the end, whoever lost it', () => {
+    expect(statLine({ rush_att: 12, rush_yd: 40, fum_lost: 1 }, 'RB'))
+      .toBe('12 CAR, 40 YD, 1 FUM LOST');
   });
 });
 

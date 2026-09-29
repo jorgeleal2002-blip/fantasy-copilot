@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   findUser, getDraftPicks, getRosters, getSeasonStats, getTradedPicks, getUsers,
   loadLeague, matchMe, userLeagues, playerPhoto, getMatchups, getNflState, getTransactions,
-  getWeekProjections,
+  getWeekProjections, getWeekStats,
 } from '../api/sleeper';
 import type {
-  LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup, SleeperTransaction,
+  LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup, SleeperStatLine, SleeperTransaction,
 } from '../api/types';
 import { DRAFT_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, RESUME_REFRESH_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
@@ -45,6 +45,9 @@ const usageCache = new Map<string, UsageMap>();
 /** Sleeper's projections for one week of one season, with when they were
  *  read: they move as news breaks, so the entry ages out — see `PROJ_TTL_MS`. */
 const projCache = new Map<string, { at: number; map: Record<string, number> }>();
+/** One week of every player's stats. Big, and only wanted where a stat line
+ *  is drawn, so it ages out rather than polling with the scores. */
+const statCache = new Map<string, { at: number; map: Record<string, SleeperStatLine> }>();
 /** A league's transactions, keyed by how many weeks of them were asked for. */
 const txCache = new Map<string, SleeperTransaction[]>();
 /** Every team's score in every FINISHED week, for the all-play record. A week
@@ -173,6 +176,8 @@ export function useApp() {
    * are looking at it. */
   const [week, setWeekState] = useState<number | null>(null);
   const [projections, setProjections] = useState<Record<string, number>>({});
+  /** Every player's week, for the line under a name on a scoreboard. */
+  const [weekStats, setWeekStats] = useState<Record<string, SleeperStatLine>>({});
   /** The week the NFL is on, as distinct from the one being looked at. */
   const [nflWeek, setNflWeek] = useState<number | null>(null);
   /** Said out loud when it fails. A projection that is simply absent, with no
@@ -327,6 +332,33 @@ export function useApp() {
     setWeekScores(got.flat());
     setPowerState('ok');
   }, [leagueId]);
+
+  /**
+   * One week of every player's stat line.
+   *
+   * The whole league in one payload, which is why it is asked for from the one
+   * screen that draws it rather than polled beside the scores. It ages out on
+   * the projections' clock: a stat line moves every play, and a line that is
+   * five minutes behind a score it sits under is still the right stat line for
+   * a player whose game finished on Sunday.
+   */
+  const fetchWeekStats = useCallback(async (wk: number, force = false) => {
+    const d = dataRef.current;
+    if (!d || !wk) return;
+    const season = d.league.season || String(new Date().getFullYear());
+    const key = season + ':' + wk;
+    const hit = statCache.get(key);
+    if (hit) setWeekStats(hit.map);
+    if (!projectionsAreStale(hit, Date.now(), PROJ_TTL_MS, force)) return;
+    try {
+      const raw = await getWeekStats(season, wk);
+      if (!raw || typeof raw !== 'object' || !Object.keys(raw).length) return;
+      statCache.set(key, { at: Date.now(), map: raw });
+      setWeekStats(raw);
+    } catch {
+      /* the line under a name is an extra; the score above it is not */
+    }
+  }, []);
 
   const fetchMatchups = useCallback(async (lid: string, wk: number, quiet = false, force = false) => {
     // A poll must not blank the scores it is refreshing, so it stays quiet and
@@ -1165,7 +1197,8 @@ export function useApp() {
     clearRoomError: () => setRoomError(''),
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, photoBy, query, topPos, topLens, topOpen,
-    week, matchups, matchupState, projections, projState, tradeTeams, tradeAssets,
+    week, matchups, matchupState, projections, projState, weekStats, fetchWeekStats,
+    tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,
     weekScores, powerState, fetchWeekScores,
 

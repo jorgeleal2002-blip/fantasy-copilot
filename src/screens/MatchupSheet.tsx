@@ -1,9 +1,11 @@
+import { useEffect } from 'react';
 import { benchRows, leaderOf, lineupRows, pairMatchups, type LineupCell, type MatchupSide } from '../model/matchups';
 import type { DraftPos } from '../api/types';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { colorOf, POS } from '../model/constants';
 import { byeOf } from '../model/sos';
+import { statLine } from '../model/stat-line';
 import { Face, Overlay } from '../ui/primitives';
 import { dim } from '../ui/styles';
 
@@ -24,6 +26,11 @@ import { dim } from '../ui/styles';
  * keeps moving while it is open.
  */
 export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[] }) {
+  // The whole league's week in one payload, so it is asked for here — the one
+  // screen that draws a stat line — rather than polled beside the scores.
+  const wk = app.week;
+  useEffect(() => { if (wk) void app.fetchWeekStats(wk); }, [app.fetchWeekStats, wk]);
+
   const games = pairMatchups(m.leagueRows, app.matchups, app.projections);
   const game = games.find(g => ids.includes(g.a.rosterId) && (g.b ? ids.includes(g.b.rosterId) : ids.length === 1));
 
@@ -176,6 +183,7 @@ function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'righ
   if (!c) return <div className="ms-cell" />;
   const tappable = !!c.id;
   const bye = c.team ? byeOf(c.team) : 0;
+  const did = c.id ? statLine(app.weekStats[c.id], c.pos) : '';
   return (
     <div
       className={'ms-cell' + (right ? ' is-right' : '') + (tappable ? ' is-tap' : '')}
@@ -184,19 +192,25 @@ function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'righ
       onClick={tappable ? () => app.setDetail(c.id as string) : undefined}
       onKeyDown={tappable ? e => { if (e.key === 'Enter') app.setDetail(c.id as string); } : undefined}
     >
-      <Face photo={c.id ? app.photoFor(c.id, 'thumb') : null} pos={c.pos || '—'} size={30} />
-      <div className="ms-who">
-        <div className="ms-pl-name">{c.name}</div>
-        <div className="ms-pl-sub">
-          {[c.pos, c.team ? c.team + (bye ? ' (' + bye + ')' : '') : ''].filter(Boolean).join(' · ')}
+      <div className="ms-cell-top">
+        <Face photo={c.id ? app.photoFor(c.id, 'thumb') : null} pos={c.pos || '—'} size={30} />
+        <div className="ms-who">
+          <div className="ms-pl-name">{c.name}</div>
+          <div className="ms-pl-sub">
+            {[c.pos, c.team ? c.team + (bye ? ' (' + bye + ')' : '') : ''].filter(Boolean).join(' · ')}
+          </div>
+        </div>
+        {/* Scored over projected, in one column: the question is whether he
+            beat it, and two figures stacked is that question. */}
+        <div className="ms-num">
+          <div className="ms-pl-pts">{c.points == null ? '—' : c.points.toFixed(2)}</div>
+          {c.projected != null ? <div className="ms-pl-proj">{c.projected.toFixed(1)}</div> : null}
         </div>
       </div>
-      {/* Scored over projected, in one column: the question is whether he beat
-          it, and two figures stacked is that question. */}
-      <div className="ms-num">
-        <div className="ms-pl-pts">{c.points == null ? '—' : c.points.toFixed(2)}</div>
-        {c.projected != null ? <div className="ms-pl-proj">{c.projected.toFixed(1)}</div> : null}
-      </div>
+      {/* What he actually did, across the whole of his half rather than down
+          the sliver left between a face and a score. A number of points says
+          how much he was worth and nothing about how he got there. */}
+      {did ? <div className="ms-pl-did">{did}</div> : null}
     </div>
   );
 }

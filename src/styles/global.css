@@ -1137,19 +1137,26 @@ button { font-family: inherit; }
   flex: 1;
   min-width: 0;
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 8px;
+  padding: 3px 2px;
+}
+.ms-cell-top {
+  display: flex;
   align-items: center;
   /* Sideways, every pixel is a pixel off a name — a face, a slot and two
      numbers are fixed width and "J. Smith-Njigba" is not — so the air goes
      into the row's height, where nothing is competing for it. */
   gap: 8px;
-  border-radius: 8px;
-  padding: 3px 2px;
 }
-.ms-cell.is-right { flex-direction: row-reverse; text-align: right; }
+.ms-cell.is-right { text-align: right; }
+.ms-cell.is-right .ms-cell-top { flex-direction: row-reverse; }
 .ms-cell.is-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .ms-cell.is-tap:active { background: rgba(233, 233, 237, 0.06); }
 .ms-cell.is-tap:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 .ms-who { flex: 1; min-width: 0; }
+
 .ms-pl-name {
   font-size: 12.5px;
   color: rgba(233, 233, 237, 0.85);
@@ -1164,6 +1171,20 @@ button { font-family: inherit; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* Across the whole of its half, under the face as well as the name: down the
+   sliver between a face and a score it wrapped "1/1 CMP, 14 YD, 10/14 RE…"
+   onto two lines and still cut. Two lines at most, and it wraps rather than
+   cutting — a line ending in "204 Y…" is worse than one that says three
+   quarters of what happened. */
+.ms-pl-did {
+  font-size: 9.5px;
+  line-height: 1.35;
+  color: rgba(233, 233, 237, 0.42);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .ms-num { flex: none; }
 .ms-pl-pts {

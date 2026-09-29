@@ -89,6 +89,10 @@ export const getTransactions = (lid: string, week: number) =>
   get<SleeperTransaction[]>('/league/' + lid + '/transactions/' + week);
 export const getSeasonStats = (year: number) =>
   get<Record<string, SleeperStatLine>>('/stats/nfl/regular/' + year);
+/** The same feed, one week of it. Every player in the league, so it is asked
+ *  for only where a stat line is actually shown. */
+export const getWeekStats = (season: string | number, week: number) =>
+  get<Record<string, SleeperStatLine>>('/stats/nfl/regular/' + season + '/' + week);
 
 /**
  * Sleeper's own projections for one week.
