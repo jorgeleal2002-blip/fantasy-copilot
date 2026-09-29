@@ -20,6 +20,7 @@ import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
 import { projectionsAreStale, readProjections } from '../model/projections';
+import type { WeekScore } from '../model/power';
 import { nextDetailStack, topDetail } from './detail-stack';
 
 export type Stage = 'connect' | 'leagues' | 'app';
@@ -44,6 +45,9 @@ const usageCache = new Map<string, UsageMap>();
 const projCache = new Map<string, { at: number; map: Record<string, number> }>();
 /** A league's transactions, keyed by how many weeks of them were asked for. */
 const txCache = new Map<string, SleeperTransaction[]>();
+/** Every team's score in every FINISHED week, for the all-play record. A week
+ *  that has closed cannot change, so this needs no age on it. */
+const scoreCache = new Map<string, WeekScore[]>();
 const seasonCache = new Map<string, string>();
 
 function readJson<T>(key: string, fallback: T): T {
@@ -136,7 +140,7 @@ export function useApp() {
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [rosterSort, setRosterSort] = useState<'value' | 'age' | 'snap'>('value');
   const [boardMode, setBoardMode] = useState<'rookies' | 'fa'>('rookies');
-  const [rankMode, setRankMode] = useState<'now' | 'future' | 'fit' | 'fitFut'>('now');
+  const [rankMode, setRankMode] = useState<'power' | 'now' | 'future' | 'fit' | 'fitFut'>('power');
   const [pickSel, setPickSel] = useState(0);
   const [strat, setStrat] = useState<StratKey>('balanced');
   /* Sheets stack: opening a player from a rival's team has to come back to
@@ -168,6 +172,9 @@ export function useApp() {
    *  that prices them is in scope. */
   const [transactions, setTransactions] = useState<SleeperTransaction[]>([]);
   const [tradeLogState, setTradeLogState] = useState<FeedState>('idle');
+  /** Scores from the weeks that have finished — see `model/power`. */
+  const [weekScores, setWeekScores] = useState<WeekScore[]>([]);
+  const [powerState, setPowerState] = useState<FeedState>('idle');
   const [matchups, setMatchups] = useState<SleeperMatchup[]>([]);
   const [matchupState, setMatchupState] = useState<FeedState>('idle');
 
@@ -242,6 +249,45 @@ export function useApp() {
     txCache.set(key, rows);
     setTransactions(rows);
     setTradeLogState('ok');
+  }, [leagueId]);
+
+  /**
+   * Every team's score in every week that has FINISHED.
+   *
+   * Strictly before the week on the clock: a week in progress would rank the
+   * league on whoever happens to have played by Sunday afternoon, and a power
+   * ranking that moves while the games are on is a scoreboard. A closed week
+   * cannot change, so what is read once is kept.
+   */
+  const fetchWeekScores = useCallback(async (upTo: number) => {
+    const lid = leagueId;
+    if (!lid) return;
+    const done = Math.max(0, Math.min(18, upTo));
+    if (!done) { setWeekScores([]); setPowerState('ok'); return; }
+    const key = lid + ':' + done;
+    if (scoreCache.has(key)) { setWeekScores(scoreCache.get(key)!); setPowerState('ok'); return; }
+
+    setPowerState('loading');
+    const got = await Promise.all(
+      Array.from({ length: done }, (_, i) => getMatchups(lid, i + 1).then(
+        rows => ({ week: i + 1, rows }),
+      ).catch(() => null)),
+    );
+    const ok = got.filter((w): w is { week: number; rows: SleeperMatchup[] } => !!w && Array.isArray(w.rows));
+    if (!ok.length) { setPowerState('fail'); return; }
+
+    const out: WeekScore[] = [];
+    for (const { week, rows } of ok) {
+      for (const r of rows) {
+        // Sleeper reports 0 for a week it has a row but no result for, which
+        // is a score; null means no row, and a team with no row did not play.
+        if (r.points == null || !Number.isFinite(r.points)) continue;
+        out.push({ rosterId: r.roster_id, week, points: r.points });
+      }
+    }
+    scoreCache.set(key, out);
+    setWeekScores(out);
+    setPowerState('ok');
   }, [leagueId]);
 
   const fetchMatchups = useCallback(async (lid: string, wk: number, quiet = false, force = false) => {
@@ -943,6 +989,7 @@ export function useApp() {
     pickSel, strat, detail, passed, toast, photos, query, topPos, topLens, topOpen,
     week, matchups, matchupState, projections, tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,
+    weekScores, powerState, fetchWeekScores,
 
     accounts, switchAccount, forgetAccount,
     block: (leagueId ? blocks[username + '/' + leagueId] : undefined) || [],

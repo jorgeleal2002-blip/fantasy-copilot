@@ -5,6 +5,7 @@ import type { App } from '../state/useApp';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { cardTitle, dim, ellipsis, fitColor } from '../ui/styles';
 import { Matchups } from './Matchups';
+import { PowerRankings } from './PowerRankings';
 import { hasPlayed } from '../model/record';
 
 const STATUS_TEXT: Record<string, string> = {
@@ -29,16 +30,23 @@ const windowColor = (r: LeagueRow) =>
   r.now <= 0 ? dim(0.35) : r.window === 'contender' ? GOOD : r.window === 'rebuild' ? BAD : MID;
 
 export function LeagueTab({ app, m }: { app: App; m: Model }) {
-  type Mode = 'now' | 'future' | 'fit' | 'fitFut';
+  type Mode = 'power' | 'now' | 'future' | 'fit' | 'fitFut';
   /* One control carried two questions — what is measured, and when — so it
    * needed four labels of fourteen characters and the fourth fell off the
    * side of the phone. Split in two, every label is a word. */
-  const allowed: Mode[] = m.isDynasty ? ['now', 'future', 'fit', 'fitFut'] : ['now', 'fit'];
-  const mode: Mode = allowed.includes(app.rankMode) ? app.rankMode : 'now';
+  const allowed: Mode[] = m.isDynasty
+    ? ['power', 'now', 'future', 'fit', 'fitFut']
+    : ['power', 'now', 'fit'];
+  const mode: Mode = allowed.includes(app.rankMode) ? app.rankMode : 'power';
+  const isPower = mode === 'power';
   const isFitMode = mode === 'fit' || mode === 'fitFut';
   const ahead = mode === 'future' || mode === 'fitFut';
 
-  const measures: SegOption<'strength' | 'rating'>[] = [
+  /* Three questions, not two. "Power" is who has actually been the best;
+   * the other two are what each roster is worth, which is a different
+   * question and regularly a different order. */
+  const measures: SegOption<'power' | 'strength' | 'rating'>[] = [
+    { key: 'power', label: 'Power' },
     { key: 'strength', label: 'Strength' },
     { key: 'rating', label: 'Rating' },
   ];
@@ -46,8 +54,10 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
     { key: 'today', label: 'Today' },
     { key: 'ahead', label: 'In 2 years' },
   ];
-  const pick = (meas: 'strength' | 'rating', when: boolean) => app.setRankMode(
-    meas === 'rating' ? (when ? 'fitFut' : 'fit') : (when ? 'future' : 'now'),
+  const pick = (meas: 'power' | 'strength' | 'rating', when: boolean) => app.setRankMode(
+    meas === 'power' ? 'power'
+      : meas === 'rating' ? (when ? 'fitFut' : 'fit')
+        : (when ? 'future' : 'now'),
   );
 
   const ranked = m.leagueRows.slice().sort((a, b) => (
@@ -57,6 +67,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
           : b.now - a.now
   ));
   const NOTES: Record<Mode, string> = {
+    power: '',
     now: 'the sum of the best lineup each team can field today.',
     future: 'the roster aged two seasons plus the pick capital it owns.',
     fit: 'the average Rating of the optimal starters — quality, not volume.',
@@ -90,12 +101,13 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
 
       <Segmented
         options={measures}
-        value={isFitMode ? 'rating' : 'strength'}
+        value={isPower ? 'power' : isFitMode ? 'rating' : 'strength'}
         onChange={v => pick(v, ahead)}
       />
       {/* Only a dynasty has a future to look at: a redraft roster two seasons
-          out is not a thing anybody owns. */}
-      {m.isDynasty ? (
+          out is not a thing anybody owns. And a power ranking has no horizon
+          — it is the season that happened. */}
+      {m.isDynasty && !isPower ? (
         <Segmented
           options={horizons}
           value={ahead ? 'ahead' : 'today'}
@@ -103,8 +115,11 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
           size="sm"
         />
       ) : null}
-      <div style={{ fontSize: 11, lineHeight: 1.45, color: dim(0.4), marginTop: -4, textWrap: 'pretty' }}>{note}</div>
+      {isPower ? null : (
+        <div style={{ fontSize: 11, lineHeight: 1.45, color: dim(0.4), marginTop: -4, textWrap: 'pretty' }}>{note}</div>
+      )}
 
+      {isPower ? <PowerRankings app={app} m={m} /> : (
       <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
         {ranked.map((t, i) => (
           <div
@@ -174,6 +189,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
           </div>
         ))}
       </div>
+      )}
 
       <TopPlayers app={app} m={m} />
 

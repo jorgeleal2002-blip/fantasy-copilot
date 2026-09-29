@@ -19,6 +19,7 @@ import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { projectionsAreStale, readProjections, scoreProjection, scoringKind } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
+import { allPlayRecords, powerRankings } from '../model/power';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -2735,6 +2736,124 @@ describe('the season\'s trades', () => {
     // "with" anybody and team 3 still walks away with the most.
     expect(t.sides.map(s => s.net)).toEqual([-3100, 1000, 2100]);
     expect(t.verdict!.winner!.name).toBe('Team 3');
+  });
+});
+
+/* ── power rankings ─────────────────────────────────────────────────────────
+   A record is two numbers about a team and one about its luck. The all-play
+   record removes the third: every week, every team against every other team
+   that played, so the schedule has nothing left to say. */
+describe('power rankings', () => {
+  const wk = (week: number, points: Record<number, number>) =>
+    Object.entries(points).map(([id, p]) => ({ rosterId: Number(id), week, points: p }));
+
+  const row = (id: number, over: Partial<{ name: string; now: number; wins: number; losses: number; pointsFor: number; isMe: boolean }> = {}) => ({
+    id,
+    name: over.name ?? 'Team ' + id,
+    isMe: over.isMe ?? false,
+    avatar: null,
+    now: over.now ?? 10,
+    record: {
+      wins: over.wins ?? 0, losses: over.losses ?? 0, ties: 0,
+      label: (over.wins ?? 0) + '-' + (over.losses ?? 0),
+      pointsFor: over.pointsFor ?? 0, pointsAgainst: 0,
+    },
+  } as unknown as import('../model/types').LeagueRow);
+
+  it('scores every team against every other team that played', () => {
+    // Four teams, one week: the top score beats three, the bottom beats none.
+    const all = allPlayRecords(wk(1, { 1: 130, 2: 120, 3: 110, 4: 100 }));
+    expect(all.get(1)).toMatchObject({ wins: 3, losses: 0 });
+    expect(all.get(4)).toMatchObject({ wins: 0, losses: 3 });
+    expect(all.get(2)!.pct).toBeCloseTo(2 / 3, 6);
+  });
+
+  it('splits a tie the way a record does', () => {
+    const all = allPlayRecords(wk(1, { 1: 100, 2: 100, 3: 80 }));
+    expect(all.get(1)).toMatchObject({ wins: 1, losses: 0, ties: 1 });
+    // One win and half a tie out of two: three quarters.
+    expect(all.get(1)!.pct).toBeCloseTo(0.75, 6);
+  });
+
+  it('measures nobody against a week they are alone in', () => {
+    expect(allPlayRecords(wk(1, { 1: 100 })).size).toBe(0);
+  });
+
+  it('ranks the team that has outscored the league, not the one that won', () => {
+    /* The whole point. Team 2 is 3-0 on the soft half of the schedule while
+       scoring least; team 1 is 0-3 and has outscored everyone every week. */
+    const scores = [
+      ...wk(1, { 1: 140, 2: 90, 3: 120, 4: 80 }),
+      ...wk(2, { 1: 138, 2: 88, 3: 118, 4: 78 }),
+      ...wk(3, { 1: 136, 2: 86, 3: 116, 4: 76 }),
+    ];
+    const rows = [
+      row(1, { wins: 0, losses: 3 }),
+      row(2, { wins: 3, losses: 0 }),
+      row(3, { wins: 2, losses: 1 }),
+      row(4, { wins: 1, losses: 2 }),
+    ];
+    const power = powerRankings(rows, scores);
+    expect(power.map(t => t.id)).toEqual([1, 3, 2, 4]);
+    expect(power[0].allPlay.pct).toBe(1);
+  });
+
+  it('says out loud when a record is luck', () => {
+    const scores = [
+      ...wk(1, { 1: 140, 2: 90, 3: 120, 4: 80 }),
+      ...wk(2, { 1: 138, 2: 88, 3: 118, 4: 78 }),
+      ...wk(3, { 1: 136, 2: 86, 3: 116, 4: 76 }),
+    ];
+    const power = powerRankings([
+      row(1, { wins: 0, losses: 3 }),
+      row(2, { wins: 3, losses: 0 }),
+      row(3, { wins: 2, losses: 1 }),
+      row(4, { wins: 1, losses: 2 }),
+    ], scores);
+    const lucky = power.find(t => t.id === 2)!;
+    const robbed = power.find(t => t.id === 1)!;
+    /* Team 2 outscores only team 4, so a third of the league: its all-play
+       record earns it one win of the three it has, and the other two are the
+       schedule. Team 1 outscores everyone every week and has none of them. */
+    expect(lucky.allPlay.pct).toBeCloseTo(1 / 3, 6);
+    expect(lucky.luck).toBeCloseTo(2, 6);
+    expect(lucky.read).toContain('flatters them');
+    expect(robbed.luck).toBeCloseTo(-3, 6);
+    expect(robbed.read).toContain('undersells them');
+  });
+
+  it('reads the roster only when it disagrees with the results', () => {
+    // Every team level on scoring, so nothing but the roster is left to say.
+    const scores = [...Array(4)].flatMap((_, i) => wk(i + 1, { 1: 100, 2: 100, 3: 100, 4: 100 }));
+    const power = powerRankings([
+      row(1, { now: 1, wins: 2, losses: 2 }),
+      row(2, { now: 2, wins: 2, losses: 2 }),
+      row(3, { now: 3, wins: 2, losses: 2 }),
+      row(4, { now: 40, wins: 2, losses: 2 }),
+    ], scores);
+    expect(power.find(t => t.id === 4)!.rosterRank).toBe(1);
+  });
+
+  it('is the roster before a week has finished', () => {
+    const power = powerRankings([row(1), row(2)], []);
+    expect(power).toHaveLength(2);
+    expect(power[0].weeks).toBe(0);
+    expect(power[0].read).toContain('Nothing played yet');
+    expect(power[0].luck).toBe(0);
+  });
+
+  it('reads a team that is heating up', () => {
+    // Level all season, then three big weeks: the average hides it, the tail
+    // does not, which is the only reason "lately" is a column at all.
+    const scores = [
+      ...wk(1, { 1: 80, 2: 100 }), ...wk(2, { 1: 80, 2: 100 }),
+      ...wk(3, { 1: 140, 2: 100 }), ...wk(4, { 1: 140, 2: 100 }), ...wk(5, { 1: 140, 2: 100 }),
+    ];
+    const power = powerRankings([row(1, { wins: 3, losses: 2 }), row(2, { wins: 2, losses: 3 })], scores);
+    const hot = power.find(t => t.id === 1)!;
+    expect(hot.recent).toBe(140);
+    expect(hot.ppg).toBe(116);
+    expect(hot.read).toContain('Heating up');
   });
 });
 
