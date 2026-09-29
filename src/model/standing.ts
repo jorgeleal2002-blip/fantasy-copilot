@@ -8,12 +8,19 @@
  * placing beside them and left the reader to do the last step.
  *
  * So the figure itself carries it. Green where he is near the top of his
- * position, salmon near the bottom, amber in between, and nothing at all where
- * the card does not know — an uncoloured number is honest about that, and a
- * colour applied to a figure with no direction is worse than none, because it
- * spends the signal on noise.
+ * position and salmon near the bottom — and nothing in between, because being
+ * ordinary is not news. A middle band in its own colour paints most of a card
+ * most of the time, and a screen where everything is lit is a screen where
+ * nothing stands out; the two ends only mean something against a quiet middle.
+ *
+ * Nothing, too, where the card does not know where a figure places. An
+ * uncoloured number is honest about that, and it reads the same as an ordinary
+ * one, which is the right answer for both.
  */
 
+/* `warn` is not reached by a placing — see `toneOf`. It exists for the one
+   reading that is genuinely a caution rather than a middling one: a man listed
+   Questionable, who is neither fine nor out. */
 export type Tone = 'good' | 'warn' | 'bad';
 
 /** Above this share of the field it is a strength; below LOW, a weakness. */
@@ -35,7 +42,9 @@ export function placing(rank: number, of: number): number | null {
 
 export function toneOf(at: number | null | undefined): Tone | undefined {
   if (at == null || !Number.isFinite(at)) return undefined;
-  return at >= TOP ? 'good' : at <= LOW ? 'bad' : 'warn';
+  if (at >= TOP) return 'good';
+  if (at <= LOW) return 'bad';
+  return undefined;
 }
 
 /** The tone for a placing given as a rank in a field. */

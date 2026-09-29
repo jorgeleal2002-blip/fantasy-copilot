@@ -4221,10 +4221,17 @@ describe('what a placing is worth', () => {
   it('paints the top of a position good and the bottom bad', () => {
     expect(toneOf(1)).toBe('good');
     expect(toneOf(TOP)).toBe('good');
-    expect(toneOf(TOP - 0.01)).toBe('warn');
-    expect(toneOf(LOW + 0.01)).toBe('warn');
     expect(toneOf(LOW)).toBe('bad');
     expect(toneOf(0)).toBe('bad');
+  });
+
+  it('leaves the middle of a position alone', () => {
+    // Being ordinary is not news, and a lit middle band paints most of a card
+    // most of the time — the two ends only mean something against a quiet one.
+    expect(toneOf(TOP - 0.01)).toBe(undefined);
+    expect(toneOf(0.5)).toBe(undefined);
+    expect(toneOf(LOW + 0.01)).toBe(undefined);
+    expect(toneOfRank(16, 32)).toBe(undefined);
   });
 
   it('leaves a figure it cannot place uncoloured', () => {
@@ -4240,6 +4247,5 @@ describe('what a placing is worth', () => {
     // The rank is "nth easiest of 32", so first is the kind run.
     expect(toneOfRank(1, 32)).toBe('good');
     expect(toneOfRank(32, 32)).toBe('bad');
-    expect(toneOfRank(16, 32)).toBe('warn');
   });
 });
