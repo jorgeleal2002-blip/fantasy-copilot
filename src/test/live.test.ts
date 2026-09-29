@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_ROOM, PHOTO_MAX_BYTES, keepPhotos, newRoomId } from '../api/live';
 import { caretAfterClean, cleanRoomCode, isRoomCode, roomCodeProblem } from '../model/invite';
-import { LOOKS } from '../ui/brainrot';
-import type { ClipName } from '../ui/sfx';
+import { LOOKS, type ClipName } from '../ui/brainrot';
 
 const CLIP_NAMES = Object.keys(LOOKS) as ClipName[];
 

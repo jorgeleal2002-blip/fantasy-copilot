@@ -6,8 +6,7 @@ import { sfxFor } from '../model/sfx-map';
 import type { Pos } from '../api/types';
 import type { MockOption, MockPick, MockState, Model } from '../model/types';
 import type { App } from '../state/useApp';
-import { Brainrot } from '../ui/brainrot';
-import { armSfx, playSfx, type ClipName } from '../ui/sfx';
+import { Brainrot, cardFor, type ClipName } from '../ui/brainrot';
 import { Face } from '../ui/primitives';
 import { dim, ellipsis, fitColor } from '../ui/styles';
 
@@ -99,7 +98,6 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
    * only exists while it is your turn, and the moment worth reacting to is the
    * one after that — when somebody else takes one of them. */
   // Woken from a real tap, which is the only way an installed copy makes noise.
-  useEffect(() => { armSfx(); }, []);
 
   const suggested = useRef<string[]>([]);
   if (st.onClock?.mine && st.options.length) suggested.current = st.options.map(o => o.id);
@@ -111,7 +109,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
   useEffect(() => {
     if (!live || !shown) return;
     const pick = st.made[shown - 1];
-    if (pick) shoutOut(playSfx(sfxFor(pick, suggested.current, st.made.slice(0, shown - 1))));
+    if (pick) shoutOut(cardFor(sfxFor(pick, suggested.current, st.made.slice(0, shown - 1))));
     // `st.made` is rebuilt every render and `shown` is what actually moves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shown, live]);
@@ -126,7 +124,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
     ended.current = true;
     /* The end of a draft is not the same event as somebody taking the player
        you were told to take, and it used to share a sound with it. */
-    shoutOut(playSfx('done'));
+    shoutOut(cardFor('done'));
   }, [live, waiting, st.done]);
   useEffect(() => { if (!live) ended.current = false; }, [live]);
 
@@ -147,7 +145,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
     // Your turn brings the list back if you had wandered off to your roster.
     setTab('players');
     // Your turn is the one thing in here you might miss while looking away.
-    shoutOut(playSfx('horn'));
+    shoutOut(cardFor('horn'));
   }, [onClock?.overall]);
 
   const visible = live ? st.made.slice(0, shown) : [];
@@ -214,7 +212,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => { armSfx(); setShown(0); app.startMock(); }}
+            onClick={() => { setShown(0); app.startMock(); }}
             style={{ width: '100%', padding: '11px 0', fontSize: 13.5, borderRadius: 11 }}
           >
             {app.roomId ? 'Start for the room' : 'Start mock draft'}

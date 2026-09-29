@@ -1,5 +1,11 @@
-import type { SfxName } from '../ui/sfx';
 import type { MockPick } from './types';
+
+/**
+ * The moments a draft room reacts to. They were the names of sounds; the
+ * sounds are gone and the moments are not — they are still what decides
+ * whether anything happens on screen when a pick lands.
+ */
+export type SfxName = 'tick' | 'coin' | 'boom' | 'horn' | 'pipe' | 'womp' | 'tung' | 'done';
 
 /**
  * How deep a pick has to be to count as a reach.
@@ -25,9 +31,8 @@ export const REACH = 6;
 /**
  * What a revealed pick sounds like.
  *
- * Kept out of the screen and out of the audio so it can be read, argued with
- * and tested on its own: the question "when does the room shout" is a rule
- * about a draft, not a fact about oscillators.
+ * Kept out of the screen so it can be read, argued with and tested on its
+ * own: the question "when does the room react" is a rule about a draft.
  *
  * The order is the priority. A pick is only ever one thing, and the first true
  * line wins — your own selection is your own selection even if it was also a

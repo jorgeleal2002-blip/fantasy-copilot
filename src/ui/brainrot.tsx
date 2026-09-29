@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ClipName } from './sfx';
+import type { SfxName } from '../model/sfx-map';
+
+/**
+ * The eight characters. They used to be the names of eight sound files; the
+ * sounds are gone and the cards stayed, so the names live here now, with the
+ * only thing that still reads them.
+ */
+export type ClipName =
+  | 'siu' | 'gotthis' | 'patapim' | 'bombardino'
+  | 'brainrot' | 'chillguy' | 'chimpanzini' | 'ballerina';
 
 /**
  * The card that bursts onto the board when a clip plays.
@@ -49,7 +58,37 @@ export const LOOKS: Record<ClipName, Look> = {
   ballerina:   { label: 'BALLERINA',       mark: '🩰', tint: '#f6a9c0', move: 'twirl' },
 };
 
-/** As long as the shortest clip, so the card leaves with the sound. */
+/**
+ * Which moment brings out which card.
+ *
+ * The three that repeat — your pick, your turn, and being sniped — hold two
+ * each, because one card shown fifteen times stops being a surprise somewhere
+ * around the fourth, and two taking turns is the cheapest fix there is.
+ * `tick` and `pipe` are deliberately absent: those two fire over and over, and
+ * a card on every one of them is not a draft room, it is a wall.
+ */
+const CARDS: Partial<Record<SfxName, ClipName[]>> = {
+  coin: ['siu', 'gotthis'],             // you took somebody
+  horn: ['patapim', 'bombardino'],      // you are on the clock
+  womp: ['brainrot', 'chillguy'],       // they took the one you were told to take
+  boom: ['chimpanzini'],                // a reach, from well down the board
+  tung: ['ballerina'],                  // three of a position in a row
+  done: ['gotthis'],                    // the board is drafted out, and that is your team
+};
+
+/** How many times each moment has come up, so its cards take turns. */
+const turn: Partial<Record<SfxName, number>> = {};
+
+/** The card for this moment, or null for the moments that do not get one. */
+export function cardFor(name: SfxName): ClipName | null {
+  const list = CARDS[name];
+  if (!list || !list.length) return null;
+  const n = turn[name] || 0;
+  turn[name] = n + 1;
+  return list[n % list.length];
+}
+
+/** Long enough to read across a room and short enough not to sit on the board. */
 const HOLD_MS = 1450;
 
 /**
