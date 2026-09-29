@@ -1132,6 +1132,9 @@ export function buildModel(input: ModelInput): Model {
       allFits.push({
         id: p.id, name: p.name, pos: p.pos, team: p.team, age: p.age,
         fit: neutral.fit,
+        // The scoring that produced that Rating, not another one of him.
+        m: neutral.m,
+        weights: wOwn,
         fitMe: Number.isFinite(forMe.fit) ? forMe.fit : neutral.fit,
         fit2: Number.isFinite(ahead.fit) ? ahead.fit : neutral.fit,
         value: quality(p.raw) * 100,

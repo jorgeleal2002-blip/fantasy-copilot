@@ -122,20 +122,21 @@ function Side({ a, b, app, m }: { a: PlayerFit; b: PlayerFit; app: App; m: Model
     });
   }
   const ahead = aheadBy(rows);
-  const nums = compareNumbers(useOf(m, a.id), useOf(m, b.id));
+  const nums = compareNumbers(useOf(m, a, a.fit), useOf(m, b, b.fit));
   /* What the Rating is made of, ordered by how far apart they are — so the
      reason one of them is ahead is the first line rather than somewhere in
      eleven rows of mostly nothing. */
-  const ra = resolve(m, a.id, m.wUsed);
-  const rb = resolve(m, b.id, m.wUsed);
-  const why = ra && rb
-    ? compareMetrics(
-      m.metricKeys as string[],
-      k => METRIC_LABEL[k as keyof typeof METRIC_LABEL] || k,
-      { m: ra.m as unknown as Record<string, number>, weights: ra.weights as unknown as Record<string, number> },
-      { m: rb.m as unknown as Record<string, number>, weights: rb.weights as unknown as Record<string, number> },
-    )
-    : [];
+  /* Out of the list's own scoring, not a fresh one. Scoring a player again
+     here gave a different answer — an un-owned man came back on the draft
+     board's weights and against YOUR stack rather than his owner's — so the
+     breakdown was explaining a Rating nothing had ordered by, and its rows
+     did not add up to the Rating printed over them. */
+  const why = compareMetrics(
+    m.metricKeys as string[],
+    k => METRIC_LABEL[k as keyof typeof METRIC_LABEL] || k,
+    { m: a.m as unknown as Record<string, number>, weights: a.weights as unknown as Record<string, number> },
+    { m: b.m as unknown as Record<string, number>, weights: b.weights as unknown as Record<string, number> },
+  );
 
   return (
     <>
@@ -199,12 +200,12 @@ function Rows({ rows }: { rows: CmpRow[] }) {
 }
 
 /** What of a player's card two of them can be asked together. */
-function useOf(m: Model, id: string): CmpUse {
-  const sheet = resolve(m, id, m.wUsed);
-  const u = sheet?.use;
+function useOf(m: Model, p: PlayerFit, rating: number): CmpUse {
+  const id = p.id;
+  const u = resolve(m, id, m.wUsed)?.use;
   const val = m.marketValue(id);
   return {
-    rating: sheet ? sheet.fit : null,
+    rating,
     value: val ? val.pts : null,
     snap: u?.snap ?? null,
     share: u && Number.isFinite(u.tgt) ? (u.tgt as number) : null,

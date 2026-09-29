@@ -4459,3 +4459,40 @@ describe('touchdowns this season', () => {
     expect(countTds([{ rec_td: 2, rec_yd: 118 }, { rec_td: NaN }])).toBe(2);
   });
 });
+
+/* The comparison printed a Rating over a breakdown of it, and the breakdown
+   did not add up to the Rating — because the two came from different scorings
+   of the same player. Rows that do not sum to the number they explain are
+   worse than no rows. */
+describe('a rating and its breakdown agree', () => {
+  const W = { talent: 0.3, rz: 0.1, age: 0.06 } as Record<string, number>;
+  const keys = ['talent', 'rz', 'age'];
+  const label = (k: string) => k;
+
+  it('sums the contributions to the rating itself', () => {
+    const m = { talent: 0.8, rz: 0.5, age: 0.25 };
+    // A Rating is round(sum(weight * metric) * 100) — see `scorePlayer`.
+    const fit = Math.round(keys.reduce((a, k) => a + (W[k] as number) * (m[k as keyof typeof m]), 0) * 100);
+    const rows = compareMetrics(keys, label, { m, weights: W }, { m, weights: W });
+    const summed = rows.reduce((a, r) => a + (r.a ?? 0), 0);
+    // Within a point: the rows round once each and the Rating rounds once at
+    // the end, so they cannot agree to the decimal and do not need to.
+    expect(Math.abs(summed - fit)).toBeLessThanOrEqual(1);
+  });
+
+  it('gives the same answer to both sides of a man against himself', () => {
+    const m = { talent: 0.62, rz: 0.4, age: 0.9 };
+    const rows = compareMetrics(keys, label, { m, weights: W }, { m, weights: W });
+    expect(rows.every(r => r.win === null)).toBe(true);
+    expect(rows.every(r => r.a === r.b)).toBe(true);
+  });
+
+  it('is what two weight vectors would have broken', () => {
+    // Scoring one player on the board's weights and the other on the owner's
+    // is how a lower Rating came out of higher contributions.
+    const m = { talent: 0.62, rz: 0.4, age: 0.9 };
+    const other = { talent: 0.2, rz: 0.05, age: 0.03 } as Record<string, number>;
+    const rows = compareMetrics(keys, label, { m, weights: W }, { m, weights: other });
+    expect(rows.every(r => r.win === 'a')).toBe(true);
+  });
+});

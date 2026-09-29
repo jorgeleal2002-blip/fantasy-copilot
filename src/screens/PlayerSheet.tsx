@@ -54,6 +54,20 @@ export interface Sheet {
 }
 
 export function resolve(m: Model, id: string, strat: Weights): Sheet | null {
+  const sheet = build(m, id, strat);
+  if (!sheet) return null;
+  /* One Rating a player. The league's list scores everybody the same way —
+     no need term, the stack measured inside his OWN owner's roster — and this
+     was scoring him again: an un-owned man came back on the draft board's
+     weights and against YOUR stack, so his card and the list disagreed about
+     the same number under the same word. A player nobody has rostered is not
+     in that list and keeps the board's answer, which is the right one for
+     somebody who is still on it. */
+  const listed = m.allFits.find(x => x.id === id);
+  return listed ? { ...sheet, fit: listed.fit, m: listed.m, weights: listed.weights } : sheet;
+}
+
+function build(m: Model, id: string, strat: Weights): Sheet | null {
   const mine = m.myPlayers.find(p => p.id === id);
   if (mine) {
     return {

@@ -392,6 +392,12 @@ export interface PlayerFit {
   age: number | null;
   /** no need term, stack inside the owner's roster — how good he is, full stop */
   fit: number;
+  /* What that Rating is made of, so a screen can break it down without
+     scoring him again and getting a different number. Two scorings of one
+     player is how the comparison came to explain a Rating the list had not
+     ordered by. */
+  m: Metrics;
+  weights: Weights;
   /** with your positional need and the stack against your roster */
   fitMe: number;
   /** aged two seasons */
