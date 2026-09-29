@@ -456,7 +456,7 @@ export function buildModel(input: ModelInput): Model {
        twenty-fifth of a Rating in October, damped three times over: a third of
        it inside the blend, two fifths of the quality term, a quarter of the
        Rating. A breakout could not move it, which is what a breakout is. */
-    const share = prodShare(uFor(pid)?.curWeight);
+    const share = prodShare(uFor(pid)?.curWeight, !isDynasty);
     return v * (1 - share) + p * share;
   };
   /** Where market and production disagree, for the player sheet. */

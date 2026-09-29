@@ -132,19 +132,25 @@ export const num = (n: number) => Math.round(n).toLocaleString('en-US');
  * Quality was a fixed three-fifths market price and two-fifths production, and
  * that fraction made sense in an off-season: the market has watched a player
  * for years and a model has watched him for three. It stops making sense in
- * October. The market's price is what he is worth to trade for — a number
- * about next year as much as this one — and it moves in weeks, while the
- * season is telling you every Sunday who is actually good now.
+ * October. The market's price is what he is worth to trade for, and it moves
+ * in weeks, while the season is telling you every Sunday who is actually good
+ * now. So the evidence gains on the prior as the evidence accumulates.
  *
- * So the evidence gains on the prior as the evidence accumulates, which is the
- * only honest way to weigh the two. `at` is how much of the season in progress
- * the blend is standing on; in the off-season it is nothing and this returns
- * exactly what it always did.
+ * It gains further in a redraft league, where the price is the weakest of the
+ * two to begin with. A dynasty price is about a player's whole career and is
+ * worth respecting against four games; a redraft price is a guess at one
+ * season, made before it started, and by October the season itself has
+ * answered most of what that guess was for. There is no asset underneath him
+ * either — you do not keep him — so nothing is being measured except what he
+ * scores between now and the end of it.
  */
 export const PROD_SHARE_BASE = 0.4;
 export const PROD_SHARE_MAX = 0.7;
+/** Where it can reach in a league nobody is kept in. */
+export const PROD_SHARE_MAX_REDRAFT = 0.85;
 
-export const prodShare = (at: number | null | undefined): number => {
+export const prodShare = (at: number | null | undefined, redraft = false): number => {
   const w = Number.isFinite(at as number) ? clamp(at as number, 0, 1) : 0;
-  return PROD_SHARE_BASE + (PROD_SHARE_MAX - PROD_SHARE_BASE) * w;
+  const top = redraft ? PROD_SHARE_MAX_REDRAFT : PROD_SHARE_MAX;
+  return PROD_SHARE_BASE + (top - PROD_SHARE_BASE) * w;
 };

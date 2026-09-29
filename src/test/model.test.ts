@@ -18,7 +18,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
-import { PROD_SHARE_BASE, PROD_SHARE_MAX, prodShare } from '../model/math';
+import { PROD_SHARE_BASE, PROD_SHARE_MAX, PROD_SHARE_MAX_REDRAFT, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
 import { type CmpUse, aheadBy, compareMetrics, compareNumbers, compareSeasons, tally } from '../model/compare';
 import { countTds, gapsIn, mergeSeason } from '../model/season';
@@ -4642,5 +4642,33 @@ describe('the league\'s ratings do not collapse', () => {
     const top = fits().sort((a, b) => b - a).slice(0, 10);
     expect(new Set(top).size).toBeGreaterThan(4);
     expect((top[0] as number) - (top[9] as number)).toBeGreaterThan(3);
+  });
+});
+
+/* A dynasty price is about a player's whole career and is worth respecting
+   against four games. A redraft price is a guess at one season, made before it
+   started — and by October the season itself has answered most of what that
+   guess was for. */
+describe('production leads harder where nobody is kept', () => {
+  it('starts both formats in the same place before a ball is thrown', () => {
+    expect(prodShare(0, true)).toBe(PROD_SHARE_BASE);
+    expect(prodShare(0, false)).toBe(PROD_SHARE_BASE);
+  });
+
+  it('trusts the season more in redraft at every point of it', () => {
+    for (const w of [0.2, 0.5, 0.7, 1]) {
+      expect(prodShare(w, true)).toBeGreaterThan(prodShare(w, false));
+    }
+  });
+
+  it('never lets the price stop counting entirely', () => {
+    // The market has watched him for years. It is the weaker of the two here,
+    // not nothing.
+    expect(prodShare(1, true)).toBe(PROD_SHARE_MAX_REDRAFT);
+    expect(PROD_SHARE_MAX_REDRAFT).toBeLessThan(1);
+  });
+
+  it('defaults to the dynasty shape when nobody says', () => {
+    expect(prodShare(0.6)).toBe(prodShare(0.6, false));
   });
 });
