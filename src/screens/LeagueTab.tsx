@@ -105,7 +105,10 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
 
   return (
     <Screen>
-      <Segmented options={screens} value={app.leagueView} onChange={app.setLeagueView} />
+      {/* The same strip the Team page is navigated by, at the same size: one
+          control means one thing across the app, and a screen switcher that
+          is bigger on one tab than on another is two controls. */}
+      <Segmented options={screens} value={app.leagueView} onChange={app.setLeagueView} size="sm" />
 
       {app.leagueView === 'matchups' ? <Matchups app={app} m={m} /> : null}
 
@@ -115,7 +118,6 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
             options={measures}
             value={isPower ? 'power' : isFitMode ? 'rating' : 'strength'}
             onChange={v => pick(v, ahead)}
-            size="sm"
           />
           {/* Only a dynasty has a future to look at: a redraft roster two seasons
               out is not a thing anybody owns. And a power ranking has no horizon
