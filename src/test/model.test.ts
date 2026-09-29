@@ -8,7 +8,7 @@ import { buildModel } from '../model/model';
 import { REACH, sfxFor } from '../model/sfx-map';
 import type { MockPick } from '../model/types';
 import { ownedWeights, pickValue, redraftWeights, scorePlayer } from '../model/score';
-import { blendSeasons, breakWeight, buildUsage, seasonUsage, withCurrentSeason, type Usage, type UsageMap } from '../model/usage';
+import { blendSeasons, breakWeight, buildUsage, priorStrength, seasonUsage, withCurrentSeason, type Usage, type UsageMap } from '../model/usage';
 import type { PlayerCatalog } from '../api/types';
 import { projectConfidence, projectPPG } from '../model/project';
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
@@ -18,7 +18,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
-import { USAGE_DECAY, USAGE_WEIGHTS } from '../model/constants';
+import { PRIOR_MIN, USAGE_DECAY, USAGE_WEIGHTS } from '../model/constants';
 import { PROD_SHARE_BASE, PROD_SHARE_MAX, PROD_SHARE_MAX_REDRAFT, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
 import { type CmpUse, aheadBy, compareMetrics, compareNumbers, compareSeasons, tally } from '../model/compare';
@@ -4311,8 +4311,11 @@ describe('a season out of two sources', () => {
    catch. They do not settle at the same speed. */
 describe('how fast the season in progress is believed', () => {
   const CAT = { a: { position: 'WR', team: 'SEA' } } as unknown as PlayerCatalog;
+  /* Three finished seasons behind him, so the prior is at full strength and
+     these are the K ratios themselves rather than the K ratios softened for a
+     thin prior — that is the block below. */
   const base = (o: Partial<Usage>): UsageMap =>
-    ({ a: { gp: 16, snap: 0.5, tgt: 0.15, eff: 7, tdPerGame: 0.3, ...o } } as unknown as UsageMap);
+    ({ a: { gp: 16, gpTotal: 45, snap: 0.5, tgt: 0.15, eff: 7, tdPerGame: 0.3, ...o } }) as unknown as UsageMap;
 
   /** A man drifting upward — not far enough to be a different role. See the
    *  block below for what happens when it IS one. */
@@ -4710,7 +4713,9 @@ describe('how far back a season still counts', () => {
    role, it is an accurate estimate of a role he no longer has. */
 describe('a role that moved rather than drifted', () => {
   const CAT = { a: { position: 'WR', team: 'SEA' } } as unknown as PlayerCatalog;
-  const one = (o: Partial<Usage>): UsageMap => ({ a: { gp: 16, ...o } } as unknown as UsageMap);
+  /* A veteran, so the shrinkage he is being pulled back by is the full one. */
+  const one = (o: Partial<Usage>): UsageMap =>
+    ({ a: { gp: 16, gpTotal: 45, ...o } }) as unknown as UsageMap;
   const move = (gp: number, snap: number) => withCurrentSeason(
     one({ snap: 0.45, eff: 7 }),
     { year: 2026, usage: one({ gp, snap, eff: 14 }) },
@@ -4770,5 +4775,96 @@ describe('a role that moved rather than drifted', () => {
     expect(breakWeight(0.6, 5, 0.5, 5)).toBe(1);
     // A role that went to nothing is a break, not a division by zero.
     expect(breakWeight(0.6, 0, 0.5, 5)).toBe(1);
+  });
+});
+
+/* Shrinking toward a prior should be proportional to how much that prior
+   knows, and this shrank toward all of them equally: a man with three seasons
+   behind him and one with half a rookie year were pulled back just as hard,
+   though one prior is forty-five games of evidence and the other is eight. It
+   is second-year players it hurt most, and they are the ones whose roles
+   change. */
+describe('how much the seasons behind a player are worth', () => {
+  it('leans fully on a prior that has seen two seasons or more', () => {
+    expect(priorStrength(45)).toBe(1);
+    expect(priorStrength(30)).toBe(1);
+    // And does not keep growing past it: a fourth season does not make the
+    // first three harder to argue with than they already were.
+    expect(priorStrength(80)).toBe(1);
+  });
+
+  it('halves it for a player with one season behind him', () => {
+    // Sixteen games out of the thirty that buy a full prior.
+    expect(priorStrength(16)).toBeCloseTo(16 / 30, 6);
+    expect(priorStrength(16)).toBeLessThan(0.6);
+    expect(priorStrength(16)).toBeGreaterThan(0.45);
+  });
+
+  it('never falls to nothing, because one season beats none', () => {
+    expect(priorStrength(8)).toBeGreaterThanOrEqual(PRIOR_MIN);
+    expect(priorStrength(0)).toBe(PRIOR_MIN);
+    expect(priorStrength(null)).toBe(PRIOR_MIN);
+    expect(priorStrength(undefined)).toBe(PRIOR_MIN);
+    expect(priorStrength(NaN)).toBe(PRIOR_MIN);
+    expect(priorStrength(-5)).toBe(PRIOR_MIN);
+  });
+
+  it('rises with the prior and never falls', () => {
+    let last = 0;
+    for (const gp of [0, 4, 8, 16, 24, 30, 45, 60]) {
+      const s = priorStrength(gp);
+      expect(s).toBeGreaterThanOrEqual(last);
+      last = s;
+    }
+  });
+
+  it('believes a second-year breakout faster than a veteran one', () => {
+    // The same man twice over, three games into the same jump in role. The
+    // only difference between them is how much football is behind it.
+    const CAT = { a: { position: 'WR', team: 'SEA' } } as unknown as PlayerCatalog;
+    const at = (gpTotal: number) => withCurrentSeason(
+      { a: { gp: 16, gpTotal, snap: 0.45, tgt: 0.14, eff: 7 } } as unknown as UsageMap,
+      /* A drift rather than a break, so what is being read here is the prior's
+         strength and not `breakWeight` on top of it. */
+      { year: 2026, usage: { a: { gp: 3, snap: 0.55, tgt: 0.18, eff: 11 } } as unknown as UsageMap },
+      CAT,
+    ).a;
+    const young = at(16);
+    const vet = at(45);
+    for (const k of ['snap', 'tgt', 'eff'] as const) {
+      expect(young[k] as number).toBeGreaterThan(vet[k] as number);
+    }
+    // And by the right amount: three games buy three fifths of the move
+    // against three seasons, and three quarters of it against one.
+    expect(vet.tgt as number).toBeCloseTo(0.14 + 0.04 * (3 / 5), 6);
+    expect(young.tgt as number).toBeCloseTo(0.14 + 0.04 * (3 / (3 + 2 * (16 / 30))), 6);
+  });
+
+  it('says so on the card, and prices him on the season instead of the guess', () => {
+    // The headline percentage is scaled by the same thing, so what it reports
+    // is what the blend did — and it is the number that decides how much of
+    // "quality" is production rather than a price set before the season.
+    const CAT = { a: { position: 'WR', team: 'SEA' } } as unknown as PlayerCatalog;
+    const at = (gpTotal: number) => withCurrentSeason(
+      { a: { gp: 16, gpTotal, snap: 0.45 } } as unknown as UsageMap,
+      { year: 2026, usage: { a: { gp: 4, snap: 0.58 } } as unknown as UsageMap },
+      CAT,
+    ).a.curWeight as number;
+    expect(at(45)).toBeCloseTo(4 / 7, 6);
+    expect(at(16)).toBeGreaterThan(at(45));
+    expect(prodShare(at(16), true)).toBeGreaterThan(prodShare(at(45), true));
+  });
+
+  it('leaves a rookie with no finished season alone', () => {
+    // Nothing to shrink toward at all: his year is the whole of what is known,
+    // which is a different case and was already handled.
+    const CAT = { a: { position: 'WR', team: 'SEA' } } as unknown as PlayerCatalog;
+    const u = withCurrentSeason(
+      {} as UsageMap,
+      { year: 2026, usage: { a: { gp: 3, snap: 0.58 } } as unknown as UsageMap },
+      CAT,
+    ).a;
+    expect(u.snap as number).toBeCloseTo(0.58, 6);
+    expect(u.curWeight).toBe(1);
   });
 });

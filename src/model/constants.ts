@@ -164,8 +164,10 @@ export const PEAK: Record<Pos, number> = { QB: 26, RB: 23, WR: 24, TE: 25 };
  *  from an older build would answer with numbers this build did not produce.
  *  v7: two metrics joined the blend, the season in progress is weighted per
  *  metric, each finished season back is worth half the one in front, and a
- *  role that has moved rather than drifted stops being shrunk at all. */
-export const USAGE_V = 7;
+ *  role that has moved rather than drifted stops being shrunk at all.
+ *  v8: the shrinkage is scaled by how much football the prior is made of, so a
+ *  second-year player's season counts for more than a veteran's does. */
+export const USAGE_V = 8;
 
 /**
  * How many seasons of usage to blend, and how much each is worth.
@@ -244,6 +246,25 @@ export const ROLE_BREAK = 0.35;
 export const ROLE_BREAK_FULL = 1.0;
 /** And never off one Sunday: a break needs a sample to be a break. */
 export const ROLE_BREAK_MIN_GP = 3;
+
+/**
+ * How much the finished seasons are worth as a prior.
+ *
+ * Shrinking toward a prior should be proportional to how much that prior
+ * knows, and this shrank toward all of them equally. A man with three seasons
+ * behind him and one with a single half-season were pulled back just as hard,
+ * though one prior is forty-five games of evidence and the other is eight —
+ * and shrinking toward eight games is shrinking toward noise. It is second-
+ * year players it hurts most, and they are the ones whose roles change.
+ *
+ * So `K` is scaled by the prior's own sample: about two seasons of football is
+ * a prior worth its full strength, and less than that is worth proportionally
+ * less. Never nothing, because even one season is more than none — a rookie
+ * with no finished season at all is already a separate case and takes his year
+ * whole.
+ */
+export const PRIOR_FULL_GP = 30;
+export const PRIOR_MIN = 0.25;
 
 /** Per metric, because they do not settle at the same rate. */
 export const CURRENT_K: Record<string, number> = {

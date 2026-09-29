@@ -1,7 +1,7 @@
 import type { PlayerCatalog, Pos, SleeperStatLine } from '../api/types';
 import {
-  CURRENT_K, CURRENT_SEASON_K, PRIME, ROLE_BREAK, ROLE_BREAK_FULL, ROLE_BREAK_MIN_GP,
-  USAGE_WEIGHTS, POS,
+  CURRENT_K, CURRENT_SEASON_K, PRIME, PRIOR_FULL_GP, PRIOR_MIN, ROLE_BREAK, ROLE_BREAK_FULL,
+  ROLE_BREAK_MIN_GP, USAGE_WEIGHTS, POS,
 } from './constants';
 
 export interface Usage {
@@ -126,6 +126,18 @@ export function breakWeight(w: number, cur: number, prior: number, gp: number): 
   if (!(move > lo)) return w;
   const past = Math.min(1, (move - lo) / (hi - lo));
   return w + (1 - w) * past;
+}
+
+/**
+ * What the finished seasons are worth as a prior, 0..1 — see `PRIOR_FULL_GP`.
+ *
+ * A player carrying three seasons is a prior worth leaning on. One carrying
+ * half of a rookie year is not, and shrinking his new role back toward it is
+ * shrinking toward noise.
+ */
+export function priorStrength(gpTotal: number | null | undefined): number {
+  const gp = Number.isFinite(gpTotal as number) ? Math.max(0, gpTotal as number) : 0;
+  return Math.min(1, Math.max(PRIOR_MIN, gp / PRIOR_FULL_GP));
 }
 
 const BLEND: (keyof Usage)[] = [
@@ -567,11 +579,18 @@ export function withCurrentSeason(
     // progress has nothing to say about him yet, and a zero-game "season"
     // dragging his numbers toward nothing would be worse than silence.
     if (!gp) continue;
-    /* How much of this year to believe, per metric — see `CURRENT_K`. The
-       plain one is still what the card reports, because "33% this year" is a
-       statement about the player and not about one of his columns. */
-    const weight = (k: string) => gp / (gp + (CURRENT_K[k] ?? CURRENT_SEASON_K));
-    const w = gp / (gp + CURRENT_SEASON_K);
+    /* How much of this year to believe, per metric — see `CURRENT_K` — and
+       then how hard to shrink at all, which depends on what is behind him. A
+       second-year player is being pulled back toward one season, and one
+       season is not worth what three are: see `priorStrength`. */
+    const hold = priorStrength(blend[id]?.gpTotal ?? blend[id]?.gp);
+    const weight = (k: string) => gp / (gp + (CURRENT_K[k] ?? CURRENT_SEASON_K) * hold);
+    /* The one the card reports, because "33% this year" is a statement about
+       the player and not about one of his columns. Scaled by the same `hold`,
+       so it stays a true summary of what the blend did — and so that the man
+       whose season is being believed is also the man whose pre-season price is
+       leaned on least. It is the same staleness in both. */
+    const w = gp / (gp + CURRENT_SEASON_K * hold);
     const prior = blend[id];
 
     if (!prior) {
