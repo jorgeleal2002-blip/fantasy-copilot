@@ -204,39 +204,6 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
           ))}
         </div>
       </Card>
-
-      <div style={{ ...cardTitle, marginTop: 2 }}>Latest picks</div>
-      {m.picks.length === 0 ? (
-        <div style={{
-          background: 'var(--color-surface)', borderRadius: 12, padding: '20px 16px',
-          fontSize: 12.5, lineHeight: 1.5, color: dim(0.5), textAlign: 'center',
-        }}>
-          The draft has not started. Once it runs, every pick shows up here live and the board recomputes itself.
-        </div>
-      ) : null}
-      {m.picks.slice(-8).reverse().map(p => {
-        const pl = m.scoreAny(p.player_id);
-        const by = m.teams.find(t => t.id === p.picked_by);
-        return (
-          <div
-            key={p.pick_no}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 11,
-              background: 'var(--color-surface)', borderRadius: 11, padding: '10px 12px',
-            }}
-          >
-            <div style={{ fontSize: 11, color: dim(0.4), width: 34, flex: 'none' }}>
-              {p.round}.{String(((p.pick_no - 1) % m.teamCount) + 1).padStart(2, '0')}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 500 }}>{pl ? pl.name : 'Player'}</div>
-              <div style={{ fontSize: 11, color: dim(0.45), marginTop: 2 }}>
-                {(by ? by.name : '—') + ' · ' + (pl ? `${pl.pos} ${pl.team}` : '')}
-              </div>
-            </div>
-          </div>
-        );
-      })}
     </Screen>
   );
 }
