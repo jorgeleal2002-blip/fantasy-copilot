@@ -4614,3 +4614,33 @@ describe('the talent scale spans the pool it is ranking', () => {
     expect(talentScale(10, 0)).toBe(0);
   });
 });
+
+
+/* A league table whose Ratings collapse into a handful of values is not a
+   ranking. Five players shared a 79 and a top-three receiver tied a flex back,
+   because the two heaviest terms were both scaled over three decades of value
+   for a pool of rostered players that spans about one. */
+describe('the league\'s ratings do not collapse', () => {
+  const fits = () => model.allFits.map(p => p.fit);
+
+  it('spreads them over a range worth reading', () => {
+    const hi = Math.max(...fits());
+    const lo = Math.min(...fits());
+    expect(hi - lo).toBeGreaterThan(25);
+  });
+
+  it('does not stack the league onto a few numbers', () => {
+    // Ties are fine and inevitable; a table where most rows share a score with
+    // somebody is a table that has stopped measuring.
+    const all = fits();
+    expect(new Set(all).size).toBeGreaterThan(all.length / 4);
+  });
+
+  it('keeps the best of them apart from each other', () => {
+    // The top is where a ranking is actually read, and it is the end a log
+    // scale compresses hardest.
+    const top = fits().sort((a, b) => b - a).slice(0, 10);
+    expect(new Set(top).size).toBeGreaterThan(4);
+    expect((top[0] as number) - (top[9] as number)).toBeGreaterThan(3);
+  });
+});

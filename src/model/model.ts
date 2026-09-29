@@ -572,15 +572,22 @@ export function buildModel(input: ModelInput): Model {
   /**
    * That gap, 0..1, against the biggest one any position offers.
    *
-   * Scaled the same way talent is — a decade of value across a third of the
-   * scale — because the quantity is the same kind of thing and the eye already
-   * reads the board in that shape. Measured against the best gap ON THE WHOLE
-   * BOARD rather than the best at his own position, which would have made the
-   * top quarterback and the top back both a perfect 1 and thrown away the
-   * comparison this exists to make.
+   * Scaled the same way talent is, and over the same range: on a draft board
+   * three decades, and over a league of rostered players the span those
+   * players actually occupy. This is the second-heaviest term in a Rating and
+   * it was saturating exactly like the first — everybody meaningfully above
+   * replacement landed within a point of everybody else, which is how five
+   * players came to share a 79 and a top-three receiver tied a flex back.
+   *
+   * Measured against the best gap ON THE WHOLE BOARD rather than the best at
+   * his own position, which would have made the top quarterback and the top
+   * back both a perfect 1 and thrown away the comparison this exists to
+   * make.
    */
-  const vorOf = (pl: SleeperPlayer, pid: string) =>
-    talentScale(Math.max(0, talentQ(pl, pid) - (replValue[pl.position as Pos] ?? 0)), surplusMax);
+  const surplusOf = (pl: SleeperPlayer, pid: string) =>
+    Math.max(0, talentQ(pl, pid) - (replValue[pl.position as Pos] ?? 0));
+  const vorOf = (pl: SleeperPlayer, pid: string, lo?: number) =>
+    talentScale(surplusOf(pl, pid), surplusMax, lo);
 
   /**
    * Strength of schedule, at his own position — see `sos.ts`.
@@ -1107,9 +1114,11 @@ export function buildModel(input: ModelInput): Model {
      player, nobody deeper. Spending three decades of scale on a pool that
      spans one is what put the best players in the league inside a sliver of
      the term that weighs the most. See `talentScale`. */
-  const dvLeague = (d.rosters || []).flatMap(r => mapRoster(r.players).map(p => talentQ(p.raw, p.id)))
-    .filter(v => v > 0);
+  const rostered = (d.rosters || []).flatMap(r => mapRoster(r.players));
+  const dvLeague = rostered.map(p => talentQ(p.raw, p.id)).filter(v => v > 0);
   const dvMinLeague = dvLeague.length ? Math.min.apply(null, dvLeague) : undefined;
+  const vorLeague = rostered.map(p => surplusOf(p.raw, p.id)).filter(v => v > 0);
+  const vorMinLeague = vorLeague.length ? Math.min.apply(null, vorLeague) : undefined;
 
   const allFits: PlayerFit[] = [];
   (d.rosters || []).forEach(r => {
@@ -1120,7 +1129,7 @@ export function buildModel(input: ModelInput): Model {
       const neutral = scorePlayer(p.raw, {}, {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(list, p.raw, p.id),
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
-        vor: vorOf(p.raw, p.id), sos: sosOf(p.raw), dvMin: dvMinLeague,
+        vor: vorOf(p.raw, p.id, vorMinLeague), sos: sosOf(p.raw), dvMin: dvMinLeague,
       }, wLeague);
       if (!Number.isFinite(neutral.fit)) return;
       const forMe = scorePlayer(p.raw, needScore, {
@@ -1137,7 +1146,7 @@ export function buildModel(input: ModelInput): Model {
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
         // How deep his position runs in two years is not knowable, so this is
         // today's line — the age discount above already prices the decline.
-        vor: vorOf(p.raw, p.id), sos: sosOf(p.raw), dvMin: dvMinLeague,
+        vor: vorOf(p.raw, p.id, vorMinLeague), sos: sosOf(p.raw), dvMin: dvMinLeague,
       }, wLeague);
       allFits.push({
         id: p.id, name: p.name, pos: p.pos, team: p.team, age: p.age,
