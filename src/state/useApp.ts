@@ -211,7 +211,12 @@ export function useApp() {
 
   const [query, setQuery] = useState('');
   const [topPos, setTopPos] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
-  const [topLens, setTopLens] = useState<'neutral' | 'pts' | 'me' | 'fut'>('neutral');
+  /* Points, not the Rating. The Rating is a draft and trade board — it prices
+     your holes, the replacement at his position and where the market has him,
+     which is a different question from who has been best. In season the second
+     question is the one being asked, and `TopPlayers` falls back to the Rating
+     by itself before anybody has played. */
+  const [topLens, setTopLens] = useState<'neutral' | 'pts' | 'me' | 'fut'>('pts');
   const [passed, setPassed] = useState<string[]>([]);
   // Every league's shortlist lives in one record; the screens only ever see
   // the current league's, so a saved deal cannot follow you somewhere it

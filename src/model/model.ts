@@ -3,7 +3,7 @@ import type { DraftPos, FillPos, LeagueBundle, Pos, SleeperPlayer, SleeperRoster
 import {
   BASE_ROUND_VALUE, DEF_SLOTS, ELIG, FILL, MetricKey, POS, PEAK, SLOT_SORT, STRATS, StratKey,
 } from './constants';
-import { ageCurve, clamp, modelVal, pickLabel, playerName, rankScore, talentScale } from './math';
+import { ageCurve, clamp, modelVal, pickLabel, playerName, prodShare, rankScore, talentScale } from './math';
 import type { Market } from './market';
 import { sosFor, sosScore } from './sos';
 import { EMPTY_METRICS, ownedWeights, redraftWeights, scorePlayer } from './score';
@@ -450,7 +450,14 @@ export function buildModel(input: ModelInput): Model {
   const talentQ = (pl: SleeperPlayer, pid: string): number => {
     const v = quality(pl);
     const p = prodVal(pl, pid);
-    return p == null ? v : v * 0.6 + p * 0.4;
+    if (p == null) return v;
+    /* The evidence gains on the prior as the evidence accumulates — see
+       `prodShare`. A fixed split left this season's production worth about a
+       twenty-fifth of a Rating in October, damped three times over: a third of
+       it inside the blend, two fifths of the quality term, a quarter of the
+       Rating. A breakout could not move it, which is what a breakout is. */
+    const share = prodShare(uFor(pid)?.curWeight);
+    return v * (1 - share) + p * share;
   };
   /** Where market and production disagree, for the player sheet. */
   const qDiverge = (pl: SleeperPlayer | null, pid: string) => {

@@ -18,6 +18,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
+import { PROD_SHARE_BASE, PROD_SHARE_MAX, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
 import { type CmpUse, aheadBy, compareNumbers, compareSeasons, tally } from '../model/compare';
 import { gapsIn, mergeSeason } from '../model/season';
@@ -4344,5 +4345,37 @@ describe('how fast the season in progress is believed', () => {
     const u = after(1);
     expect(u.tdPerGame as number).toBeLessThan(0.35);
     expect(u.eff as number).toBeLessThan(8);
+  });
+});
+
+/* "Player quality" was a fixed three-fifths market price. That is fair in an
+   off-season and wrong in October: the price is what he costs to trade for,
+   and the season is telling you every Sunday who is actually good now. */
+describe('how much of quality is production', () => {
+  it('leaves the off-season exactly as it was', () => {
+    expect(prodShare(0)).toBe(PROD_SHARE_BASE);
+    expect(prodShare(null)).toBe(PROD_SHARE_BASE);
+    expect(prodShare(undefined)).toBe(PROD_SHARE_BASE);
+  });
+
+  it('lets the evidence gain on the prior as the evidence accumulates', () => {
+    expect(prodShare(0.33)).toBeGreaterThan(prodShare(0));
+    expect(prodShare(0.7)).toBeGreaterThan(prodShare(0.33));
+    expect(prodShare(1)).toBe(PROD_SHARE_MAX);
+  });
+
+  it('never lets production take the whole of it', () => {
+    // The market has watched him for years; it does not stop being evidence.
+    for (const w of [0, 0.5, 1, 2, -1]) expect(prodShare(w)).toBeLessThanOrEqual(PROD_SHARE_MAX);
+    for (const w of [0, 0.5, 1, 2, -1]) expect(prodShare(w)).toBeGreaterThanOrEqual(PROD_SHARE_BASE);
+  });
+
+  it('is what turns a breakout into a rating that moves', () => {
+    // A man the market prices mid-table whose production is top of the board.
+    const market = 40, production = 100;
+    const q = (w: number) => market * (1 - prodShare(w)) + production * prodShare(w);
+    // In the off-season the price still leads; by December the season does.
+    expect(q(0)).toBeCloseTo(64, 6);
+    expect(q(0.7)).toBeGreaterThan(q(0) + 6);
   });
 });

@@ -111,3 +111,26 @@ export const playerName = (p: SleeperPlayer): string =>
   p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
 
 export const num = (n: number) => Math.round(n).toLocaleString('en-US');
+
+/**
+ * How much of "player quality" is what he has done, against what he costs.
+ *
+ * Quality was a fixed three-fifths market price and two-fifths production, and
+ * that fraction made sense in an off-season: the market has watched a player
+ * for years and a model has watched him for three. It stops making sense in
+ * October. The market's price is what he is worth to trade for — a number
+ * about next year as much as this one — and it moves in weeks, while the
+ * season is telling you every Sunday who is actually good now.
+ *
+ * So the evidence gains on the prior as the evidence accumulates, which is the
+ * only honest way to weigh the two. `at` is how much of the season in progress
+ * the blend is standing on; in the off-season it is nothing and this returns
+ * exactly what it always did.
+ */
+export const PROD_SHARE_BASE = 0.4;
+export const PROD_SHARE_MAX = 0.7;
+
+export const prodShare = (at: number | null | undefined): number => {
+  const w = Number.isFinite(at as number) ? clamp(at as number, 0, 1) : 0;
+  return PROD_SHARE_BASE + (PROD_SHARE_MAX - PROD_SHARE_BASE) * w;
+};
