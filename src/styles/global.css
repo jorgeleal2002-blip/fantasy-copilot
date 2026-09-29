@@ -1178,17 +1178,17 @@ button { font-family: inherit; }
 }
 /* The slot is the spine the two sides hang off, so it keeps its width
    whatever is beside it and never gives any of it up. */
+/* A filled block, not an outline — see `Slot`. Its colour and the dark type on
+   it are the draft board's, which has drawn positions this way all along. */
 .ms-slot {
   flex: none;
-  width: 26px;
-  padding: 5px 0;
+  width: 30px;
+  padding: 6px 0;
   border-radius: 8px;
   text-align: center;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  color: rgba(242, 253, 254, 0.52);
-  background: rgba(242, 253, 254, 0.04);
 }
 
 .ms-cell {

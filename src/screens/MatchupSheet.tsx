@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
 import { benchRows, leaderOf, lineupRows, pairMatchups, type LineupCell, type MatchupSide } from '../model/matchups';
-import type { DraftPos } from '../api/types';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
-import { colorOf, POS } from '../model/constants';
+import { CELL_INK, slotFill } from '../model/constants';
 import { byeOf } from '../model/sos';
 import { statLine } from '../model/stat-line';
 import { Face, Overlay } from '../ui/primitives';
@@ -166,22 +165,30 @@ function Block({ app, title, rows }: {
 }
 
 /** The slot, in its position's colour — the spine the two sides hang off. */
+/**
+ * The slot, as a filled block rather than a tinted outline.
+ *
+ * Measured against Sleeper's own starters screen, on the same phone: 4.3 to
+ * 6.2 per cent of their pixels are bright and 4.4 to 4.5 per cent carry real
+ * colour, against 1.9 and 1.2 here. Doubling the chroma of the palette does not
+ * move that, because chroma is a property of a colour and this is a property of
+ * AREA — they fill blocks, this filled thin text and six-pixel bars. Their
+ * position chip is the clearest instance: a solid pastel square with dark type
+ * on it, in every row.
+ *
+ * The colours are the ones the draft board has always used for exactly this,
+ * so nothing new is invented — a filled cell there is already a block of the
+ * position's own colour with `CELL_INK` on top.
+ */
 function Slot({ slot }: { slot: string }) {
   const label = slot === 'SUPER_FLEX' ? 'SFLX' : slot === 'REC_FLEX' ? 'WRT' : slot.replace('_', ' ');
-  const tint = POS.indexOf(slot as typeof POS[number]) >= 0 || slot === 'K' || slot === 'DEF'
-    ? colorOf(slot as DraftPos)
-    : null;
   return (
-    <div
-      className="ms-slot"
-      style={tint
-        ? { color: tint, background: 'color-mix(in srgb, ' + tint + ' 16%, transparent)' }
-        : undefined}
-    >
+    <div className="ms-slot" style={{ background: slotFill(slot), color: CELL_INK }}>
       {label}
     </div>
   );
 }
+
 
 function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'right' }) {
   const right = align === 'right';

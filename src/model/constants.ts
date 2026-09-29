@@ -381,6 +381,24 @@ export const ELIG: Record<string, Pos[]> = {
   REC_FLEX: ['WR', 'TE'],
 };
 
+/**
+ * The fill for a lineup slot, including the flex ones.
+ *
+ * A flex has no colour of its own because it is not a position — it is a list
+ * of them — so it gets the list, in stripes. Sleeper draws its own the same
+ * way, and it is the one chip on the screen that has to say "any of these"
+ * rather than "this".
+ */
+export const slotFill = (slot: string): string => {
+  const elig = ELIG[slot];
+  if (!elig || !elig.length) return 'rgba(242,253,254,0.12)';
+  if (elig.length === 1) return cellOf(elig[0] as DraftPos);
+  const step = 100 / elig.length;
+  const stops = elig.map((p, i) =>
+    `${cellOf(p as DraftPos)} ${i * step}% ${(i + 1) * step}%`).join(', ');
+  return `linear-gradient(90deg, ${stops})`;
+};
+
 /** Display order for the optimal lineup. */
 export const SLOT_SORT: Record<string, number> = {
   QB: 0, RB: 1, WR: 2, TE: 3, REC_FLEX: 4, FLEX: 5, SUPER_FLEX: 6,
