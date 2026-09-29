@@ -1928,3 +1928,102 @@ button { font-family: inherit; }
   color: var(--color-text);
   margin-bottom: 12px;
 }
+
+/* ── Two players against each other ───────────────────────────────────────
+   The matchup screen's shape, because it is the same question: two sides, a
+   spine down the middle naming what is compared, and the winner of each line
+   marked. Reading two cards and doing the subtraction in your head is the
+   work this is meant to have done.
+   ──────────────────────────────────────────────────────────────────────── */
+.cmp-pick {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 5px;
+  margin: 0 -5px;
+  border-top: var(--hairline) solid var(--color-divider);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cmp-pick:first-child { border-top: 0; }
+.cmp-pick:active { background: rgba(233, 233, 237, 0.06); }
+.cmp-pick:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+
+.cmp-head { display: flex; align-items: flex-start; gap: 10px; padding-bottom: 14px; }
+.cmp-who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; }
+.cmp-who.is-right { flex-direction: row-reverse; text-align: right; }
+.cmp-name {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmp-sub {
+  font-size: 10.5px;
+  margin-top: 3px;
+  color: rgba(233, 233, 237, 0.4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmp-vs {
+  flex: none;
+  align-self: center;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(233, 233, 237, 0.28);
+}
+.cmp-verdict {
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 11px 12px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--color-accent) 7%, transparent);
+  color: rgba(233, 233, 237, 0.75);
+  text-wrap: pretty;
+}
+
+.cmp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 0;
+  border-top: var(--hairline) solid var(--color-divider);
+}
+.cmp-val {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: rgba(233, 233, 237, 0.45);
+}
+.cmp-val.is-right { text-align: right; }
+/* Only the winner is lit. Both sides in full white is two numbers to compare
+   again, which is the thing this screen exists to have already done. */
+.cmp-val.is-win { color: var(--color-accent); }
+.cmp-label {
+  flex: none;
+  width: 104px;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: rgba(233, 233, 237, 0.38);
+}
+
+.cmp-charts { display: flex; gap: 12px; margin-top: 20px; }
+.cmp-chart { flex: 1; min-width: 0; }
+.cmp-chart-h {
+  font-size: 10.5px;
+  margin-bottom: 4px;
+  color: rgba(233, 233, 237, 0.45);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

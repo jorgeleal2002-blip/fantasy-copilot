@@ -538,7 +538,20 @@ function ThisSeason(
     <Card style={{ marginTop: 16 }}>
       {played && line ? (
       <div className="ps-sec is-first">
-      <div style={cardTitle}>This season</div>
+      {/* The way out of one player's card and into two. It belongs on this
+          heading because the season is what gets compared — the market value
+          and the schedule are about him alone. */}
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <div style={cardTitle}>This season</div>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => app.setDetail('compare-' + id)}
+          style={{ fontSize: 12, padding: 0, flex: 'none' }}
+        >
+          Compare ›
+        </button>
+      </div>
       <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 3, textWrap: 'pretty' }}>
         In this league's own scoring. Byes and the weeks he did not play are
         left out rather than averaged in as nothing.

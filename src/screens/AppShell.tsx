@@ -9,6 +9,7 @@ import { PlayerSheet } from './PlayerSheet';
 import { SettingsTab } from './SettingsTab';
 import { TeamSheet } from './TeamSheet';
 import { MatchupSheet } from './MatchupSheet';
+import { CompareSheet } from './CompareSheet';
 import { TeamTab } from './TeamTab';
 import { TradesTab } from './TradesTab';
 
@@ -53,6 +54,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
   const detail = app.detail;
   const isTeamDetail = typeof detail === 'string' && detail.startsWith('team-');
   const isMatchupDetail = typeof detail === 'string' && detail.startsWith('matchup-');
+  const isCompare = typeof detail === 'string' && detail.startsWith('compare-');
 
   return (
     <div className="shell">
@@ -134,7 +136,8 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
       {isMatchupDetail ? (
         <MatchupSheet app={app} m={model} ids={detail!.slice(8).split('-').map(Number)} />
       ) : null}
-      {detail && !isTeamDetail && !isMatchupDetail
+      {isCompare ? <CompareSheet app={app} m={model} ids={detail!.slice(8).split('~')} /> : null}
+      {detail && !isTeamDetail && !isMatchupDetail && !isCompare
         ? <PlayerSheet app={app} m={model} playerId={detail} /> : null}
     </div>
   );

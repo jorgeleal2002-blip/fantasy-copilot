@@ -17,6 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
+import { aheadBy, compareSeasons, tally } from '../model/compare';
 import { barHeights, ordinal, pointsInWeek, quantile, rankAmong, seasonLine } from '../model/season';
 import { SCREEN_TRUST, bestHeight } from '../model/viewport';
 import { FULL_SQ, THUMB_SQ, playerPhotoSet } from '../api/sleeper';
@@ -4101,5 +4102,51 @@ describe('what he scored in one week', () => {
     const field = [40.8, 19.5, 28.0, 12.1];
     expect(rankAmong(pointsInWeek(season, 3) as number, field)).toEqual({ rank: 3, of: 4 });
     expect(rankAmong(pointsInWeek(season, 4) as number, field)).toEqual({ rank: 1, of: 4 });
+  });
+});
+
+/* Reading a number off one card and a number off another and doing the
+   subtraction in your head is the work a comparison is supposed to have done,
+   and it is exactly the work people get wrong. */
+describe('two seasons against each other', () => {
+  const line = (o: Partial<ReturnType<typeof seasonLine>> & object) => ({
+    games: 3, total: 60, ppg: 20, high: 30, low: 10, floor: 15, ceiling: 25, ...o,
+  } as NonNullable<ReturnType<typeof seasonLine>>);
+
+  it('marks a winner on every row that has one', () => {
+    const rows = compareSeasons(line({ ppg: 20 }), line({ ppg: 14 }));
+    expect(rows.find(r => r.key === 'ppg')?.win).toBe('a');
+    expect(rows.find(r => r.key === 'total')?.win).toBe(null);
+  });
+
+  it('reads a higher worst week as the better one', () => {
+    // The row people misread: a worst week is the floor under him, so more is
+    // better, the same as every other row here.
+    const rows = compareSeasons(line({ low: 12 }), line({ low: 3 }));
+    expect(rows.find(r => r.key === 'low')?.win).toBe('a');
+  });
+
+  it('gives a row to nobody when a man has not played', () => {
+    const rows = compareSeasons(line({}), null);
+    expect(rows.every(r => r.win === null)).toBe(true);
+    expect(rows.every(r => r.b === null)).toBe(true);
+    expect(aheadBy(rows)).toBe(null);
+  });
+
+  it('counts the rows rather than averaging them', () => {
+    // Five narrow wins beat two wide ones, which is the honest reading of a
+    // table whose rows are in different units and cannot be added up.
+    const rows = compareSeasons(
+      line({ ppg: 21, total: 61, games: 4, floor: 16, ceiling: 26, high: 20, low: 4 }),
+      line({ ppg: 20, total: 60, games: 3, floor: 15, ceiling: 25, high: 99, low: 40 }),
+    );
+    expect(tally(rows)).toEqual({ a: 5, b: 2 });
+    expect(aheadBy(rows)).toEqual({ side: 'a', rows: 5 });
+  });
+
+  it('calls a dead heat a dead heat', () => {
+    const rows = compareSeasons(line({}), line({}));
+    expect(tally(rows)).toEqual({ a: 0, b: 0 });
+    expect(aheadBy(rows)).toBe(null);
   });
 });
