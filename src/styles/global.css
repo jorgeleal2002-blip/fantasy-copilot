@@ -139,6 +139,27 @@ button { font-family: inherit; }
   display: flex;
   justify-content: center;
 }
+
+/* Installed, the height stops being something to work out at all.
+   Every version of this so far has been a measurement — 100dvh, then a
+   number JS publishes, then the screen consulted when iOS answers short —
+   and a measurement can be taken at the wrong moment. On a launch where iOS
+   reports its window before it has finished sizing it, every reading agrees
+   on the wrong number and stays there; the app comes up short and only
+   straightens out when a pinch forces a recalculation.
+   A fixed box pinned to all four edges is not a measurement. The browser
+   resolves it against the viewport continuously, so there is no moment to
+   take it at and no reading to be stale. It is scoped to the installed app
+   because that is where the window is unambiguously the screen: in a browser
+   tab the collapsing toolbars make the bottom edge a moving target, and
+   pinning to it would put the tab bar underneath them. */
+@media (display-mode: standalone) {
+  .app-frame {
+    position: fixed;
+    inset: 0;
+    height: auto;
+  }
+}
 .app-column {
   position: relative;
   width: 100%;
