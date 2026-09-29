@@ -394,6 +394,28 @@ describe('the palette carries its colour', () => {
    *  were never muted, sit at 42 and up; the verdict hues now join them. */
   const CHROMA_MIN = 40;
 
+  it('names a colour instead of writing it down again', () => {
+    /* The check this file was missing. The chroma tests above read the palette's
+       DEFINITION, so when the greens were raised they passed — while nine places
+       across six files went on painting the old muted ones, because they had
+       copied the hex instead of naming it. The matchup bar was the visible one,
+       under a comment reading "the same green the rest of the app calls good",
+       which by then it was not.
+
+       Three files may hold colour literals and each has a reason: the two that
+       ARE the palette, and the map of NFL team colours, which belong to the
+       teams rather than to this app. The meme overlay keeps its own tints. */
+    const ALLOWED = ['model/constants.ts', 'styles/tokens.css', 'ui/Mark.tsx', 'ui/brainrot.tsx'];
+    const stray: string[] = [];
+    for (const f of FILES) {
+      if (ALLOWED.some(a => f.path.endsWith(a))) continue;
+      for (const m of f.text.matchAll(/#[0-9a-fA-F]{6}\b/g)) {
+        stray.push(`${m[0]} in ${f.path}`);
+      }
+    }
+    expect(stray).toEqual([]);
+  });
+
   it('states each verdict hue once, however many files need it', () => {
     /* The stylesheet needs the same greens the TypeScript does, and a value
        written in two places is a value that drifts. */

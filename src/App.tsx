@@ -36,7 +36,7 @@ export default function App() {
             onClick={app.hideToast}
             className="toast"
             style={{
-              background: '#2f3245', border: 'var(--hairline) solid var(--color-divider)', borderRadius: 12,
+              background: 'var(--color-float)', border: 'var(--hairline) solid var(--color-divider)', borderRadius: 12,
               padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 10,
               boxShadow: 'var(--shadow-lg)', cursor: 'pointer', animation: 'fadeUp .25s ease backwards',
             }}

@@ -92,6 +92,13 @@
   --c-bad: #ee8c64;
   --c-warn: #ecd880;
   --c-mid: #7290fa;
+  /* The dark type that sits on a filled position block — CELL_INK. */
+  --c-ink: #0a1024;
+  /* A slot with no position of its own, on the draft board. */
+  --c-cell-none: #8ea3c8;
+  /* The toast, which floats over everything and so is the one surface lighter
+     than a card. */
+  --color-float: #2f3245;
 
   --color-section: #1b2e4b;
   --color-section-glow: #24406b;

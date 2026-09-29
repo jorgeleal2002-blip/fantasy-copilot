@@ -1,3 +1,4 @@
+import { BAD } from '../model/constants';
 import { leagueAvatar } from '../api/sleeper';
 import type { SleeperLeague } from '../api/types';
 import { BOOT_STEPS, type App } from '../state/useApp';
@@ -67,7 +68,7 @@ export function ConnectScreen({ app }: { app: App }) {
         />
       </div>
       {app.authError ? (
-        <div role="alert" style={{ fontSize: 12, lineHeight: '17px', color: '#d9a08e', marginTop: 10 }}>
+        <div role="alert" style={{ fontSize: 12, lineHeight: '17px', color: BAD, marginTop: 10 }}>
           {app.authError}
         </div>
       ) : null}
@@ -227,7 +228,7 @@ export function BootScreen({ app }: { app: App }) {
             borderRadius: 12, padding: 13,
           }}
         >
-          <div style={{ fontSize: 12, lineHeight: '18px', color: '#d9a08e' }}>{error}</div>
+          <div style={{ fontSize: 12, lineHeight: '18px', color: BAD }}>{error}</div>
           <button type="button" onClick={app.retry} className="btn btn-secondary" style={{ marginTop: 10, borderRadius: 8 }}>
             Retry
           </button>

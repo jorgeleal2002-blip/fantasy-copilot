@@ -502,7 +502,7 @@ function PickMoves({ app, m }: { app: App; m: Model }) {
               {dd.get.map(x => `${x.label} (${num(x.q * 100)})`).join(' + ')}
             </div>
             <div style={{ fontSize: 12 }}>
-              <span style={{ color: '#d9a08e' }}>Send</span>{' '}
+              <span style={{ color: BAD }}>Send</span>{' '}
               {dd.give.map(x => `${'label' in x && x.label ? x.label : x.name} (${num(x.q * 100)})`).join(' + ')}
             </div>
           </div>

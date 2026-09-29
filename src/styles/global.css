@@ -78,7 +78,7 @@ button { font-family: inherit; }
 /* Rows and cards that respond to touch. Hover only where there is a pointer,
    so a tap on iOS does not leave the tint stuck on. */
 @media (hover: hover) {
-  .row-tap:hover { background: #1e2b4d !important; }
+  .row-tap:hover { background: var(--color-section) !important; }
   .ghost-tap:hover { background: rgba(242, 253, 254, 0.04); }
   .accent-tap:hover { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
   .pick-tap:hover { border-color: var(--color-accent) !important; }
@@ -521,8 +521,8 @@ button { font-family: inherit; }
    follows draws one. A tint of six hues over one dark card reads as six dark
    cards; a fill reads as a run on a position from across the room. */
 .bd-cell.is-filled {
-  background: var(--pos-fill, #8ea3c8);
-  color: var(--cell-ink, #0a1024);
+  background: var(--pos-fill, var(--c-cell-none));
+  color: var(--cell-ink, var(--c-ink));
   /* The class arrives the moment the pick does, one square at a time, so this
      fires per pick and a run down a position reads as it happens rather than
      appearing between glances. `backwards` and an end at `none` keep it off
@@ -586,7 +586,7 @@ button { font-family: inherit; }
    its own colour — at this size on a pastel it would be the one unreadable
    thing on the board. */
 .bd-cell.is-filled .bd-tag { color: rgba(10, 16, 36, 0.55); }
-.bd-cell.is-filled .bd-name { color: var(--cell-ink, #0a1024); font-weight: 600; }
+.bd-cell.is-filled .bd-name { color: var(--cell-ink, var(--c-ink)); font-weight: 600; }
 .bd-cell.is-filled .bd-pos { color: rgba(10, 16, 36, 0.62); font-weight: 600; }
 /* The arrow points at wherever the next pick lands, which is how a snake
    reads as a snake rather than as ten unrelated columns. */
@@ -1158,8 +1158,7 @@ button { font-family: inherit; }
 .ms-bar-fill {
   height: 100%;
   border-radius: 4px;
-  /* The same green the rest of the app calls good. */
-  background: #8ec9a8;
+  background: var(--c-good);
   transition: width .5s ease;
 }
 .ms-edge {
@@ -1415,7 +1414,7 @@ button { font-family: inherit; }
   margin-top: 12px;
   text-wrap: pretty;
 }
-.tb-problem { font-size: 12px; color: #d9a08e; margin-top: 7px; text-wrap: pretty; }
+.tb-problem { font-size: 12px; color: var(--c-bad); margin-top: 7px; text-wrap: pretty; }
 .tb-band {
   font-size: 12px;
   line-height: 14px;
@@ -1437,9 +1436,9 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.52);
 }
 /* Green where the deal is there to be made, amber where it costs you. */
-.tb-why.is-surplus { color: #8ec9a8; }
+.tb-why.is-surplus { color: var(--c-good); }
 .tb-why.is-fills { color: var(--color-accent); }
-.tb-why.is-core { color: #d9a08e; }
+.tb-why.is-core { color: var(--c-bad); }
 
 /* The record, under the name the way a scoreboard prints it. Quiet enough
    that the score stays the number being read. */
@@ -1518,7 +1517,7 @@ button { font-family: inherit; }
 }
 .fb-bal-legs span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fb-fit { font-size: 12px; color: rgba(242, 253, 254, 0.75); margin-top: 10px; text-wrap: pretty; }
-.fb-problem { font-size: 12px; color: #d9a08e; margin-top: 7px; text-wrap: pretty; }
+.fb-problem { font-size: 12px; color: var(--c-bad); margin-top: 7px; text-wrap: pretty; }
 
 /* Two columns fit a phone; a third and fourth scroll rather than squeeze, so
    a card never gets too narrow to read a name in. */
@@ -1592,7 +1591,7 @@ button { font-family: inherit; }
   letter-spacing: 0.02em;
   padding: 1px 5px;
   border-radius: 4px;
-  color: #04060f;
+  color: var(--bg-base);
 }
 .fb-val { font-size: 12px; color: rgba(242, 253, 254, 0.62); }
 .fb-from { font-size: 12px; color: rgba(242, 253, 254, 0.52); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1954,7 +1953,7 @@ button { font-family: inherit; }
   font-variant-numeric: tabular-nums;
   color: rgba(242, 253, 254, 0.52);
 }
-.ps-feed-d.is-up { color: #8ec9a8; }
+.ps-feed-d.is-up { color: var(--c-good); }
 /* His finish that week. A placement, so it is the accent — the same colour
    every other "where does he come" on this card is written in. */
 .ps-feed-rk {
