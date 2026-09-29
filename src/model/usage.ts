@@ -69,6 +69,14 @@ export interface Usage {
   effPct?: number;
   volPct?: number;
   ltrPct?: number;
+  /* The same treatment for the three the card draws but never placed: how much
+     of his team's snaps he is on for, how often he scores, and his share of the
+     work inside the twenty. A figure nobody can place is a figure nobody can
+     read — 16% of a team's red-zone work is a lot for a back and nothing for a
+     number one receiver. */
+  snapPct?: number;
+  tdPct?: number;
+  rzPct?: number;
 }
 
 export type UsageMap = Record<string, Usage>;
@@ -479,7 +487,10 @@ function rankWithin(usage: UsageMap, players: PlayerCatalog): void {
       const pl = players[id];
       return pl && pl.position === pos && (usage[id].gpTotal || usage[id].gp || 0) >= 8;
     });
-    for (const [src, dst] of [['eff', 'effPct'], ['vol', 'volPct'], ['ltr', 'ltrPct']] as const) {
+    for (const [src, dst] of [
+      ['eff', 'effPct'], ['vol', 'volPct'], ['ltr', 'ltrPct'],
+      ['snap', 'snapPct'], ['tdPerGame', 'tdPct'], ['rzShare', 'rzPct'],
+    ] as const) {
       const vals = ok
         .filter(id => Number.isFinite(usage[id][src] as number))
         .sort((a, b) => (usage[a][src] as number) - (usage[b][src] as number));

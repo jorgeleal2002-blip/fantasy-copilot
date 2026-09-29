@@ -3,6 +3,9 @@ import { ACCENT, BAD, GOOD, POS, WARN, type Weights } from '../model/constants';
 
 const TONE = { good: GOOD, warn: WARN, bad: BAD };
 
+/** A figure's colour, or none where the card does not know where it places. */
+const tint = (t: Tone | undefined) => (t ? { color: TONE[t] } : undefined);
+
 /**
  * What a status word means for Sunday.
  *
@@ -29,6 +32,7 @@ import { byeOf, sosFor } from '../model/sos';
 import { statBits } from '../model/stat-line';
 import { projectPPG } from '../model/project';
 import { barHeights, ordinal, type Ranked } from '../model/season';
+import { type Tone, placing, toneOf, toneOfRank } from '../model/standing';
 import { TradePackages } from '../ui/TradePackages';
 import { cardTitle, dim, fitColor } from '../ui/styles';
 
@@ -141,7 +145,7 @@ function Tiles({ rows }: { rows: Tile[] }) {
               either side of it out of line. */}
           <div
             className={'ps-v' + (/\d/.test(r.value) || r.value.length < 7 ? '' : ' is-word')}
-            style={r.tone ? { color: TONE[r.tone] } : undefined}
+            style={tint(r.tone)}
           >
             {r.value}
           </div>
@@ -218,6 +222,19 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const pctOf = (pct: number | null | undefined): string | undefined =>
     (fin(pct) ? ord(Math.max(1, 100 - Math.round((pct as number) * 100))) + ' pct' : undefined);
 
+  /* Where the market puts him among the men at his position in THIS league —
+     the same field every other placing on the card uses. `posRank` beside the
+     figure is the market's own board, which is the right note and the wrong
+     denominator for a colour. */
+  const ppgRank = app.seasonRanks(p.id, p.pos)?.ppg;
+  const marketAt = (() => {
+    if (!val) return null;
+    const field = m.allFits.filter(x => x.pos === p.pos).map(x => x.value);
+    if (field.length < 2) return null;
+    const better = field.filter(v => v > val.pts).length;
+    return placing(better + 1, field.length);
+  })();
+
   /* What a person reads. Price, whether he plays, how much of the offence he
    * is, and what he does with it — in that order, because that is the order
    * the questions come in. */
@@ -229,6 +246,9 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       value: val ? num(val.pts) : '—',
       note: val?.posRank ? val.pos + val.posRank : undefined,
       rank: true,
+      /* Placed inside this league rather than against the market's whole
+         board, which is the field every other placing on this card uses. */
+      tone: toneOf(marketAt),
     },
     (() => {
       const status = String(p.raw.status || '');
@@ -252,10 +272,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       label: 'Points/gm',
       value: season ? season.ppg.toFixed(1) : u && u.ppg != null ? u.ppg.toFixed(1) : '—',
       note: season ? season.games + ' gm' : u && u.ppg != null ? 'half-PPR' : undefined,
+      tone: season ? toneOfRank(ppgRank?.rank, ppgRank?.of) : undefined,
     },
     {
       label: 'Snaps',
       value: u && u.snap != null ? Math.round(u.snap * 100) + '%' : '—',
+      tone: toneOf(u?.snapPct),
     },
     {
       // Three to a row leaves no space for "Attempts per game" spelled out.
@@ -263,17 +285,20 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       value: u && u.shareText ? u.shareText : '—',
       note: u && u.shareText ? pctOf(u.volPct) : undefined,
       rank: true,
+      tone: toneOf(u?.volPct),
     },
     {
       label: u?.effLabel || 'Yds/touch',
       value: u && fin(u.eff) ? (u.eff as number).toFixed(1) : '—',
       note: u && fin(u.eff) ? pctOf(u.effPct) : undefined,
       rank: true,
+      tone: toneOf(u?.effPct),
     },
     {
       label: 'TDs/gm',
       value: u && u.tdPerGame != null ? u.tdPerGame.toFixed(2) : '—',
       note: u && u.tdShare != null ? Math.round(u.tdShare * 100) + '% tm' : undefined,
+      tone: toneOf(u?.tdPct),
     },
   ];
 
@@ -295,8 +320,20 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
        other tile — so the accent line down the grid is one column of the same
        question and not two different ones. */
     stats.push(
-      { label: 'Sched allows', value: sos.perGame.toFixed(1), note: ord(sos.rank) + ' of 32', rank: true },
-      { label: 'Playoffs allow', value: sos.playoffPerGame.toFixed(1), note: ord(sos.playoffRank) + ' of 32', rank: true },
+      {
+        label: 'Sched allows',
+        value: sos.perGame.toFixed(1),
+        note: ord(sos.rank) + ' of 32',
+        rank: true,
+        tone: toneOfRank(sos.rank, 32),
+      },
+      {
+        label: 'Playoffs allow',
+        value: sos.playoffPerGame.toFixed(1),
+        note: ord(sos.playoffRank) + ' of 32',
+        rank: true,
+        tone: toneOfRank(sos.playoffRank, 32),
+      },
       {
         label: 'Playoff foes',
         value: sos.weeks.map(w => fixtures[w - 1] || 'bye').join(' '),
@@ -306,7 +343,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
            it is against, and the colour is that sentence without the words.
            The thresholds are the ones the prose used: a top-ten run was "one
            of the easiest", 23rd or worse "one of the hardest". */
-        tone: sos.playoffRank <= 10 ? 'good' : sos.playoffRank >= 23 ? 'bad' : 'warn',
+        tone: toneOfRank(sos.playoffRank, 32),
       },
     );
   }
@@ -316,6 +353,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       label: 'Red zone',
       value: u && u.rzShare != null ? (u.rzShare * 100).toFixed(1) + '%' : '—',
       note: u && u.rzShare != null ? 'of team' : undefined,
+      tone: toneOf(u?.rzPct),
     },
     {
       label: 'Expected TDs',
@@ -327,6 +365,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       value: u && fin(u.longTd) ? (u.longTd as number).toFixed(1) : '—',
       note: u && fin(u.longTd) ? pctOf(u.ltrPct) : undefined,
       rank: true,
+      tone: toneOf(u?.ltrPct),
     },
     {
       /* Signed, because the direction is the whole finding: over is the market
@@ -561,7 +600,7 @@ function ThisSeason(
         {cells.map(c => (
           <div className="ps-cell" key={c.k}>
             <div className="ps-k">{c.k}</div>
-            <div className="ps-v">{c.v}</div>
+            <div className="ps-v" style={tint(toneOfRank(c.r?.rank, c.r?.of))}>{c.v}</div>
             <div className={'ps-r' + (c.r ? '' : ' is-none')}>{c.r ? ordinal(c.r.rank) : '—'}</div>
           </div>
         ))}

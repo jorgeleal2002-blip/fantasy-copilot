@@ -17,6 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
+import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
 import { type CmpUse, aheadBy, compareNumbers, compareSeasons, tally } from '../model/compare';
 import { barHeights, ordinal, pointsInWeek, quantile, rankAmong, seasonLine } from '../model/season';
 import { SCREEN_TRUST, bestHeight } from '../model/viewport';
@@ -4191,5 +4192,54 @@ describe('two players\' numbers against each other', () => {
     const rows = compareNumbers(use({}), use({ eff: null, rzShare: null }));
     expect(rows.find(r => r.key === 'eff')?.win).toBe(null);
     expect(rows.find(r => r.key === 'rz')?.win).toBe(null);
+  });
+});
+
+/* A number on its own is not a reading: 16% of a team's red-zone work is a lot
+   for a back and nothing for a number one receiver. The card already knew
+   where most of its figures placed and left the reader to do the last step. */
+describe('what a placing is worth', () => {
+  it('runs from the best of the field to the worst', () => {
+    expect(placing(1, 16)).toBe(1);
+    expect(placing(16, 16)).toBe(0);
+    expect(placing(6, 11)).toBeCloseTo(0.5, 5);
+  });
+
+  it('has nothing to say about a field of one', () => {
+    // Being the only quarterback anybody rosters makes you neither good nor
+    // bad, and "1st of 1" would paint him green for it.
+    expect(placing(1, 1)).toBe(null);
+    expect(placing(1, 0)).toBe(null);
+  });
+
+  it('refuses a rank outside its own field', () => {
+    expect(placing(0, 16)).toBe(null);
+    expect(placing(17, 16)).toBe(null);
+    expect(placing(NaN, 16)).toBe(null);
+  });
+
+  it('paints the top of a position good and the bottom bad', () => {
+    expect(toneOf(1)).toBe('good');
+    expect(toneOf(TOP)).toBe('good');
+    expect(toneOf(TOP - 0.01)).toBe('warn');
+    expect(toneOf(LOW + 0.01)).toBe('warn');
+    expect(toneOf(LOW)).toBe('bad');
+    expect(toneOf(0)).toBe('bad');
+  });
+
+  it('leaves a figure it cannot place uncoloured', () => {
+    // An uncoloured number is honest about not knowing; a colour on a figure
+    // with no direction spends the signal on noise.
+    expect(toneOf(null)).toBe(undefined);
+    expect(toneOf(undefined)).toBe(undefined);
+    expect(toneOfRank(null, 32)).toBe(undefined);
+    expect(toneOfRank(4, null)).toBe(undefined);
+  });
+
+  it('reads an easier schedule as the better one', () => {
+    // The rank is "nth easiest of 32", so first is the kind run.
+    expect(toneOfRank(1, 32)).toBe('good');
+    expect(toneOfRank(32, 32)).toBe('bad');
+    expect(toneOfRank(16, 32)).toBe('warn');
   });
 });
