@@ -19,7 +19,7 @@ import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { projectionsAreStale, readProjections, scoreProjection, scoringKind } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
-import { allPlayRecords, powerRankings, WEIGHTS } from '../model/power';
+import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -2934,6 +2934,38 @@ describe('power rankings', () => {
     expect(power.find(t => t.id === 2)!.move).toBe(1);
     expect(power.find(t => t.id === 2)!.was).toBe(2);
     expect(power.find(t => t.id === 1)!.move).toBe(-1);
+  });
+
+  /* The ranking used to take every week before the one on the clock, and
+     Sleeper's week does not roll until Tuesday — so all Monday night a
+     finished week was thrown out while the records beside it already counted
+     it, and a team that had just scored the league's worst week sat top of
+     the page on an average that did not include it. */
+  it('counts a week as soon as its results are in', () => {
+    const scores = [
+      ...wk(1, { 1: 140, 2: 80 }), ...wk(2, { 1: 140, 2: 80 }),
+      ...wk(3, { 1: 60, 2: 160 }),
+    ];
+    expect([...finishedWeeks(scores, 2)].sort()).toEqual([1, 2, 3]);
+    const power = powerRankings([row(1, { wins: 2, losses: 1 }), row(2, { wins: 1, losses: 2 })], scores);
+    // (140 + 140 + 60) / 3, not (140 + 140) / 2.
+    expect(power.find(t => t.id === 1)!.ppg).toBe(113.3);
+    expect(power.find(t => t.id === 1)!.weeks).toBe(3);
+  });
+
+  it('leaves out a week the league is still playing', () => {
+    // Somebody's players have not kicked off, so the week is not a result yet.
+    const scores = [...wk(1, { 1: 140, 2: 80 }), ...wk(2, { 1: 96, 2: 0 })];
+    expect([...finishedWeeks(scores, 2)]).toEqual([1]);
+    const power = powerRankings([row(1, { wins: 1 }), row(2, { losses: 1 })], scores);
+    expect(power.find(t => t.id === 1)!.ppg).toBe(140);
+    expect(power.find(t => t.id === 1)!.weeks).toBe(1);
+  });
+
+  it('leaves out a week the feed only half sent', () => {
+    // Ten rows in a twelve-team league is a week still arriving, and ranking
+    // on it would credit the two missing teams with having been outscored.
+    expect([...finishedWeeks(wk(1, { 1: 100, 2: 90 }), 4)]).toEqual([]);
   });
 
   it('has no movement to report off a single week', () => {

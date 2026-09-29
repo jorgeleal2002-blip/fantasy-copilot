@@ -15,8 +15,9 @@ import { cardNote, dim, ellipsis } from '../ui/styles';
  * argue with.
  */
 export function PowerRankings({ app, m }: { app: App; m: Model }) {
-  // Strictly before the week on the clock: a week in progress is not a result.
-  const done = Math.max(0, (app.week ?? 1) - 1);
+  /* Every week up to and including the one showing. Which of them have
+   * finished is worked out from the scores, not from the clock. */
+  const done = Math.max(0, app.week ?? 1);
   useEffect(() => { void app.fetchWeekScores(done); }, [app.fetchWeekScores, done]);
 
   const teams = useMemo(

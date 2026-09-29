@@ -281,39 +281,50 @@ export function useApp() {
   /**
    * Every team's score in every week that has FINISHED.
    *
-   * Strictly before the week on the clock: a week in progress would rank the
-   * league on whoever happens to have played by Sunday afternoon, and a power
-   * ranking that moves while the games are on is a scoreboard. A closed week
-   * cannot change, so what is read once is kept.
+   * Through the week on the clock, not up to it. Which of them actually
+   * count is decided from the scores themselves — see `finishedWeeks` — and
+   * not from where the clock is, because Sleeper's week does not roll until
+   * Tuesday and a ranking that waits for it spends every Monday night a week
+   * behind its own standings.
    */
   const fetchWeekScores = useCallback(async (upTo: number) => {
     const lid = leagueId;
     if (!lid) return;
-    const done = Math.max(0, Math.min(18, upTo));
-    if (!done) { setWeekScores([]); setPowerState('ok'); return; }
-    const key = lid + ':' + done;
-    if (scoreCache.has(key)) { setWeekScores(scoreCache.get(key)!); setPowerState('ok'); return; }
+    const last = Math.max(0, Math.min(18, upTo));
+    if (!last) { setWeekScores([]); setPowerState('ok'); return; }
+    const teams = (dataRef.current?.rosters || []).length;
 
     setPowerState('loading');
-    const got = await Promise.all(
-      Array.from({ length: done }, (_, i) => getMatchups(lid, i + 1).then(
-        rows => ({ week: i + 1, rows }),
-      ).catch(() => null)),
-    );
-    const ok = got.filter((w): w is { week: number; rows: SleeperMatchup[] } => !!w && Array.isArray(w.rows));
-    if (!ok.length) { setPowerState('fail'); return; }
-
-    const out: WeekScore[] = [];
-    for (const { week, rows } of ok) {
-      for (const r of rows) {
+    const weeks = await Promise.all(Array.from({ length: last }, async (_, i) => {
+      const wk = i + 1;
+      const key = lid + ':' + wk;
+      const held = scoreCache.get(key);
+      if (held) return held;
+      let rows: SleeperMatchup[];
+      try {
+        rows = await getMatchups(lid, wk);
+      } catch {
+        return null;
+      }
+      const out: WeekScore[] = [];
+      for (const r of rows || []) {
         // Sleeper reports 0 for a week it has a row but no result for, which
         // is a score; null means no row, and a team with no row did not play.
         if (r.points == null || !Number.isFinite(r.points)) continue;
-        out.push({ rosterId: r.roster_id, week, points: r.points });
+        out.push({ rosterId: r.roster_id, week: wk, points: r.points });
       }
-    }
-    scoreCache.set(key, out);
-    setWeekScores(out);
+      /* Kept only once the week is over. A week still being played changes
+       * every few minutes, and a cache that froze the first partial read of
+       * it would hold those half-scores for the rest of the session. */
+      const over = teams > 0 && out.length >= teams && out.every(x => x.points > 0);
+      if (over) scoreCache.set(key, out);
+      return out;
+    }));
+
+    const got = weeks.filter((w): w is WeekScore[] => !!w);
+    // A week that failed is a week; every week failing is the feed being down.
+    if (!got.length) { setPowerState('fail'); return; }
+    setWeekScores(got.flat());
     setPowerState('ok');
   }, [leagueId]);
 

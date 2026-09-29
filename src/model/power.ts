@@ -163,6 +163,38 @@ export function allPlayRecords(scores: WeekScore[]): Map<number, AllPlay> {
   return out;
 }
 
+/**
+ * The weeks whose results are actually in.
+ *
+ * Not "every week before the one on the clock", which is what this used to be
+ * and what made the ranking a week behind its own standings: Sleeper's week
+ * does not roll until Tuesday, so all Monday night a finished week was thrown
+ * away while the records beside it already counted it. A team that had just
+ * scored the league's third-lowest week sat top of the page on an average
+ * that did not include it.
+ *
+ * A week is in when every team has a score in it and none of them is zero. On
+ * a Sunday afternoon somebody's players have not kicked off yet, so the week
+ * waits; by the time the last game is over it counts. The one thing this
+ * cannot survive is a team that genuinely scores nothing all week, which is
+ * not a thing that happens to a filled lineup.
+ */
+export function finishedWeeks(scores: WeekScore[], teams: number): Set<number> {
+  const byWeek = new Map<number, WeekScore[]>();
+  for (const s of scores) {
+    const list = byWeek.get(s.week);
+    if (list) list.push(s);
+    else byWeek.set(s.week, [s]);
+  }
+  const out = new Set<number>();
+  for (const [week, rows] of byWeek) {
+    if (teams > 0 && rows.length < teams) continue;
+    if (rows.length < 2) continue;
+    if (rows.every(r => Number.isFinite(r.points) && r.points > 0)) out.add(week);
+  }
+  return out;
+}
+
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -176,7 +208,11 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
  */
 export const WEIGHTS = { points: 0.45, roster: 0.35, record: 0.2 };
 
-function build(rows: LeagueRow[], scores: WeekScore[]): PowerTeam[] {
+function build(rows: LeagueRow[], raw: WeekScore[]): PowerTeam[] {
+  // Only the weeks that finished. A week in progress would rank the league on
+  // whoever happens to have played by Sunday afternoon.
+  const done = finishedWeeks(raw, rows.length);
+  const scores = raw.filter(s => done.has(s.week));
   const all = allPlayRecords(scores);
   // Most recent last, so "lately" is the tail.
   const weeksOf = (id: number) => scores
@@ -241,8 +277,9 @@ function build(rows: LeagueRow[], scores: WeekScore[]): PowerTeam[] {
   return teams;
 }
 
-export function powerRankings(rows: LeagueRow[], scores: WeekScore[]): PowerTeam[] {
-  const teams = build(rows, scores);
+export function powerRankings(rows: LeagueRow[], raw: WeekScore[]): PowerTeam[] {
+  const teams = build(rows, raw);
+  const scores = raw.filter(s => finishedWeeks(raw, rows.length).has(s.week));
 
   /* Where everybody stood before the newest week, by running the same ranking
    * over everything but it. Not a stored number: a ranking that remembers its
