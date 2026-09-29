@@ -1103,6 +1103,14 @@ export function buildModel(input: ModelInput): Model {
   //    "how good is he, full stop"; "for you" adds your own positional need and
   //    measures the stack against your roster; "in two years" ages him and
   //    discounts his quality by exactly what his position keeps at that age.
+  /* The floor of the pool a league-wide Rating ranks over — every rostered
+     player, nobody deeper. Spending three decades of scale on a pool that
+     spans one is what put the best players in the league inside a sliver of
+     the term that weighs the most. See `talentScale`. */
+  const dvLeague = (d.rosters || []).flatMap(r => mapRoster(r.players).map(p => talentQ(p.raw, p.id)))
+    .filter(v => v > 0);
+  const dvMinLeague = dvLeague.length ? Math.min.apply(null, dvLeague) : undefined;
+
   const allFits: PlayerFit[] = [];
   (d.rosters || []).forEach(r => {
     const list = mapRoster(r.players);
@@ -1112,7 +1120,7 @@ export function buildModel(input: ModelInput): Model {
       const neutral = scorePlayer(p.raw, {}, {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(list, p.raw, p.id),
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
-        vor: vorOf(p.raw, p.id), sos: sosOf(p.raw),
+        vor: vorOf(p.raw, p.id), sos: sosOf(p.raw), dvMin: dvMinLeague,
       }, wLeague);
       if (!Number.isFinite(neutral.fit)) return;
       const forMe = scorePlayer(p.raw, needScore, {
@@ -1129,7 +1137,7 @@ export function buildModel(input: ModelInput): Model {
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
         // How deep his position runs in two years is not knowable, so this is
         // today's line — the age discount above already prices the decline.
-        vor: vorOf(p.raw, p.id), sos: sosOf(p.raw),
+        vor: vorOf(p.raw, p.id), sos: sosOf(p.raw), dvMin: dvMinLeague,
       }, wLeague);
       allFits.push({
         id: p.id, name: p.name, pos: p.pos, team: p.team, age: p.age,

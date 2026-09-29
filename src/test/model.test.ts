@@ -4577,3 +4577,40 @@ describe('every number that describes a player gets blended', () => {
     for (const k of described) expect(after[k] as number).toBeGreaterThan(1);
   });
 });
+
+/* The heaviest term in a Rating could not tell the best players in a league
+   apart. Three decades of scale spent on a pool that spans one puts the whole
+   top of it inside a sliver: two receivers thirteen per cent apart in value
+   came out six tenths of a Rating point apart, while everything else about
+   them was worth three or four. */
+describe('the talent scale spans the pool it is ranking', () => {
+  it('still gives a draft board its three decades', () => {
+    // Value there really does span orders of magnitude, and dividing linearly
+    // by the best asset in scope drags every rookie into the twenties.
+    expect(talentScale(1000, 1000)).toBeCloseTo(1, 6);
+    expect(talentScale(1, 1000)).toBeCloseTo(0, 6);
+    expect(talentScale(100, 1000)).toBeCloseTo(2 / 3, 6);
+  });
+
+  it('stretches over a league where everybody is already rostered', () => {
+    const top = 10000, floor = 2000;
+    const wide = talentScale(9800, top) - talentScale(8700, top);
+    const fitted = talentScale(9800, top, floor) - talentScale(8700, top, floor);
+    expect(fitted).toBeGreaterThan(wide * 3);
+  });
+
+  it('separates the top of a narrow pool by more than a rounding error', () => {
+    // Thirteen per cent of value has to be worth more than half a point of a
+    // hundred-point Rating, or the term that weighs most says nothing.
+    const gap = talentScale(9800, 10000, 2000) - talentScale(8700, 10000, 2000);
+    expect(gap * 0.33 * 100).toBeGreaterThan(1.5);
+  });
+
+  it('is monotonic, and survives a floor that makes no sense', () => {
+    for (const lo of [undefined, 0, -5, 20000, NaN]) {
+      expect(talentScale(9000, 10000, lo)).toBeGreaterThan(talentScale(4000, 10000, lo));
+    }
+    expect(talentScale(0, 10000, 2000)).toBe(0);
+    expect(talentScale(10, 0)).toBe(0);
+  });
+});

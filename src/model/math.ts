@@ -63,21 +63,35 @@ export const pickLabel = (n: number | null | undefined, teams: number) => {
 };
 
 /**
- * Talent from market value, on a log scale.
+ * Talent from market value, on a log scale over the pool it is ranking.
  *
  * Value across a player pool spans two to three orders of magnitude — a first-
  * round veteran is worth a hundred times a bench body, not five times. Divided
  * linearly by the most valuable asset in scope, almost everyone lands near
  * zero: the best rookie on a real board scored 0.056, and since talent carries
- * the heaviest weight in the Rating, it dragged every rookie into the twenties out
- * of a hundred. A board where the 1.01 reads 32 is not measuring anything.
+ * the heaviest weight in the Rating, it dragged every rookie into the twenties
+ * out of a hundred. A board where the 1.01 reads 32 is not measuring anything.
  *
- * A decade of value is worth a third of the scale, which is the same shape
- * `rankScore` uses on ranks and the shape the eye already reads value in.
+ * But a fixed three decades has the mirror fault at the other end, and that is
+ * the end a league table is read at. Three decades of range spent on a pool
+ * that only spans one puts the whole top of it inside a sliver of the scale:
+ * two receivers thirteen per cent apart in value came out 0.997 and 0.980,
+ * six tenths of a Rating point, while everything else about them was worth
+ * three or four. The best players in a league were indistinguishable on the
+ * term that weighs the most.
+ *
+ * So the range is the pool's own. `lo` is the least valuable thing being
+ * ranked; left out it falls back to a thousandth of the top, which is the
+ * three decades this always used and exactly what a draft board wants. A
+ * league of rostered players passes its real floor and the scale stretches
+ * over what is actually there.
  */
-export const talentScale = (dv: number, dvMax: number) => {
+export const talentScale = (dv: number, dvMax: number, lo?: number) => {
   if (!(dv > 0) || !(dvMax > 0)) return 0;
-  return clamp(1 + Math.log10(dv / dvMax) / 3, 0, 1);
+  const floor = lo != null && lo > 0 && lo < dvMax ? lo : dvMax / 1000;
+  const span = Math.log10(dvMax / floor);
+  if (!(span > 0)) return 1;
+  return clamp(Math.log10(dv / floor) / span, 0, 1);
 };
 
 export const rankScore = (r: number | null | undefined) =>

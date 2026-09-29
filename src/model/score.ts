@@ -34,6 +34,9 @@ export interface ScoreContext {
   /** market (or modelled) value of this player, and the board's maximum */
   dv?: number;
   dvMax?: number;
+  /** the least valuable thing in the pool being ranked — see `talentScale`.
+   *  Left out, the scale spans three decades, which is what a draft board is. */
+  dvMin?: number;
   /** NFL-team correlation with the rest of your roster */
   stack?: number;
   use?: Usage;
@@ -103,7 +106,7 @@ export function scorePlayer(
   const rs = rankScore(adp);
   const exp = p.years_exp || 0;
   const age = p.age || 26;
-  const talent = ctx.dv != null ? talentScale(ctx.dv, ctx.dvMax || 1) : rs;
+  const talent = ctx.dv != null ? talentScale(ctx.dv, ctx.dvMax || 1, ctx.dvMin) : rs;
   /** Where this player comes off the board if it runs to consensus from here. */
   const board = Math.max((ctx.now || 1) - 1 + (ctx.idx || 0), 1);
 
