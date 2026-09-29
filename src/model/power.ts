@@ -337,51 +337,45 @@ function blend(parts: PowerTeam['parts']): number {
  * that has nothing surprising about it says the plain thing rather than
  * reaching for a story.
  */
+/**
+ * A team's state, as a tag.
+ *
+ * This used to be a sentence apiece — "Heating up — 142.1 a week lately
+ * against 118.4 on the season" — twelve of them down one screen, which is a
+ * paragraph of reading for a table that exists to be scanned. The state is
+ * worth keeping and the sentence is not: the figures it quoted are in the row
+ * already, and what the reader wanted from it was the two words at the front.
+ *
+ * Most teams get nothing. A tag on every row is a tag that says nothing, and
+ * these only mean something against the rows that have none.
+ */
 function readOf(t: PowerTeam, teamCount: number): string {
-  if (!t.weeks) return 'Nothing played yet — this is the roster.';
+  if (!t.weeks) return '';
 
-  const share = Math.round(t.allPlay.pct * 100);
-  if (t.luck >= LUCKY) {
-    return `${t.record.label} flatters them: they have outscored ${share}% of the league.`;
-  }
-  if (t.luck <= -LUCKY) {
-    return `${t.record.label} undersells them: they have outscored ${share}% of the league.`;
-  }
+  if (t.luck >= LUCKY) return 'Record flatters them';
+  if (t.luck <= -LUCKY) return 'Record undersells them';
 
   if (t.recent != null && t.ppg) {
     const swing = (t.recent - t.ppg) / t.ppg;
-    if (swing >= HOT) {
-      return `Heating up — ${t.recent.toFixed(1)} a week lately against ${t.ppg.toFixed(1)} on the season.`;
-    }
-    if (swing <= -HOT) {
-      return `Cooling off — ${t.recent.toFixed(1)} a week lately against ${t.ppg.toFixed(1)} on the season.`;
-    }
+    if (swing >= HOT) return 'Heating up';
+    if (swing <= -HOT) return 'Cooling off';
   }
 
   /* Which is the same team every week and which is a coin toss. Only the two
-   * ends of the league get this line: everybody in between is ordinary, and
-   * saying so about eight teams would bury the two it is about. */
+   * ends of the league get this: everybody in between is ordinary, and saying
+   * so about eight teams would bury the two it is about. */
   if (t.swing != null && t.weeks >= RECENT_WEEKS) {
-    if (t.swingiest) {
-      return `The wildest week to week in the league — give or take ${t.swing.toFixed(0)} points either side.`;
-    }
-    if (t.steadiest) {
-      return `The same team every Sunday — give or take ${t.swing.toFixed(0)} points either side.`;
-    }
+    if (t.swingiest) return 'Wildest week to week';
+    if (t.steadiest) return 'Same team every Sunday';
   }
 
   // The roster only speaks when it disagrees with the results by enough to be
   // about something other than where the line was drawn.
   const gap = t.rank - t.rosterRank;
   const wide = Math.max(3, Math.round(teamCount / 4));
-  if (gap >= wide) return `The roster is better than the results — ${ordinal(t.rosterRank)} in the league on paper.`;
-  if (gap <= -wide) return `Outplaying the roster, which the model has ${ordinal(t.rosterRank)}.`;
+  if (gap >= wide) return 'Roster better than results';
+  if (gap <= -wide) return 'Outplaying the roster';
 
-  return `Has outscored ${share}% of the league${t.ppg ? `, ${t.ppg.toFixed(1)} a week` : ''}.`;
+  return '';
 }
 
-function ordinal(n: number): string {
-  const rest = n % 100;
-  if (rest >= 11 && rest <= 13) return n + 'th';
-  return n + (['th', 'st', 'nd', 'rd'][n % 10] || 'th');
-}

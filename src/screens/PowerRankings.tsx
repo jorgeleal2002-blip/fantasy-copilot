@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { BAD, GOOD } from '../model/constants';
-import { HALF_LIFE_WEEKS, powerRankings, WEIGHTS, type PowerTeam } from '../model/power';
+import { powerRankings, type PowerTeam } from '../model/power';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { Card, Empty } from '../ui/primitives';
@@ -35,40 +35,10 @@ export function PowerRankings({ app, m }: { app: App; m: Model }) {
     return <Empty title="No teams to rank" body="This league has no rosters yet." />;
   }
 
-  const weeks = Math.max(...teams.map(t => t.weeks), 0);
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-      <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), textWrap: 'pretty' }}>
-        {weeks
-          ? <>
-              Points {Math.round(WEIGHTS.points * 100)}%, roster {Math.round(WEIGHTS.roster * 100)}%,
-              record {Math.round(WEIGHTS.record * 100)}%. Points is the all-play
-              record — every team against every other team, every week,
-              {' '}{weeks === 1 ? '1 week' : weeks + ' weeks'} of it — so the schedule has nothing left to say.
-              Losing 130 to the league&apos;s best week and beating 78 with 81 count the same in the standings;
-              they do not count the same here. Recent weeks count for more: a week is worth half of one
-              {' '}{HALF_LIFE_WEEKS} weeks newer than it.
-            </>
-          : <>Nothing has finished yet, so this is the roster alone. Points and record join it after week one.</>}
-      </div>
-
       {teams.map(t => <Row key={t.id} t={t} />)}
 
-      {weeks ? (
-        <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), textWrap: 'pretty' }}>
-          Points leads because it is the best thing anyone has for what a team does next, and because it is
-          a fact rather than a model — no market, nothing this app believes, just who outscored whom. The
-          roster is the only part that looks forward: a trade or a starter back off injury is in it the day
-          it happens. The record is the weakest of the three at saying how good a team is — over a season
-          roughly half of it is who you were scheduled against — and the only one that banks a playoff
-          place, so it gets the smallest share rather than none. Beside the rank is where each team stood
-          before the newest week, worked out by running this same ranking without it rather than by
-          remembering — a ranking that remembers its own past can only be wrong about it. Under each row
-          is the record the scoring earned and how far a normal week lands from that team&apos;s average,
-          which is the difference between a team you can count on and a coin toss with the same average.
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -149,9 +119,10 @@ function Row({ t }: { t: PowerTeam }) {
         </div>
       </div>
 
-      <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.55), marginTop: 7, textWrap: 'pretty' }}>
-        {t.read}
-      </div>
+      {/* A tag, not a sentence: the figures a sentence would quote are in the
+          row above it, and most teams get none at all — a tag on every row is
+          a tag that says nothing. */}
+      {t.read ? <div className="pw-tag">{t.read}</div> : null}
     </Card>
   );
 }

@@ -2037,3 +2037,17 @@ button { font-family: inherit; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* A team's state on the power table. A tag rather than the sentence it
+   replaced: the figures that sentence quoted are in the row above it, and most
+   teams get no tag at all — one on every row is one that says nothing. */
+.pw-tag {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  letter-spacing: .01em;
+  color: rgba(233, 233, 237, 0.62);
+  background: rgba(233, 233, 237, 0.06);
+}

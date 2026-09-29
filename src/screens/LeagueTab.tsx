@@ -66,16 +66,6 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
         : mode === 'fitFut' ? b.fitFut - a.fitFut
           : b.now - a.now
   ));
-  const NOTES: Record<Mode, string> = {
-    power: '',
-    now: 'the sum of the best lineup each team can field today.',
-    future: 'the roster aged two seasons plus the pick capital it owns.',
-    fit: 'the average Rating of the optimal starters — quality, not volume.',
-    fitFut: 'the same Rating with the roster aged two seasons, picks excluded.',
-  };
-  const note = 'Ordered by ' + NOTES[mode] +
-    (m.isDynasty ? ' On the right, how far each team drifts from its raw strength.' : '');
-
   const facts = [
     { label: 'Teams', value: String(m.teamCount) },
     {
@@ -131,9 +121,6 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
               size="sm"
             />
           ) : null}
-          {isPower ? null : (
-            <div style={{ fontSize: 11, lineHeight: 1.45, color: dim(0.4), marginTop: -4, textWrap: 'pretty' }}>{note}</div>
-          )}
 
           {isPower ? <PowerRankings app={app} m={m} /> : (
           <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
@@ -265,14 +252,6 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
     ...(m.isDynasty ? [{ key: 'fut' as const, label: 'In 2 yrs' }] : []),
   ];
 
-  const lensNote = lens === 'me'
-    ? 'With YOUR positional need and the stack against your roster: how much having him would actually help you.'
-    : lens === 'fut'
-      ? 'Every player aged two seasons, his quality discounted by his position\'s curve and his metrics recomputed at that age. The ones that climb are the ones the league has not priced yet.'
-      : lens === 'pts'
-        ? 'Points a game this season, in this league\'s own scoring. Byes and the weeks he did not play are left out rather than averaged in as nothing.'
-        : 'No need term, and the stack measured inside his owner\'s roster: how good he is, full stop. The same for everybody.';
-
   if (!m.allFits.length) return null;
 
   return (
@@ -297,7 +276,6 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
           <Segmented options={POS_OPTIONS} value={app.topPos} onChange={app.setTopPos} size="sm" />
           <Segmented options={lensOptions} value={lens} onChange={app.setTopLens} size="sm" />
-          <div style={{ fontSize: 11, lineHeight: 1.45, color: dim(0.42), textWrap: 'pretty' }}>{lensNote}</div>
 
           <div style={{ marginTop: 2 }}>
             {list.map((x, i) => (

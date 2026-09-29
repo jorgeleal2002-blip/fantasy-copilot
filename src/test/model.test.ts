@@ -2910,9 +2910,9 @@ describe('power rankings', () => {
        schedule. Team 1 outscores everyone every week and has none of them. */
     expect(lucky.allPlay.pct).toBeCloseTo(1 / 3, 6);
     expect(lucky.luck).toBeCloseTo(2, 6);
-    expect(lucky.read).toContain('flatters them');
+    expect(lucky.read).toBe('Record flatters them');
     expect(robbed.luck).toBeCloseTo(-3, 6);
-    expect(robbed.read).toContain('undersells them');
+    expect(robbed.read).toBe('Record undersells them');
   });
 
   it('reads the roster only when it disagrees with the results', () => {
@@ -2935,7 +2935,8 @@ describe('power rankings', () => {
     expect(power[0].weeks).toBe(0);
     expect(power[0].score).toBe(100);
     expect(power[1].score).toBe(50);
-    expect(power[0].read).toContain('Nothing played yet');
+    // Nothing has been played, so there is no state to tag.
+    expect(power[0].read).toBe('');
     expect(power[0].luck).toBe(0);
   });
 
@@ -3083,8 +3084,8 @@ describe('power rankings', () => {
     expect(wild.swing).toBe(49);
     expect(steady.steadiest).toBe(true);
     expect(wild.swingiest).toBe(true);
-    expect(steady.read).toContain('same team every Sunday');
-    expect(wild.read).toContain('wildest week to week');
+    expect(steady.read).toBe('Same team every Sunday');
+    expect(wild.read).toBe('Wildest week to week');
   });
 
   it('prints the record the scoring earned', () => {
@@ -3109,7 +3110,7 @@ describe('power rankings', () => {
     const hot = power.find(t => t.id === 1)!;
     expect(hot.recent).toBe(140);
     expect(hot.ppg).toBe(116);
-    expect(hot.read).toContain('Heating up');
+    expect(hot.read).toBe('Heating up');
   });
 });
 
