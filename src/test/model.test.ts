@@ -18,6 +18,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
+import { USAGE_DECAY, USAGE_WEIGHTS } from '../model/constants';
 import { PROD_SHARE_BASE, PROD_SHARE_MAX, PROD_SHARE_MAX_REDRAFT, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
 import { type CmpUse, aheadBy, compareMetrics, compareNumbers, compareSeasons, tally } from '../model/compare';
@@ -4670,5 +4671,34 @@ describe('production leads harder where nobody is kept', () => {
 
   it('defaults to the dynasty shape when nobody says', () => {
     expect(prodShare(0.6)).toBe(prodShare(0.6, false));
+  });
+});
+
+/* A two-year-old season was carrying a fifth of what the model thought a
+   player was. That is too much for a league you only own him in for this one,
+   and too much generally for a sport where roles turn over on a coaching
+   change and a contract. */
+describe('how far back a season still counts', () => {
+  it('is worth half the year in front of it', () => {
+    const [a, b, c] = USAGE_WEIGHTS;
+    expect(b / a).toBeCloseTo(USAGE_DECAY, 6);
+    expect(c / b).toBeCloseTo(USAGE_DECAY, 6);
+  });
+
+  it('still adds up to one whole player', () => {
+    expect(USAGE_WEIGHTS.reduce((x, y) => x + y, 0)).toBeCloseTo(1, 6);
+  });
+
+  it('leans harder on the most recent finished season than it used to', () => {
+    // The old shape was 50/30/20 — a decay of about two thirds a year.
+    expect(USAGE_WEIGHTS[0]).toBeGreaterThan(0.5);
+    expect(USAGE_WEIGHTS[2]).toBeLessThan(0.2);
+  });
+
+  it('keeps three of them, because one is a small sample', () => {
+    // An injury, a coordinator, a quarterback going down: every number in a
+    // single season moves.
+    expect(USAGE_WEIGHTS.length).toBe(3);
+    expect(USAGE_WEIGHTS.every(w => w > 0)).toBe(true);
   });
 });

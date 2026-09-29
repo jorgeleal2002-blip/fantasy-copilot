@@ -159,15 +159,36 @@ export const ELITE_HOLD: Record<Pos, number> = { QB: 1, TE: 0.8, WR: 0.7, RB: 0.
 /** Where the prime window opens — used wherever a single number is needed. */
 export const PEAK: Record<Pos, number> = { QB: 26, RB: 23, WR: 24, TE: 25 };
 
-/** Bumped when the shape of the usage map changes, so a cached map from an
- *  older build cannot survive a reload and publish one season's numbers under
- *  a three-season label. */
-export const USAGE_V = 5;
+/** Bumped when the MEANING of the usage map changes, not only its shape — a
+ *  map blended under different weights is a different map, and one held over
+ *  from an older build would answer with numbers this build did not produce.
+ *  v6: two metrics joined the blend, the season in progress is weighted per
+ *  metric, and each finished season back is now worth half the one in front. */
+export const USAGE_V = 6;
 
-/** How many seasons of usage to blend, and how much each is worth. The most
- *  recent leads; a season the player missed has its weight redistributed
- *  across the ones they played, so an injury year is not counted as a bad year. */
-export const USAGE_WEIGHTS: [number, number, number] = [0.5, 0.3, 0.2];
+/**
+ * How many seasons of usage to blend, and how much each is worth.
+ *
+ * Three, because one is a small sample: an injury, a coordinator, a quarterback
+ * going down, and every number in a single year moves. The most recent leads,
+ * and a season the player missed has its weight redistributed across the ones
+ * he played, so an injury year is not counted as a bad year.
+ *
+ * Each year back is worth half the one in front of it, which is a rule rather
+ * than three numbers. It used to be 50/30/20, a decay of about two thirds a
+ * year, and that left a two-year-old season carrying a fifth of what the model
+ * thought a player was — too much for a league you only own him in for this
+ * one, and too much generally for a sport where roles turn over on a coaching
+ * change and a contract. Halving puts 2023 at a seventh instead of a fifth.
+ *
+ * `blendSeasons` steepens this further for a player past his prime: his older
+ * seasons prop him up falsely, so they fade on top of this.
+ */
+export const USAGE_DECAY = 0.5;
+export const USAGE_WEIGHTS: [number, number, number] =
+  (([a, b, c]) => [a, b, c] as [number, number, number])(
+    [1, USAGE_DECAY, USAGE_DECAY ** 2].map(x => x / (1 + USAGE_DECAY + USAGE_DECAY ** 2)),
+  );
 
 /**
  * How many games of the season in progress are worth everything before it.
