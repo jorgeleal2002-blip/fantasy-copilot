@@ -4496,3 +4496,35 @@ describe('a rating and its breakdown agree', () => {
     expect(rows.every(r => r.win === 'a')).toBe(true);
   });
 });
+
+/* Checked across every rated player in the league rather than the two somebody
+   happened to compare: a Rating that does not equal the sum of its own parts
+   is a Rating explaining itself with somebody else's arithmetic. */
+describe('every player\'s rating equals what it is made of', () => {
+  it('holds for all of them, not just the pair on screen', () => {
+    expect(model.allFits.length).toBeGreaterThan(0);
+    const off = model.allFits.map(p => {
+      const summed = (Object.keys(p.weights) as (keyof typeof p.weights)[])
+        .reduce((a, k) => a + p.weights[k] * p.m[k], 0) * 100;
+      return { id: p.id, name: p.name, fit: p.fit, summed, gap: Math.abs(summed - p.fit) };
+    }).filter(x => x.gap > 1);
+    expect(off).toEqual([]);
+  });
+
+  it('scores all of them on one weight vector', () => {
+    // Two vectors is how a lower Rating came out of higher contributions: an
+    // un-owned player was coming back on the draft board's weights, where the
+    // need and value terms are alive, against an owned one where they are not.
+    const first = model.allFits[0]?.weights;
+    for (const p of model.allFits) expect(p.weights).toEqual(first);
+  });
+
+  it('leaves the two draft-board terms out of a league-wide rating', () => {
+    // "Positional need" and "value vs availability" are about YOUR pick. They
+    // say nothing about how good somebody else's player is.
+    for (const p of model.allFits) {
+      expect(p.weights.need).toBe(0);
+      expect(p.weights.value).toBe(0);
+    }
+  });
+});
