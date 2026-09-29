@@ -19,7 +19,7 @@ import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { PRIOR_MIN, USAGE_DECAY, USAGE_WEIGHTS } from '../model/constants';
-import { PROD_SHARE_BASE, PROD_SHARE_MAX, PROD_SHARE_MAX_REDRAFT, prodShare } from '../model/math';
+import { PROD_SHARE_BASE, PROD_SHARE_MAX, PROD_SHARE_MAX_REDRAFT, poolFloor, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
 import { type CmpUse, aheadBy, compareMetrics, compareNumbers, compareSeasons, tally } from '../model/compare';
 import { countTds, gapsIn, mergeSeason } from '../model/season';
@@ -4866,5 +4866,99 @@ describe('how much the seasons behind a player are worth', () => {
     ).a;
     expect(u.snap as number).toBeCloseTo(0.58, 6);
     expect(u.curWeight).toBe(1);
+  });
+});
+
+/* Three lenses over one league, and they were not measuring on one scale. The
+   fix that stretched the talent term over the league's own range instead of a
+   draft board's three decades was wired into the neutral Rating and the future
+   one and missed out of "for you" — so the lens that was meant to add YOUR
+   needs to a Rating was also flattening the two heaviest terms for everybody
+   first, and then ordering what was left mostly by need. */
+describe('one scale for every lens of the same board', () => {
+  const spread = (v: number[]) => Math.max(...v) - Math.min(...v);
+  const fit = model.allFits.map(x => x.fit);
+  const fitMe = model.allFits.map(x => x.fitMe);
+
+  it('has a board wide enough to be worth asking about', () => {
+    // If the fixture ever shrinks to a handful of players the tests below stop
+    // meaning anything, so they say out loud what they are standing on.
+    expect(model.allFits.length).toBeGreaterThan(50);
+    expect(spread(fit)).toBeGreaterThan(40);
+  });
+
+  it('separates "for you" about as widely as the plain Rating', () => {
+    // Same players, same pool. Adding your needs to a score reorders it; it
+    // does not compress it into half the range, and when it did the top of the
+    // board came out inside four points of itself.
+    expect(spread(fitMe)).toBeGreaterThan(spread(fit) * 0.6);
+  });
+
+  it('does not collapse the board into a handful of buckets', () => {
+    const distinct = (v: number[]) => new Set(v).size;
+    expect(distinct(fitMe)).toBeGreaterThan(distinct(fit) * 0.8);
+  });
+
+  it('still ranks the same men near the top under both lenses', () => {
+    // The two questions are different and the orders should differ — but not
+    // wholly: the best players in a league are the best players in it whoever
+    // is asking. Half of one top ten belongs in the other.
+    const top = (key: 'fit' | 'fitMe') => model.allFits
+      .slice().sort((a, b) => b[key] - a[key]).slice(0, 10).map(x => x.id);
+    const shared = top('fit').filter(id => top('fitMe').indexOf(id) >= 0);
+    expect(shared.length).toBeGreaterThanOrEqual(5);
+  });
+});
+
+/* A scale belongs to the pool it is measuring — see `poolFloor`. */
+describe('the bottom of a pool', () => {
+  it('is its own smallest real value', () => {
+    expect(poolFloor([5, 2, 9])).toBe(2);
+    expect(poolFloor([0.004, 12])).toBe(0.004);
+  });
+
+  it('treats a missing price as absent, not as the cheapest man in the league', () => {
+    // A player the market has no number for would otherwise become the floor
+    // the whole league is measured against.
+    expect(poolFloor([0, 5, 2])).toBe(2);
+    expect(poolFloor([-3, 5, 2])).toBe(2);
+    expect(poolFloor([NaN, 5, 2])).toBe(2);
+    expect(poolFloor([Infinity, 5, 2])).toBe(2);
+  });
+
+  it('has none at all when there is nothing in it', () => {
+    // Which `talentScale` reads as the three decades a draft board wants.
+    expect(poolFloor([])).toBeUndefined();
+    expect(poolFloor([0, NaN])).toBeUndefined();
+  });
+
+  it('gives a pool that has been aged a lower floor than the same pool today', () => {
+    // The future lens ranks aged values, so it needs an aged floor. Handed
+    // today's, its oldest players fall off the bottom of the scale together.
+    const today = [100, 40, 12];
+    const aged = today.map((v, i) => v * [0.9, 0.7, 0.5][i]!);
+    expect(poolFloor(aged) as number).toBeLessThan(poolFloor(today) as number);
+  });
+});
+
+/* The elite hold inside `ageCurve` takes a 0..1 quality, and the future lens
+   was handing it one measured against three decades of value rather than
+   against the league. On that scale almost every rostered player reads ~1, so
+   almost every rostered player was credited with a star's ability to age well —
+   including the ones at the bottom, who came out BETTER two years out than they
+   are today while the actual stars declined. */
+describe('who gets to age well', () => {
+  const past = model.allFits.filter(x => x.age != null && x.age > PRIME[x.pos][1]);
+
+  it('has past-prime players to talk about', () => {
+    expect(past.length).toBeGreaterThan(20);
+  });
+
+  it('does not let a player past his prime get better in two years', () => {
+    const gains = past.map(x => x.fit2 - x.fit);
+    // A point either way is rounding. Four is the model telling you a
+    // replacement-level 31-year-old receiver is a rising asset.
+    expect(Math.max(...gains)).toBeLessThanOrEqual(1);
+    expect(gains.filter(g => g > 0).length).toBeLessThan(past.length * 0.1);
   });
 });

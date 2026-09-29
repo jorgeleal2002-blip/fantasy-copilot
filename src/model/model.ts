@@ -3,7 +3,7 @@ import type { DraftPos, FillPos, LeagueBundle, Pos, SleeperPlayer, SleeperRoster
 import {
   BASE_ROUND_VALUE, DEF_SLOTS, ELIG, FILL, MetricKey, POS, PEAK, SLOT_SORT, STRATS, StratKey,
 } from './constants';
-import { ageCurve, clamp, modelVal, pickLabel, playerName, prodShare, rankScore, talentScale } from './math';
+import { ageCurve, clamp, modelVal, pickLabel, playerName, poolFloor, prodShare, rankScore, talentScale } from './math';
 import type { Market } from './market';
 import { sosFor, sosScore } from './sos';
 import { EMPTY_METRICS, leagueWeights, ownedWeights, redraftWeights, scorePlayer } from './score';
@@ -1115,10 +1115,37 @@ export function buildModel(input: ModelInput): Model {
      spans one is what put the best players in the league inside a sliver of
      the term that weighs the most. See `talentScale`. */
   const rostered = (d.rosters || []).flatMap(r => mapRoster(r.players));
-  const dvLeague = rostered.map(p => talentQ(p.raw, p.id)).filter(v => v > 0);
-  const dvMinLeague = dvLeague.length ? Math.min.apply(null, dvLeague) : undefined;
-  const vorLeague = rostered.map(p => surplusOf(p.raw, p.id)).filter(v => v > 0);
-  const vorMinLeague = vorLeague.length ? Math.min.apply(null, vorLeague) : undefined;
+  const dvMinLeague = poolFloor(rostered.map(p => talentQ(p.raw, p.id)));
+  const vorMinLeague = poolFloor(rostered.map(p => surplusOf(p.raw, p.id)));
+
+  /**
+   * How good the age curve thinks he is, on the scale the rest of him is on.
+   *
+   * The elite discount inside `ageCurve` takes a 0..1 quality, and this was
+   * measuring it against three decades of value while the `talent` term beside
+   * it measured the same player against the league. One man, two answers to
+   * "how good is he" inside a single score.
+   */
+  const eliteOf = (p: OppPlayer) => talentScale(talentQ(p.raw, p.id), dvMax || 1, dvMinLeague);
+
+  /** What survives two more years of him, as a fraction of today. */
+  const keepOf = (p: OppPlayer) => {
+    const el = eliteOf(p);
+    const cur = ageCurve(p.pos, p.age, el) || 0.5;
+    return ageCurve(p.pos, (p.age || 25) + 2, el) / Math.max(cur, 0.05);
+  };
+
+  /**
+   * The future lens ranks aged values, so its floor has to be an aged one too.
+   *
+   * A scale belongs to the pool it is measuring. Handed today's floor, every
+   * player the two years push below the worst man in the league TODAY falls off
+   * the bottom of the scale and clamps to zero with the others down there —
+   * the oldest players in the league, which is exactly the group this lens
+   * exists to sort. How many depends on the league; in a young one it is a
+   * handful.
+   */
+  const dvMinAhead = poolFloor(rostered.map(p => talentQ(p.raw, p.id) * keepOf(p)));
 
   const allFits: PlayerFit[] = [];
   (d.rosters || []).forEach(r => {
@@ -1132,21 +1159,28 @@ export function buildModel(input: ModelInput): Model {
         vor: vorOf(p.raw, p.id, vorMinLeague), sos: sosOf(p.raw), dvMin: dvMinLeague,
       }, wLeague);
       if (!Number.isFinite(neutral.fit)) return;
+      /* Over the same pool, on the same scale. "For you" differs from the
+         neutral Rating by the two terms that are about YOUR roster and by
+         nothing else — and it was also being measured against three decades of
+         value while the neutral one was measured against the league, which is
+         the saturation `talentScale` exists to avoid. So the lens that was
+         supposed to add your needs to a Rating was instead flattening the two
+         heaviest terms for everybody and then ordering what was left by need:
+         the top of it separated by hundredths where the neutral board
+         separated by points. Same players, same pool, same floor. */
       const forMe = scorePlayer(p.raw, needScore, {
         dv: talentQ(p.raw, p.id), dvMax, stack: stackIn(myPlayers, p.raw, p.id),
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
-        vor: vorOf(p.raw, p.id), sos: sosOf(p.raw),
+        vor: vorOf(p.raw, p.id, vorMinLeague), sos: sosOf(p.raw), dvMin: dvMinLeague,
       }, w);
-      const el = talentScale(talentQ(p.raw, p.id), dvMax || 1);
-      const cur = ageCurve(p.pos, p.age, el) || 0.5;
-      const keep = ageCurve(p.pos, (p.age || 25) + 2, el) / Math.max(cur, 0.05);
+      const keep = keepOf(p);
       const raw2 = { ...p.raw, age: (p.age || 25) + 2, years_exp: (p.raw.years_exp || 0) + 2 };
       const ahead = scorePlayer(raw2, {}, {
         dv: talentQ(p.raw, p.id) * keep, dvMax, stack: stackIn(list, p.raw, p.id),
         use: uFor(p.id), redraft: !isDynasty, rank: rankOf(p.id, p.raw),
         // How deep his position runs in two years is not knowable, so this is
         // today's line — the age discount above already prices the decline.
-        vor: vorOf(p.raw, p.id, vorMinLeague), sos: sosOf(p.raw), dvMin: dvMinLeague,
+        vor: vorOf(p.raw, p.id, vorMinLeague), sos: sosOf(p.raw), dvMin: dvMinAhead,
       }, wLeague);
       allFits.push({
         id: p.id, name: p.name, pos: p.pos, team: p.team, age: p.age,

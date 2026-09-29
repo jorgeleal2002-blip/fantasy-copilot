@@ -94,6 +94,29 @@ export const talentScale = (dv: number, dvMax: number, lo?: number) => {
   return clamp(Math.log10(dv / floor) / span, 0, 1);
 };
 
+/**
+ * The bottom of a pool, for `talentScale` to stretch its scale over.
+ *
+ * A scale belongs to the pool it is measuring, and the app ranks the same
+ * league through several lenses that are not the same pool: today's values,
+ * the same values aged two years, the surplus over a replacement starter. Each
+ * needs its own floor, and handing one lens another's puts part of it under the
+ * bottom of the scale where everything clamps to zero together.
+ *
+ * Zero and below are absent rather than low — a player the market has no price
+ * for is not the cheapest man in the league — and a pool with nothing in it has
+ * no floor, which `talentScale` reads as "use the three decades a draft board
+ * wants".
+ */
+export const poolFloor = (values: number[]): number | undefined => {
+  let lo: number | undefined;
+  for (const v of values) {
+    if (!(v > 0) || !Number.isFinite(v)) continue;
+    if (lo === undefined || v < lo) lo = v;
+  }
+  return lo;
+};
+
 export const rankScore = (r: number | null | undefined) =>
   clamp(1 - Math.log10(Math.max(r || 900, 1)) / 3.1, 0.02, 1);
 
