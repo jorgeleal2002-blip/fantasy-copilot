@@ -17,6 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
+import { SCREEN_TRUST, bestHeight } from '../model/viewport';
 import { FULL_SQ, THUMB_SQ, playerPhotoSet } from '../api/sleeper';
 import { PULL_MAX, PULL_RESIST, PULL_SLOP, PULL_TRIGGER, edgeAt, pullArmed, pullFrom, pullProgress } from '../model/pull';
 import { PHOTO_PX, PHOTO_Q, PHOTO_Q_FLOOR, pickEncoding } from '../model/photo';
@@ -3940,5 +3941,60 @@ describe('which portrait a face is given', () => {
   it('has nothing to offer where Sleeper has no portrait address', () => {
     // Defences and kickers are not numbered ids, and there is no picture.
     expect(playerPhotoSet('DEF')).toBe(null);
+  });
+});
+
+/* An installed iOS copy sometimes reports its window before the system has
+   finished sizing it — 793 where the screen is 852, which is the Dynamic
+   Island inset to the pixel — and the app launches with a band of dead
+   background under the tab bar. Both of the usual sources give the same wrong
+   number in that moment, so the screen has to be asked. */
+describe('how tall the app thinks the window is', () => {
+  const phone = {
+    inner: 793, dvh: 793, screen: 852, screenW: 393, innerW: 393, standalone: true,
+  };
+
+  it('takes the screen when a home-screen app is reported short', () => {
+    expect(bestHeight(phone)).toBe(852);
+  });
+
+  it('leaves a window that is already right alone', () => {
+    expect(bestHeight({ ...phone, inner: 852, dvh: 852 })).toBe(852);
+  });
+
+  it('still takes the larger of the two ordinary readings', () => {
+    expect(bestHeight({ ...phone, inner: 700, dvh: 793, screen: 0, screenW: 0 })).toBe(793);
+    expect(bestHeight({ ...phone, inner: 793, dvh: 0, screen: 0, screenW: 0 })).toBe(793);
+  });
+
+  it('does not believe the screen in a browser tab', () => {
+    // Safari's chrome bars are real: the window is genuinely shorter than the
+    // screen and always will be.
+    expect(bestHeight({ ...phone, standalone: false })).toBe(793);
+  });
+
+  it('does not believe the screen on a rotated phone', () => {
+    // Landscape: the window is wider than it is tall, and screen.height is
+    // then the short side or the long one depending on the browser. Neither
+    // is a correction to anything.
+    expect(bestHeight({ inner: 393, dvh: 393, screen: 852, screenW: 852, innerW: 852, standalone: true })).toBe(393);
+  });
+
+  it('does not believe the screen in a window narrower than it', () => {
+    // A desktop app window on a big monitor is standalone too, and the screen
+    // says nothing about how tall that window is.
+    expect(bestHeight({ inner: 900, dvh: 900, screen: 1440, screenW: 2560, innerW: 1200, standalone: true })).toBe(900);
+  });
+
+  it('will not stretch a reading that is nowhere near the screen', () => {
+    // A maximised desktop app, as wide as the monitor: a correction of half
+    // the window is not a safe-area inset, it is a different quantity.
+    expect(bestHeight({ inner: 900, dvh: 900, screen: 1440, screenW: 1440, innerW: 1440, standalone: true })).toBe(900);
+    expect(bestHeight({ ...phone, screen: Math.floor(793 * SCREEN_TRUST) })).toBe(Math.floor(793 * SCREEN_TRUST));
+    expect(bestHeight({ ...phone, screen: Math.ceil(793 * SCREEN_TRUST) + 1 })).toBe(793);
+  });
+
+  it('never returns something out of nothing', () => {
+    expect(bestHeight({ inner: 0, dvh: 0, screen: 852, screenW: 393, innerW: 393, standalone: true })).toBe(0);
   });
 });

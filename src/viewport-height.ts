@@ -1,3 +1,5 @@
+import { bestHeight } from './model/viewport';
+
 /* Publishes the real viewport height as --app-h.
  *
  * `100dvh` is resolved once at launch, and an installed iOS copy sometimes
@@ -39,6 +41,20 @@ function dvhNow(): number {
   }
 }
 
+/**
+ * Whether the app is running from the home screen, with nothing drawn around
+ * its window. `display-mode` is the standard; `navigator.standalone` is the
+ * only answer older iOS gives.
+ */
+function isStandalone(): boolean {
+  try {
+    return !!(window.matchMedia?.('(display-mode: standalone)').matches
+      || (navigator as unknown as { standalone?: boolean }).standalone);
+  } catch {
+    return false;
+  }
+}
+
 export function trackViewportHeight() {
   /* The tallest reading seen AT THIS WIDTH.
    *
@@ -60,7 +76,14 @@ export function trackViewportHeight() {
     try {
       const w = window.innerWidth;
       if (w !== bestFor) { bestFor = w; best = 0; }
-      const h = Math.round(Math.max(window.innerHeight || 0, dvhNow()));
+      const h = Math.round(bestHeight({
+        inner: window.innerHeight || 0,
+        dvh: dvhNow(),
+        screen: window.screen?.height || 0,
+        screenW: window.screen?.width || 0,
+        innerW: w,
+        standalone: isStandalone(),
+      }));
       if (h <= best) return;
       best = h;
       document.documentElement.style.setProperty('--app-h', `${h}px`);
@@ -73,9 +96,9 @@ export function trackViewportHeight() {
 
   /* The launch race is the whole point, and its timing varies per launch — so
    * this samples across the whole window in which it can be lost rather than
-   * betting on one moment. Ten reads of two numbers is nothing, and they stop
-   * after three seconds. */
-  [0, 60, 120, 250, 400, 600, 900, 1300, 2000, 3000].forEach(ms => setTimeout(apply, ms));
+   * betting on one moment. A dozen reads of three numbers is nothing, and they
+   * stop after eight seconds. */
+  [0, 60, 120, 250, 400, 600, 900, 1300, 2000, 3000, 5000, 8000].forEach(ms => setTimeout(apply, ms));
   let frames = 0;
   const onFrame = () => {
     apply();
