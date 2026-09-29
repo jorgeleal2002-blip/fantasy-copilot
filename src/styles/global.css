@@ -1836,6 +1836,9 @@ button { font-family: inherit; }
    a line of prose says the same thing and is read as a caption, while three
    big numbers are read as a scoreline, which is what they are.
    ──────────────────────────────────────────────────────────────────────── */
+/* The heading above the log already draws a rule; the first row does not need
+   a second one under it. */
+.ps-sec > div > .ps-feed:first-child { border-top: 0; padding-top: 0; }
 .ps-feed {
   display: flex;
   gap: 11px;
@@ -1897,10 +1900,13 @@ button { font-family: inherit; }
    the player; a rule between them says the same thing without the gap. */
 .ps-sec { padding-top: 18px; margin-top: 18px; border-top: var(--hairline) solid var(--color-divider); }
 .ps-sec.is-first { padding-top: 0; margin-top: 0; border-top: 0; }
+/* The same weight as "This season" above it, because they are the same thing:
+   three headings over three sections of one card. Set as a dim caption, the
+   two under it read as labels on the first one rather than as its equals. */
 .ps-sec-h {
-  font-size: 10px;
-  letter-spacing: .11em;
-  text-transform: uppercase;
-  color: rgba(233, 233, 237, 0.4);
-  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  margin-bottom: 12px;
 }

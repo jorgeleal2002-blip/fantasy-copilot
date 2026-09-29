@@ -608,7 +608,7 @@ function ThisSeason(
           with their units small beside them, rather than a comma-joined
           sentence. Three big numbers read as a scoreline, which is what they
           are; the same numbers in prose read as a caption. */}
-      <div style={{ marginTop: 18 }}>
+      <div>
         {shown.slice().reverse().map(g => {
           const bits = statBits(app.gameStats[g.week]?.[id], pos).slice(0, FEED_STATS);
           const opp = OPPONENTS[team]?.[g.week - 1] || '';
