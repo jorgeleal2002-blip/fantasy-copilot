@@ -1,7 +1,7 @@
 import { BAD, GOOD, MID, POS } from '../model/constants';
 import { num } from '../model/math';
 import type { LeagueRow, Model, PlayerFit } from '../model/types';
-import type { App } from '../state/useApp';
+import type { App, LeagueView } from '../state/useApp';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { cardTitle, dim, ellipsis, fitColor } from '../ui/styles';
 import { Matchups } from './Matchups';
@@ -93,106 +93,122 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
     },
   ];
 
+  /* Three screens rather than one column. Everything here used to be stacked
+   * in reading order, which put the rankings six matchup cards below the fold
+   * and the format below those — a page you had to scroll to find out what was
+   * on it. One control at the top and each of the three is a tap away. */
+  const screens: SegOption<LeagueView>[] = [
+    { key: 'matchups', label: 'Matchups' },
+    { key: 'rankings', label: 'Rankings' },
+    { key: 'format', label: 'Format' },
+  ];
+
   return (
     <Screen>
-      {/* Above the rankings: the scoreboard is what a league page is opened
-          for during the season, and the standings are still a scroll away. */}
-      <Matchups app={app} m={m} />
+      <Segmented options={screens} value={app.leagueView} onChange={app.setLeagueView} />
 
-      <Segmented
-        options={measures}
-        value={isPower ? 'power' : isFitMode ? 'rating' : 'strength'}
-        onChange={v => pick(v, ahead)}
-      />
-      {/* Only a dynasty has a future to look at: a redraft roster two seasons
-          out is not a thing anybody owns. And a power ranking has no horizon
-          — it is the season that happened. */}
-      {m.isDynasty && !isPower ? (
-        <Segmented
-          options={horizons}
-          value={ahead ? 'ahead' : 'today'}
-          onChange={v => pick(isFitMode ? 'rating' : 'strength', v === 'ahead')}
-          size="sm"
-        />
-      ) : null}
-      {isPower ? null : (
-        <div style={{ fontSize: 11, lineHeight: 1.45, color: dim(0.4), marginTop: -4, textWrap: 'pretty' }}>{note}</div>
-      )}
+      {app.leagueView === 'matchups' ? <Matchups app={app} m={m} /> : null}
 
-      {isPower ? <PowerRankings app={app} m={m} /> : (
-      <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
-        {ranked.map((t, i) => (
-          <div
-            key={t.id}
-            className="row-tap"
-            role="button"
-            tabIndex={0}
-            onClick={() => app.setDetail('team-' + t.id)}
-            onKeyDown={e => { if (e.key === 'Enter') app.setDetail('team-' + t.id); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px',
-              borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
-              cursor: 'pointer',
-              background: t.isMe ? 'color-mix(in srgb, var(--color-accent) 9%, transparent)' : 'transparent',
-            }}
-          >
-            <span style={{ width: 16, flex: 'none', color: dim(0.4), fontSize: 12 }}>{i + 1}</span>
-            {t.avatar ? (
-              <img
-                src={t.avatar}
-                alt=""
+      {app.leagueView === 'rankings' ? (
+        <>
+          <Segmented
+            options={measures}
+            value={isPower ? 'power' : isFitMode ? 'rating' : 'strength'}
+            onChange={v => pick(v, ahead)}
+            size="sm"
+          />
+          {/* Only a dynasty has a future to look at: a redraft roster two seasons
+              out is not a thing anybody owns. And a power ranking has no horizon
+              — it is the season that happened. */}
+          {m.isDynasty && !isPower ? (
+            <Segmented
+              options={horizons}
+              value={ahead ? 'ahead' : 'today'}
+              onChange={v => pick(isFitMode ? 'rating' : 'strength', v === 'ahead')}
+              size="sm"
+            />
+          ) : null}
+          {isPower ? null : (
+            <div style={{ fontSize: 11, lineHeight: 1.45, color: dim(0.4), marginTop: -4, textWrap: 'pretty' }}>{note}</div>
+          )}
+
+          {isPower ? <PowerRankings app={app} m={m} /> : (
+          <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
+            {ranked.map((t, i) => (
+              <div
+                key={t.id}
+                className="row-tap"
+                role="button"
+                tabIndex={0}
+                onClick={() => app.setDetail('team-' + t.id)}
+                onKeyDown={e => { if (e.key === 'Enter') app.setDetail('team-' + t.id); }}
                 style={{
-                  width: 28, height: 28, borderRadius: 8, flex: 'none', objectFit: 'cover',
-                  border: '1px solid var(--color-divider)',
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px',
+                  borderTop: i === 0 ? 'none' : '1px solid var(--color-divider)',
+                  cursor: 'pointer',
+                  background: t.isMe ? 'color-mix(in srgb, var(--color-accent) 9%, transparent)' : 'transparent',
                 }}
-              />
-            ) : null}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-                <span style={{ fontSize: 13, fontWeight: t.isMe ? 600 : 400, letterSpacing: '-0.01em', ...ellipsis }}>
-                  {t.name}
-                </span>
-                <span style={{ fontSize: 10, color: windowColor(t), flex: 'none' }}>{windowLabel(t, m.isDynasty)}</span>
-              </div>
-              <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2 }}>
-                {/* The record leads: the table ranks rosters by what they are
-                    worth, and the first thing anyone checks against that is
-                    what the season has actually done to them. */}
-                {hasPlayed(t.record) ? t.record.label + ' · ' : ''}
-                {t.now <= 0
-                  ? 'Draft not started'
-                  : 'age ' + t.avgAge.toFixed(1) +
-                    (t.worst ? ' · weak at ' + t.worst : '') +
-                    (m.isDynasty ? ' · picks ' + num(t.pickCapital * 100) : '')}
-              </div>
-            </div>
-            <div style={{ textAlign: 'right', flex: 'none' }}>
-              <div style={{ fontSize: 12.5, color: dim(0.7), fontVariantNumeric: 'tabular-nums' }}>
-                {isFitMode
-                  ? (t.now <= 0 ? '—' : Math.round(mode === 'fitFut' ? t.fitFut : t.fit))
-                  : num((mode === 'future' ? t.future : t.now) * 100)}
-              </div>
-              {/* Across ten teams the order barely moves between measures, so a
-                  change of place says little. What does have range is how many
-                  Rating points a roster loses as it ages. */}
-              {m.isDynasty && t.now > 0 ? (() => {
-                const d = Math.round(t.fitFut - t.fit);
-                if (Math.abs(d) < 2) return null;
-                return (
-                  <div style={{ fontSize: 10, marginTop: 2, color: d > 0 ? GOOD : BAD }}>
-                    {(d > 0 ? '+' : '') + d} in 2 yrs
+              >
+                <span style={{ width: 16, flex: 'none', color: dim(0.4), fontSize: 12 }}>{i + 1}</span>
+                {t.avatar ? (
+                  <img
+                    src={t.avatar}
+                    alt=""
+                    style={{
+                      width: 28, height: 28, borderRadius: 8, flex: 'none', objectFit: 'cover',
+                      border: '1px solid var(--color-divider)',
+                    }}
+                  />
+                ) : null}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+                    <span style={{ fontSize: 13, fontWeight: t.isMe ? 600 : 400, letterSpacing: '-0.01em', ...ellipsis }}>
+                      {t.name}
+                    </span>
+                    <span style={{ fontSize: 10, color: windowColor(t), flex: 'none' }}>{windowLabel(t, m.isDynasty)}</span>
                   </div>
-                );
-              })() : null}
-            </div>
-            <div style={{ flex: 'none', padding: '6px 4px 6px 8px', color: 'var(--color-accent)', fontSize: 15 }}>›</div>
+                  <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2 }}>
+                    {/* The record leads: the table ranks rosters by what they are
+                        worth, and the first thing anyone checks against that is
+                        what the season has actually done to them. */}
+                    {hasPlayed(t.record) ? t.record.label + ' · ' : ''}
+                    {t.now <= 0
+                      ? 'Draft not started'
+                      : 'age ' + t.avgAge.toFixed(1) +
+                        (t.worst ? ' · weak at ' + t.worst : '') +
+                        (m.isDynasty ? ' · picks ' + num(t.pickCapital * 100) : '')}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', flex: 'none' }}>
+                  <div style={{ fontSize: 12.5, color: dim(0.7), fontVariantNumeric: 'tabular-nums' }}>
+                    {isFitMode
+                      ? (t.now <= 0 ? '—' : Math.round(mode === 'fitFut' ? t.fitFut : t.fit))
+                      : num((mode === 'future' ? t.future : t.now) * 100)}
+                  </div>
+                  {/* Across ten teams the order barely moves between measures, so a
+                      change of place says little. What does have range is how many
+                      Rating points a roster loses as it ages. */}
+                  {m.isDynasty && t.now > 0 ? (() => {
+                    const d = Math.round(t.fitFut - t.fit);
+                    if (Math.abs(d) < 2) return null;
+                    return (
+                      <div style={{ fontSize: 10, marginTop: 2, color: d > 0 ? GOOD : BAD }}>
+                        {(d > 0 ? '+' : '') + d} in 2 yrs
+                      </div>
+                    );
+                  })() : null}
+                </div>
+                <div style={{ flex: 'none', padding: '6px 4px 6px 8px', color: 'var(--color-accent)', fontSize: 15 }}>›</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      )}
+          )}
 
-      <TopPlayers app={app} m={m} />
-
+          {/* The best players in the league belong beside the best teams in it. */}
+          <TopPlayers app={app} m={m} />
+        </>
+      ) : null}
+      {app.leagueView === 'format' ? (
       <Card>
         <div style={{ ...cardTitle, marginBottom: 10 }}>Format</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -204,6 +220,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
           ))}
         </div>
       </Card>
+      ) : null}
     </Screen>
   );
 }

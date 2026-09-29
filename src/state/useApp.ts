@@ -27,6 +27,7 @@ import { nextDetailStack, topDetail } from './detail-stack';
 export type Stage = 'connect' | 'leagues' | 'app';
 export type Tab = 'team' | 'trades' | 'draft' | 'league' | 'settings';
 export type TeamView = 'resumen' | 'lineup' | 'roster' | 'activos';
+export type LeagueView = 'matchups' | 'rankings' | 'format';
 export type FeedState = 'idle' | 'loading' | 'ok' | 'fail';
 
 export const BOOT_STEPS = [
@@ -142,6 +143,9 @@ export function useApp() {
   const [rosterSort, setRosterSort] = useState<'value' | 'age' | 'snap'>('value');
   const [boardMode, setBoardMode] = useState<'rookies' | 'fa'>('rookies');
   const [rankMode, setRankMode] = useState<'power' | 'now' | 'future' | 'fit' | 'fitFut'>('power');
+  /** Which of the league page's three screens is showing. They were one
+   *  column and the rankings sat six matchup cards below the fold. */
+  const [leagueView, setLeagueView] = useState<LeagueView>('matchups');
   const [pickSel, setPickSel] = useState(0);
   const [strat, setStrat] = useState<StratKey>('balanced');
   /* Sheets stack: opening a player from a rival's team has to come back to
@@ -1121,6 +1125,7 @@ export function useApp() {
     setUsername: (v: string) => { setUsername(v); setAuthError(''); },
     connectUser, pickLeague, switchLeague, logout, refreshAll, refreshPicks, retry,
     setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
+    leagueView, setLeagueView,
     setTeamView, setDraftView, setTradeView, setFilter,
     /**
      * Start over.
