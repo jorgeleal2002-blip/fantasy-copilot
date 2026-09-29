@@ -99,7 +99,15 @@ function More({ label, children }: { label: string; children: React.ReactNode })
  * share of the team. Three to a row, and the whole set fits where four tiles
  * used to.
  */
-export type Tile = { label: string; value: string; note?: string };
+export type Tile = {
+  label: string;
+  value: string;
+  note?: string;
+  /** The note is a placement — worn in the accent, as it is on the season
+   *  grid, because "where does he come" is one question asked all over this
+   *  card and it should look like one question wherever it is answered. */
+  rank?: boolean;
+};
 
 function Tiles({ rows }: { rows: Tile[] }) {
   return (
@@ -111,7 +119,7 @@ function Tiles({ rows }: { rows: Tile[] }) {
               is wider than its third of the row and shoulders the columns
               either side of it out of line. */}
           <div className={'ps-v' + (/\d/.test(r.value) || r.value.length < 7 ? '' : ' is-word')}>{r.value}</div>
-          <div className={'ps-r' + (r.note ? ' is-note' : ' is-none')}>{r.note || ''}</div>
+          <div className={'ps-r' + (r.note ? (r.rank ? '' : ' is-note') : ' is-none')}>{r.note || ''}</div>
         </div>
       ))}
     </div>
@@ -194,6 +202,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       label: val && !val.real ? 'Value (est)' : 'Market value',
       value: val ? num(val.pts) : '—',
       note: val?.posRank ? val.pos + val.posRank : undefined,
+      rank: true,
     },
     {
       label: 'Availability',
@@ -225,11 +234,13 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       label: (u?.shareLabel || 'Target share').replace('Attempts per game', 'Att/gm').replace(' share', ' shr'),
       value: u && u.shareText ? u.shareText : '—',
       note: u && u.shareText ? pctOf(u.volPct) : undefined,
+      rank: true,
     },
     {
       label: u?.effLabel || 'Yds/touch',
       value: u && fin(u.eff) ? (u.eff as number).toFixed(1) : '—',
       note: u && fin(u.eff) ? pctOf(u.effPct) : undefined,
+      rank: true,
     },
     {
       label: 'TDs/gm',
@@ -252,9 +263,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const sos = m.isDynasty ? null : sosFor(p.team, p.pos, m.league);
   const fixtures = p.team ? OPPONENTS[p.team] : null;
   if (sos && fixtures) {
+    /* The rate on top and the placement under it, the same way round as every
+       other tile — so the accent line down the grid is one column of the same
+       question and not two different ones. */
     stats.push(
-      { label: 'Schedule', value: ord(sos.rank), note: 'easiest of 32' },
-      { label: 'Playoffs', value: ord(sos.playoffRank), note: 'easiest of 32' },
+      { label: 'Sched allows', value: String(sos.perGame), note: ord(sos.rank) + ' of 32', rank: true },
+      { label: 'Playoffs allow', value: String(sos.playoffPerGame), note: ord(sos.playoffRank) + ' of 32', rank: true },
       {
         label: 'Playoff foes',
         value: sos.weeks.map(w => fixtures[w - 1] || 'bye').join(' '),
@@ -278,6 +292,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       label: 'Long TDs',
       value: u && fin(u.longTd) ? (u.longTd as number).toFixed(1) : '—',
       note: u && fin(u.longTd) ? pctOf(u.ltrPct) : undefined,
+      rank: true,
     },
     {
       /* Signed, because the direction is the whole finding: over is the market
@@ -294,11 +309,6 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
     // The market's own order across every player it prices — not a search
     // index dressed up as an ADP.
     { label: 'Market rank', value: p.rank ? '#' + p.rank : '—' },
-    ...(sos ? [{
-      label: 'Opp allowed',
-      value: String(sos.perGame),
-      note: 'to ' + p.pos + 's a gm',
-    }] : []),
     {
       label: 'Seasons',
       value: u && u.seasons ? String(u.seasons) : '—',
