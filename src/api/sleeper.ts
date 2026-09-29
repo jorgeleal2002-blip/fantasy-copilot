@@ -103,13 +103,28 @@ export const getSeasonStats = (year: number) =>
  * a scoreboard, while one that throws is a blank screen.
  */
 const PROJ_POS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+const PROJ_BASE = 'https://api.sleeper.com/projections/nfl/';
+
 export async function getWeekProjections(season: string | number, week: number): Promise<unknown> {
-  const q = PROJ_POS.map(p => 'position[]=' + p).join('&');
-  const url = 'https://api.sleeper.com/projections/nfl/' + season + '/' + week
-    + '?season_type=regular&order_by=ppr&' + q;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('projections ' + r.status);
-  return r.json();
+  const head = PROJ_BASE + season + '/' + week + '?season_type=regular';
+  /* Twice, because the filtered form is the one that can go wrong. Repeated
+   * `position[]` params are what the endpoint wants today and an endpoint
+   * nobody documents is free to stop wanting them — in which case it answers
+   * with nothing rather than with an error, and a projection that is missing
+   * for no stated reason is the hardest kind of bug to be told about. The bare
+   * URL returns every position, which is more rows and always readable. */
+  for (const url of [head + '&order_by=ppr&' + PROJ_POS.map(p => 'position[]=' + p).join('&'), head]) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      const body = await r.json();
+      const rows = Array.isArray(body) ? body.length : Object.keys(body || {}).length;
+      if (rows) return body;
+    } catch {
+      /* try the next shape before giving up on the week */
+    }
+  }
+  throw new Error('projections unavailable');
 }
 
 /**

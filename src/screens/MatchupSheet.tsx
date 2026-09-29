@@ -57,11 +57,15 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
         </div>
       )}
 
-      <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), textWrap: 'pretty' }}>
-        The projection counts what a lineup has already scored: a starter who has played is worth what he
-        put up, one who has not is worth what he is projected for. So it starts at the plain projection,
-        walks with the score, and lands on it.
-      </div>
+      {/* Only when there is something to say. A projection that is simply
+          absent, with no reason given, is the hardest kind of missing number
+          to report — and the explanation of one that IS there belongs nowhere,
+          which is why it no longer sits under every game. */}
+      {app.projState === 'fail' ? (
+        <div style={{ fontSize: 11, color: dim(0.33), textWrap: 'pretty' }}>
+          Sleeper did not return projections for this week. It retries on its own.
+        </div>
+      ) : null}
     </Overlay>
   );
 }

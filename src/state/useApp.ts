@@ -173,6 +173,9 @@ export function useApp() {
    * are looking at it. */
   const [week, setWeekState] = useState<number | null>(null);
   const [projections, setProjections] = useState<Record<string, number>>({});
+  /** Said out loud when it fails. A projection that is simply absent, with no
+   *  reason given, is the hardest kind of missing number to report. */
+  const [projState, setProjState] = useState<FeedState>('idle');
   /** Raw league transactions; the trades are read out of them where the market
    *  that prices them is in scope. */
   const [transactions, setTransactions] = useState<SleeperTransaction[]>([]);
@@ -217,19 +220,23 @@ export function useApp() {
      * here every time, and a starter ruled out on Sunday morning never moved
      * the number. */
     const hit = projCache.get(key);
-    if (hit) setProjections(hit.map);
+    if (hit) { setProjections(hit.map); setProjState('ok'); }
     if (!projectionsAreStale(hit, Date.now(), PROJ_TTL_MS, force)) return;
+    if (!hit) setProjState('loading');
 
     try {
       const raw = await getWeekProjections(season, wk);
       const map = readProjections(raw, d.league.scoring_settings);
       // An empty map is an answer that did not arrive, not a league where
       // nobody is projected to score: it must not replace one that did.
-      if (!Object.keys(map).length) return;
+      if (!Object.keys(map).length) { if (!hit) setProjState('fail'); return; }
       projCache.set(key, { at: Date.now(), map });
       setProjections(map);
+      setProjState('ok');
     } catch {
-      /* the scoreboard is a scoreboard without them */
+      // The scoreboard is a scoreboard without them; it just stops pretending
+      // they are on their way. The next poll tries again.
+      if (!hit) setProjState('fail');
     }
   }, []);
 
@@ -1085,7 +1092,7 @@ export function useApp() {
     clearRoomError: () => setRoomError(''),
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, photoBy, query, topPos, topLens, topOpen,
-    week, matchups, matchupState, projections, tradeTeams, tradeAssets,
+    week, matchups, matchupState, projections, projState, tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,
     weekScores, powerState, fetchWeekScores,
 
