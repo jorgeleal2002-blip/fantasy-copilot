@@ -20,7 +20,7 @@ import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
-import { projectionsAreStale, readProjections } from '../model/projections';
+import { type HeldStats, projectionsAreStale, readProjections, statsForWeek } from '../model/projections';
 import type { WeekScore } from '../model/power';
 import { nextDetailStack, topDetail } from './detail-stack';
 
@@ -176,8 +176,16 @@ export function useApp() {
    * are looking at it. */
   const [week, setWeekState] = useState<number | null>(null);
   const [projections, setProjections] = useState<Record<string, number>>({});
-  /** Every player's week, for the line under a name on a scoreboard. */
-  const [weekStats, setWeekStats] = useState<Record<string, SleeperStatLine>>({});
+  /**
+   * Every player's week, for the line under a name on a scoreboard, carrying
+   * the week it is true of.
+   *
+   * A stat line only ever belongs to one week, and the week on screen moves
+   * under it — forward into a week the NFL has not played, which answers with
+   * nothing at all. Holding the week beside the map is what stops last
+   * Sunday's yards from sitting under next Sunday's 0.00.
+   */
+  const [weekStats, setWeekStats] = useState<HeldStats<SleeperStatLine>>({ wk: 0, map: {} });
   /** The week the NFL is on, as distinct from the one being looked at. */
   const [nflWeek, setNflWeek] = useState<number | null>(null);
   /** Said out loud when it fails. A projection that is simply absent, with no
@@ -373,13 +381,16 @@ export function useApp() {
     const season = d.league.season || String(new Date().getFullYear());
     const key = season + ':' + wk;
     const hit = statCache.get(key);
-    if (hit) setWeekStats(hit.map);
+    // Whatever happens next, the week we are asking about is the week that is
+    // held from here on: a week the NFL has not played answers with nothing,
+    // and nothing is the right answer to draw under it.
+    setWeekStats(s => (hit ? { wk, map: hit.map } : s.wk === wk ? s : { wk, map: {} }));
     if (!projectionsAreStale(hit, Date.now(), PROJ_TTL_MS, force)) return;
     try {
       const raw = await getWeekStats(season, wk);
       if (!raw || typeof raw !== 'object' || !Object.keys(raw).length) return;
       statCache.set(key, { at: Date.now(), map: raw });
-      setWeekStats(raw);
+      setWeekStats({ wk, map: raw });
     } catch {
       /* the line under a name is an extra; the score above it is not */
     }
@@ -1250,7 +1261,8 @@ export function useApp() {
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, photoBy, photoShared,
     query, topPos, topLens, topOpen,
-    week, matchups, matchupState, projections, projState, weekStats, fetchWeekStats,
+    week, matchups, matchupState, projections, projState, fetchWeekStats,
+    weekStats: statsForWeek(weekStats, week),
     tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,
     weekScores, powerState, fetchWeekScores, seasonPpg,

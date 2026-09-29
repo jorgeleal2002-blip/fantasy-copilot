@@ -204,3 +204,25 @@ export function projectionsAreStale(
   if (!hit || force) return true;
   return now - hit.at >= ttl;
 }
+
+/** One week's worth of something, carrying the week it is true of. */
+export type HeldStats<T> = { wk: number; map: Record<string, T> };
+
+const NO_STATS: Record<string, never> = {};
+
+/**
+ * The stat lines to draw for a week, out of the one week that is held.
+ *
+ * A score is a fact about a week and so is the line under it, but only one of
+ * the two is refetched the moment the week on screen changes: the scores come
+ * from the matchup feed the scoreboard already polls, and the stat lines are
+ * a separate payload asked for by the screen that draws them. Step forward
+ * into a week the NFL has not played and that payload is empty — there is
+ * nothing to replace last week's with — so last week's yards would sit under
+ * this week's 0.00 unless the held week has to match the week being asked
+ * about. It has to match. A week with no stats draws no stats.
+ */
+export function statsForWeek<T>(held: HeldStats<T>, wk: number | null): Record<string, T> {
+  if (!wk || !held.wk || held.wk !== wk) return NO_STATS as Record<string, T>;
+  return held.map;
+}

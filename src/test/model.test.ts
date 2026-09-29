@@ -17,7 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
-import { projectionsAreStale, readProjections, scoreProjection, scoringKind } from '../model/projections';
+import { projectionsAreStale, readProjections, scoreProjection, scoringKind, statsForWeek } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
 import { statLine } from '../model/stat-line';
@@ -3173,6 +3173,22 @@ describe('Sleeper\'s weekly projections', () => {
   it('asks again straight away when somebody presses refresh', () => {
     // A button is a request for the number now, not for whatever is in hand.
     expect(projectionsAreStale({ at: 1000 }, 1001, 300000, true)).toBe(true);
+  });
+
+  /* Week 4 drew week 3's yards under week 4's 0.00: the scores came from the
+     matchup feed, which changes week the moment you turn the page, and the
+     stat lines came from a payload that had nothing to say about a week the
+     NFL had not played yet, so the old map simply stayed on screen. */
+  it('draws no stat line for a week it is not holding', () => {
+    const wk3 = { wk: 3, map: { '4046': { rec_yd: 155 } } };
+    expect(statsForWeek(wk3, 3)).toEqual({ '4046': { rec_yd: 155 } });
+    expect(statsForWeek(wk3, 4)).toEqual({});
+    expect(statsForWeek(wk3, 2)).toEqual({});
+  });
+
+  it('draws no stat line before anything is held, or with no week on screen', () => {
+    expect(statsForWeek({ wk: 0, map: {} }, 4)).toEqual({});
+    expect(statsForWeek({ wk: 4, map: { '4046': { rec_yd: 155 } } }, null)).toEqual({});
   });
 
   it('leaves out what it cannot read instead of falling over', () => {
