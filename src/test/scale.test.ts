@@ -22,7 +22,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { ALPHA_STEPS, FS_STEPS, GROUNDS, INK, R_STEPS, T, TEXT_CONTRAST_MIN, W } from '../ui/scale';
-import { ACCENT, BAD, GOOD, MARK_BAD, MARK_GOOD, MARK_MID, MID, POS_COLOR, WARN } from '../model/constants';
+import { ACCENT, BAD, GOOD, MARK_BAD, MARK_GOOD, MARK_MID, MARK_NONE, MID, POS_COLOR, WARN } from '../model/constants';
 import { placeColor, placeMark } from '../ui/styles';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -416,6 +416,28 @@ describe('the palette carries its colour', () => {
     expect(stray).toEqual([]);
   });
 
+  it('paints a fill with a fill step and a letter with a text step', () => {
+    /* There are two steps of every state because a colour dark enough to be a
+       good mark on a dark surface is too dark to be small type on it, and the
+       note in constants.ts says what happens the other way round: a text step
+       painted as a chart mark "came out washed". The matchup bar was exactly
+       that — the light green, four pixels tall across a card — and it looked it.
+       Nothing had ever checked which step a declaration reached for. */
+    const TEXT = ['--c-good', '--c-bad', '--c-warn', '--c-mid'];
+    const FILL = ['--c-mark-good', '--c-mark-bad', '--c-mark-mid', '--c-mark-none'];
+    const wrong: string[] = [];
+    for (const f of FILES) {
+      if (!f.path.endsWith('.css')) continue;
+      for (const m of f.text.matchAll(/(background|background-color|color): var\((--c-[a-z-]+)\)/g)) {
+        const [prop, token] = [m[1] as string, m[2] as string];
+        const fills = prop !== 'color';
+        if (fills && TEXT.indexOf(token) >= 0) wrong.push(`${prop}: ${token} in ${f.path}`);
+        if (!fills && FILL.indexOf(token) >= 0) wrong.push(`${prop}: ${token} in ${f.path}`);
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
+
   it('states each verdict hue once, however many files need it', () => {
     /* The stylesheet needs the same greens the TypeScript does, and a value
        written in two places is a value that drifts. */
@@ -430,6 +452,10 @@ describe('the palette carries its colour', () => {
     expect(read('bad')).toBe(BAD);
     expect(read('warn')).toBe(WARN);
     expect(read('mid')).toBe(MID);
+    expect(read('mark-good')).toBe(MARK_GOOD);
+    expect(read('mark-mid')).toBe(MARK_MID);
+    expect(read('mark-bad')).toBe(MARK_BAD);
+    expect(read('mark-none')).toBe(MARK_NONE);
   });
 
   it('keeps every meaning hue above the floor', () => {

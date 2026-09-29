@@ -1158,7 +1158,12 @@ button { font-family: inherit; }
 .ms-bar-fill {
   height: 100%;
   border-radius: 4px;
-  background: var(--c-good);
+  /* The FILL step, not the text one. This bar carried the old muted green as a
+     literal, and swapping that for the palette's name kept the value current
+     while keeping the mistake: a text step is light because it has to be
+     legible at 11px, and painted four pixels tall across a card it reads
+     washed. Which is exactly how it looked. */
+  background: var(--c-mark-good);
   transition: width .5s ease;
 }
 .ms-edge {
@@ -1295,11 +1300,6 @@ button { font-family: inherit; }
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
-/* The verdict the row exists to give. Neutral about sides — the row compares
-   two players, and whose team each belongs to is already said by which side of
-   the spine he is on. */
-.ms-pl-pts.is-won { color: var(--c-good); }
-.ms-pl-pts.is-lost { color: rgba(242, 253, 254, 0.75); }
 .ms-pl-proj {
   font-size: 10px;
   margin-top: 2px;

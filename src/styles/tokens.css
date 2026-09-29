@@ -92,6 +92,13 @@
   --c-bad: #ee8c64;
   --c-warn: #ecd880;
   --c-mid: #7290fa;
+  /* The same states again, deeper, for anything FILLED rather than lettered —
+     see MARK_GOOD in constants.ts. A text step painted as a bar comes out
+     washed, which is the whole reason there are two of each. */
+  --c-mark-good: #12b878;
+  --c-mark-mid: #5c8ef4;
+  --c-mark-bad: #dc7442;
+  --c-mark-none: #afb7ca;
   /* The dark type that sits on a filled position block — CELL_INK. */
   --c-ink: #0a1024;
   /* A slot with no position of its own, on the draft board. */

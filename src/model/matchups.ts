@@ -262,36 +262,3 @@ export function benchRows(
   }
   return out;
 }
-
-/**
- * Which of the two men in a slot did more, or nothing where that is not a
- * question yet.
- *
- * The one thing every row of a head-to-head is asking, and it was not being
- * said: both figures came out in the same white, so the reader did the
- * subtraction nine times down the screen. It is also the only verdict on that
- * card, which is why the card had almost no colour in it.
- *
- * Neutral about whose team is whose. The row compares two players; who each of
- * them belongs to is said by which side of the spine he is on, and saying it
- * twice would paint a good performance by the other manager as a bad thing in
- * itself.
- *
- * Nothing before kickoff, nothing on a tie, and nothing where neither has a
- * score — three states that are all "no answer yet" and must not be drawn as
- * a nil-nil draw one of them won.
- */
-export function slotWinner(
-  a: LineupCell | null | undefined,
-  b: LineupCell | null | undefined,
-): 'a' | 'b' | null {
-  const x = a && Number.isFinite(a.points as number) ? (a.points as number) : null;
-  const y = b && Number.isFinite(b.points as number) ? (b.points as number) : null;
-  // An empty slot loses to anybody who scored, which is the point of drawing
-  // it — and where neither scored, neither of these clears zero, which is the
-  // "nobody has played" case falling out rather than needing its own guard.
-  if (x == null) return (y ?? 0) > 0 ? 'b' : null;
-  if (y == null) return x > 0 ? 'a' : null;
-  if (x === y) return null;
-  return x > y ? 'a' : 'b';
-}

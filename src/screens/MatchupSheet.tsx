@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { benchRows, leaderOf, lineupRows, pairMatchups, slotWinner, type LineupCell, type MatchupSide } from '../model/matchups';
+import { benchRows, leaderOf, lineupRows, pairMatchups, type LineupCell, type MatchupSide } from '../model/matchups';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { CELL_INK, slotFill } from '../model/constants';
@@ -155,10 +155,9 @@ function Block({ app, title, rows }: {
       <div className="ms-block-head">{title}</div>
       {rows.map((r, i) => (
         <div className="ms-row" key={title + r.slot + '-' + i}>
-          {/* Which of the two did more — see `slotWinner`. */}
-          <Cell app={app} c={r.a} won={slotWinner(r.a, r.b)} side="a" />
+          <Cell app={app} c={r.a} />
           <Slot slot={r.slot} />
-          <Cell app={app} c={r.b} won={slotWinner(r.a, r.b)} side="b" align="right" />
+          <Cell app={app} c={r.b} align="right" />
         </div>
       ))}
     </div>
@@ -191,10 +190,7 @@ function Slot({ slot }: { slot: string }) {
 }
 
 
-function Cell(
-  { app, c, align, won, side }:
-  { app: App; c: LineupCell | null; align?: 'right'; won?: 'a' | 'b' | null; side?: 'a' | 'b' },
-) {
+function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'right' }) {
   const right = align === 'right';
   if (!c) return <div className="ms-cell" />;
   const tappable = !!c.id;
@@ -225,12 +221,7 @@ function Cell(
         {/* Scored over projected, in one column: the question is whether he
             beat it, and two figures stacked is that question. */}
         <div className="ms-num">
-          <div
-            className={'ms-pl-pts'
-              + (won && side ? (won === side ? ' is-won' : ' is-lost') : '')}
-          >
-            {c.points == null ? '—' : c.points.toFixed(2)}
-          </div>
+          <div className="ms-pl-pts">{c.points == null ? '—' : c.points.toFixed(2)}</div>
           {c.projected != null ? <div className="ms-pl-proj">{c.projected.toFixed(1)}</div> : null}
         </div>
       </div>

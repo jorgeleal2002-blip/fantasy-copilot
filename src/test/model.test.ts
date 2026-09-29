@@ -17,7 +17,7 @@ import { isInLeague, isMockEligible } from '../model/mock-pool';
 import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedule';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
-import { leaderOf, lineupRows, pairMatchups, slotWinner, startingSlots } from '../model/matchups';
+import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { PRIOR_MIN, USAGE_DECAY, USAGE_WEIGHTS } from '../model/constants';
 import { PROD_SHARE_BASE, PROD_SHARE_MAX, PROD_SHARE_MAX_REDRAFT, poolFloor, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
@@ -4960,46 +4960,5 @@ describe('who gets to age well', () => {
     // replacement-level 31-year-old receiver is a rising asset.
     expect(Math.max(...gains)).toBeLessThanOrEqual(1);
     expect(gains.filter(g => g > 0).length).toBeLessThan(past.length * 0.1);
-  });
-});
-
-/* Every row of a head-to-head asks one thing and the card was not answering it:
-   both figures came out in the same white, so the reader did the subtraction
-   nine times down the screen. */
-describe('who won a slot', () => {
-  const at = (points: number | null) =>
-    ({ id: 'x', name: 'x', pos: 'WR', team: 'SEA', points, projected: null });
-
-  it('is whoever scored more', () => {
-    expect(slotWinner(at(19.46), at(13.62))).toBe('a');
-    expect(slotWinner(at(5.6), at(18.3))).toBe('b');
-  });
-
-  it('separates by a tenth, because a tenth decides weeks', () => {
-    expect(slotWinner(at(12.4), at(12.3))).toBe('a');
-  });
-
-  it('says nothing before anybody has played', () => {
-    // Not a nil-nil draw one of them won: no answer yet.
-    expect(slotWinner(at(null), at(null))).toBeNull();
-    expect(slotWinner(at(0), at(0))).toBeNull();
-  });
-
-  it('says nothing on a tie', () => {
-    expect(slotWinner(at(14.2), at(14.2))).toBeNull();
-  });
-
-  it('lets a man who played beat an empty slot, which is the point of drawing one', () => {
-    expect(slotWinner(at(9), at(null))).toBe('a');
-    expect(slotWinner(at(null), at(9))).toBe('b');
-    // But an empty slot does not beat another empty one.
-    expect(slotWinner(at(0), at(null))).toBeNull();
-  });
-
-  it('answers with nothing rather than guessing', () => {
-    expect(slotWinner(null, at(9))).toBe('b');
-    expect(slotWinner(at(9), null)).toBe('a');
-    expect(slotWinner(null, null)).toBeNull();
-    expect(slotWinner(at(NaN), at(NaN))).toBeNull();
   });
 });
