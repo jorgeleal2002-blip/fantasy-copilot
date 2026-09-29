@@ -91,6 +91,23 @@ function More({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
+function Tiles({ rows }: { rows: { label: string; value: string }[] }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+      {rows.map(r => (
+        <div key={r.label} style={{ background: 'var(--color-surface)', borderRadius: 11, padding: 12 }}>
+          <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.42) }}>
+            {r.label}
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 5, lineHeight: 1.3 }}>
+            {r.value}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId: string }) {
   const p = resolve(m, playerId, m.wUsed);
 
@@ -143,6 +160,26 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
 
   const val = m.marketValue(p.id);
 
+  /**
+   * A percentile, in words.
+   *
+   * "84th pct" is a number about a number, and the reader has to do the
+   * second sum themselves. Four bands say the same thing in the language
+   * somebody would use out loud, and the middle one says nothing at all
+   * because being ordinary is not news.
+   */
+  const standing = (pct: number | null | undefined): string => {
+    if (!fin(pct)) return '';
+    const n = Math.round((pct as number) * 100);
+    return n >= 90 ? ' · among the best at his position'
+      : n >= 70 ? ' · well above average'
+        : n <= 20 ? ' · below average'
+          : '';
+  };
+
+  /* What a person reads. Price, whether he plays, how much of the offence he
+   * is, and what he does with it — in that order, because that is the order
+   * the questions come in. */
   const stats = [
     {
       // The first thing anyone wants before proposing a trade: the price, and
@@ -163,53 +200,34 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         return state + (role ? ' · ' + role : '');
       })(),
     },
+    { label: 'Points per game', value: u && u.ppg != null ? u.ppg.toFixed(1) : 'no data' },
     {
-      label: 'Seasons measured',
-      value: u && u.seasons
-        ? (u.seasons === 1
-          ? '1 · ' + u.seasonList + ' (small sample)'
-          : u.seasons + ' · ' + u.seasonList
-            /* How much of the number is the year you are watching. Two games
-             * and a full season print the same and are not the same claim. */
-            + (u.curWeight != null ? ' · ' + Math.round(u.curWeight * 100) + '% this year' : '')
-            + (u.fade != null && u.fade < 0.9 ? ' · past his peak: recency weighted' : ''))
-        : 'no data',
+      label: 'On the field',
+      value: u && u.snap != null ? Math.round(u.snap * 100) + '% of his team\'s snaps' : 'no data',
     },
-    { label: 'Snap %', value: u && u.snap != null ? Math.round(u.snap * 100) + '%' : 'no data' },
     {
       label: u?.shareLabel || 'Target share',
-      value: u && u.shareText
-        ? u.shareText + (fin(u.volPct) ? ' · ' + Math.round((u.volPct as number) * 100) + 'th pct' : '')
-        : 'no data',
-    },
-    {
-      label: 'Market vs production',
-      value: (() => {
-        if (!diverge) return 'no data';
-        const d = Math.round((diverge.mkt - diverge.prod) * 100);
-        const base = 'market ' + Math.round(diverge.mkt * 100) + ' · production ' + Math.round(diverge.prod * 100);
-        return base + (Math.abs(d) < 12 ? ' · agreed' : d > 0 ? ' · market overpays' : ' · produces more than he costs');
-      })(),
+      value: u && u.shareText ? u.shareText + standing(u.volPct) : 'no data',
     },
     {
       label: u?.effLabel || 'Yards per touch',
-      value: u && fin(u.eff)
-        ? (u.eff as number).toFixed(1) + (fin(u.effPct) ? ' · ' + Math.round((u.effPct as number) * 100) + 'th pct' : '')
-        : 'no data',
+      value: u && fin(u.eff) ? (u.eff as number).toFixed(1) + standing(u.effPct) : 'no data',
     },
-    {
-      label: 'Long TDs',
-      value: u && fin(u.longTd)
-        ? (u.longTd as number).toFixed(1) + ' of ' + Math.round((u.xtd || 0) + (u.tdLuck || 0)) +
-          (fin(u.ltrPct) ? ' · ' + Math.round((u.ltrPct as number) * 100) + 'th pct' : '')
-        : 'no data',
-    },
-    { label: 'Red-zone share', value: u && u.rzShare != null ? (u.rzShare * 100).toFixed(1) + '%' : 'no data' },
     {
       label: 'TDs per game',
       value: u && u.tdPerGame != null
-        ? u.tdPerGame.toFixed(2) + (u.tdShare != null ? ` · ${Math.round(u.tdShare * 100)}% of the team` : '')
+        ? u.tdPerGame.toFixed(2) + (u.tdShare != null ? ` · ${Math.round(u.tdShare * 100)}% of the team\'s` : '')
         : 'no data',
+    },
+  ];
+
+  /* The rest. Not wrong and not what anybody opened the card for: two of them
+   * are the model talking about itself, and the others are the kind of number
+   * you go looking for rather than one you want put in front of you. */
+  const deeper = [
+    {
+      label: 'Red-zone share',
+      value: u && u.rzShare != null ? (u.rzShare * 100).toFixed(1) + '% of his team\'s' : 'no data',
     },
     {
       label: 'Expected TDs',
@@ -218,11 +236,38 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           (Math.abs(u.tdLuck || 0) < 1.5 ? ' · in line' : (u.tdLuck || 0) > 0 ? ' · scored above it' : ' · scored below it')
         : 'no data',
     },
-    { label: 'PPG', value: u && u.ppg != null ? u.ppg.toFixed(1) + ' pts' : 'no data' },
+    {
+      label: 'Long TDs',
+      value: u && fin(u.longTd)
+        ? (u.longTd as number).toFixed(1) + ' of ' + Math.round((u.xtd || 0) + (u.tdLuck || 0)) + standing(u.ltrPct)
+        : 'no data',
+    },
+    {
+      label: 'Market vs production',
+      value: (() => {
+        if (!diverge) return 'no data';
+        const d = Math.round((diverge.mkt - diverge.prod) * 100);
+        return Math.abs(d) < 12 ? 'the two agree'
+          : d > 0 ? 'the market pays more than he produces'
+            : 'he produces more than he costs';
+      })(),
+    },
     // The market's own order across every player it prices — not a search
     // index dressed up as an ADP.
-    { label: 'Age · market rank', value: (p.age ?? '?') + ' · ' + (p.rank ? '#' + p.rank : 'unranked') },
+    { label: 'Market rank', value: p.rank ? '#' + p.rank : 'unranked' },
+    {
+      label: 'Seasons measured',
+      value: u && u.seasons
+        ? (u.seasons === 1
+          ? '1 · ' + u.seasonList + ' (small sample)'
+          : u.seasons + ' · ' + u.seasonList
+            /* How much of the number is the year you are watching. Two games
+             * and a full season print the same and are not the same claim. */
+            + (u.curWeight != null ? ' · ' + Math.round(u.curWeight * 100) + '% this year' : ''))
+        : 'no data',
+    },
   ];
+
 
   return (
     <Overlay onClose={() => app.setDetail(null)}>
@@ -419,18 +464,16 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
 
       {fill ? null : <WhatHeCosts app={app} m={m} sheet={p} />}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
-        {(fill ? [] : stats).map(s => (
-          <div key={s.label} style={{ background: 'var(--color-surface)', borderRadius: 11, padding: 12 }}>
-            <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.42) }}>
-              {s.label}
-            </div>
-            <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 5 }}>{s.value}</div>
-          </div>
-        ))}
-      </div>
+      {fill ? null : <Tiles rows={stats} />}
 
-      <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), marginTop: 14, textWrap: 'pretty' }}>{DATA_NOTE}</div>
+      {fill ? null : (
+        <More label="More numbers">
+          <Tiles rows={deeper} />
+          <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), marginTop: 14, textWrap: 'pretty' }}>
+            {DATA_NOTE}
+          </div>
+        </More>
+      )}
     </Overlay>
   );
 }
