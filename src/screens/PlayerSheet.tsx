@@ -31,7 +31,7 @@ import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { statBits } from '../model/stat-line';
 import { projectPPG } from '../model/project';
-import { barHeights, ordinal, type Ranked } from '../model/season';
+import { barHeights, gapsIn, ordinal, type Ranked } from '../model/season';
 import { type Tone, placing, toneOf, toneOfRank } from '../model/standing';
 import { TradePackages } from '../ui/TradePackages';
 import { cardTitle, dim, fitColor } from '../ui/styles';
@@ -218,9 +218,16 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
    */
   /* Where a number sits among his position, as a number. It used to be a
      clause — "well above average" — which is longer than the fact it reports
-     and cannot be compared between two tiles at a glance. */
+     and cannot be compared between two tiles at a glance.
+
+     Higher is better, which is the way a percentile is read everywhere and
+     was not the way this printed it: the model stores 0.74 for a man ahead of
+     74% of his position and the tile said "26th pct", which reads as the
+     bottom of it — under a figure the same number had just painted green. */
   const pctOf = (pct: number | null | undefined): string | undefined =>
-    (fin(pct) ? ord(Math.max(1, 100 - Math.round((pct as number) * 100))) + ' pct' : undefined);
+    (fin(pct)
+      ? ord(Math.min(99, Math.max(1, Math.round((pct as number) * 100)))) + ' pct'
+      : undefined);
 
   /* Where the market puts him among the men at his position in THIS league —
      the same field every other placing on the card uses. `posRank` beside the
@@ -543,16 +550,26 @@ function ThisSeason(
   const games = app.seasonLog(id);
   const ranks = app.seasonRanks(id, pos);
 
-  /* The log costs one request a game, so it asks for the weeks it is about to
-     draw and no others. `logged` is a string because the array is rebuilt
-     every render and would otherwise re-fire the effect forever. */
+  /* Two reasons to ask for a week of stats, and the fetch is driven by both.
+
+     The log needs a line under each game it draws. And the season itself has
+     holes: the league's weekly payload lists the players on a roster, so a man
+     it had not picked up yet is missing every week before somebody claimed him
+     — which for a waiver pickup is most of his own total. Those weeks are
+     asked for by their absence, so a player rostered all year costs nothing
+     extra and one picked up in week six costs the five he was a free agent.
+
+     Joined into a string because the array is rebuilt every render and would
+     otherwise re-fire the effect forever. */
   const shown = games.slice(-LOG_GAMES);
-  const logged = shown.map(g => g.week).join(',');
+  const upTo = Math.min(18, Math.max(0, app.nflWeek ?? app.week ?? 0));
+  const want = [...new Set([...shown.map(g => g.week), ...gapsIn(games, upTo)])].sort((x, y) => x - y);
+  const asked = want.join(',');
   const { fetchGameStats } = app;
   useEffect(() => {
-    const weeks = logged ? logged.split(',').map(Number) : [];
+    const weeks = asked ? asked.split(',').map(Number) : [];
     if (weeks.length) void fetchGameStats(weeks);
-  }, [fetchGameStats, logged]);
+  }, [fetchGameStats, asked]);
 
   /* Before he has played, the season block is zeroes pretending to be facts
      — but the numbers under it and his schedule are as true in week 1 as in

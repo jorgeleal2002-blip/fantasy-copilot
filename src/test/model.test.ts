@@ -19,6 +19,7 @@ import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
 import { type CmpUse, aheadBy, compareNumbers, compareSeasons, tally } from '../model/compare';
+import { gapsIn, mergeSeason } from '../model/season';
 import { barHeights, ordinal, pointsInWeek, quantile, rankAmong, seasonLine } from '../model/season';
 import { SCREEN_TRUST, bestHeight } from '../model/viewport';
 import { FULL_SQ, THUMB_SQ, playerPhotoSet } from '../api/sleeper';
@@ -4247,5 +4248,47 @@ describe('what a placing is worth', () => {
     // The rank is "nth easiest of 32", so first is the kind run.
     expect(toneOfRank(1, 32)).toBe('good');
     expect(toneOfRank(32, 32)).toBe('bad');
+  });
+});
+
+/* The league's weekly payload lists the players on a roster, so a man it had
+   not picked up yet is missing every week before somebody claimed him — which
+   for a waiver pickup is most of his own season total. */
+describe('a season out of two sources', () => {
+  const rostered = [{ week: 4, pts: 18.2 }, { week: 5, pts: 22.6 }];
+
+  it('fills the weeks the league never saw him play', () => {
+    const merged = mergeSeason(rostered, { 1: 14.4, 2: 9.1, 3: 0 });
+    expect(merged.map(g => g.week)).toEqual([1, 2, 4, 5]);
+    expect(seasonLine(merged)?.total).toBe(64.3);
+  });
+
+  it('keeps the league\'s own number where it has one, and counts a week once', () => {
+    // Sleeper's figure is exact under this league's settings; the stat feed
+    // has to be totalled here, so it loses any tie — and a week that reaches
+    // the merge twice would be counted twice in the total, which is the way
+    // this goes wrong in the direction nobody notices.
+    const merged = mergeSeason(rostered, { 4: 99.9 });
+    expect(merged.filter(g => g.week === 4)).toEqual([{ week: 4, pts: 18.2 }]);
+    expect(merged.length).toBe(2);
+    expect(seasonLine(merged)?.total).toBe(40.8);
+  });
+
+  it('treats a scored zero as a week he did not play', () => {
+    expect(mergeSeason([], { 1: 0, 2: null, 3: undefined }).length).toBe(0);
+  });
+
+  it('returns the weeks in order whichever source they came from', () => {
+    const merged = mergeSeason([{ week: 9, pts: 5 }], { 2: 7, 12: 3 });
+    expect(merged.map(g => g.week)).toEqual([2, 9, 12]);
+  });
+
+  it('asks only for the weeks it is missing', () => {
+    // A player rostered all year costs nothing extra; one picked up in week
+    // six costs the five he was a free agent.
+    expect(gapsIn([{ week: 1, pts: 1 }, { week: 2, pts: 2 }], 2)).toEqual([]);
+    expect(gapsIn([{ week: 6, pts: 1 }], 7)).toEqual([1, 2, 3, 4, 5, 7]);
+    expect(gapsIn(undefined, 3)).toEqual([1, 2, 3]);
+    expect(gapsIn([], 0)).toEqual([]);
   });
 });

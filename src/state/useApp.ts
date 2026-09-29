@@ -21,7 +21,8 @@ import { buildModel } from '../model/model';
 import type { SavedTrade } from '../model/types';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
 import { pickEncoding } from '../model/photo';
-import { type Game, type SeasonLine, pointsInWeek, rankAmong, seasonLine } from '../model/season';
+import { scoreProjection, scoringKind } from '../model/projections';
+import { type Game, type SeasonLine, mergeSeason, pointsInWeek, rankAmong, seasonLine } from '../model/season';
 import { type HeldStats, projectionsAreStale, readProjections, statsForWeek } from '../model/projections';
 import type { WeekScore } from '../model/power';
 import { nextDetailStack, topDetail } from './detail-stack';
@@ -1210,19 +1211,30 @@ export function useApp() {
    * Byes and weeks he did not play are left out rather than averaged in as
    * zeroes — a man who has played twice and sat out once has scored twice.
    */
-  const seasonPpg = useCallback((id: string): { ppg: number; games: number } | null => {
-    const line = seasonLine(seasonPoints[id] || []);
-    return line ? { ppg: line.ppg, games: line.games } : null;
-  }, [seasonPoints]);
-
-  /** Every week he has played, in order, for the chart on his card. */
-  const seasonLog = useCallback(
-    (id: string): Game[] => (seasonPoints[id] || []).slice().sort((a, b) => a.week - b.week),
-    [seasonPoints],
-  );
+  /**
+   * Every week he has played, in order — out of the league's own payload
+   * first, and out of the stat feed for the weeks that payload cannot know
+   * about. See `mergeSeason`: the league lists the players on a roster, so a
+   * man it had not picked up yet has no week there at all.
+   */
+  const seasonLog = useCallback((id: string): Game[] => {
+    const league = dataRef.current?.league;
+    const scoring = league?.scoring_settings;
+    const kind = scoringKind(scoring);
+    const scored: Record<number, number | null> = {};
+    for (const [wk, map] of Object.entries(gameStats)) {
+      scored[Number(wk)] = scoreProjection(map[id] as Record<string, number> | undefined, scoring, kind);
+    }
+    return mergeSeason(seasonPoints[id], scored);
+  }, [gameStats, seasonPoints]);
 
   /** His whole season as one line: average, total, floor, ceiling. */
-  const seasonOf = useCallback((id: string) => seasonLine(seasonPoints[id] || []), [seasonPoints]);
+  const seasonOf = useCallback((id: string) => seasonLine(seasonLog(id)), [seasonLog]);
+
+  const seasonPpg = useCallback((id: string): { ppg: number; games: number } | null => {
+    const line = seasonOf(id);
+    return line ? { ppg: line.ppg, games: line.games } : null;
+  }, [seasonOf]);
 
   /**
    * Where he finished that week among the men at his position.
@@ -1235,19 +1247,19 @@ export function useApp() {
    * total under this league's settings.
    */
   const weekRank = useCallback((id: string, pos: string, week: number) => {
-    const mine = pointsInWeek(seasonPoints[id], week);
+    const mine = pointsInWeek(seasonLog(id), week);
     if (mine == null) return null;
     const players = dataRef.current?.players || {};
     const field: number[] = [];
     for (const r of dataRef.current?.rosters || []) {
       for (const pid of r.players || []) {
         if (players[pid]?.position !== pos) continue;
-        const p = pointsInWeek(seasonPoints[pid], week);
+        const p = pointsInWeek(seasonLog(pid), week);
         if (p != null) field.push(p);
       }
     }
     return rankAmong(mine, field);
-  }, [seasonPoints]);
+  }, [seasonLog]);
 
   /**
    * Where each of those numbers puts him among the men at his position who
@@ -1258,7 +1270,7 @@ export function useApp() {
    * every quarterback in the NFL includes thirty nobody here can start.
    */
   const seasonRanks = useCallback((id: string, pos: string) => {
-    const mine = seasonLine(seasonPoints[id] || []);
+    const mine = seasonOf(id);
     if (!mine) return null;
     const players = dataRef.current?.players || {};
     const rostered = new Set<string>();
@@ -1268,7 +1280,7 @@ export function useApp() {
     const field: SeasonLine[] = [];
     for (const pid of rostered) {
       if (players[pid]?.position !== pos) continue;
-      const line = seasonLine(seasonPoints[pid] || []);
+      const line = seasonOf(pid);
       if (line) field.push(line);
     }
     const of = (pick: (l: SeasonLine) => number) => rankAmong(pick(mine), field.map(pick));
@@ -1281,7 +1293,7 @@ export function useApp() {
       ceiling: of(l => l.ceiling),
       games: of(l => l.games),
     };
-  }, [seasonPoints]);
+  }, [seasonOf]);
 
   /** Who set the photo on screen, where the league set it. */
   const photoBy = useCallback((id: string) => leaguePhotos[id]?.by || '', [leaguePhotos]);
@@ -1452,7 +1464,7 @@ export function useApp() {
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, photoBy, photoShared,
     query, topPos, topLens, topOpen,
-    week, matchups, matchupState, projections, projState, fetchWeekStats,
+    week, nflWeek, matchups, matchupState, projections, projState, fetchWeekStats,
     weekStats: statsForWeek(weekStats, week),
     gameStats, fetchGameStats,
     tradeTeams, tradeAssets,

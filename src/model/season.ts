@@ -104,3 +104,42 @@ export function pointsInWeek(games: Game[] | undefined, week: number): number | 
   const g = games?.find(x => x.week === week);
   return g ? g.pts : null;
 }
+
+/**
+ * A season out of two sources, preferring the exact one.
+ *
+ * What a player scored comes from the league's own weekly payload, which is
+ * Sleeper's number under this league's settings and therefore right to the
+ * decimal. It has one hole in it: that payload lists the players on a roster,
+ * so a man the league had not picked up yet is simply absent, and his season
+ * starts the week somebody claimed him. For a waiver pickup that is most of
+ * his season missing from his own total.
+ *
+ * The stat feed has no such hole — it is every player in the league of
+ * football, rostered or not — but it has to be totalled against the scoring
+ * settings here rather than arriving pre-totalled, so it is the fallback and
+ * not the source. Where both know a week, the league's own number wins.
+ */
+export function mergeSeason(
+  rostered: Game[] | undefined,
+  scored: Record<number, number | null | undefined>,
+): Game[] {
+  const out = (rostered || []).slice();
+  const known = new Set(out.map(g => g.week));
+  for (const [key, pts] of Object.entries(scored)) {
+    const week = Number(key);
+    if (!Number.isFinite(week) || known.has(week)) continue;
+    // A zero is a week he did not play, the same as it is in the other source.
+    if (pts == null || !Number.isFinite(pts) || pts === 0) continue;
+    out.push({ week, pts: Math.round(pts * 10) / 10 });
+  }
+  return out.sort((a, b) => a.week - b.week);
+}
+
+/** The weeks of a season a player's own record has nothing for. */
+export function gapsIn(games: Game[] | undefined, upTo: number): number[] {
+  const known = new Set((games || []).map(g => g.week));
+  const out: number[] = [];
+  for (let w = 1; w <= upTo; w++) if (!known.has(w)) out.push(w);
+  return out;
+}
