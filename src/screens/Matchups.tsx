@@ -64,7 +64,7 @@ function Note({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       background: 'var(--color-surface)', borderRadius: 12, padding: '14px 13px',
-      fontSize: 12.5, color: dim(0.5),
+      fontSize: 12, color: dim(0.48),
     }}>
       {children}
     </div>

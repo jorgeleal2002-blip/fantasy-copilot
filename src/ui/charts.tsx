@@ -1,5 +1,6 @@
 import { MARK_BAD, MARK_GAP, MARK_GOOD, MARK_MID, TRACK } from '../model/constants';
 import { dim } from './styles';
+import { R } from './scale';
 
 /**
  * Fill colour for a STATE — strong / middling / weak, premium / neutral /
@@ -39,9 +40,8 @@ export function Meter({
   markLabel?: string;
 }) {
   const w = Math.max(0, Math.min(100, pct));
-  const r = Math.round(height / 2);
   return (
-    <div style={{ position: 'relative', height, background: TRACK, borderRadius: r, overflow: 'hidden' }}>
+    <div style={{ position: 'relative', height, background: TRACK, borderRadius: R.pill, overflow: 'hidden' }}>
       <div
         style={{
           height: '100%',
@@ -49,7 +49,10 @@ export function Meter({
           // that still reads as a mark.
           width: w > 0 ? `max(2px, ${w}%)` : 0,
           background: color,
-          borderRadius: `${r}px ${r}px ${r}px ${r}px`,
+          /* Follows its own height — see `R.pill`. This was four copies of
+             `Math.round(height / 2)`, which is the same shape written as a
+             number that has to be recomputed whenever the bar changes. */
+          borderRadius: R.pill,
         }}
       />
       {mark != null ? (
@@ -63,7 +66,7 @@ export function Meter({
             // the mark visible where the fill passes beneath it.
             borderLeft: `2px solid ${MARK_GAP}`,
             borderRight: `2px solid ${MARK_GAP}`,
-            background: dim(0.55),
+            background: dim(0.6),
             backgroundClip: 'padding-box',
           }}
         />

@@ -12,14 +12,14 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
   if (!info) {
     return (
       <Overlay onClose={() => app.setDetail(null)} label="The league" z={6}>
-        <div style={{ fontSize: 14, color: dim(0.6) }}>No data for this team.</div>
+        <div style={{ fontSize: 13, color: dim(0.6) }}>No data for this team.</div>
       </Overlay>
     );
   }
 
   const { row } = info;
   const w = row.window;
-  const windowColor = !m.leagueHasRosters ? dim(0.4) : w === 'contender' ? GOOD : w === 'rebuild' ? BAD : MID;
+  const windowColor = !m.leagueHasRosters ? dim(0.38) : w === 'contender' ? GOOD : w === 'rebuild' ? BAD : MID;
   const windowLabel = !m.leagueHasRosters ? 'No roster'
     : !m.isDynasty ? (w === 'contender' ? 'Strong roster' : w === 'rebuild' ? 'Weak roster' : 'Average roster')
       : w === 'contender' ? 'Contending now' : w === 'rebuild' ? 'Rebuilding' : 'Mid-table';
@@ -44,17 +44,17 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
             src={row.avatar}
             alt=""
             style={{
-              width: 46, height: 46, borderRadius: 11, flex: 'none', objectFit: 'cover',
+              width: 46, height: 46, borderRadius: 12, flex: 'none', objectFit: 'cover',
               border: 'var(--hairline) solid var(--color-divider)',
             }}
           />
         ) : null}
-        <div style={{ fontSize: 25, fontWeight: 500, letterSpacing: '-0.025em' }}>{row.name}</div>
+        <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.025em' }}>{row.name}</div>
       </div>
-      <div style={{ fontSize: 12.5, color: dim(0.5), marginTop: 4 }}>{sub}</div>
+      <div style={{ fontSize: 12, color: dim(0.48), marginTop: 4 }}>{sub}</div>
       <div style={{
-        display: 'inline-flex', marginTop: 10, fontSize: 11, padding: '4px 10px', borderRadius: 7,
-        color: windowColor, border: '1px solid ' + windowColor, background: 'rgba(233,233,237,.04)',
+        display: 'inline-flex', marginTop: 10, fontSize: 10, padding: '4px 10px', borderRadius: 8,
+        color: windowColor, border: '1px solid ' + windowColor, background: 'rgba(242,253,254,0.04)',
       }}>
         {windowLabel}
       </div>
@@ -68,7 +68,7 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
         }}>
           How to trade with them
         </div>
-        <div style={{ fontSize: 13.5, lineHeight: 1.5, textWrap: 'pretty' }}>{angle(info, m)}</div>
+        <div style={{ fontSize: 13, lineHeight: '20px', textWrap: 'pretty' }}>{angle(info, m)}</div>
       </div>
 
       <Card style={{ marginTop: 12 }}>
@@ -106,17 +106,17 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
           onKeyDown={e => { if (e.key === 'Enter') app.setDetail(p.id); }}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-            background: 'var(--color-surface)', borderRadius: 11, padding: '11px 12px',
+            background: 'var(--color-surface)', borderRadius: 12, padding: '11px 12px',
             marginBottom: 8, cursor: 'pointer',
           }}
         >
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 500 }}>{p.name}</div>
-            <div style={{ fontSize: 11, color: dim(0.42), marginTop: 2 }}>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</div>
+            <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2 }}>
               {p.pos} · {p.age ?? '?'} yrs · {p.team}
             </div>
           </div>
-          <div style={{ fontSize: 12, color: dim(0.55), flex: 'none' }}>{num(p.q * 100)}</div>
+          <div style={{ fontSize: 12, color: dim(0.6), flex: 'none' }}>{num(p.q * 100)}</div>
         </div>
       ))}
 
@@ -129,10 +129,10 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
           {info.picks.slice(0, 6).map(p => (
             <DividedRow
               key={p.id}
-              style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '7px 0', fontSize: 12.5 }}
+              style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '7px 0', fontSize: 12 }}
             >
               <span>{p.name}</span>
-              <span style={{ color: dim(0.5) }}>{num(p.q * 100)}</span>
+              <span style={{ color: dim(0.48) }}>{num(p.q * 100)}</span>
             </DividedRow>
           ))}
         </Card>

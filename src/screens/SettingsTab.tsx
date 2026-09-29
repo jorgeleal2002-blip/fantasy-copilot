@@ -30,7 +30,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
     <Screen>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 13,
-        background: 'var(--color-surface)', borderRadius: 13, padding: 14,
+        background: 'var(--color-surface)', borderRadius: 12, padding: 14,
       }}>
         <div style={{
           width: 46, height: 46, flex: 'none', borderRadius: '50%', overflow: 'hidden',
@@ -43,7 +43,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{m.me.teamName}</div>
-          <div style={{ fontSize: 12, color: dim(0.45), marginTop: 2, ...ellipsis }}>{m.league.name}</div>
+          <div style={{ fontSize: 12, color: dim(0.48), marginTop: 2, ...ellipsis }}>{m.league.name}</div>
         </div>
       </div>
 
@@ -57,7 +57,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           type="button"
           onClick={() => void app.switchLeague()}
           className="btn btn-primary"
-          style={{ flex: 1, borderRadius: 10, minHeight: 42 }}
+          style={{ flex: 1, borderRadius: 8, minHeight: 42 }}
         >
           Change league
         </button>
@@ -65,7 +65,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           type="button"
           onClick={app.logout}
           className="btn btn-secondary"
-          style={{ flex: 1, borderRadius: 10, minHeight: 42 }}
+          style={{ flex: 1, borderRadius: 8, minHeight: 42 }}
         >
           Sign out
         </button>
@@ -73,19 +73,19 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
 
       <div>
         <div style={{
-          fontSize: 10.5, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.4), marginBottom: 9,
+          fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.38), marginBottom: 9,
         }}>
           Algorithm strategy
         </div>
         <Segmented options={STRAT_OPTIONS} value={app.strat} onChange={app.setStrat} />
-        <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), marginTop: 10, textWrap: 'pretty' }}>
+        <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.48), marginTop: 10, textWrap: 'pretty' }}>
           {strat.copy}
         </div>
       </div>
 
       <Card>
         <div style={{ ...cardTitle, marginBottom: 4 }}>Rating weights</div>
-        <div style={{ fontSize: 11.5, color: dim(0.45), marginBottom: 12 }}>Rating = Σ wᵢ × metricᵢ</div>
+        <div style={{ fontSize: 12, color: dim(0.48), marginBottom: 12 }}>Rating = Σ wᵢ × metricᵢ</div>
         {/* Heaviest first, scaled against this profile's own largest weight:
             ordered by size, the chart answers "what is this profile actually
             buying?" without the reader ranking nine numbers by eye. */}
@@ -93,8 +93,8 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           {[...m.metricKeys].sort((a, b) => strat.w[b] - strat.w[a]).map(k => (
             <div key={k}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
-                <span style={{ color: strat.w[k] ? undefined : dim(0.4) }}>{METRIC_LABEL[k]}</span>
-                <span style={{ color: strat.w[k] ? ACCENT : dim(0.4) }}>{Math.round(strat.w[k] * 100)}%</span>
+                <span style={{ color: strat.w[k] ? undefined : dim(0.38) }}>{METRIC_LABEL[k]}</span>
+                <span style={{ color: strat.w[k] ? ACCENT : dim(0.38) }}>{Math.round(strat.w[k] * 100)}%</span>
               </div>
               <Meter
                 pct={strat.w[k] / Math.max(...m.metricKeys.map(x => strat.w[x])) * 100}
@@ -130,8 +130,8 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
                 <div style={{
                   display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 5,
                 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', color: ACCENT }}>{mi.pos}</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 500, color }}>×{mi.mult.toFixed(2)}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.06em', color: ACCENT }}>{mi.pos}</span>
+                  <span style={{ fontSize: 12, fontWeight: 500, color }}>×{mi.mult.toFixed(2)}</span>
                 </div>
                 {/* The reference is ×1.00 — no premium. Without it the bar only
                     says "some multiplier"; with it, it says which side of
@@ -143,7 +143,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
                   markLabel="no premium (×1.00)"
                   height={7}
                 />
-                <div style={{ ...cardNote, fontSize: 10.5, marginTop: 5 }}>{mi.why}</div>
+                <div style={{ ...cardNote, fontSize: 10, marginTop: 5 }}>{mi.why}</div>
               </div>
             );
           })}
@@ -154,8 +154,8 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
         <div style={{ ...cardTitle, marginBottom: 10 }}>Rules read from your league</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {rules.map(r => (
-            <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
-              <span style={{ color: dim(0.5) }}>{r.label}</span>
+            <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12 }}>
+              <span style={{ color: dim(0.48) }}>{r.label}</span>
               <span style={{ textAlign: 'right' }}>{r.value}</span>
             </div>
           ))}
@@ -166,7 +166,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           it to. When "your team" comes up empty this is the one fact that
           separates a broken match from a genuinely empty roster, and it saves
           a round trip to find out. */}
-      <div style={{ ...cardNote, textAlign: 'center', fontSize: 10.5 }}>
+      <div style={{ ...cardNote, textAlign: 'center', fontSize: 10 }}>
         Build {__BUILD__} UTC
       </div>
 
@@ -239,7 +239,7 @@ function TeamPicker({ app, m }: { app: App; m: Model }) {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8,
                   background: current ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent',
-                  borderRadius: 9,
+                  borderRadius: 8,
                 }}
               >
                 <button
@@ -250,19 +250,19 @@ function TeamPicker({ app, m }: { app: App; m: Model }) {
                   style={{
                     flex: 1, minWidth: 0, font: 'inherit', fontSize: 13, textAlign: 'left',
                     cursor: current ? 'default' : 'pointer', background: 'transparent',
-                    border: 0, borderRadius: 9, padding: '9px 10px', color: 'inherit',
+                    border: 0, borderRadius: 8, padding: '9px 10px', color: 'inherit',
                   }}
                 >
                   <span style={ellipsis}>{a.username}</span>
                 </button>
                 {current ? (
-                  <span style={{ flex: 'none', fontSize: 11, color: ACCENT, paddingRight: 10 }}>signed in</span>
+                  <span style={{ flex: 'none', fontSize: 10, color: ACCENT, paddingRight: 10 }}>signed in</span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => app.forgetAccount(a.username)}
                     className="btn btn-ghost"
-                    style={{ flex: 'none', fontSize: 11, padding: '0 10px 0 0', color: dim(0.4) }}
+                    style={{ flex: 'none', fontSize: 10, padding: '0 10px 0 0', color: dim(0.38) }}
                   >
                     Forget
                   </button>
@@ -293,11 +293,11 @@ function TeamPicker({ app, m }: { app: App; m: Model }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
                 font: 'inherit', fontSize: 13, textAlign: 'left', cursor: 'pointer',
                 background: r.isMe ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent',
-                border: 0, borderRadius: 9, padding: '9px 10px', color: 'inherit',
+                border: 0, borderRadius: 8, padding: '9px 10px', color: 'inherit',
               }}
             >
               <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{r.name}</span>
-              <span style={{ flex: 'none', fontSize: 11, color: r.isMe ? ACCENT : dim(0.4) }}>
+              <span style={{ flex: 'none', fontSize: 10, color: r.isMe ? ACCENT : dim(0.38) }}>
                 {r.isMe ? 'yours' : (r.now > 0 ? 'drafted' : 'no roster')}
               </span>
             </button>
@@ -320,8 +320,8 @@ function TeamPicker({ app, m }: { app: App; m: Model }) {
 
 function Row({ label, value, bad }: { label: string; value: string; bad?: boolean }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
-      <span style={{ color: dim(0.5) }}>{label}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12 }}>
+      <span style={{ color: dim(0.48) }}>{label}</span>
       <span style={{ textAlign: 'right', color: bad ? BAD : undefined }}>{value}</span>
     </div>
   );

@@ -89,16 +89,28 @@
   --font-heading-weight: 500;
   --font-body: 'Inter', system-ui, sans-serif;
 
-  --space-1: 2.8px;
-  --space-2: 5.6px;
-  --space-3: 8.4px;
-  --space-4: 11.2px;
-  --space-6: 16.8px;
-  --space-8: 22.4px;
+  /* Whole pixels, on a 2px grid. These arrived as 2.8 / 5.6 / 8.4 / 11.2 /
+     16.8 / 22.4 — a 14px base cut into fifths — and every one of them puts the
+     edge of whatever it pads on a fraction of a CSS pixel, which on a 2×
+     screen is a half device pixel the compositor can only resolve by averaging
+     two rows together. That is not a thin edge, it is a grey one, and it was
+     inside the padding of every button in the app. */
+  --space-1: 2px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-6: 16px;
+  --space-8: 24px;
 
+  /* Doubling, so a chip looks cut out of the card it sits in rather than drawn
+     beside it — see `R` in src/ui/scale.ts, which is the same scale for the
+     inline styles. `--radius-pill` is for anything whose corner should follow
+     its own height: a track, a bar, a capsule. */
   --radius-sm: 4px;
   --radius-md: 8px;
-  --radius-lg: 14px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
 
   --shadow-sm: 0 0 0 1px #3e424d;
   --shadow-md: 0 0 0 1px #585d6c, 0 6px 18px rgba(0, 0, 0, 0.55);
@@ -119,12 +131,15 @@
   text-decoration: none;
   font-family: var(--font-heading);
   font-weight: var(--font-heading-weight);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.2;
   color: var(--color-text);
   background: transparent;
   border: 1px solid transparent;
-  padding: var(--space-2) calc(var(--space-3) * 1.2);
+  /* Both from the grid. The second used to be `calc(var(--space-3) * 1.2)`,
+     which resolved to 10.08px and put every button's left and right edge on a
+     fifth of a pixel. */
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
 }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }

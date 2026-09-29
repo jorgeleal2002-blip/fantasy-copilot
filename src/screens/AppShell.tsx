@@ -75,16 +75,16 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
             onClick={() => void app.switchLeague()}
             onKeyDown={e => { if (e.key === 'Enter') void app.switchLeague(); }}
             style={{
-              width: 34, height: 34, borderRadius: 9, flex: 'none', objectFit: 'cover',
+              width: 34, height: 34, borderRadius: 8, flex: 'none', objectFit: 'cover',
               border: 'var(--hairline) solid var(--color-divider)', cursor: 'pointer',
             }}
           />
         ) : null}
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: dim(0.45), ...ellipsis }}>
+          <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: dim(0.48), ...ellipsis }}>
             {HEADER[app.tab].kicker(model)}
           </div>
-          <div style={{ fontSize: 19, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 2, ...ellipsis }}>
+          <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 2, ...ellipsis }}>
             {HEADER[app.tab].title(model)}
           </div>
         </div>

@@ -77,9 +77,9 @@ export function PlayerSearch(
       <div style={{
         display: 'flex', alignItems: 'center', gap: 9,
         background: 'var(--color-surface)', border: 'var(--hairline) solid var(--color-divider)',
-        borderRadius: 10, padding: '9px 11px',
+        borderRadius: 8, padding: '9px 11px',
       }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(233,233,237,.4)" strokeWidth="1.8" style={{ flex: 'none' }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(242,253,254,0.38)" strokeWidth="1.8" style={{ flex: 'none' }}>
           <circle cx="11" cy="11" r="7" />
           <path d="M20 20l-3.5-3.5" />
         </svg>
@@ -101,7 +101,7 @@ export function PlayerSearch(
             aria-label="Clear search"
             onClick={() => app.setQuery('')}
             style={{
-              flex: 'none', color: dim(0.45), fontSize: 15, cursor: 'pointer',
+              flex: 'none', color: dim(0.48), fontSize: 15, cursor: 'pointer',
               padding: '0 2px', background: 'transparent', border: 0,
             }}
           >
@@ -117,7 +117,7 @@ export function PlayerSearch(
       {hasQuery ? (
         <div style={{ background: 'var(--color-surface)', borderRadius: 12, overflow: 'hidden' }}>
           {results.length === 0 ? (
-            <div style={{ padding: '14px 12px', fontSize: 12.5, lineHeight: 1.5, color: dim(0.5) }}>
+            <div style={{ padding: '14px 12px', fontSize: 12, lineHeight: '18px', color: dim(0.48) }}>
               {hiddenByScope && scope
                 ? `${hiddenByScope === 1 ? '1 match is' : hiddenByScope + ' matches are'} ${scope.narrowed}`
                 : 'Nobody by that name in the catalog.'}
@@ -133,21 +133,21 @@ export function PlayerSearch(
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{r.name}</div>
-                  <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2, ...ellipsis }}>{r.meta}</div>
+                  <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2, ...ellipsis }}>{r.meta}</div>
                 </div>
                 <div style={{ flex: 'none', textAlign: 'right' }}>
                   <div style={{
                     fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em',
                     // A modelled price is not a market price, and the app never
                     // pretends otherwise: it arrives dimmed and labelled.
-                    color: r.val && r.val.real ? 'var(--color-text)' : dim(0.55),
+                    color: r.val && r.val.real ? 'var(--color-text)' : dim(0.6),
                   }}>
                     {r.val ? num(r.val.pts) : '—'}
                   </div>
-                  <div style={{ fontSize: 10, color: dim(0.4), marginTop: 2, whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2, whiteSpace: 'nowrap' }}>
                     {r.val && !r.val.real ? 'modelled · ' : ''}
                     {r.val && r.val.posRank ? r.val.pos + String(r.val.posRank) + ' · ' : ''}
-                    Rating <span style={{ color: r.fit != null ? fitColor(r.fit) : dim(0.5) }}>{r.fit ?? '—'}</span>
+                    Rating <span style={{ color: r.fit != null ? fitColor(r.fit) : dim(0.48) }}>{r.fit ?? '—'}</span>
                   </div>
                 </div>
               </div>
@@ -161,14 +161,14 @@ export function PlayerSearch(
                     onClick={() => setOpenId(openId === r.id ? null : r.id)}
                     aria-expanded={openId === r.id}
                     style={{
-                      width: '100%', textAlign: 'left', padding: '0 12px 10px', fontSize: 11,
+                      width: '100%', textAlign: 'left', padding: '0 12px 10px', fontSize: 10,
                       color: 'var(--color-accent)', background: 'transparent', border: 0, cursor: 'pointer',
                     }}
                   >
                     {openId === r.id ? 'Hide what he would cost' : 'What he would cost ›'}
                   </button>
                   {openId === r.id ? (
-                    <div style={{ padding: '0 12px 12px', background: 'rgba(233,233,237,.03)' }}>
+                    <div style={{ padding: '0 12px 12px', background: 'rgba(242,253,254,0.04)' }}>
                       <TradePackages app={app} m={m} targetId={r.id} targetName={r.name} compact />
                     </div>
                   ) : null}

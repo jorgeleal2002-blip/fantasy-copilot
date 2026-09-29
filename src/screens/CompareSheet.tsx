@@ -31,7 +31,7 @@ export function CompareSheet({ app, m, ids }: { app: App; m: Model; ids: string[
   if (!a) {
     return (
       <Overlay onClose={() => app.setDetail(null)} label="Back" z={7}>
-        <div style={{ fontSize: 14, color: dim(0.6) }}>No data for this player.</div>
+        <div style={{ fontSize: 13, color: dim(0.6) }}>No data for this player.</div>
       </Overlay>
     );
   }
@@ -63,10 +63,10 @@ function Pick({ app, m, a }: { app: App; m: Model; a: PlayerFit }) {
 
   return (
     <>
-      <div style={{ fontSize: 19, fontWeight: 500, letterSpacing: '-0.02em' }}>
+      <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: '-0.02em' }}>
         Compare {a.name} with
       </div>
-      <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 4, marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: dim(0.48), marginTop: 4, marginBottom: 12 }}>
         By points a game
       </div>
       <Segmented options={options} value={pos} onChange={setPos} size="sm" />
@@ -82,12 +82,12 @@ function Pick({ app, m, a }: { app: App; m: Model; a: PlayerFit }) {
           >
             <Face {...app.photoSet(x.id)} pos={x.pos} size={34} round />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, ...ellipsis }}>{x.name}</div>
-              <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2, ...ellipsis }}>
+              <div style={{ fontSize: 13, ...ellipsis }}>{x.name}</div>
+              <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2, ...ellipsis }}>
                 {x.pos} · {x.team || 'FA'} · {x.mine ? 'yours' : x.owner}
               </div>
             </div>
-            <div style={{ flex: 'none', fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>
+            <div style={{ flex: 'none', fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
               {s ? s.ppg.toFixed(1) : '—'}
             </div>
           </div>

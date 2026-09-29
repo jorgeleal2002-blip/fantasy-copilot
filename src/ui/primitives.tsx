@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { type Pull, pullArmed, pullProgress } from '../model/pull';
 import { cardNote, cardTitle, seg, SegSize, surface } from './styles';
 import { usePullToRefresh } from './usePull';
+import { FS, boxRadius, boxType } from './scale';
 
 export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return <div style={{ ...surface, ...style }}>{children}</div>;
@@ -50,7 +51,8 @@ export function Segmented<T extends string>({
           onClick={() => onChange(o.key)}
           aria-pressed={value === o.key}
           style={{
-            ...seg(value === o.key, size), font: 'inherit', fontSize: size === 'sm' ? 11 : 11.5,
+            ...seg(value === o.key, size), font: 'inherit',
+            fontSize: size === 'sm' ? FS.micro : FS.small,
             flex: 'none', whiteSpace: 'nowrap',
           }}
         >
@@ -91,8 +93,8 @@ export function DividedRow({
 export function Empty({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   return (
     <div style={{ ...surface, padding: '26px 18px', textAlign: 'center' }}>
-      <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 6 }}>{title}</div>
-      <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'rgba(233,233,237,.5)', marginBottom: action ? 16 : 0 }}>{body}</div>
+      <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>{title}</div>
+      <div style={{ fontSize: 12, lineHeight: '18px', color: 'rgba(242,253,254,0.48)', marginBottom: action ? 16 : 0 }}>{body}</div>
       {action}
     </div>
   );
@@ -131,7 +133,7 @@ export function Overlay({
       <div className="overlay-scrim" onClick={onClose} aria-hidden="true" />
       <div className="overlay-panel" role="dialog" aria-modal="true" aria-label={label}>
         <div className="overlay-head">
-          <button type="button" className="btn btn-ghost" onClick={onClose} style={{ fontSize: 14, padding: 0 }}>
+          <button type="button" className="btn btn-ghost" onClick={onClose} style={{ fontSize: 13, padding: 0 }}>
             ‹ {label}
           </button>
         </div>
@@ -210,10 +212,10 @@ export function Face({ photo, srcSet, pos, size = 34, round }: {
   return (
     <div
       style={{
-        width: size, height: size, flex: 'none', borderRadius: round ? '50%' : size * 0.27,
+        width: size, height: size, flex: 'none', borderRadius: round ? '50%' : boxRadius(size),
         position: 'relative', overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: size * 0.3, fontWeight: 600, letterSpacing: '.04em',
+        fontSize: boxType(size), fontWeight: 600, letterSpacing: '.04em',
         color: 'var(--color-accent)',
         background: 'color-mix(in srgb, var(--color-accent) 14%, transparent)',
       }}

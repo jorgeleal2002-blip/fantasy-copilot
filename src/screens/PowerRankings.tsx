@@ -60,34 +60,34 @@ function Row({ t }: { t: PowerTeam }) {
         <div style={{ flex: 'none', width: 26, textAlign: 'center' }}>
           <div style={{
             fontSize: 15, fontWeight: 500, letterSpacing: '-0.02em',
-            color: t.isMe ? 'var(--color-accent)' : dim(0.45),
+            color: t.isMe ? 'var(--color-accent)' : dim(0.48),
           }}>
             {t.rank}
           </div>
           {/* Where they came from. A power ranking is read for the movement as
               much as for the order, and a rank with no history is a table. */}
           {t.move ? (
-            <div style={{ fontSize: 9, marginTop: 1, color: t.move > 0 ? GOOD : BAD }}>
+            <div style={{ fontSize: 10, marginTop: 1, color: t.move > 0 ? GOOD : BAD }}>
               {(t.move > 0 ? '▲' : '▼') + Math.abs(t.move)}
             </div>
           ) : t.was != null ? (
-            <div style={{ fontSize: 9, marginTop: 1, color: dim(0.25) }}>–</div>
+            <div style={{ fontSize: 10, marginTop: 1, color: dim(0.28) }}>–</div>
           ) : null}
         </div>
         {t.avatar
-          ? <img src={t.avatar} alt="" style={{ width: 26, height: 26, borderRadius: 7, flex: 'none', objectFit: 'cover' }} />
-          : <div style={{ width: 26, height: 26, borderRadius: 7, flex: 'none', background: 'rgba(233,233,237,0.06)' }} />}
+          ? <img src={t.avatar} alt="" style={{ width: 26, height: 26, borderRadius: 8, flex: 'none', objectFit: 'cover' }} />
+          : <div style={{ width: 26, height: 26, borderRadius: 8, flex: 'none', background: 'rgba(242,253,254,0.07)' }} />}
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: 12.5, fontWeight: 500, ...ellipsis,
+            fontSize: 12, fontWeight: 500, ...ellipsis,
             color: t.isMe ? 'var(--color-accent)' : 'var(--color-text)',
           }}>
             {t.name}
           </div>
           {/* The score taken apart, in the order it is weighted. Three figures
               anybody can put back together rather than one to be trusted. */}
-          <div style={{ fontSize: 10, color: dim(0.4), marginTop: 1, ...ellipsis }}>
+          <div style={{ fontSize: 10, color: dim(0.38), marginTop: 1, ...ellipsis }}>
             {t.weeks
               ? `${pct}% all-play · roster ${ordinal(t.rosterRank)} · ${t.record.label}`
               : `roster ${ordinal(t.rosterRank)} · no weeks played`}
@@ -95,7 +95,7 @@ function Row({ t }: { t: PowerTeam }) {
           {/* The record the scoring earned, and how far a normal week lands
               from their average. Two numbers a standings table cannot hold. */}
           {t.weeks ? (
-            <div style={{ fontSize: 9.5, color: dim(0.28), marginTop: 1, ...ellipsis }}>
+            <div style={{ fontSize: 10, color: dim(0.28), marginTop: 1, ...ellipsis }}>
               {[
                 t.expected ? `earned ${t.expected.wins}-${t.expected.losses}` : '',
                 t.swing != null ? `±${t.swing.toFixed(0)} a week` : '',
@@ -106,13 +106,13 @@ function Row({ t }: { t: PowerTeam }) {
         </div>
 
         <div style={{ flex: 'none', textAlign: 'right' }}>
-          <div style={{ fontSize: 16, fontWeight: 500, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: 15, fontWeight: 500, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
             {Math.round(t.score)}
           </div>
           {/* The gap between the record and what the scoring earned, where
               there is one: something you can see rather than be told. */}
           {lucky || unlucky ? (
-            <div style={{ fontSize: 9.5, marginTop: 1, color: lucky ? BAD : GOOD }}>
+            <div style={{ fontSize: 10, marginTop: 1, color: lucky ? BAD : GOOD }}>
               {(t.luck > 0 ? '+' : '−') + Math.abs(t.luck).toFixed(1) + ' vs earned'}
             </div>
           ) : null}

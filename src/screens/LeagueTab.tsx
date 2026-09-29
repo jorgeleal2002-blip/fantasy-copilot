@@ -20,7 +20,7 @@ const windowLabel = (r: LeagueRow, dynasty: boolean) =>
         : 'Mid';
 
 const windowColor = (r: LeagueRow) =>
-  r.now <= 0 ? dim(0.35) : r.window === 'contender' ? GOOD : r.window === 'rebuild' ? BAD : MID;
+  r.now <= 0 ? dim(0.38) : r.window === 'contender' ? GOOD : r.window === 'rebuild' ? BAD : MID;
 
 export function LeagueTab({ app, m }: { app: App; m: Model }) {
   type Mode = 'power' | 'now' | 'future' | 'fit' | 'fitFut';
@@ -120,7 +120,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
                   background: t.isMe ? 'color-mix(in srgb, var(--color-accent) 9%, transparent)' : 'transparent',
                 }}
               >
-                <span style={{ width: 16, flex: 'none', color: dim(0.4), fontSize: 12 }}>{i + 1}</span>
+                <span style={{ width: 16, flex: 'none', color: dim(0.38), fontSize: 12 }}>{i + 1}</span>
                 {t.avatar ? (
                   <img
                     src={t.avatar}
@@ -138,7 +138,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
                     </span>
                     <span style={{ fontSize: 10, color: windowColor(t), flex: 'none' }}>{windowLabel(t, m.isDynasty)}</span>
                   </div>
-                  <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2 }}>
+                  <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2 }}>
                     {/* The record leads: the table ranks rosters by what they are
                         worth, and the first thing anyone checks against that is
                         what the season has actually done to them. */}
@@ -151,7 +151,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', flex: 'none' }}>
-                  <div style={{ fontSize: 12.5, color: dim(0.7), fontVariantNumeric: 'tabular-nums' }}>
+                  <div style={{ fontSize: 12, color: dim(0.72), fontVariantNumeric: 'tabular-nums' }}>
                     {isFitMode
                       ? (t.now <= 0 ? '—' : Math.round(mode === 'fitFut' ? t.fitFut : t.fit))
                       : num((mode === 'future' ? t.future : t.now) * 100)}
@@ -229,7 +229,7 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
           have to be told to tap. */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <div style={cardTitle}>Best in the league</div>
-        <span style={{ fontSize: 11.5, color: dim(0.45), ...ellipsis }}>
+        <span style={{ fontSize: 12, color: dim(0.48), ...ellipsis }}>
           {pool.length > list.length ? 'top ' + list.length : 'all ' + list.length}
         </span>
       </div>
@@ -253,12 +253,12 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
                   background: x.mine ? 'color-mix(in srgb, var(--color-accent) 9%, transparent)' : 'transparent',
                 }}
               >
-                <span style={{ width: 16, flex: 'none', color: dim(0.4), fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ width: 16, flex: 'none', color: dim(0.38), fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
                   {i + 1}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{x.name}</div>
-                  <div style={{ fontSize: 10.5, color: dim(0.42), marginTop: 2, ...ellipsis }}>
+                  <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2, ...ellipsis }}>
                     {x.pos} · {x.team || 'FA'} ·{' '}
                     {lens === 'fut'
                       ? `${x.age ?? '?'}→${(x.age || 25) + 2} yrs`
@@ -272,7 +272,7 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
                   </div>
                 </div>
                 <span style={{
-                  fontSize: 12.5, flex: 'none', padding: '2px 8px', borderRadius: 6,
+                  fontSize: 12, flex: 'none', padding: '2px 8px', borderRadius: 4,
                   fontVariantNumeric: 'tabular-nums',
                   background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)',
                   /* The Rating's colour scale means nothing applied to a price

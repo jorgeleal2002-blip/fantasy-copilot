@@ -103,7 +103,7 @@ function More({ label, children }: { label: string; children: React.ReactNode })
         className="btn btn-ghost"
         aria-expanded={open}
         onClick={() => setOpen(v => !v)}
-        style={{ fontSize: 11.5, padding: 0, marginTop: 12 }}
+        style={{ fontSize: 12, padding: 0, marginTop: 12 }}
       >
         {open ? 'Less' : label + ' \u203a'}
       </button>
@@ -170,7 +170,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   if (!p) {
     return (
       <Overlay onClose={() => app.setDetail(null)}>
-        <div style={{ fontSize: 14, color: dim(0.6) }}>No data for this player.</div>
+        <div style={{ fontSize: 13, color: dim(0.6) }}>No data for this player.</div>
       </Overlay>
     );
   }
@@ -415,12 +415,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           <div
             style={photo
               ? {
-                width: 64, height: 64, flex: 'none', borderRadius: 14,
+                width: 64, height: 64, flex: 'none', borderRadius: 12,
                 background: `color-mix(in srgb, var(--color-accent) 12%, transparent) url(${photo}) center/cover no-repeat`,
                 border: 'var(--hairline) solid var(--color-divider)',
               }
               : {
-                width: 64, height: 64, flex: 'none', borderRadius: 14,
+                width: 64, height: 64, flex: 'none', borderRadius: 12,
                 background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)', border: 'var(--hairline) solid var(--color-divider)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: ACCENT, fontSize: 13, fontWeight: 600,
@@ -431,7 +431,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           <div style={{
             position: 'absolute', right: -4, bottom: -4, width: 22, height: 22, borderRadius: '50%',
             background: 'var(--color-bg)', border: '1px solid var(--color-accent)', color: 'var(--color-accent)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10,
           }}>
             ✎
           </div>
@@ -448,8 +448,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </label>
 
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 25, fontWeight: 500, letterSpacing: '-0.025em' }}>{p.name}</div>
-          <div style={{ fontSize: 12.5, color: dim(0.5), marginTop: 4 }}>
+          <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.025em' }}>{p.name}</div>
+          <div style={{ fontSize: 12, color: dim(0.48), marginTop: 4 }}>
             {[p.pos, p.team]
               .concat(p.age ? [p.age + ' yrs'] : [])
               // The bye is a draft-room fact — you count them as you go — and it
@@ -463,7 +463,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
                 type="button"
                 className="btn btn-ghost"
                 onClick={() => app.clearPhoto(p.id)}
-                style={{ fontSize: 11, padding: 0 }}
+                style={{ fontSize: 10, padding: 0 }}
               >
                 Restore original photo
               </button>
@@ -471,7 +471,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
                   this" is a question about a photo that outlives the toast
                   that answered it, and a photo with nothing beside it is one
                   somebody has to come and ask about. */}
-              <span style={{ fontSize: 10.5, color: dim(0.35) }}>
+              <span style={{ fontSize: 10, color: dim(0.38) }}>
                 {shared
                   ? (setter ? 'set by ' + setter + ' · the league sees it' : 'the league sees it')
                   : 'only on this device'}
@@ -497,16 +497,16 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           made the model look wrong. */}
       <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
         {proj != null ? (
-          <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 11, padding: '10px 12px' }}>
-            <div style={{ fontSize: 22, fontWeight: 500, letterSpacing: '-0.03em' }}>{proj.toFixed(1)}</div>
-            <div style={{ fontSize: 9.5, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45), marginTop: 3 }}>
+          <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
+            <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.03em' }}>{proj.toFixed(1)}</div>
+            <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.48), marginTop: 3 }}>
               {weekProj != null ? 'proj this week' : 'proj pts/gm'}
             </div>
           </div>
         ) : null}
-        <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 11, padding: '10px 12px' }}>
-          <div style={{ fontSize: 22, fontWeight: 500, letterSpacing: '-0.03em', color: fitColor(p.fit) }}>{p.fit}</div>
-          <div style={{ fontSize: 9.5, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45), marginTop: 3 }}>
+        <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
+          <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.03em', color: fitColor(p.fit) }}>{p.fit}</div>
+          <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.48), marginTop: 3 }}>
             {/* Never call it a Rating when it is not one. */}
             {fill ? 'consensus' : 'rating'}
           </div>
@@ -517,7 +517,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           omits one reads as a broken screen rather than as an absence. */}
       {fill ? (
         <Card style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 13, color: dim(0.55) }}>
+          <div style={{ fontSize: 13, color: dim(0.6) }}>
             No Rating for a {p.pos === 'DEF' ? 'team defence' : 'kicker'} — the number above is
             where the consensus drafts him.
           </div>
@@ -737,7 +737,7 @@ function ThisSeason(
         })}
       </div>
       {games.length > shown.length ? (
-        <div style={{ fontSize: 10.5, color: dim(0.3), marginTop: 10 }}>
+        <div style={{ fontSize: 10, color: dim(0.28), marginTop: 10 }}>
           His last {LOG_GAMES} games. The chart above is the whole season.
         </div>
       ) : null}
@@ -764,8 +764,8 @@ function WhatHeCosts({ app, m, sheet }: { app: App; m: Model; sheet: Sheet }) {
   if (sheet.ownerLabel === 'free agent') {
     return (
       <Card style={{ marginTop: 12 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 500, marginBottom: 5 }}>Nobody to trade with</div>
-        <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5) }}>
+        <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 5 }}>Nobody to trade with</div>
+        <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.48) }}>
           He is a free agent. Add him from the Draft tab&apos;s free-agent board — no trade needed.
         </div>
       </Card>
@@ -776,7 +776,7 @@ function WhatHeCosts({ app, m, sheet }: { app: App; m: Model; sheet: Sheet }) {
     <Card style={{ marginTop: 12 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <div style={{ fontSize: 13, fontWeight: 500 }}>What he would cost</div>
-        <div style={{ fontSize: 11, color: dim(0.42) }}>{sheet.ownerLabel}</div>
+        <div style={{ fontSize: 10, color: dim(0.38) }}>{sheet.ownerLabel}</div>
       </div>
       <TradePackages app={app} m={m} targetId={sheet.id} targetName={sheet.name} />
     </Card>

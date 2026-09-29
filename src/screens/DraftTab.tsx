@@ -55,7 +55,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
   const filtered = filter === 'ALL' ? m.scored : m.scored.filter(p => p.pos === filter);
   const top = filtered[0] || m.scored[0];
   const status = m.draft ? (STATUS_TEXT[m.draft.status || ''] || m.draft.status || '—') : 'No draft configured';
-  const dotColor = m.draft?.status === 'drafting' ? GOOD : m.draft?.status === 'complete' ? dim(0.4) : ACCENT;
+  const dotColor = m.draft?.status === 'drafting' ? GOOD : m.draft?.status === 'complete' ? dim(0.38) : ACCENT;
 
   const views: SegOption<'board' | 'mock' | 'deals'>[] = m.isDynasty
     ? [{ key: 'board', label: 'Board' }, { key: 'mock', label: 'Mock' }, { key: 'deals', label: 'Pick moves' }]
@@ -81,12 +81,12 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
     <Screen>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 9,
-        background: 'var(--color-surface)', borderRadius: 11, padding: '11px 12px',
+        background: 'var(--color-surface)', borderRadius: 12, padding: '11px 12px',
       }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flex: 'none' }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 500 }}>{status}</div>
-          <div style={{ fontSize: 11, color: dim(0.45), marginTop: 2 }}>
+          <div style={{ fontSize: 12, fontWeight: 500 }}>{status}</div>
+          <div style={{ fontSize: 10, color: dim(0.48), marginTop: 2 }}>
             {(m.mySlot ? 'Your slot ' + m.mySlot + ' · ' : '') +
               m.picks.length + ' of ' + m.rounds * m.teamCount + ' picks made · auto-refreshes every 20s'}
           </div>
@@ -95,7 +95,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
           type="button"
           onClick={() => void app.refreshPicks()}
           className="btn btn-ghost"
-          style={{ fontSize: 11.5, flex: 'none' }}
+          style={{ fontSize: 12, flex: 'none' }}
         >
           Refresh
         </button>
@@ -110,10 +110,10 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 10 }}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-0.025em', ...ellipsis }}>
+              <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.025em', ...ellipsis }}>
                 {top ? top.name : '—'}
               </div>
-              <div style={{ fontSize: 12.5, color: dim(0.6), marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: dim(0.6), marginTop: 4 }}>
                 {/* A rookie has no NFL team until he is drafted, and Sleeper
                     reports that as null — which a template literal prints as
                     the word "null". */}
@@ -136,7 +136,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
               <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.03em', color: 'var(--color-accent-300)' }}>
                 {top ? top.fit : '—'}
               </div>
-              <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.45) }}>
+              <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.48) }}>
                 {/* A kicker's number is where the consensus takes him, not a
                     Rating — none of the eleven metrics exists for one. */}
                 {top && POS.indexOf(top.pos as Pos) < 0 ? 'consensus' : 'rating'}
@@ -146,7 +146,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
             {top ? reasons(top.m, pickLabel(asPick(top.goes), m.teamCount), top.pos, top.age).map(r => (
               <span key={r} style={{
-                fontSize: 11, padding: '4px 9px', borderRadius: 7,
+                fontSize: 10, padding: '4px 9px', borderRadius: 8,
                 background: 'color-mix(in srgb, var(--color-accent) 18%, transparent)', color: 'var(--color-accent-200)',
               }}>
                 {r}
@@ -157,7 +157,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
             type="button"
             onClick={() => top && app.setDetail(top.id)}
             className="btn btn-primary"
-            style={{ marginTop: 14, borderRadius: 9, padding: '8px 13px' }}
+            style={{ marginTop: 14, borderRadius: 8, padding: '8px 13px' }}
           >
             See score breakdown
           </button>
@@ -173,7 +173,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
       {view === 'board' ? (
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ fontSize: 10.5, letterSpacing: '.02em', color: dim(0.38), padding: '0 2px' }}>
+            <div style={{ fontSize: 10, letterSpacing: '.02em', color: dim(0.38), padding: '0 2px' }}>
               {done
                 ? `Draft complete · ${m.picks.length} picks made · everyone below is still unrostered`
                 : m.selPick
@@ -216,7 +216,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
           <div style={{
             display: 'flex', justifyContent: 'flex-end', gap: 7,
             fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase',
-            color: dim(0.35), padding: '0 12px 2px',
+            color: dim(0.38), padding: '0 12px 2px',
           }}>
             {filtered.slice(0, 24).some(p => projOf(p) != null)
               ? <><span>proj pts/gm</span><span>·</span></>
@@ -252,13 +252,13 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                   onKeyDown={e => { if (e.key === 'Enter') app.setDetail(p.id); }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 11,
-                    background: 'var(--color-surface)', borderRadius: 11, padding: '11px 12px', cursor: 'pointer',
+                    background: 'var(--color-surface)', borderRadius: 12, padding: '11px 12px', cursor: 'pointer',
                   }}
                 >
                   <Face {...app.photoSet(p.id)} pos={p.pos} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{p.name}</div>
-                    <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 2 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{p.name}</div>
+                    <div style={{ fontSize: 12, color: dim(0.48), marginTop: 2 }}>
                       {/* A team defence has no age, and "? yrs" is not a fact. */}
                       {[p.pos, p.team || 'no team yet']
                         .concat(p.age ? [p.age + ' yrs'] : []).join(' · ')}
@@ -280,15 +280,15 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                         useful thing on the row. */}
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: 7 }}>
                       {projOf(p) != null ? (
-                        <span style={{ fontSize: 11.5, color: dim(0.5), letterSpacing: '-0.01em' }}>
+                        <span style={{ fontSize: 12, color: dim(0.48), letterSpacing: '-0.01em' }}>
                           {(projOf(p) as number).toFixed(1)}
                         </span>
                       ) : null}
-                      <span style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.02em', color: fitColor(p.fit) }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.02em', color: fitColor(p.fit) }}>
                         {p.fit}
                       </span>
                     </div>
-                    <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2 }}>
+                    <div style={{ fontSize: 10, color: dim(0.38), marginTop: 2 }}>
                       {/* The warning goes with the number, never over it. */}
                       {where(p.goes)}
                     </div>
@@ -349,7 +349,7 @@ function JoinByCode({ app }: { app: App }) {
   return (
     <Card>
       <div style={{ ...cardTitle, marginBottom: 4 }}>Join a room</div>
-      <div style={{ fontSize: 11.5, color: dim(0.45), lineHeight: 1.5, marginBottom: 10 }}>
+      <div style={{ fontSize: 12, color: dim(0.48), lineHeight: '18px', marginBottom: 10 }}>
         Six characters from whoever opened it. You end up in the same draft,
         picking in turn.
       </div>
@@ -369,7 +369,7 @@ function JoinByCode({ app }: { app: App }) {
           aria-label="Room code"
           style={{
             flex: 1, minWidth: 0, background: 'var(--color-surface)',
-            border: 'var(--hairline) solid var(--color-divider)', borderRadius: 10,
+            border: 'var(--hairline) solid var(--color-divider)', borderRadius: 8,
             padding: '11px 12px', outline: 'none', color: 'var(--color-text)',
             // Monospaced and spaced out, because this is read one character at
             // a time off somebody else's screen.
@@ -382,13 +382,13 @@ function JoinByCode({ app }: { app: App }) {
           className="btn btn-primary"
           disabled={!ready || busy}
           onClick={() => void go()}
-          style={{ flex: 'none', borderRadius: 10, padding: '0 18px', fontSize: 13 }}
+          style={{ flex: 'none', borderRadius: 8, padding: '0 18px', fontSize: 13 }}
         >
           {busy ? '…' : 'Join'}
         </button>
       </div>
       {problem || app.roomError ? (
-        <div role="alert" style={{ fontSize: 11.5, lineHeight: 1.45, color: BAD, marginTop: 8 }}>
+        <div role="alert" style={{ fontSize: 12, lineHeight: '17px', color: BAD, marginTop: 8 }}>
           {problem || app.roomError}
         </div>
       ) : null}
@@ -412,10 +412,10 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
       <div style={{ ...heroCard, padding: '18px 16px' }}>
         <div style={{ position: 'relative' }}>
           <div style={kicker}>Mock draft</div>
-          <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 6 }}>
+          <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 6 }}>
             {m.teamCount} teams, {m.rounds} rounds
           </div>
-          <div style={{ fontSize: 12, color: dim(0.5), marginTop: 6, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12, color: dim(0.48), marginTop: 6, lineHeight: '18px' }}>
             Claim a seat on the board, then start. The other {m.teamCount - 1} draft live
             while you watch, and every name left carries a rating for your roster.
           </div>
@@ -423,7 +423,7 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
             type="button"
             onClick={app.openMock}
             className="btn btn-primary"
-            style={{ marginTop: 14, width: '100%', padding: '12px 0', fontSize: 13.5, borderRadius: 11 }}
+            style={{ marginTop: 14, width: '100%', padding: '12px 0', fontSize: 13, borderRadius: 12 }}
           >
             {going ? 'Back to the draft room' : 'Enter the draft room'}
           </button>
@@ -453,14 +453,14 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
           <div style={{ ...cardTitle, marginBottom: 8 }}>What you have drafted</div>
           {st.myTeam.map((o, i) => (
             <div key={o.id} style={{
-              display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5,
+              display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12,
               paddingTop: 8, borderTop: i === 0 ? 'none' : 'var(--hairline) solid var(--color-divider)',
             }}>
               <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{o.name}</span>
-              <span style={{ color: dim(0.42), flex: 'none' }}>{o.pos} · fit {o.fit}</span>
+              <span style={{ color: dim(0.38), flex: 'none' }}>{o.pos} · fit {o.fit}</span>
             </div>
           ))}
-          <div style={{ fontSize: 11, color: dim(0.4), marginTop: 10 }}>
+          <div style={{ fontSize: 10, color: dim(0.38), marginTop: 10 }}>
             {st.made.length} picks in · {POS.map(p => st.shape[p] + ' ' + p).join(' · ')}
           </div>
         </Card>
@@ -474,8 +474,8 @@ function PickMoves({ app, m }: { app: App; m: Model }) {
   if (!m.bestDeals.length) {
     return (
       <Card>
-        <div style={{ fontSize: 13.5, fontWeight: 500, marginBottom: 6 }}>No pick moves worth making</div>
-        <div style={{ fontSize: 12.5, lineHeight: 1.5, color: dim(0.5) }}>
+        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>No pick moves worth making</div>
+        <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.48) }}>
           Nobody's picks line up with yours at a price both sides would take. This recomputes as picks come off the board.
         </div>
       </Card>
@@ -495,7 +495,7 @@ function PickMoves({ app, m }: { app: App; m: Model }) {
             </div>
             <span style={fitStyle(dd.fit)}>{dd.fit}</span>
           </div>
-          <div style={{ fontSize: 11.5, color: dim(0.5), marginTop: 6 }}>with {dd.partner}</div>
+          <div style={{ fontSize: 12, color: dim(0.48), marginTop: 6 }}>with {dd.partner}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 7 }}>
             <div style={{ fontSize: 12 }}>
               <span style={{ color: GOOD }}>Receive</span>{' '}
@@ -506,7 +506,7 @@ function PickMoves({ app, m }: { app: App; m: Model }) {
               {dd.give.map(x => `${'label' in x && x.label ? x.label : x.name} (${num(x.q * 100)})`).join(' + ')}
             </div>
           </div>
-          <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.45), marginTop: 7, textWrap: 'pretty' }}>
+          <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.48), marginTop: 7, textWrap: 'pretty' }}>
             {dealWhy(dd)}
           </div>
           <button

@@ -122,7 +122,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 function Balance({ v, fit }: { v: ReturnType<typeof evaluateTrade>; fit: string | null }) {
   const [open, setOpen] = useState(false);
   const me = v.ledgers.find(l => l.isMe);
-  const tone = !v.moved ? dim(0.5) : v.winner ? (v.winner.isMe ? GOOD : BAD) : dim(0.75);
+  const tone = !v.moved ? dim(0.48) : v.winner ? (v.winner.isMe ? GOOD : BAD) : dim(0.72);
 
   const head = !v.moved ? 'Nothing in the trade yet'
     : !v.winner ? 'Even trade'
@@ -183,7 +183,7 @@ function Balance({ v, fit }: { v: ReturnType<typeof evaluateTrade>; fit: string 
 
 /** One team's whole side of the deal, in the terms it would judge it by. */
 function LedgerRow({ l, moved }: { l: TeamLedger; moved: number }) {
-  const tone = l.standing === 'wins' ? GOOD : l.standing === 'loses' ? BAD : dim(0.5);
+  const tone = l.standing === 'wins' ? GOOD : l.standing === 'loses' ? BAD : dim(0.48);
   const pct = moved ? Math.round((l.net / moved) * 100) : 0;
   return (
     <div className="fb-row">

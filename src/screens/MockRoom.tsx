@@ -174,11 +174,11 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
           ‹ Leave
         </button>
         <div style={{ minWidth: 0, flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 9, letterSpacing: '.11em', textTransform: 'uppercase', color: dim(0.4) }}>
+          <div style={{ fontSize: 10, letterSpacing: '.11em', textTransform: 'uppercase', color: dim(0.38) }}>
             Mock draft · seat {st.slot}
           </div>
           <div style={{
-            fontSize: 12.5, fontWeight: 500, marginTop: 2, ...ellipsis,
+            fontSize: 12, fontWeight: 500, marginTop: 2, ...ellipsis,
             color: onClock ? ACCENT : 'inherit',
           }}>
             {status}
@@ -214,7 +214,7 @@ export function MockRoom({ app, m }: { app: App; m: Model }) {
             type="button"
             className="btn btn-primary"
             onClick={() => { setShown(0); app.startMock(); }}
-            style={{ width: '100%', padding: '11px 0', fontSize: 13.5, borderRadius: 11 }}
+            style={{ width: '100%', padding: '11px 0', fontSize: 13, borderRadius: 12 }}
           >
             {app.roomId ? 'Start for the room' : 'Start mock draft'}
           </button>
@@ -386,7 +386,7 @@ function PlayerList({ st, m, app, pos, q, canTake, onTake }: {
 
   if (!picks.length && !rest.length) {
     return (
-      <div style={{ fontSize: 12.5, color: dim(0.45), padding: '14px 15px' }}>
+      <div style={{ fontSize: 12, color: dim(0.48), padding: '14px 15px' }}>
         Nobody left matching that.
       </div>
     );
@@ -438,7 +438,7 @@ function PlayerRow({ o, teams, face, canTake, onTake, again }: {
       </button>
       <div style={{ minWidth: 0, flex: 1 }}>
         {o.title ? (
-          <div className="pl-lens" style={{ color: o.lens === 'need' ? GOOD : dim(0.45) }}>
+          <div className="pl-lens" style={{ color: o.lens === 'need' ? GOOD : dim(0.48) }}>
             {o.title}
           </div>
         ) : null}
@@ -480,16 +480,16 @@ function MyTeam({ st, m, app }: { st: MockState; m: Model; app: App }) {
         }}>
           <Face {...app.photoSet(o.id)} pos={o.pos} size={28} />
           <span style={{ flex: 1, minWidth: 0, ...ellipsis }}>{o.name}</span>
-          <span style={{ color: dim(0.42), flex: 'none' }}>
+          <span style={{ color: dim(0.38), flex: 'none' }}>
             <span style={{ color: colorOf(o.pos) }}>{o.pos}</span>{' · rating ' + o.fit}
           </span>
         </div>
       )) : (
-        <div style={{ fontSize: 12.5, color: dim(0.5), paddingTop: 10 }}>
+        <div style={{ fontSize: 12, color: dim(0.48), paddingTop: 10 }}>
           Nothing yet.
         </div>
       )}
-      <div style={{ fontSize: 11, color: dim(0.4), marginTop: 12, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 10, color: dim(0.38), marginTop: 12, lineHeight: '15px' }}>
         {POS.map(p => (st.shape[p] || 0) + '/' + (m.slots[p] || 0) + ' ' + p).join(' · ')}
         {' — counting what you already own'}
       </div>
@@ -554,7 +554,7 @@ function InvitePanel({ app, m, finished, onClose }: {
             className="btn btn-primary"
             onClick={() => void openRoom()}
             disabled={opening}
-            style={{ width: '100%', marginTop: 11, padding: '10px 0', fontSize: 13, borderRadius: 10 }}
+            style={{ width: '100%', marginTop: 11, padding: '10px 0', fontSize: 13, borderRadius: 8 }}
           >
             {app.roomId ? 'Share room ' + app.roomId : opening ? 'Opening…' : 'Draft together'}
           </button>
@@ -567,10 +567,10 @@ function InvitePanel({ app, m, finished, onClose }: {
           {app.roomId ? (
             <div style={{
               display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 9,
-              marginTop: 10, padding: '9px 10px', borderRadius: 10,
-              background: 'rgba(242,253,254,.05)', border: 'var(--hairline) solid var(--color-divider)',
+              marginTop: 10, padding: '9px 10px', borderRadius: 8,
+              background: 'rgba(242,253,254,0.04)', border: 'var(--hairline) solid var(--color-divider)',
             }}>
-              <span style={{ fontSize: 10.5, color: dim(0.42) }}>or read them</span>
+              <span style={{ fontSize: 10, color: dim(0.38) }}>or read them</span>
               <span style={{
                 font: "600 20px ui-monospace, SFMono-Regular, Menlo, monospace",
                 letterSpacing: '.22em', color: ACCENT,
@@ -579,25 +579,25 @@ function InvitePanel({ app, m, finished, onClose }: {
               </span>
             </div>
           ) : null}
-          <div style={{ fontSize: 11, color: dim(0.45), marginTop: 7 }}>
+          <div style={{ fontSize: 10, color: dim(0.48), marginTop: 7 }}>
             Seats nobody takes are drafted by the app.
           </div>
           {app.roomError ? (
-            <div style={{ fontSize: 11.5, color: BAD, marginTop: 6 }} role="alert">{app.roomError}</div>
+            <div style={{ fontSize: 12, color: BAD, marginTop: 6 }} role="alert">{app.roomError}</div>
           ) : null}
           {app.roomId ? (
             <button
               type="button"
               className="btn btn-secondary"
               onClick={app.leaveRoom}
-              style={{ width: '100%', marginTop: 8, padding: '8px 0', fontSize: 12, borderRadius: 10 }}
+              style={{ width: '100%', marginTop: 8, padding: '8px 0', fontSize: 12, borderRadius: 8 }}
             >
               Leave the room
             </button>
           ) : null}
           <div style={{
-            fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase',
-            color: dim(0.35), margin: '14px 0 4px',
+            fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase',
+            color: dim(0.38), margin: '14px 0 4px',
           }}>
             Or just the same board
           </div>
@@ -615,18 +615,18 @@ function InvitePanel({ app, m, finished, onClose }: {
           type="button"
           className="btn btn-secondary"
           onClick={() => void send('the league')}
-          style={{ width: '100%', marginTop: app.liveOn ? 0 : 11, padding: '10px 0', fontSize: 13, borderRadius: 10 }}
+          style={{ width: '100%', marginTop: app.liveOn ? 0 : 11, padding: '10px 0', fontSize: 13, borderRadius: 8 }}
         >
           Share this board
         </button>
       ) : (
-        <div style={{ fontSize: 11.5, color: dim(0.4), marginTop: app.liveOn ? 0 : 11 }}>
+        <div style={{ fontSize: 12, color: dim(0.38), marginTop: app.liveOn ? 0 : 11 }}>
           Send this board on: the same players, bots and order.
         </div>
       )}
 
       {done ? (
-        <div style={{ fontSize: 11.5, color: GOOD, marginTop: 10 }} role="status">{done}</div>
+        <div style={{ fontSize: 12, color: GOOD, marginTop: 10 }} role="status">{done}</div>
       ) : null}
     </div>
   );

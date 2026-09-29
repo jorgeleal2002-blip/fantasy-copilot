@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { ACCENT, BAD, GOOD, MID } from '../model/constants';
+import { FS } from './scale';
 
 /** Text tints used all over the prototype, named once. */
 export const dim = (a: number) => `rgba(242,253,254,${a})`;
@@ -8,9 +9,9 @@ export const fitColor = (f: number) => (f >= 75 ? GOOD : f >= 60 ? MID : dim(0.6
 
 /** The pill that carries a Rating next to a heading. */
 export function fitStyle(fit: number): CSSProperties {
-  const c = fit >= 75 ? GOOD : fit >= 60 ? MID : dim(0.55);
+  const c = fit >= 75 ? GOOD : fit >= 60 ? MID : dim(0.6);
   return {
-    fontSize: 12.5, fontWeight: 500, padding: '2px 9px', borderRadius: 7, flex: 'none',
+    fontSize: 12, fontWeight: 500, padding: '2px 9px', borderRadius: 8, flex: 'none',
     color: c,
     border: '1px solid ' + (fit >= 60 ? c + '55' : 'var(--color-divider)'),
     background: fit >= 60 ? c + '18' : 'transparent',
@@ -32,8 +33,9 @@ export function seg(active: boolean, size: SegSize = 'md'): CSSProperties {
     flex: 1,
     textAlign: 'center',
     padding: size === 'sm' ? '6px 3px 5px' : '7px 4px 6px',
-    fontSize: size === 'sm' ? 11 : 11.5,
-    lineHeight: 1.3,
+    fontSize: size === 'sm' ? FS.micro : FS.small,
+    /* Whole pixels, per branch: a ratio here resolved to 14.3 and 14.95. */
+    lineHeight: size === 'sm' ? '13px' : '16px',
     // "Free agents" broke across two lines and made the row twice as tall as
     // its neighbour; a two-word option is still one option.
     whiteSpace: 'nowrap',
@@ -45,7 +47,7 @@ export function seg(active: boolean, size: SegSize = 'md'): CSSProperties {
     borderRadius: 0,
     fontWeight: active ? 600 : 400,
     letterSpacing: active ? '.01em' : 0,
-    color: active ? ACCENT : dim(0.45),
+    color: active ? ACCENT : dim(0.48),
     background: 'transparent',
     userSelect: 'none',
   };
@@ -54,7 +56,7 @@ export function seg(active: boolean, size: SegSize = 'md'): CSSProperties {
 /** Only the part that changes with state — the layout lives in `.tab-btn`,
  *  because it has to become a row on a laptop and inline styles cannot. */
 export function tabStyle(on: boolean): CSSProperties {
-  return { color: on ? ACCENT : dim(0.4) };
+  return { color: on ? ACCENT : dim(0.38) };
 }
 
 
@@ -74,7 +76,7 @@ export const surface: CSSProperties = {
  * nothing more.
  */
 export const heroCard: CSSProperties = {
-  borderRadius: 14,
+  borderRadius: 12,
   padding: 13,
   background: 'var(--color-section)',
   position: 'relative',
@@ -91,9 +93,9 @@ export const kicker: CSSProperties = {
 export const cardTitle: CSSProperties = { fontSize: 13, fontWeight: 500 };
 
 export const cardNote: CSSProperties = {
-  fontSize: 11,
-  lineHeight: 1.45,
-  color: dim(0.42),
+  fontSize: 10,
+  lineHeight: '14px',
+  color: dim(0.38),
   textWrap: 'pretty' as CSSProperties['textWrap'],
 };
 
@@ -110,16 +112,18 @@ export const capsule: CSSProperties = {
   gap: 6,
   fontSize: 10,
   letterSpacing: '.04em',
-  color: dim(0.45),
-  background: 'rgba(242,253,254,.05)',
-  borderRadius: 6,
+  color: dim(0.48),
+  background: 'rgba(242,253,254,0.04)',
+  borderRadius: 4,
   padding: '4px 8px',
 };
 
 export const trackStyle: CSSProperties = {
   height: 6,
-  borderRadius: 3,
-  background: 'rgba(242,253,254,.08)',
+  /* Follows its own height — see `R.pill`. A 4px corner on a 6px bar leaves a
+     flat 2px in the middle of what is meant to read as a capsule. */
+  borderRadius: 999,
+  background: 'rgba(242,253,254,0.07)',
   overflow: 'hidden',
 };
 

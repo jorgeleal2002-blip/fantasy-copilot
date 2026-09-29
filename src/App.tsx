@@ -42,7 +42,7 @@ export default function App() {
             }}
           >
             <Mark size={20} />
-            <span style={{ fontSize: 13, lineHeight: 1.4 }}>{app.toast}</span>
+            <span style={{ fontSize: 13, lineHeight: '18px' }}>{app.toast}</span>
           </div>
         ) : null}
       </div>

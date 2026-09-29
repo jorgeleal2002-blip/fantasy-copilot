@@ -87,7 +87,7 @@ export function LeagueTrades({ app, m }: { app: App; m: Model }) {
       {/* Judged at today's market rather than the market on the day: whether a
           deal was fair when it was made is answered by both managers having
           accepted it. */}
-      <div style={{ fontSize: 12, color: dim(0.5) }}>
+      <div style={{ fontSize: 12, color: dim(0.48) }}>
         {trades.length === 1 ? '1 trade' : trades.length + ' trades'} this season
         {mine ? ', ' + mine + ' yours' : ''}
       </div>
@@ -103,24 +103,24 @@ const WHEN = (at: number) => (at
 function TradeCard({ app, m, t }: { app: App; m: Model; t: LeagueTrade }) {
   const [open, setOpen] = useState(false);
   const winner = t.verdict?.winner || null;
-  const tone = !winner ? dim(0.5) : winner.isMe ? GOOD : ACCENT;
+  const tone = !winner ? dim(0.48) : winner.isMe ? GOOD : ACCENT;
 
   return (
     <Card>
       <div style={{
         display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8,
-        fontSize: 10.5, color: dim(0.4),
+        fontSize: 10, color: dim(0.38),
       }}>
         <span>{t.week ? 'Week ' + t.week : 'Preseason'}</span>
         <span>{WHEN(t.at)}</span>
       </div>
 
-      <div style={{ fontSize: 12.5, fontWeight: 500, color: tone, marginTop: 4, textWrap: 'pretty' }}>
+      <div style={{ fontSize: 12, fontWeight: 500, color: tone, marginTop: 4, textWrap: 'pretty' }}>
         {tradeOutcome(t)}
       </div>
       {/* Said out loud where it changes the number, rather than quietly. */}
       {t.faab && t.verdict ? (
-        <div style={{ fontSize: 10, color: dim(0.35), marginTop: 3 }}>
+        <div style={{ fontSize: 10, color: dim(0.38), marginTop: 3 }}>
           waiver budget not counted
         </div>
       ) : null}
@@ -135,18 +135,18 @@ function TradeCard({ app, m, t }: { app: App; m: Model; t: LeagueTrade }) {
         {t.sides.map(s => (
           <div key={s.id}>
             <div style={{
-              fontSize: 11, fontWeight: 500, marginBottom: 5,
+              fontSize: 10, fontWeight: 500, marginBottom: 5,
               color: s.isMe ? 'var(--color-accent)' : 'var(--color-text)', ...ellipsis,
             }}>
               {s.name} {s.isMe ? 'get' : 'gets'}
             </div>
             {s.got.length
               ? s.got.map(mv => <Piece key={mv.id} mv={mv} />)
-              : <div style={{ fontSize: 11, color: dim(0.33) }}>nothing</div>}
+              : <div style={{ fontSize: 10, color: dim(0.28) }}>nothing</div>}
             {s.net != null ? (
               <div style={{
                 fontSize: 10, marginTop: 5,
-                color: s.net > 0 ? GOOD : s.net < 0 ? BAD : dim(0.4),
+                color: s.net > 0 ? GOOD : s.net < 0 ? BAD : dim(0.38),
               }}>
                 {(s.net > 0 ? '+' : s.net < 0 ? '−' : '') + Math.abs(Math.round(s.net)) + ' in value'}
               </div>
@@ -160,7 +160,7 @@ function TradeCard({ app, m, t }: { app: App; m: Model; t: LeagueTrade }) {
         onClick={() => setOpen(v => !v)}
         aria-expanded={open}
         className="btn btn-ghost"
-        style={{ fontSize: 11, padding: 0, marginTop: 9 }}
+        style={{ fontSize: 10, padding: 0, marginTop: 9 }}
       >
         {open ? 'Less' : 'What it did to each team ›'}
       </button>
@@ -198,18 +198,18 @@ function SideDetail({ app, m, t, s }: { app: App; m: Model; t: LeagueTrade; s: T
 
   return (
     <div style={{ borderTop: 'var(--hairline) solid var(--color-divider)', paddingTop: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 10 }}>
         <span style={{
           fontWeight: 500, color: s.isMe ? 'var(--color-accent)' : 'var(--color-text)', ...ellipsis,
         }}>
           {s.name}
         </span>
-        <span style={{ fontSize: 10, color: dim(0.4), flex: 'none' }}>
+        <span style={{ fontSize: 10, color: dim(0.38), flex: 'none' }}>
           {[row?.record.label, row ? ord(row.rankNow) + ' in the league' : ''].filter(Boolean).join(' · ')}
         </span>
       </div>
 
-      <div style={{ fontSize: 11.5, lineHeight: 1.5, color: dim(0.72), marginTop: 4, textWrap: 'pretty' }}>
+      <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.72), marginTop: 4, textWrap: 'pretty' }}>
         {read}
       </div>
 
@@ -225,7 +225,7 @@ function SideDetail({ app, m, t, s }: { app: App; m: Model; t: LeagueTrade; s: T
 function Column({ app, label, list }: { app: App; label: string; list: TradeMove[] }) {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 9.5, letterSpacing: '0.06em', color: dim(0.32), marginBottom: 3 }}>
+      <div style={{ fontSize: 10, letterSpacing: '0.06em', color: dim(0.28), marginBottom: 3 }}>
         {label.toUpperCase()}
       </div>
       {list.length ? list.map(mv => (
@@ -238,13 +238,13 @@ function Column({ app, label, list }: { app: App; label: string; list: TradeMove
             ? e => { if (e.key === 'Enter') app.setDetail(mv.id.slice(1)); }
             : undefined}
           style={{
-            fontSize: 11, marginBottom: 2,
+            fontSize: 10, marginBottom: 2,
             cursor: mv.kind === 'player' ? 'pointer' : undefined, ...ellipsis,
           }}
         >
           {mv.name}
         </div>
-      )) : <div style={{ fontSize: 11, color: dim(0.3) }}>—</div>}
+      )) : <div style={{ fontSize: 10, color: dim(0.28) }}>—</div>}
     </div>
   );
 }
@@ -252,8 +252,8 @@ function Column({ app, label, list }: { app: App; label: string; list: TradeMove
 function Piece({ mv }: { mv: TradeMove }) {
   return (
     <div style={{ marginBottom: 4 }}>
-      <div style={{ fontSize: 11.5, ...ellipsis }}>{mv.name}</div>
-      {mv.note ? <div style={{ fontSize: 9.5, color: dim(0.35), ...ellipsis }}>{mv.note}</div> : null}
+      <div style={{ fontSize: 12, ...ellipsis }}>{mv.name}</div>
+      {mv.note ? <div style={{ fontSize: 10, color: dim(0.38), ...ellipsis }}>{mv.note}</div> : null}
     </div>
   );
 }

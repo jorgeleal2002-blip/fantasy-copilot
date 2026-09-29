@@ -53,7 +53,7 @@ export function TradePackages(
 
   if (!deals.length) {
     return (
-      <div style={{ fontSize: 12, lineHeight: 1.5, color: dim(0.5), marginTop: 8 }}>
+      <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.48), marginTop: 8 }}>
         Nothing you own gets there at a price his manager would take. Either he is worth more than
         any package you can build, or his team is short at exactly his position.
       </div>
@@ -72,10 +72,10 @@ export function TradePackages(
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.4) }}>
+                <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.38) }}>
                   You send
                 </div>
-                <div style={{ fontSize: 13.5, fontWeight: 500, letterSpacing: '-0.01em', marginTop: 3 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', marginTop: 3 }}>
                   {t.give.map(g => g.name).join(' + ')}
                 </div>
               </div>
@@ -83,20 +83,20 @@ export function TradePackages(
                 <div style={{ fontSize: 15, fontWeight: 500, color: t.accept >= 70 ? GOOD : t.accept >= 50 ? ACCENT : dim(0.6) }}>
                   {t.accept}
                 </div>
-                <div style={{ fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', color: dim(0.38) }}>
+                <div style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: dim(0.38) }}>
                   they accept
                 </div>
               </div>
             </div>
 
             {compact ? null : (
-              <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 5, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12, color: dim(0.48), marginTop: 5, lineHeight: '18px' }}>
                 {t.give.map(g => (g.isPick ? g.label : g.pos + ' · ' + (g.age ?? '?') + ' yrs')).join(' · ')}
                 {' · '}{num(t.cost * 100)} vs his {num(t.target.q * 100)}
               </div>
             )}
 
-            <div style={{ fontSize: 11.5, marginTop: 5, lineHeight: 1.5, color: dim(0.6) }}>
+            <div style={{ fontSize: 12, marginTop: 5, lineHeight: '18px', color: dim(0.6) }}>
               {priceRead(t)}
             </div>
 
@@ -107,7 +107,7 @@ export function TradePackages(
                 aria-pressed={on}
                 className="btn btn-ghost"
                 style={{
-                  fontSize: 11.5, padding: '4px 0', fontWeight: 500,
+                  fontSize: 12, padding: '4px 0', fontWeight: 500,
                   color: on ? GOOD : 'var(--color-accent)',
                 }}
               >
@@ -119,7 +119,7 @@ export function TradePackages(
                   type="button"
                   onClick={() => app.setDetail(g.id)}
                   className="btn btn-ghost"
-                  style={{ fontSize: 11, padding: '4px 0' }}
+                  style={{ fontSize: 10, padding: '4px 0' }}
                 >
                   Open {g.name}
                 </button>
