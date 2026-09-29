@@ -160,11 +160,14 @@ async function send(url: string, method: string, body?: unknown): Promise<unknow
  */
 export function liveReason(e: unknown, what: string): string {
   const msg = String((e as Error)?.message || e);
+  /* A 401 here is never a network problem and never a bug in the app — it is
+   * the database saying no, and in a fresh setup it says no for one reason:
+   * rules that were typed and not published, or that predate what is being
+   * written. Short, because it is a toast over a card somebody is reading —
+   * and it names the button rather than a README, which is not a thing you
+   * can open from the phone it appears on. */
   if (/40[13]/.test(msg)) {
-    return 'The database refused it — your rules do not cover this, or were '
-      + 'never published. Firebase console → Realtime Database → Rules → '
-      + 'Publish (the rules playground only simulates, it does not publish). '
-      + 'The README has the rules to paste; photos need a newer set than rooms.';
+    return 'Database refused it. Firebase → Realtime Database → Rules → Publish.';
   }
   return 'Could not ' + what + '. The database did not answer (' + msg + ').';
 }
