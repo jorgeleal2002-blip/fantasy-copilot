@@ -4,8 +4,8 @@ import { METRIC_LABEL } from '../model/constants';
 import { POS } from '../model/constants';
 import type { Pos } from '../api/types';
 import { resolve } from './PlayerSheet';
+import { WeekBars } from '../ui/charts';
 import { Segmented, type SegOption } from '../ui/primitives';
-import { barHeights } from '../model/season';
 import type { Model, PlayerFit } from '../model/types';
 import type { App } from '../state/useApp';
 import { Face, Overlay } from '../ui/primitives';
@@ -232,23 +232,12 @@ function Who({ app, p, align }: { app: App; p: PlayerFit; align?: 'right' }) {
 function Bars({ app, id, name }: { app: App; id: string; name: string }) {
   const games = app.seasonLog(id);
   if (!games.length) return <div className="cmp-chart" />;
-  const hs = barHeights(games);
   return (
     <div className="cmp-chart">
       {/* Named, because two sets of bars in a row with nothing between them
           read as one chart of seven weeks. */}
       <div className="cmp-chart-h">{name}</div>
-      <div className="ps-bars">
-        {games.map((g, i) => (
-          <div className="ps-bar" key={g.week}>
-            <div className="ps-bar-n">{g.pts.toFixed(0)}</div>
-            <div className="ps-bar-fill" style={{ height: ((hs[i] as number) * 100) + '%' }} />
-          </div>
-        ))}
-      </div>
-      <div className="ps-wks" aria-hidden="true">
-        {games.map(g => <div className="ps-wk" key={g.week}>W{g.week}</div>)}
-      </div>
+      <WeekBars games={games} digits={0} />
     </div>
   );
 }

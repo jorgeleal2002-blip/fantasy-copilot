@@ -1,5 +1,6 @@
 import { MARK_BAD, MARK_GAP, MARK_GOOD, MARK_MID, MARK_NONE, TRACK } from '../model/constants';
 import { dim } from './styles';
+import { type Game, barHeights } from '../model/season';
 import { R } from './scale';
 
 /**
@@ -73,5 +74,49 @@ export function Meter({
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A player's weeks, as bars.
+ *
+ * One component, because there were two — the player card and the compare
+ * screen each drew this — and they shared a defect that a screenshot of the
+ * real app made visible: a week of 35.7 and a week of 40.8 came out the same
+ * height, and 19.5 came out at two thirds of the tallest rather than a half.
+ * The chart was not describing its own numbers.
+ *
+ * The cause was that the figure above each bar lived in the same flex column
+ * as the bar, so a bar tall enough that bar + label exceeded the 92px chart was
+ * SHRUNK to fit — flex-shrink defaults to 1 — and every week above about four
+ * fifths of the best one flattened onto the same ceiling. The label now sits
+ * outside a track of its own, so a percentage means the same thing in every
+ * column, which is the one thing a bar chart has to get right.
+ */
+export function WeekBars({ games, digits = 1 }: { games: Game[]; digits?: number }) {
+  if (!games.length) return null;
+  const hs = barHeights(games);
+  const top = Math.max(...games.map(g => g.pts));
+  return (
+    <>
+      <div
+        className="ps-bars"
+        role="img"
+        aria-label={'points by week: '
+          + games.map(g => 'week ' + g.week + ', ' + g.pts.toFixed(1)).join('; ')}
+      >
+        {games.map((g, i) => (
+          <div className={'ps-bar' + (g.pts === top ? ' is-top' : '')} key={g.week}>
+            <div className="ps-bar-n">{g.pts.toFixed(digits)}</div>
+            <div className="ps-bar-track">
+              <div className="ps-bar-fill" style={{ height: ((hs[i] as number) * 100) + '%' }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="ps-wks" aria-hidden="true">
+        {games.map(g => <div className="ps-wk" key={g.week}>W{g.week}</div>)}
+      </div>
+    </>
   );
 }

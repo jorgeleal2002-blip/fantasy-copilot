@@ -1753,10 +1753,28 @@ button { font-family: inherit; }
 .ps-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px 6px;
+  /* Three implicit rows per band of cells — see `.ps-cell`. The row gap is the
+     space BETWEEN bands, so the rows inside one stay tight. */
+  gap: 0 6px;
   margin-top: 12px;
 }
-.ps-cell { text-align: center; min-width: 0; }
+/* Label, figure and note each on a row SHARED with the other columns.
+   Stacked independently, a label long enough to wrap — "YARDS PER TOUCH" — put
+   its own figure a line below the two beside it, so a row of three readings sat
+   on three different baselines. Subgrid makes the three cells agree; where it
+   is not available the label simply reserves the two lines instead. */
+.ps-cell {
+  text-align: center;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 3;
+  align-content: start;
+}
+@supports not (grid-template-rows: subgrid) {
+  .ps-cell { display: block; }
+  .ps-k { min-height: 26px; }
+}
 .ps-k {
   font-size: 10px;
   letter-spacing: .1em;
@@ -1774,6 +1792,9 @@ button { font-family: inherit; }
 .ps-r {
   font-size: 12px;
   margin-top: 2px;
+  /* What separates one band of readings from the next, now that the grid's row
+     gap belongs to the three rows inside a band. */
+  margin-bottom: 16px;
   color: var(--color-accent);
   font-variant-numeric: tabular-nums;
 }
@@ -1786,7 +1807,7 @@ button { font-family: inherit; }
    is allowed to wrap where the grid's own labels are single tokens. */
 .ps-grid.is-tiles {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px 8px;
+  gap: 0 8px;
 }
 .ps-grid.is-tiles .ps-v { font-size: 15px; }
 .ps-grid.is-tiles .ps-v.is-word { font-size: 12px; letter-spacing: -0.01em; padding-top: 3px; }
@@ -1810,6 +1831,18 @@ button { font-family: inherit; }
   height: 100%;
   gap: 4px;
 }
+/* What the percentage is a percentage OF. The figure above a bar used to share
+   the column with it, so a bar tall enough that the two together passed 92px
+   was shrunk to fit — flex-shrink is 1 unless you say otherwise — and every
+   week above four fifths of the best one flattened onto the same ceiling. The
+   track is the same height in every column, which is what makes the heights
+   comparable at all. */
+.ps-bar-track {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+}
 .ps-bar-n {
   font-size: 10px;
   text-align: center;
@@ -1817,6 +1850,8 @@ button { font-family: inherit; }
   font-variant-numeric: tabular-nums;
 }
 .ps-bar-fill {
+  width: 100%;
+  flex: none;
   border-radius: 4px 4px 2px 2px;
   background: color-mix(in srgb, var(--color-accent) 55%, transparent);
 }

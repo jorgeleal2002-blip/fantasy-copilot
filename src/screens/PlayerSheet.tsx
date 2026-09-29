@@ -26,12 +26,13 @@ import type { Model } from '../model/types';
 import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
+import { WeekBars } from '../ui/charts';
 import { Card, Face, Overlay } from '../ui/primitives';
 import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { statBits } from '../model/stat-line';
 import { projectPPG } from '../model/project';
-import { barHeights, gapsIn, ordinal, type Ranked } from '../model/season';
+import { gapsIn, ordinal, type Ranked } from '../model/season';
 import { type Tone, placing, toneOf, toneOfRank } from '../model/standing';
 import { TradePackages } from '../ui/TradePackages';
 import { cardTitle, dim, fitColor } from '../ui/styles';
@@ -599,9 +600,6 @@ function ThisSeason(
     { k: 'Worst', v: line.low.toFixed(1), r: ranks?.low },
   ];
 
-  const hs = barHeights(games);
-  const top = Math.max(...games.map(g => g.pts));
-
   return (
     <Card style={{ marginTop: 16 }}>
       {played && line ? (
@@ -630,17 +628,7 @@ function ThisSeason(
         ))}
       </div>
 
-      <div className="ps-bars" role="img" aria-label={'points by week: ' + games.map(g => 'week ' + g.week + ', ' + g.pts.toFixed(1)).join('; ')}>
-        {games.map((g, i) => (
-          <div className={'ps-bar' + (g.pts === top ? ' is-top' : '')} key={g.week}>
-            <div className="ps-bar-n">{g.pts.toFixed(1)}</div>
-            <div className="ps-bar-fill" style={{ height: ((hs[i] as number) * 100) + '%' }} />
-          </div>
-        ))}
-      </div>
-      <div className="ps-wks" aria-hidden="true">
-        {games.map(g => <div className="ps-wk" key={g.week}>W{g.week}</div>)}
-      </div>
+      <WeekBars games={games} />
 
       </div>
       ) : null}
