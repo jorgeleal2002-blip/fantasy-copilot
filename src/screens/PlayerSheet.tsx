@@ -295,8 +295,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
        other tile — so the accent line down the grid is one column of the same
        question and not two different ones. */
     stats.push(
-      { label: 'Sched allows', value: String(sos.perGame), note: ord(sos.rank) + ' of 32', rank: true },
-      { label: 'Playoffs allow', value: String(sos.playoffPerGame), note: ord(sos.playoffRank) + ' of 32', rank: true },
+      { label: 'Sched allows', value: sos.perGame.toFixed(1), note: ord(sos.rank) + ' of 32', rank: true },
+      { label: 'Playoffs allow', value: sos.playoffPerGame.toFixed(1), note: ord(sos.playoffRank) + ' of 32', rank: true },
       {
         label: 'Playoff foes',
         value: sos.weeks.map(w => fixtures[w - 1] || 'bye').join(' '),
@@ -575,6 +575,31 @@ function ThisSeason(
         {games.map(g => <div className="ps-wk" key={g.week}>W{g.week}</div>)}
       </div>
 
+      </div>
+      ) : null}
+
+      {/* The rest of what is known about him, in the same card rather than in
+          three more below it: what he costs, how much of his offence he is,
+          and who he still has to play. They were separate cards because they
+          came from separate places, which is a fact about the app and not
+          about him. */}
+      <div className={'ps-sec' + (played ? '' : ' is-first')}>
+        <div className="ps-sec-h">The numbers</div>
+        <Tiles rows={stats} />
+        <More label="More numbers">
+          <Tiles rows={deeper} />
+          <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), marginTop: 14, textWrap: 'pretty' }}>
+            {DATA_NOTE}
+          </div>
+        </More>
+      </div>
+
+      {/* The long tail of the card, so it sits under everything that is
+          one line each. Eight games of log between the season and the rest of
+          the numbers put the two halves of one answer a screen apart. */}
+      {played ? (
+      <div className="ps-sec">
+        <div className="ps-sec-h">Game by game</div>
       {/* Game by game, newest first — the order somebody scrolls a log in,
           because "what has he done lately" is the question being asked and
           the answer to it is at the top.
@@ -630,23 +655,6 @@ function ThisSeason(
       ) : null}
       </div>
       ) : null}
-
-      {/* The rest of what is known about him, in the same card rather than in
-          three more below it: what he costs, how much of his offence he is,
-          and who he still has to play. They were separate cards because they
-          came from separate places, which is a fact about the app and not
-          about him. */}
-      <div className={'ps-sec' + (played ? '' : ' is-first')}>
-        <div className="ps-sec-h">The numbers</div>
-        <Tiles rows={stats} />
-        <More label="More numbers">
-          <Tiles rows={deeper} />
-          <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), marginTop: 14, textWrap: 'pretty' }}>
-            {DATA_NOTE}
-          </div>
-        </More>
-      </div>
-
     </Card>
   );
 }
