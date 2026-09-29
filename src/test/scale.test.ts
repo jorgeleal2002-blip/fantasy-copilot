@@ -214,6 +214,29 @@ describe('the app is drawn on its scales', () => {
     expect(bad).toEqual([]);
   });
 
+  it('keeps the smallest step for text that can survive it', () => {
+    /* `FS.micro` is for uppercase, numerals and glyphs — see its note. It had
+       become the app's general small size instead, on 41 rules, including the
+       line naming which player a row is about. A rule that sets it has to say
+       it is one of those: uppercase, or numeric. */
+    const css = FILES.filter(f => f.path.endsWith('.css'));
+    const bad: string[] = [];
+    for (const f of css) {
+      for (const m of f.text.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const body = m[2] as string;
+        if (!/font-size: 10px/.test(body)) continue;
+        if (/text-transform: uppercase/.test(body)) continue;
+        if (/font-variant-numeric: tabular-nums/.test(body)) continue;
+        bad.push((m[1] as string).trim().split('\n').pop() as string);
+      }
+    }
+    // Each remaining one holds a glyph or a bare code and is listed by name,
+    // so adding to this list is a decision somebody has to write down.
+    const GLYPHS = ['.bd-live', '.bd-arrow', '.bd-pos', '.bd-head', '.bd-round',
+      '.pos-count', '.ms-slot', '.ms-edge', '.fb-pill', '.pw-tag', '.ps-bar-n'];
+    expect(bad.filter(sel => !GLYPHS.some(g => sel.includes(g)))).toEqual([]);
+  });
+
   it('keeps the scales small enough to hold in your head', () => {
     // The number that matters. Whatever the steps are, there cannot be many.
     expect(FS_STEPS.length).toBeLessThanOrEqual(9);

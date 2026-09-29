@@ -34,9 +34,19 @@
  * board proving it.
  */
 export const FS = {
-  /** Kickers, chips, week labels, stat keys — mostly uppercase. */
+  /**
+   * Uppercase labels, bare numerals and glyphs. NOT lowercase words.
+   *
+   * This step became the app's general small-text size — 41 rules were setting
+   * mixed-case content lines in it, a player's team and bye, the line of what
+   * he actually did on Sunday, a trade's reasoning. Ten pixels of lowercase on
+   * a phone is small in a way no amount of resolution fixes, and it is most of
+   * what reads as an app that has not been finished. Caps carry it because
+   * their x-height IS their cap height; lowercase has nothing left over.
+   */
   micro: 10,
-  /** Second lines: a team, a position, an owner. */
+  /** The floor for anything with lowercase words in it: a team, an owner, a
+   *  secondary line, a stat line. */
   small: 12,
   /** The body of the app, and every list row. */
   body: 13,

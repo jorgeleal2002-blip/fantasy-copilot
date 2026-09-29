@@ -214,7 +214,7 @@ button { font-family: inherit; }
   border: 0;
   font: inherit;
 }
-.tab-btn span { font-size: 10px; }
+.tab-btn span { font-size: 12px; }
 
 /* ── Laptop and up ────────────────────────────────────────────────────────
    A thumb reaches the bottom of a phone; a cursor does not want to travel
@@ -706,7 +706,7 @@ button { font-family: inherit; }
   text-overflow: ellipsis;
 }
 .pl-meta {
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(242, 253, 254, 0.52);
   margin-top: 1px;
   white-space: nowrap;
@@ -1094,7 +1094,7 @@ button { font-family: inherit; }
 .ms-pts.is-up { color: var(--color-text); }
 /* The forecast under the fact, and smaller than it. */
 .ms-proj {
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 2px;
   color: rgba(242, 253, 254, 0.52);
   font-variant-numeric: tabular-nums;
@@ -1147,7 +1147,7 @@ button { font-family: inherit; }
 }
 .ms-name.is-me { color: var(--color-accent); }
 .ms-sub {
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 3px;
   color: rgba(242, 253, 254, 0.52);
   overflow: hidden;
@@ -1215,16 +1215,23 @@ button { font-family: inherit; }
 .ms-cell.is-tap:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 .ms-who { flex: 1; min-width: 0; }
 
+/* On its own line now, with the cell's full width — so it can carry the size
+   and weight the subject of a row should have, which beside a score it could
+   not. */
 .ms-pl-name {
-  font-size: 13px;
-  color: rgba(242, 253, 254, 0.9);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 19px;
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .ms-pl-sub {
   font-size: 10px;
-  margin-top: 2px;
+  text-transform: uppercase;
+  margin-top: 0;
   color: rgba(242, 253, 254, 0.52);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1237,6 +1244,7 @@ button { font-family: inherit; }
    quarters of what happened. */
 .ms-pl-did {
   font-size: 10px;
+  text-transform: uppercase;
   line-height: 14px;
   color: rgba(242, 253, 254, 0.52);
   display: -webkit-box;
@@ -1246,8 +1254,8 @@ button { font-family: inherit; }
 }
 .ms-num { flex: none; }
 .ms-pl-pts {
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 17px;
+  font-weight: 600;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
@@ -1277,7 +1285,7 @@ button { font-family: inherit; }
 .tb-team {
   flex: none;
   font: inherit;
-  font-size: 10px;
+  font-size: 12px;
   cursor: pointer;
   padding: 7px 11px;
   border-radius: 999px;
@@ -1354,7 +1362,7 @@ button { font-family: inherit; }
 }
 
 .tb-gets {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 14px;
   color: rgba(242, 253, 254, 0.52);
   margin-top: 5px;
@@ -1366,9 +1374,9 @@ button { font-family: inherit; }
   margin-top: 12px;
   text-wrap: pretty;
 }
-.tb-problem { font-size: 10px; color: #d9a08e; margin-top: 7px; text-wrap: pretty; }
+.tb-problem { font-size: 12px; color: #d9a08e; margin-top: 7px; text-wrap: pretty; }
 .tb-band {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 14px;
   color: rgba(242, 253, 254, 0.52);
   margin-top: 10px;
@@ -1380,7 +1388,7 @@ button { font-family: inherit; }
 .tb-asset { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .tb-asset-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-why {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1395,7 +1403,7 @@ button { font-family: inherit; }
 /* The record, under the name the way a scoreboard prints it. Quiet enough
    that the score stays the number being read. */
 .mu-rec {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 12px;
   margin-top: 1px;
   color: rgba(242, 253, 254, 0.52);
@@ -1412,7 +1420,7 @@ button { font-family: inherit; }
    is which. */
 .mu-proj {
   margin-left: 6px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   letter-spacing: 0;
   color: rgba(242, 253, 254, 0.52);
@@ -1464,12 +1472,12 @@ button { font-family: inherit; }
   justify-content: space-between;
   gap: 10px;
   margin-top: 5px;
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(242, 253, 254, 0.52);
 }
 .fb-bal-legs span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fb-fit { font-size: 12px; color: rgba(242, 253, 254, 0.75); margin-top: 10px; text-wrap: pretty; }
-.fb-problem { font-size: 10px; color: #d9a08e; margin-top: 7px; text-wrap: pretty; }
+.fb-problem { font-size: 12px; color: #d9a08e; margin-top: 7px; text-wrap: pretty; }
 
 /* Two columns fit a phone; a third and fourth scroll rather than squeeze, so
    a card never gets too narrow to read a name in. */
@@ -1545,8 +1553,8 @@ button { font-family: inherit; }
   border-radius: 4px;
   color: #04060f;
 }
-.fb-val { font-size: 10px; color: rgba(242, 253, 254, 0.62); }
-.fb-from { font-size: 10px; color: rgba(242, 253, 254, 0.52); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-val { font-size: 12px; color: rgba(242, 253, 254, 0.62); }
+.fb-from { font-size: 12px; color: rgba(242, 253, 254, 0.52); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .fb-x {
   flex: none;
@@ -1563,7 +1571,7 @@ button { font-family: inherit; }
 }
 .fb-add {
   font: inherit;
-  font-size: 10px;
+  font-size: 12px;
   cursor: pointer;
   padding: 7px 0;
   border-radius: 8px;
@@ -1603,7 +1611,7 @@ button { font-family: inherit; }
   border-top: var(--hairline) solid var(--color-divider);
 }
 .fb-pick-row.is-on { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
-.fb-on { flex: none; font-size: 10px; color: var(--color-accent); }
+.fb-on { flex: none; font-size: 12px; color: var(--color-accent); }
 
 /* The breakdown, folded away. The headline names one team; this is where the
    other two live, and where a two-team swap says by how much. */
@@ -1634,7 +1642,7 @@ button { font-family: inherit; }
 .fb-row-line {
   display: flex;
   gap: 6px;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 14px;
   color: rgba(242, 253, 254, 0.62);
   margin-top: 3px;
@@ -1651,7 +1659,7 @@ button { font-family: inherit; }
   padding-top: 1px;
 }
 .fb-note {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 14px;
   color: rgba(242, 253, 254, 0.52);
   text-wrap: pretty;
@@ -1729,7 +1737,7 @@ button { font-family: inherit; }
   font-variant-numeric: tabular-nums;
 }
 .ps-r {
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 2px;
   color: var(--color-accent);
   font-variant-numeric: tabular-nums;
@@ -1826,7 +1834,7 @@ button { font-family: inherit; }
   font-variant-numeric: tabular-nums;
 }
 .ps-log-did {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 14px;
   margin-top: 3px;
   color: rgba(242, 253, 254, 0.52);
@@ -1898,20 +1906,20 @@ button { font-family: inherit; }
   font-variant-numeric: tabular-nums;
 }
 .ps-feed-u {
-  font-size: 10px;
+  font-size: 12px;
   text-transform: lowercase;
   color: rgba(242, 253, 254, 0.52);
 }
 /* The tail of the line, under the figures that are set large. */
 .ps-feed-rest {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 14px;
   margin-top: 4px;
   color: rgba(242, 253, 254, 0.62);
   text-wrap: pretty;
 }
 .ps-feed-opp {
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 5px;
   color: rgba(242, 253, 254, 0.52);
 }
@@ -1965,7 +1973,7 @@ button { font-family: inherit; }
   white-space: nowrap;
 }
 .cmp-sub {
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 3px;
   color: rgba(242, 253, 254, 0.52);
   overflow: hidden;
@@ -2033,7 +2041,7 @@ button { font-family: inherit; }
 .cmp-charts { display: flex; gap: 12px; margin-top: 20px; }
 .cmp-chart { flex: 1; min-width: 0; }
 .cmp-chart-h {
-  font-size: 10px;
+  font-size: 12px;
   margin-bottom: 4px;
   color: rgba(242, 253, 254, 0.62);
   overflow: hidden;

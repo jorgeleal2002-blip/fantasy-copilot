@@ -197,10 +197,16 @@ function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'righ
       onClick={tappable ? () => app.setDetail(c.id as string) : undefined}
       onKeyDown={tappable ? e => { if (e.key === 'Enter') app.setDetail(c.id as string); } : undefined}
     >
+      {/* The name gets the cell's whole width, above the row rather than in it.
+          Beside a face and a score there were 65 pixels left for it, so "J.
+          Smith-Njigba" came out "J. Smith-..." and "D. Montgomery" as "D.
+          Montgo..." — on the screen whose subject is which of two players did
+          more. Nothing else in the cell is text that can be read wrong when it
+          is cut, and a name is. */}
+      <div className="ms-pl-name">{c.name}</div>
       <div className="ms-cell-top">
-        <Face {...(c.id ? app.photoSet(c.id) : { photo: null })} pos={c.pos || '—'} size={34} />
+        <Face {...(c.id ? app.photoSet(c.id) : { photo: null })} pos={c.pos || '—'} size={30} />
         <div className="ms-who">
-          <div className="ms-pl-name">{c.name}</div>
           <div className="ms-pl-sub">
             {[c.pos, c.team ? c.team + (bye ? ' (' + bye + ')' : '') : ''].filter(Boolean).join(' · ')}
           </div>
