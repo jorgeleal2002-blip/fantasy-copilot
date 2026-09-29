@@ -1,6 +1,7 @@
 /* Nocturne's structure — the ramps, the spacing, the shadows — carrying
-   Sleeper's colours, sampled from the app itself rather than guessed: the
-   grounds #05081b / #151f3e, the cyan #8eeded, the near-white #f2fdfe.
+   Sleeper's colours: the grounds #05081b / #151f3e, the near-white #f2fdfe,
+   and a cyan that has since been measured against the real thing and found
+   half as chromatic as it — see ACCENT in constants.ts.
    This file is the source of truth for the look: retune here, never inline a hex.
 
    The cyan is far brighter against these grounds than the violet it replaces —
@@ -12,8 +13,8 @@
   --color-bg: #05081b;
   --color-surface: #151f3e;
   --color-text: #f2fdfe;
-  --color-accent: #8eeded;
-  --color-accent-2: #a4e2e1;
+  --color-accent: #2ef0f8;
+  --color-accent-2: #00f2f2;
   --color-divider: color-mix(in srgb, #f2fdfe 14%, transparent);
 
   /* A rule between two rows wants to be the thinnest line the screen can
@@ -71,15 +72,18 @@
   --color-neutral-800: #3e424d;
   --color-neutral-900: #292b31;
 
-  --color-accent-100: #e7fafa;
-  --color-accent-200: #caf1f1;
-  --color-accent-300: #a4e2e1;
-  --color-accent-400: #72c8c9;
-  --color-accent-500: #3cabac;
-  --color-accent-600: #058c8d;
-  --color-accent-700: #006c6e;
-  --color-accent-800: #004d4e;
-  --color-accent-900: #073233;
+  /* The same lightness ladder, at the chroma the gamut allows on it. The ramp
+     was the accent's own paleness repeated nine times — its middle steps came
+     out at chroma 31 where this hue can carry 38 to 48. */
+  --color-accent-100: #bcfefe;
+  --color-accent-200: #28fefe;
+  --color-accent-300: #00f2f2;
+  --color-accent-400: #00d2d2;
+  --color-accent-500: #00b0b0;
+  --color-accent-600: #009090;
+  --color-accent-700: #007070;
+  --color-accent-800: #005050;
+  --color-accent-900: #003636;
 
   --color-section: #1b2e4b;
   --color-section-glow: #24406b;

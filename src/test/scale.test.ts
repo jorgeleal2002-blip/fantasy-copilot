@@ -22,7 +22,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { ALPHA_STEPS, FS_STEPS, GROUNDS, INK, R_STEPS, T, TEXT_CONTRAST_MIN, W } from '../ui/scale';
-import { ACCENT, BAD, GOOD, MID, WARN } from '../model/constants';
+import { ACCENT, BAD, GOOD, MARK_BAD, MARK_GOOD, MARK_MID, MID, POS_COLOR, WARN } from '../model/constants';
 import { placeColor, placeMark } from '../ui/styles';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -352,5 +352,75 @@ describe('what colour a placing is', () => {
       if (/mine <= 3|rank <= 3/.test(f.text)) bad.push(f.path);
     }
     expect([...new Set(bad)]).toEqual([]);
+  });
+});
+
+/* "Los colores le faltan brillo." They did, and it was measurable: every hue
+   the app used to state a meaning sat at about half the chroma of the app this
+   look is taken from — Sleeper's green is 64, this one was 28 — while the four
+   position colours, which nobody had ever muted, were already at 42 to 76. The
+   semantic set was the only dull thing in the palette, and it was the set
+   carrying every verdict. */
+describe('the palette carries its colour', () => {
+  const hex = (h: string) =>
+    [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
+
+  const labOf = (c: [number, number, number]): [number, number, number] => {
+    const f = (v: number) => {
+      const x = v / 255;
+      return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+    };
+    const [r, g, b] = c.map(f) as [number, number, number];
+    const X = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+    const Y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+    const Z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+    const t = (v: number) => (v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116);
+    const [fx, fy, fz] = [t(X), t(Y), t(Z)];
+    return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+  };
+
+  /** Chroma: how much colour is left once lightness and hue are set aside. */
+  const chroma = (h: string) => {
+    const [, a, b] = labOf(hex(h));
+    return Math.sqrt(a * a + b * b);
+  };
+
+  const dE = (x: string, y: string) => {
+    const [p, q] = [labOf(hex(x)), labOf(hex(y))];
+    return Math.sqrt(p.reduce((acc, v, i) => acc + (v - (q[i] as number)) ** 2, 0));
+  };
+
+  /** Below this a hue is a grey with an opinion. The position colours, which
+   *  were never muted, sit at 42 and up; the verdict hues now join them. */
+  const CHROMA_MIN = 40;
+
+  it('keeps every meaning hue above the floor', () => {
+    const dull = Object.entries({ ACCENT, GOOD, BAD, WARN, MID, MARK_GOOD, MARK_MID, MARK_BAD })
+      .filter(([, h]) => chroma(h) < CHROMA_MIN)
+      .map(([n, h]) => `${n} ${h} is chroma ${chroma(h).toFixed(0)}`);
+    expect(dull).toEqual([]);
+  });
+
+  it('keeps the position hues there too, which they always were', () => {
+    const dull = Object.entries(POS_COLOR)
+      .filter(([, h]) => chroma(h) < CHROMA_MIN)
+      .map(([n, h]) => `${n} ${h} is chroma ${chroma(h).toFixed(0)}`);
+    expect(dull).toEqual([]);
+  });
+
+  it('does not buy the colour back by letting two of them converge', () => {
+    // Chroma without separation is a brighter mess. The muted set had pairs at
+    // ΔE 24; this one has none under 30.
+    const set = { ACCENT, GOOD, BAD, WARN, MID };
+    const names = Object.keys(set);
+    const close: string[] = [];
+    for (let i = 0; i < names.length; i++) {
+      for (let j = i + 1; j < names.length; j++) {
+        const [a, b] = [names[i] as string, names[j] as string];
+        const d = dE(set[a as keyof typeof set], set[b as keyof typeof set]);
+        if (d < 30) close.push(`${a} vs ${b} is ${d.toFixed(0)}`);
+      }
+    }
+    expect(close).toEqual([]);
   });
 });

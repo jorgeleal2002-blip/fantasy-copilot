@@ -2,11 +2,28 @@ import type { DraftPos, FillPos, Pos } from '../api/types';
 
 export const POS: Pos[] = ['QB', 'RB', 'WR', 'TE'];
 
-/** Palette pulled from the Nocturne accent plus the two status hues the
- *  prototype uses for good/bad readings. */
-export const ACCENT = '#8eeded';
-export const GOOD = '#8ec9a8';
-export const BAD = '#d9a08e';
+/**
+ * The verdict hues, and the accent they share a screen with.
+ *
+ * These were muted on purpose — the note at WARN argued that a saturated set
+ * "read as an alarm on a card that is mostly quiet" — and the purpose was
+ * wrong. Measured in LCh against the app this look comes from: Sleeper's green
+ * is chroma 64 and its pink chip 52, while this green sat at 28, the salmon at
+ * 26 and the accent at 29. Less than half. That is not restraint, it is a
+ * palette that has had the colour taken out of it, and nothing about a figure
+ * being green survives being told in a green that grey.
+ *
+ * So each keeps its hue and roughly doubles its chroma, landing in the band
+ * Sleeper actually occupies rather than at the top of the gamut, which is where
+ * the alarm the old note feared really is: the most chromatic green in sRGB at
+ * this hue is #00ff8d, and it is a highlighter.
+ *
+ * Every one of them clears 4.5:1 on all three grounds and no two are closer
+ * than ΔE 36 — better separated than the muted set, which had pairs at 24.
+ */
+export const ACCENT = '#2ef0f8';
+export const GOOD = '#52dea4';
+export const BAD = '#ee8c64';
 /**
  * The third state, for a reading that is neither good nor bad but wary — a man
  * listed Questionable, a run of opponents that is middling.
@@ -18,7 +35,7 @@ export const BAD = '#d9a08e';
  * a traffic light — a saturated yellow cleared the distances by ten more but
  * read as an alarm on a card that is mostly quiet.
  */
-export const WARN = '#eedaa0';
+export const WARN = '#ecd880';
 /**
  * The middle of the good/bad scale.
  *
@@ -131,11 +148,11 @@ export const DEF_SLOTS = ['DEF', 'DST', 'D/ST'];
  * Two steps per state, not one: a colour dark enough to be a good mark on a
  * dark surface is too dark to be small type on it.
  */
-export const MARK_GOOD = '#3fa877';
+export const MARK_GOOD = '#12b878';
 /** The fill of the same neutral. Worst adjacent pair ΔE 22.2 to deuteranopes,
  *  against the 16.9 the violet managed. */
-export const MARK_MID = '#5671d8';
-export const MARK_BAD = '#cc6a4e';
+export const MARK_MID = '#5c8ef4';
+export const MARK_BAD = '#dc7442';
 /**
  * A bar with nothing to report.
  *
