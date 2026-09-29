@@ -143,3 +143,30 @@ export function gapsIn(games: Game[] | undefined, upTo: number): number[] {
   for (let w = 1; w <= upTo; w++) if (!known.has(w)) out.push(w);
   return out;
 }
+
+/**
+ * Touchdowns he has scored this season, out of the weeks in hand.
+ *
+ * Not the same quantity as `Usage.tdPerGame`, which is a rate blended over
+ * four seasons and exists to feed the model. A card that says a man scores
+ * 0.76 touchdowns a game has not told anybody how many he has scored, and
+ * that is the number people mean.
+ *
+ * Every scoring column is summed rather than the one his position uses: only
+ * his own are ever non-zero, and a receiver who threw one still threw it.
+ */
+const TD_KEYS = ['pass_td', 'rush_td', 'rec_td', 'def_st_td'] as const;
+
+export function countTds(lines: (Record<string, number> | undefined | null)[]): number | null {
+  let seen = false;
+  let n = 0;
+  for (const st of lines) {
+    if (!st) continue;
+    seen = true;
+    for (const k of TD_KEYS) {
+      const v = st[k];
+      if (Number.isFinite(v)) n += v as number;
+    }
+  }
+  return seen ? Math.round(n * 10) / 10 : null;
+}

@@ -22,7 +22,7 @@ import type { SavedTrade } from '../model/types';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
 import { pickEncoding } from '../model/photo';
 import { scoreProjection, scoringKind } from '../model/projections';
-import { type Game, type SeasonLine, mergeSeason, pointsInWeek, rankAmong, seasonLine } from '../model/season';
+import { type Game, type SeasonLine, countTds, mergeSeason, pointsInWeek, rankAmong, seasonLine } from '../model/season';
 import { type HeldStats, projectionsAreStale, readProjections, statsForWeek } from '../model/projections';
 import type { WeekScore } from '../model/power';
 import { nextDetailStack, topDetail } from './detail-stack';
@@ -1232,6 +1232,17 @@ export function useApp() {
     return mergeSeason(seasonPoints[id], scored);
   }, [gameStats, seasonPoints]);
 
+  /**
+   * Touchdowns this season, out of the weeks whose stat lines are in hand.
+   *
+   * A different quantity from the `tdPerGame` on his card, which is a rate
+   * blended over four seasons to feed the model — nobody asking how many he
+   * has scored means that.
+   */
+  const seasonTds = useCallback((id: string): number | null => countTds(
+    Object.values(gameStats).map(map => map[id] as unknown as Record<string, number> | undefined),
+  ), [gameStats]);
+
   /** His whole season as one line: average, total, floor, ceiling. */
   const seasonOf = useCallback((id: string) => seasonLine(seasonLog(id)), [seasonLog]);
 
@@ -1473,7 +1484,7 @@ export function useApp() {
     gameStats, fetchGameStats,
     tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,
-    weekScores, powerState, fetchWeekScores, seasonPpg, seasonLog, seasonOf, seasonRanks, weekRank,
+    weekScores, powerState, fetchWeekScores, seasonPpg, seasonLog, seasonOf, seasonRanks, seasonTds, weekRank,
 
     accounts, switchAccount, forgetAccount,
     block: (leagueId ? blocks[username + '/' + leagueId] : undefined) || [],

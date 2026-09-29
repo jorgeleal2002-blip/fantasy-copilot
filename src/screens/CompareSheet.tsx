@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { type CmpRow, type CmpUse, aheadBy, compareMetrics, compareNumbers, compareSeasons } from '../model/compare';
 import { METRIC_LABEL } from '../model/constants';
 import { POS } from '../model/constants';
@@ -98,9 +98,29 @@ function Pick({ app, m, a }: { app: App; m: Model; a: PlayerFit }) {
 }
 
 function Side({ a, b, app, m }: { a: PlayerFit; b: PlayerFit; app: App; m: Model }) {
+  /* One request a week for the stat lines behind the touchdown count. A week
+     of stats is the whole league of football, so both men come out of the same
+     payload — and it is the same cache the player card and the scoreboard
+     fill, so arriving here from either of them costs nothing. */
+  const upTo = Math.min(18, Math.max(0, app.nflWeek ?? app.week ?? 0));
+  const { fetchGameStats } = app;
+  useEffect(() => {
+    if (upTo) void fetchGameStats(Array.from({ length: upTo }, (_, i) => i + 1));
+  }, [fetchGameStats, upTo]);
+
   const sa = app.seasonOf(a.id);
   const sb = app.seasonOf(b.id);
   const rows = compareSeasons(sa, sb);
+  /* Appended to the season rather than sitting with the rates below it: it is
+     a count of what happened this year, which is what the rows around it are. */
+  const ta = app.seasonTds(a.id);
+  const tb = app.seasonTds(b.id);
+  if (ta != null || tb != null) {
+    rows.push({
+      key: 'tds', label: 'Touchdowns', a: ta, b: tb,
+      win: ta != null && tb != null && ta !== tb ? (ta > tb ? 'a' : 'b') : null,
+    });
+  }
   const ahead = aheadBy(rows);
   const nums = compareNumbers(useOf(m, a.id), useOf(m, b.id));
   /* What the Rating is made of, ordered by how far apart they are — so the
@@ -159,7 +179,7 @@ function Side({ a, b, app, m }: { a: PlayerFit; b: PlayerFit; app: App; m: Model
 }
 
 /** How a figure is written, which the row cannot know from its value alone. */
-const DIGITS: Record<string, number> = { games: 0, value: 0, rating: 0, td: 2 };
+const DIGITS: Record<string, number> = { games: 0, value: 0, rating: 0, tds: 0, td: 2 };
 const SUFFIX: Record<string, string> = { snap: '%', rz: '%' };
 
 function Rows({ rows }: { rows: CmpRow[] }) {

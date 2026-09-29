@@ -21,7 +21,7 @@ import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matc
 import { PROD_SHARE_BASE, PROD_SHARE_MAX, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
 import { type CmpUse, aheadBy, compareMetrics, compareNumbers, compareSeasons, tally } from '../model/compare';
-import { gapsIn, mergeSeason } from '../model/season';
+import { countTds, gapsIn, mergeSeason } from '../model/season';
 import { barHeights, ordinal, pointsInWeek, quantile, rankAmong, seasonLine } from '../model/season';
 import { SCREEN_TRUST, bestHeight } from '../model/viewport';
 import { FULL_SQ, THUMB_SQ, playerPhotoSet } from '../api/sleeper';
@@ -4425,5 +4425,33 @@ describe('which metric put one player above the other', () => {
   it('gives a row to nobody where the two land in the same place', () => {
     const rows = compareMetrics(keys, label, side({ talent: 0.5 }), side({ talent: 0.5 }));
     expect(rows.find(r => r.key === 'talent')?.win).toBe(null);
+  });
+});
+
+/* "0.76 touchdowns a game" is a rate blended over four seasons to feed the
+   model. It has not told anybody how many he has scored, and that is the
+   number people mean when they ask about touchdowns. */
+describe('touchdowns this season', () => {
+  it('adds up every week in hand', () => {
+    expect(countTds([{ rec_td: 2 }, { rec_td: 1, rush_td: 1 }, {}])).toBe(4);
+  });
+
+  it('counts every way of scoring one, not just his position\'s', () => {
+    // A receiver who threw one still threw it, and only his own columns are
+    // ever non-zero anyway.
+    expect(countTds([{ pass_td: 3 }])).toBe(3);
+    expect(countTds([{ rec_td: 1, pass_td: 1, rush_td: 1, def_st_td: 1 }])).toBe(4);
+  });
+
+  it('says nothing rather than nought where no week is loaded', () => {
+    // Zero touchdowns and no data are different claims, and the second one
+    // must not print as the first.
+    expect(countTds([])).toBe(null);
+    expect(countTds([undefined, null])).toBe(null);
+    expect(countTds([{}])).toBe(0);
+  });
+
+  it('ignores a column that is not a number', () => {
+    expect(countTds([{ rec_td: 2, rec_yd: 118 }, { rec_td: NaN }])).toBe(2);
   });
 });

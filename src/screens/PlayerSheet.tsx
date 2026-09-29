@@ -543,6 +543,7 @@ function ThisSeason(
   const line = app.seasonOf(id);
   const games = app.seasonLog(id);
   const ranks = app.seasonRanks(id, pos);
+  const tds = app.seasonTds(id);
 
   /* Two reasons to ask for a week of stats, and the fetch is driven by both.
 
@@ -574,6 +575,10 @@ function ThisSeason(
     { k: 'Games', v: String(line.games), r: ranks?.games },
     { k: 'Pts/gm', v: line.ppg.toFixed(1), r: ranks?.ppg },
     { k: 'Total', v: line.total.toFixed(1), r: ranks?.total },
+    /* How many he has scored, which is what anybody asking about touchdowns
+       means. The rate under "The numbers" is a four-season blend feeding the
+       model and answers a different question. */
+    ...(tds != null ? [{ k: 'TDs', v: String(tds), r: undefined }] : []),
     { k: 'Best', v: line.high.toFixed(1), r: ranks?.high },
     { k: 'Floor', v: line.floor.toFixed(1), r: ranks?.floor },
     { k: 'Ceiling', v: line.ceiling.toFixed(1), r: ranks?.ceiling },
