@@ -51,20 +51,33 @@ export const playerPhoto = (id: string, size: 'thumb' | 'full' = 'thumb'): strin
     ? 'https://sleepercdn.com/content/nfl/players/' + (size === 'full' ? '' : 'thumb/') + id + '.jpg'
     : null;
 
-/** Roughly how wide each of the two images Sleeper publishes actually is. */
-export const THUMB_W = 130;
-export const FULL_W = 512;
+/**
+ * How many pixels of each image a square face actually gets.
+ *
+ * Not the file's width — the width is the wrong number twice over. Sleeper's
+ * portraits are taller than they are wide and a face crops them to a square,
+ * so what fills it is the shorter side; and the thumbnail is small enough that
+ * a 30px face on a 3x phone was visibly soft, which is 90 pixels it plainly
+ * did not have. The first guess here was its nominal width and it was wrong in
+ * the expensive direction, so these are deliberately conservative: guessing low
+ * costs some bytes, guessing high costs the picture.
+ */
+export const THUMB_SQ = 64;
+export const FULL_SQ = 384;
 
 /**
- * Both portraits offered at once, with their widths, so the browser picks.
+ * Both portraits offered at once, with what each is actually worth to a
+ * square face, so the browser picks.
  *
  * Guessing which one a face needs means guessing the screen it is on, and the
  * same 34px row is 34 real pixels on a laptop and 102 on a phone. Handing over
  * both and saying how wide the face will be drawn moves the arithmetic to the
- * one place that knows the answer: a 1× screen takes the thumbnail, a 3× phone
- * takes it too for a roster row and reaches for the full image only where the
- * face is big enough that the thumbnail would be stretched. Nothing heavier is
- * downloaded than the screen can actually show.
+ * one place that knows the answer. With honest numbers under it that works out
+ * as: a plain laptop screen takes the thumbnail, and a retina screen takes the
+ * full portrait for anything but a very small face. That is the right trade
+ * here — a soft face is the thing being complained about, and a few more
+ * kilobytes, loaded only when the face scrolls into view and cached after,
+ * is not.
  */
 export type PhotoSet = { photo: string | null; srcSet?: string };
 
@@ -72,7 +85,7 @@ export function playerPhotoSet(id: string): { photo: string; srcSet: string } | 
   const thumb = playerPhoto(id, 'thumb');
   const full = playerPhoto(id, 'full');
   if (!thumb || !full) return null;
-  return { photo: thumb, srcSet: thumb + ' ' + THUMB_W + 'w, ' + full + ' ' + FULL_W + 'w' };
+  return { photo: thumb, srcSet: thumb + ' ' + THUMB_SQ + 'w, ' + full + ' ' + FULL_SQ + 'w' };
 }
 
 export async function findUser(name: string): Promise<SleeperUser> {

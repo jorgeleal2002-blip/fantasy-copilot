@@ -17,6 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
+import { FULL_SQ, THUMB_SQ, playerPhotoSet } from '../api/sleeper';
 import { PULL_MAX, PULL_RESIST, PULL_SLOP, PULL_TRIGGER, edgeAt, pullArmed, pullFrom, pullProgress } from '../model/pull';
 import { PHOTO_PX, PHOTO_Q, PHOTO_Q_FLOOR, pickEncoding } from '../model/photo';
 import { projectionsAreStale, readProjections, scoreProjection, scoringKind, statsForWeek } from '../model/projections';
@@ -3910,5 +3911,34 @@ describe('pulling a screen to refresh it', () => {
     expect(pullProgress(null)).toBe(0);
     expect(pullProgress({ edge: 'top', amount: PULL_TRIGGER / 2 })).toBeCloseTo(0.5, 5);
     expect(pullProgress({ edge: 'top', amount: PULL_MAX })).toBe(1);
+  });
+});
+
+/* A 30px face on a 3x phone came out visibly soft. The srcSet was declaring
+   the thumbnail at its nominal file width, which is the wrong number twice
+   over: the portraits are taller than they are wide and a square face keeps
+   only the shorter side, and the thumbnail is smaller than that anyway. */
+describe('which portrait a face is given', () => {
+  it('offers both, each with what it is worth to a square face', () => {
+    const set = playerPhotoSet('6794');
+    expect(set?.photo).toContain('/thumb/6794.jpg');
+    expect(set?.srcSet).toContain('/thumb/6794.jpg ' + THUMB_SQ + 'w');
+    expect(set?.srcSet).toContain('/players/6794.jpg ' + FULL_SQ + 'w');
+  });
+
+  it('leaves a retina phone no choice but the full portrait on a scoreboard', () => {
+    // The faces in a game are 30px, which is 90 real pixels on a 3x screen.
+    expect(30 * 3).toBeGreaterThan(THUMB_SQ);
+    expect(30 * 3).toBeLessThanOrEqual(FULL_SQ);
+  });
+
+  it('still lets a plain screen have the cheap one for a roster row', () => {
+    // 34px rows, dozens at a time, on a 1x screen: the thumbnail is enough.
+    expect(34).toBeLessThanOrEqual(THUMB_SQ);
+  });
+
+  it('has nothing to offer where Sleeper has no portrait address', () => {
+    // Defences and kickers are not numbered ids, and there is no picture.
+    expect(playerPhotoSet('DEF')).toBe(null);
   });
 });
