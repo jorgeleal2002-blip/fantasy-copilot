@@ -224,7 +224,8 @@ export function BootScreen({ app }: { app: App }) {
         <div
           role="alert"
           style={{
-            border: '1px solid rgba(217,160,142,.5)', background: 'rgba(217,160,142,.08)',
+            border: '1px solid color-mix(in srgb, var(--c-bad) 50%, transparent)',
+            background: 'color-mix(in srgb, var(--c-bad) 8%, transparent)',
             borderRadius: 12, padding: 13,
           }}
         >

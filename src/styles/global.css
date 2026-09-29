@@ -308,7 +308,7 @@ button { font-family: inherit; }
     padding: 20px 12px;
     border-top: 0;
     border-right: var(--hairline) solid var(--color-divider);
-    background: linear-gradient(to bottom, rgba(38, 42, 96, 0.22), transparent 40%);
+    background: linear-gradient(to bottom, var(--scrim-head), transparent 40%);
   }
   .tab-btn {
     flex: none;
@@ -359,7 +359,7 @@ button { font-family: inherit; }
     display: block;
     position: absolute;
     inset: 0;
-    background: rgba(9, 10, 17, 0.62);
+    background: var(--scrim-over);
     animation: fadeIn 0.18s ease both;
     cursor: pointer;
   }
@@ -1041,8 +1041,8 @@ button { font-family: inherit; }
 /* Your own game is the one being looked for, so it says so twice: it is
    first, and it is the only one with a border. */
 .mu-card.is-mine {
-  border-color: rgba(145, 132, 217, 0.45);
-  background: rgba(145, 132, 217, 0.08);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 
 .mu-side {
@@ -2160,3 +2160,113 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.75);
   background: rgba(242, 253, 254, 0.07);
 }
+
+/* ── A suggested trade ────────────────────────────────────────────────────
+   Flat, like every other section, and in the order the question is asked:
+   who it is with, what it costs and returns, then why.
+
+   It used to be a lifted box holding two chips and a second lifted box, on a
+   screen where nothing else is boxed at all — and the chips won the header, so
+   the partner's name, which is the one thing a trade is WITH, was the piece
+   that got truncated. The verdict and the gain are one line of text now rather
+   than two filled rectangles, which leaves the name the room to be read.
+   ──────────────────────────────────────────────────────────────────────── */
+.of {
+  padding: 18px 12px 0;
+  border-top: var(--hairline) solid var(--color-divider);
+}
+.of:first-child { border-top: 0; padding-top: 4px; }
+.of-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.of-with {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 20px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.of-fit {
+  flex: none;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* The reading and what it is worth, on one line: a verdict is a few words, and
+   a few words in a filled rectangle is a button that does nothing. */
+.of-verdict {
+  font-size: 12px;
+  line-height: 18px;
+  margin-top: 2px;
+}
+.of-verdict .of-gain { color: var(--c-good); }
+.of-sides {
+  display: grid;
+  grid-template-columns: 1fr 22px 1fr;
+  gap: 8px;
+  align-items: start;
+  margin-top: 14px;
+}
+.of-side { min-width: 0; }
+.of-side.is-right { text-align: right; }
+.of-k {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.of-name {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.of-meta {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: rgba(242, 253, 254, 0.52);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.of-swap {
+  align-self: center;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(242, 253, 254, 0.52);
+}
+.of-why {
+  font-size: 12px;
+  line-height: 18px;
+  color: rgba(242, 253, 254, 0.75);
+  margin-top: 14px;
+  text-wrap: pretty;
+}
+.of-why + .of-why { margin-top: 6px; }
+/* Who the other half of the sentence is about, so the second line does not
+   read as more of the first. */
+.of-why b { font-weight: 500; color: rgba(242, 253, 254, 0.52); }
+.of-acts { display: flex; gap: 8px; margin: 14px -4px 0; }
+.of-act {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: rgba(242, 253, 254, 0.62);
+}
+.of-act.is-yes { color: var(--color-accent); font-weight: 500; }
+.of-act.is-on { color: var(--c-good); font-weight: 500; }

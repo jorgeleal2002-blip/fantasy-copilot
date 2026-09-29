@@ -429,6 +429,19 @@ describe('the palette carries its colour', () => {
       for (const m of f.text.matchAll(/#[0-9a-fA-F]{6}\b/g)) {
         stray.push(`${m[0]} in ${f.path}`);
       }
+      /* And the same colour written the other way. The hex check alone missed
+         four places holding the OLD green and salmon as `rgba(142,201,168,.16)`
+         and `rgba(217,160,142,.16)` — so a chip's wash was the muted palette
+         while its text was the raised one — and three holding the violet the
+         cyan replaced, still marking "this is you". Three triplets are the
+         app's own and may be written out: the near-white everything is tinted
+         from, the dark ink that sits on a filled position block, and black,
+         which is only ever a shadow. */
+      const OWN = ['242,253,254', '10,16,36', '0,0,0'];
+      for (const m of f.text.matchAll(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/g)) {
+        const t = [m[1], m[2], m[3]].join(',');
+        if (OWN.indexOf(t) < 0) stray.push(`rgb(${t}) in ${f.path}`);
+      }
     }
     expect(stray).toEqual([]);
   });

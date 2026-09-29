@@ -106,6 +106,9 @@
   /* The toast, which floats over everything and so is the one surface lighter
      than a card. */
   --color-float: #2f3245;
+  /* The wash under a sheet's header and over the page behind an overlay. */
+  --scrim-head: rgba(38, 42, 96, 0.22);
+  --scrim-over: rgba(9, 10, 17, 0.62);
 
   --color-section: #1b2e4b;
   --color-section-glow: #24406b;

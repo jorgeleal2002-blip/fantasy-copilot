@@ -55,7 +55,7 @@ function Row({ t }: { t: PowerTeam }) {
   const unlucky = t.luck <= -1.2;
 
   return (
-    <Card style={t.isMe ? { border: '1px solid rgba(145, 132, 217, 0.45)' } : undefined}>
+    <Card style={t.isMe ? { border: '1px solid color-mix(in srgb, var(--color-accent) 45%, transparent)' } : undefined}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ flex: 'none', width: 26, textAlign: 'center' }}>
           <div style={{

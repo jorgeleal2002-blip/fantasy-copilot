@@ -63,7 +63,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
         style={{
           padding: 'calc(var(--safe-top) + 11px) 15px 9px',
           display: 'flex', alignItems: 'center', gap: 11,
-          background: 'linear-gradient(to bottom,rgba(38,42,96,.35),transparent)',
+          background: 'linear-gradient(to bottom, var(--scrim-head), transparent)',
         }}
       >
         {logo ? (
