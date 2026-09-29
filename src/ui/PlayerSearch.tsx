@@ -152,8 +152,8 @@ export function PlayerSearch(
                 </div>
               </div>
 
-              {/* Shortlist him without leaving the search: the packages open
-                  right here, with the same button the player sheet has. */}
+              {/* What he would cost, without leaving the search: the same
+                  packages the player sheet shows, opened right here. */}
               {r.owner ? (
                 <>
                   <button
@@ -169,7 +169,7 @@ export function PlayerSearch(
                   </button>
                   {openId === r.id ? (
                     <div style={{ padding: '0 12px 12px', background: 'rgba(242,253,254,0.04)' }}>
-                      <TradePackages app={app} m={m} targetId={r.id} targetName={r.name} compact />
+                      <TradePackages app={app} m={m} targetId={r.id} compact />
                     </div>
                   ) : null}
                 </>

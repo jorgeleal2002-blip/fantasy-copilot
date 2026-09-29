@@ -766,7 +766,7 @@ function WhatHeCosts({ app, m, sheet }: { app: App; m: Model; sheet: Sheet }) {
         <div style={{ fontSize: 13, fontWeight: 500 }}>What he would cost</div>
         <div style={{ fontSize: 10, color: dim(0.52) }}>{sheet.ownerLabel}</div>
       </div>
-      <TradePackages app={app} m={m} targetId={sheet.id} targetName={sheet.name} />
+      <TradePackages app={app} m={m} targetId={sheet.id} />
     </Card>
   );
 }

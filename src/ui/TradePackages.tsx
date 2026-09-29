@@ -1,28 +1,14 @@
 import { ACCENT, GOOD } from '../model/constants';
 import { num } from '../model/math';
-import type { Model, SavedTrade, TargetTrade } from '../model/types';
+import type { Model, TargetTrade } from '../model/types';
 import type { App } from '../state/useApp';
 import { dim } from './styles';
 
-/** Stable across rebuilds of the model, so a saved package is recognisable later. */
+/** Stable across rebuilds of the model, so a row keeps its identity when the
+ *  packages are recomputed. */
 export const targetKey = (t: TargetTrade, targetId: string) =>
   'target|' + targetId + '|' + t.give.map(g => g.id).sort().join(',');
 
-export function savedFromTarget(
-  t: TargetTrade, targetId: string, targetName: string,
-): Omit<SavedTrade, 'leagueId' | 'savedAt'> {
-  return {
-    key: targetKey(t, targetId),
-    partner: t.partner,
-    giveIds: t.give.map(g => g.id),
-    getIds: [targetId],
-    giveText: t.give.map(g => g.name).join(' + '),
-    getText: targetName,
-    kind: 'target',
-    note: priceRead(t),
-    score: t.accept,
-  };
-}
 
 /** One line saying what the package really is: a discount, a fair swap or a reach. */
 export function priceRead(t: TargetTrade): string {
@@ -40,14 +26,13 @@ export function priceRead(t: TargetTrade): string {
 }
 
 /**
- * The packages that would buy one specific player, each with the button that
- * puts it on your shortlist. Shared by the player sheet and the search results,
- * so a trade you found by looking someone up is the same object as one you
- * found by opening him — and lands in the same list.
+ * The packages that would buy one specific player. Shared by the player sheet
+ * and the search results, so a trade you found by looking someone up is the
+ * same object as one you found by opening him.
  */
 export function TradePackages(
-  { app, m, targetId, targetName, compact }:
-  { app: App; m: Model; targetId: string; targetName: string; compact?: boolean },
+  { app, m, targetId, compact }:
+  { app: App; m: Model; targetId: string; compact?: boolean },
 ) {
   const deals = m.offersFor(targetId);
 
@@ -64,7 +49,6 @@ export function TradePackages(
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
       {deals.map((t, i) => {
         const key = targetKey(t, targetId);
-        const on = app.isSaved(key);
         return (
           <div key={key} style={{
             paddingTop: 11,
@@ -101,18 +85,6 @@ export function TradePackages(
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0 14px', marginTop: 2 }}>
-              <button
-                type="button"
-                onClick={() => app.toggleSaved(savedFromTarget(t, targetId, targetName))}
-                aria-pressed={on}
-                className="btn btn-ghost"
-                style={{
-                  fontSize: 12, padding: '4px 0', fontWeight: 500,
-                  color: on ? GOOD : 'var(--color-accent)',
-                }}
-              >
-                {on ? '✓ On your shortlist' : "I'm interested"}
-              </button>
               {compact ? null : t.give.filter(g => !g.isPick).map(g => (
                 <button
                   key={g.id}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BAD, GOOD, MID } from '../model/constants';
 import { num } from '../model/math';
-import type { BlockReturn, Model, Offer, SavedTrade, TradeAsset } from '../model/types';
+import type { BlockReturn, Model, Offer, TradeAsset } from '../model/types';
 import type { App } from '../state/useApp';
 import { clockTime, ord } from '../ui/format';
 import { PlayerSearch } from '../ui/PlayerSearch';
@@ -23,12 +23,11 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
   const badgeColor = app.marketState === 'ok' ? GOOD : app.marketState === 'fail' ? BAD : MID;
 
   const visible = m.offers.filter(o => app.passed.indexOf(o.partner + o.get.id) < 0).slice(0, 6);
-  const views: SegOption<'suggested' | 'block' | 'saved' | 'build' | 'league'>[] = [
+  const views: SegOption<'suggested' | 'block' | 'build' | 'league'>[] = [
     { key: 'suggested', label: 'Suggested' },
     { key: 'build', label: 'Build' },
     { key: 'league', label: 'League' },
     { key: 'block', label: app.block.length ? `Block · ${app.block.length}` : 'Block' },
-    { key: 'saved', label: app.saved.length ? `Shortlist · ${app.saved.length}` : 'Shortlist' },
   ];
 
   return (
@@ -69,8 +68,6 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
         <TradeBuilder app={app} m={m} />
       ) : app.tradeView === 'league' ? (
         <LeagueTrades app={app} m={m} />
-      ) : app.tradeView === 'saved' ? (
-        <Shortlist app={app} m={m} />
       ) : app.tradeView === 'block' ? (
         <Block app={app} m={m} />
       ) : (
@@ -102,28 +99,6 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
   );
 }
 
-/** Stable across rebuilds of the model, so a saved deal is recognisable later. */
-export const offerKey = (o: Offer) => 'offer|' + o.partner + '|' + o.get.id + '|' + o.give.id;
-
-function savedFromOffer(o: Offer): Omit<SavedTrade, 'leagueId' | 'savedAt'> {
-  return {
-    key: offerKey(o),
-    partner: o.partner,
-    giveIds: [o.give.id],
-    getIds: [o.get.id],
-    giveText: o.give.name,
-    getText: o.get.name,
-    kind: 'offer',
-    note: whyMe(o),
-    score: o.fit,
-  };
-}
-
-/**
- * The trades you said you wanted. They are re-checked against live data every
- * time you open this: rosters move, and a shortlist that quietly keeps showing
- * a deal the other manager can no longer make is worse than one that says so.
- */
 /**
  * The players you have put up for trade, and what the league would give back.
  *
@@ -270,100 +245,7 @@ function ReturnCard({ r }: { r: BlockReturn }) {
   );
 }
 
-function Shortlist({ app, m }: { app: App; m: Model }) {
-  if (!app.saved.length) {
-    return (
-      <Empty
-        title="Nothing on your shortlist yet"
-        body={"Tap “I’m interested” on any suggested trade, or open a player and save what it would cost to get him. They stay here until you remove them."}
-      />
-    );
-  }
 
-  const liveOffer = new Set(m.offers.map(offerKey));
-
-  return (
-    <>
-      {/* Sleeper has no API for sending an offer, so this stays a list to work
-          from rather than a thing you can send. */}
-      <div style={{ fontSize: 12, color: dim(0.62) }}>
-        {app.saved.length === 1 ? '1 trade' : app.saved.length + ' trades'} saved
-      </div>
-
-      {app.saved.map(t => {
-        const live = t.kind === 'offer'
-          ? liveOffer.has(t.key)
-          : m.offersFor(t.getIds[0]).some(x => x.give.map(g => g.id).join(',') === t.giveIds.join(','));
-        return (
-          <Card key={t.key}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <div style={{ fontSize: 12, color: dim(0.75), ...ellipsis }}>
-                with <span style={{ color: 'var(--color-text)' }}>{t.partner}</span>
-              </div>
-              <span style={{
-                flex: 'none', fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase',
-                padding: '3px 8px', borderRadius: 4,
-                background: live
-                  ? 'color-mix(in srgb, var(--c-good) 16%, transparent)'
-                  : 'color-mix(in srgb, var(--c-bad) 16%, transparent)',
-                color: live ? GOOD : BAD,
-              }}>
-                {live ? 'still on' : 'gone'}
-              </span>
-            </div>
-
-            {/* start, not center: a two-line package on one side would drag its
-                own label out of line with the other's. */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 20px 1fr', gap: 8, alignItems: 'start', marginTop: 11 }}>
-              <SavedSide label="Receive" color={GOOD} text={t.getText} onOpen={() => app.setDetail(t.getIds[0])} />
-              <div style={{ color: dim(0.52), fontSize: 15, textAlign: 'center', paddingTop: 17 }}>⇄</div>
-              <SavedSide label="Send" color={BAD} text={t.giveText} onOpen={undefined} />
-            </div>
-
-            <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), marginTop: 10, textWrap: 'pretty' }}>
-              {live
-                ? t.note
-                : 'The rosters moved — this deal no longer builds.'}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>
-              <button
-                type="button"
-                onClick={() => app.unsaveTrade(t.key)}
-                className="btn btn-ghost"
-                style={{ fontSize: 12, padding: '4px 0' }}
-              >
-                Remove
-              </button>
-              <span style={{ fontSize: 10, color: dim(0.52) }}>
-                saved {clockTime(t.savedAt)} · {t.kind === 'offer' ? 'fit ' + t.score : t.score + '% they accept'}
-              </span>
-            </div>
-          </Card>
-        );
-      })}
-    </>
-  );
-}
-
-function SavedSide({ label, color, text, onOpen }: {
-  label: string; color: string; text: string; onOpen?: () => void;
-}) {
-  return (
-    <div
-      role={onOpen ? 'button' : undefined}
-      tabIndex={onOpen ? 0 : undefined}
-      onClick={onOpen}
-      onKeyDown={onOpen ? e => { if (e.key === 'Enter') onOpen(); } : undefined}
-      style={{ cursor: onOpen ? 'pointer' : 'default', minWidth: 0 }}
-    >
-      <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color, marginBottom: 6 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', lineHeight: '16px' }}>{text}</div>
-    </div>
-  );
-}
 
 function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty: boolean }) {
   const fitTint = o.fit >= 75 ? GOOD : o.fit >= 62 ? MID : dim(0.75);
@@ -372,7 +254,6 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
   const gain = o.kind === 'capital'
     ? `${o.gain >= 0 ? '+' : ''}${num(o.gain * 100)} market value`
     : `${o.gain >= 0 ? '+' : ''}${o.gain.toFixed(1)} lineup pts`;
-  const saved = app.isSaved(offerKey(o));
 
   return (
     <div className="of">
@@ -413,15 +294,7 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
           className="of-act ghost-tap"
           onClick={() => app.passOffer(o.partner + o.get.id)}
         >
-          Dismiss
-        </button>
-        <button
-          type="button"
-          className={'of-act accent-tap ' + (saved ? 'is-on' : 'is-yes')}
-          onClick={() => app.toggleSaved(savedFromOffer(o))}
-          aria-pressed={saved}
-        >
-          {saved ? '✓ On your shortlist' : "I'm interested"}
+          Not interested
         </button>
       </div>
     </div>

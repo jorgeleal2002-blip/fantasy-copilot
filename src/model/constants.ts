@@ -439,7 +439,6 @@ export const STORAGE_PHOTOS = 'fc.photos';
  *  back up by whoever still had it cached. */
 export const STORAGE_PHOTOS_SENT = 'fc.photos.sent';
 /** Trades you marked as interesting, kept per league across launches. */
-export const STORAGE_SAVED = 'fc.saved';
 /** "username/leagueId" → roster_id, for when your team is not under the
  *  account you signed in with. Keyed by both because two people sharing the
  *  app can be in the same league with different teams. */

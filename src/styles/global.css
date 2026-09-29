@@ -2256,9 +2256,10 @@ button { font-family: inherit; }
 /* Who the other half of the sentence is about, so the second line does not
    read as more of the first. */
 .of-why b { font-weight: 500; color: rgba(242, 253, 254, 0.52); }
-.of-acts { display: flex; gap: 8px; margin: 14px -4px 0; }
+/* One quiet action, so it sits where a line of text would rather than
+   stretching across the card the way a pair of them did. */
+.of-acts { display: flex; margin: 12px -10px 0; }
 .of-act {
-  flex: 1;
   padding: 10px;
   border-radius: 8px;
   font-size: 13px;
@@ -2268,5 +2269,3 @@ button { font-family: inherit; }
   cursor: pointer;
   color: rgba(242, 253, 254, 0.62);
 }
-.of-act.is-yes { color: var(--color-accent); font-weight: 500; }
-.of-act.is-on { color: var(--c-good); font-weight: 500; }

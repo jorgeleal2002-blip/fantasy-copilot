@@ -7,7 +7,7 @@ import {
 import type {
   LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup, SleeperStatLine, SleeperTransaction,
 } from '../api/types';
-import { DRAFT_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, RESUME_REFRESH_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SAVED, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import { DRAFT_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, RESUME_REFRESH_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
   EMPTY_ROOM, PHOTO_MAX_BYTES, claimSeat, createRoom as createRoomAt, dropPhoto, liveEnabled,
   liveReason, newRoomId, pushPick, putPhoto, readPhotos, readRoom, restartRoom, startRoom,
@@ -18,7 +18,6 @@ import {
 } from '../model/invite';
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
-import type { SavedTrade } from '../model/types';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
 import { pickEncoding } from '../model/photo';
 import { scoreProjection, scoringKind } from '../model/projections';
@@ -178,7 +177,7 @@ export function useApp() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
   const [roomError, setRoomError] = useState('');
-  const [tradeView, setTradeView] = useState<'suggested' | 'block' | 'saved' | 'build' | 'league'>('suggested');
+  const [tradeView, setTradeView] = useState<'suggested' | 'block' | 'build' | 'league'>('suggested');
   /* The trade being built. Kept here rather than in the screen because looking
    * a player up mid-build means leaving the tab, and a half-built three-team
    * trade is not something to lose to a navigation. */
@@ -216,10 +215,6 @@ export function useApp() {
      by itself before anybody has played. */
   const [topLens, setTopLens] = useState<'neutral' | 'pts' | 'me' | 'fut'>('pts');
   const [passed, setPassed] = useState<string[]>([]);
-  // Every league's shortlist lives in one record; the screens only ever see
-  // the current league's, so a saved deal cannot follow you somewhere it
-  // makes no sense.
-  const [savedAll, setSavedAll] = useState<SavedTrade[]>([]);
 
   /* The week's head-to-heads, and where the NFL currently is. Kept out of the
    * league bundle because it is the one thing on screen that changes while you
@@ -691,7 +686,6 @@ export function useApp() {
   // ── boot: resume the saved session, or ask for a username.
   useEffect(() => {
     setLocalPhotos(readJson<Record<string, string>>(STORAGE_PHOTOS, {}));
-    setSavedAll(readJson<SavedTrade[]>(STORAGE_SAVED, []));
     setTeamPick(readJson<Record<string, number>>(STORAGE_TEAM, {}));
     setAccounts(readJson<{ username: string; leagueId: string }[]>(STORAGE_ACCOUNTS, []));
     setBlocks(readJson<Record<string, string[]>>(STORAGE_BLOCK, {}));
@@ -1413,37 +1407,6 @@ export function useApp() {
     if (leagueId) void syncPhotos(leagueId);
   }, [leagueId, syncPhotos]);
 
-  // ── The shortlist: trades you said you were interested in.
-  const saved = useMemo(
-    () => savedAll.filter(t => t.leagueId === leagueId).sort((a, b) => b.savedAt - a.savedAt),
-    [savedAll, leagueId],
-  );
-  const savedKeys = useMemo(() => new Set(saved.map(t => t.key)), [saved]);
-  const isSaved = useCallback((key: string) => savedKeys.has(key), [savedKeys]);
-
-  const unsaveTrade = useCallback((key: string) => {
-    setSavedAll(prev => {
-      const next = prev.filter(t => !(t.key === key && t.leagueId === leagueId));
-      writeJson(STORAGE_SAVED, next);
-      return next;
-    });
-    showToast('Removed from your shortlist');
-  }, [leagueId, showToast]);
-
-  /** Tapping the same trade twice takes it back off the list. */
-  const toggleSaved = useCallback((t: Omit<SavedTrade, 'leagueId' | 'savedAt'>) => {
-    if (!leagueId) return;
-    setSavedAll(prev => {
-      const mine = prev.some(x => x.key === t.key && x.leagueId === leagueId);
-      const next = mine
-        ? prev.filter(x => !(x.key === t.key && x.leagueId === leagueId))
-        : prev.concat([{ ...t, leagueId, savedAt: Date.now() }]);
-      writeJson(STORAGE_SAVED, next);
-      showToast(mine ? 'Removed from your shortlist' : 'Saved — propose it in Sleeper when you are ready');
-      return next;
-    });
-  }, [leagueId, showToast]);
-
   // ── The model is pure: it re-derives whenever any of its inputs move.
   const model = useMemo(
     () => (data ? buildModel({
@@ -1574,7 +1537,6 @@ export function useApp() {
     passOffer: (key: string) => setPassed(p => p.concat(key)),
     resetOffers: () => setPassed([]),
 
-    saved, isSaved, toggleSaved, unsaveTrade,
     showToast, hideToast, photoFor, photoSet, setPhoto, clearPhoto,
   };
 }
