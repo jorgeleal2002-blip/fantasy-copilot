@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ACCENT, METRIC_LABEL, PEAK, POS, type Weights } from '../model/constants';
+import { ACCENT, POS, type Weights } from '../model/constants';
 import { num } from '../model/math';
 import type { Metrics } from '../model/score';
 import type { SleeperLeague, SleeperPlayer } from '../api/types';
@@ -7,12 +7,11 @@ import type { Model } from '../model/types';
 import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
-import { Meter, SERIES } from '../ui/charts';
 import { Card, Face, Overlay } from '../ui/primitives';
 import { ALLOWED_SEASON, OPPONENTS, SCHEDULE_SEASON } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { statBits } from '../model/stat-line';
-import { projectConfidence, projectPPG } from '../model/project';
+import { projectPPG } from '../model/project';
 import { barHeights, ordinal, type Ranked } from '../model/season';
 import { TradePackages } from '../ui/TradePackages';
 import { cardTitle, dim, fitColor } from '../ui/styles';
@@ -22,14 +21,6 @@ const DATA_NOTE =
   'Market values come from FantasyCalc, priced for this league\'s format. ' +
   'Fixtures and last season\'s points allowed by each defence ship with the app, from nflverse. ' +
   'The Rating, floor and upside are the app\'s own model on top of those.';
-
-/** How much sample the projection is standing on, said out loud rather than
- *  left for the reader to assume from a number that prints the same either way. */
-const CONF: Record<string, string> = {
-  high: 'three full seasons behind it',
-  fair: 'a season and a half behind it',
-  low: 'off a short sample, treat it lightly',
-};
 
 interface Sheet {
   id: string;
@@ -156,7 +147,6 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const weekProj = Number.isFinite(app.projections[p.id]) ? app.projections[p.id] : null;
   const modelProj = projectPPG(p.use);
   const proj = weekProj ?? modelProj;
-  const conf = modelProj != null ? projectConfidence(p.use) : null;
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
   const setter = app.photoBy(p.id);
@@ -395,91 +385,16 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </div>
       </div>
 
-      {/* First, because it is the answer. It used to sit under a paragraph
-          about how a projection is built and a nine-row breakdown — below the
-          fold on the one thing somebody opened the card to find out. */}
-      {fill ? null : (
-      <div style={{
-        border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)', borderRadius: 12, padding: '14px 13px', marginTop: 14,
-        background: 'color-mix(in srgb, var(--color-accent) 6%, transparent)',
-      }}>
-        <div style={{
-          fontSize: 10, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--color-accent)', marginBottom: 8,
-        }}>
-          Read
-        </div>
-        <div style={{ fontSize: 14, lineHeight: 1.5, textWrap: 'pretty' }}>{verdict(p)}</div>
-      </div>
-      )}
-
-      {modelProj != null ? (
-        <Card style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 13.5, lineHeight: 1.55, textWrap: 'pretty' }}>
-            The model has him at <b>{modelProj.toFixed(1)}</b> half-PPR points a game next season
-            {conf ? <span style={{ color: dim(0.5) }}>{' — ' + CONF[conf]}</span> : null}.
-          </div>
-          <More label="How this is worked out">
-          <div style={{ fontSize: 12, color: dim(0.5), lineHeight: 1.55, marginTop: 10, textWrap: 'pretty' }}>
-            Built from his volume rather than his points — the season being played,
-            weighted by how much of it there is, over his last three finished ones: his
-            real touches, priced at rates pulled from his own toward what is ordinary at
-            his position by how much each rate actually repeats year to year. A quarterback's
-            touchdowns mostly keep; a running back's catch rate is noise. It knows nothing
-            about your roster or this pick — that is the Rating's job, and the two
-            disagreeing on a player is information rather than a bug.
-          </div>
-          </More>
-        </Card>
-      ) : null}
-
+      {/* A kicker or a team defence has no Rating, and a card that simply
+          omits one reads as a broken screen rather than as an absence. */}
       {fill ? (
         <Card style={{ marginTop: 16 }}>
           <div style={{ fontSize: 13.5, lineHeight: 1.55, textWrap: 'pretty' }}>
-            No Rating for a {p.pos === 'DEF' ? 'team defence' : 'kicker'}.
-          </div>
-          <div style={{ fontSize: 12, color: dim(0.5), lineHeight: 1.55, marginTop: 8, textWrap: 'pretty' }}>
-            The Rating is built from market value, snap share, targets, yards per touch,
-            red-zone looks and an age curve.{' '}
-            {p.pos === 'DEF'
-              ? 'A team defence has none of them: no snap count, no targets, no age, and no market — nobody trades one.'
-              : 'A kicker has none of them: he is not on the field for a snap that counts here, and nobody trades one, so the market never prices him.'}{' '}
-            The number above is where the consensus drafts him, which is the only real
-            signal there is. Take one late.
+            No Rating for a {p.pos === 'DEF' ? 'team defence' : 'kicker'}. The number above is
+            where the consensus drafts him, which is the only real signal there is. Take one late.
           </div>
         </Card>
-      ) : (
-      <Card style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 500 }}>Why {p.fit}</div>
-        <More label="Metric by metric">
-        <div style={{ fontSize: 11.5, color: dim(0.42), margin: '10px 0 12px', textWrap: 'pretty' }}>
-          Metric × weight, biggest contribution first — sorted by what each one actually put on the
-          board, so the first row is the answer.
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {m.metricKeys
-            .filter(k => p.weights[k] > 0)
-            .sort((a, b) => p.m[b] * p.weights[b] - p.m[a] * p.weights[a])
-            .map(k => (
-              <div key={k}>
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginBottom: 5,
-                }}>
-                  <span style={{ fontSize: 12.5 }}>{METRIC_LABEL[k]}</span>
-                  <span style={{ fontSize: 11.5, color: dim(0.45) }}>
-                    {Math.round(p.m[k] * 100)} × {Math.round(p.weights[k] * 100)}%
-                    {' = '}
-                    <span style={{ color: 'var(--color-text)', fontWeight: 500 }}>
-                      {Math.round(p.m[k] * p.weights[k] * 100)}
-                    </span>
-                  </span>
-                </div>
-                <Meter pct={p.m[k] * 100} color={SERIES} />
-              </div>
-            ))}
-        </div>
-        </More>
-      </Card>
-      )}
+      ) : null}
 
       {fill ? null : <ThisSeason app={app} pos={p.pos} team={p.team} id={p.id} />}
 
@@ -733,20 +648,3 @@ function WhatHeCosts({ app, m, sheet }: { app: App; m: Model; sheet: Sheet }) {
   );
 }
 
-/** For a player you own the question is hold or sell; for anyone else it is buy. */
-function verdict(p: Sheet): string {
-  const peak = PEAK[p.pos as keyof typeof PEAK] || 26;
-  if (p.owned) {
-    if ((p.age || 0) > peak + 1) {
-      return `Already yours and past his peak (${p.age}): your best sell candidate while the league still pays for him.`;
-    }
-    if (p.m.age > 0.9) return 'Already yours and still short of his peak. Hold — the model projects him upward.';
-    return 'Already yours, inside his maximum-value window. No rush to buy or sell.';
-  }
-  if (p.m.need > 0.6 && p.m.value > 0.55) {
-    return 'Clean fit: he fills your most expensive hole and is falling past where the board has him.';
-  }
-  if (p.m.need > 0.6) return 'Fills your most urgent need, though you would be taking him near his market price.';
-  if (p.m.value > 0.65) return 'The best value on the board, not your need. Take him if you believe in best-player-available.';
-  return 'A reasonable option without being the best: it neither solves a hole nor gets him below where the board has him.';
-}
