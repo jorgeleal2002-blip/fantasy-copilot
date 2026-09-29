@@ -18,6 +18,8 @@ export interface MatchupSide {
   starters: string[] | null;
   /** Every player's points that week, starters and bench alike. */
   playerPoints: Record<string, number> | null;
+  /** Everyone on the roster that week, so the bench can be told from it. */
+  roster: string[] | null;
   /** What Sleeper projects the started lineup to score, in this league's
    *  scoring. Null before the feed has one, or when too little of the lineup
    *  is priced for a total to mean anything. */
@@ -81,6 +83,7 @@ export function pairMatchups(
         ? t.record.label
         : '',
       starters: r.starters ?? null,
+      roster: r.players ?? null,
       playerPoints: r.players_points ?? null,
     };
   };
@@ -212,6 +215,50 @@ export function lineupRows(
     const b = cell(m.b, i);
     if (!a && !b) continue;
     out.push({ slot: slots[i] || 'FLEX', a, b });
+  }
+  return out;
+}
+
+/**
+ * The two benches, laid against each other the way the lineups are.
+ *
+ * There is no slot to pair them by — a bench is a pile, not a formation — so
+ * they are sorted by what each man actually scored and lined up by rank. That
+ * is the order the question is asked in: the top of this list is the player
+ * somebody should have started, and having him opposite the other bench's best
+ * is as close to a comparison as a bench allows.
+ */
+export function benchRows(
+  m: Matchup,
+  players: PlayerCatalog,
+  projections?: Record<string, number> | null,
+): LineupRow[] {
+  const proj = projections || {};
+  const benchOf = (side: MatchupSide | null): LineupCell[] => {
+    if (!side || !side.roster) return [];
+    const started = new Set(side.starters || []);
+    return side.roster
+      .filter(id => id && id !== '0' && !started.has(id))
+      .map(id => {
+        const p = players[id];
+        const full = p ? (p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim()) : '';
+        return {
+          id,
+          name: full ? shortName(full) : 'Unknown',
+          pos: p?.position || '',
+          team: p?.team || null,
+          points: side.playerPoints?.[id] ?? null,
+          projected: Number.isFinite(proj[id]) ? proj[id] : null,
+        };
+      })
+      .sort((x, y) => (y.points ?? -1) - (x.points ?? -1));
+  };
+
+  const a = benchOf(m.a);
+  const b = benchOf(m.b);
+  const out: LineupRow[] = [];
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    out.push({ slot: 'BN', a: a[i] ?? null, b: b[i] ?? null });
   }
   return out;
 }

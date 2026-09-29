@@ -1002,17 +1002,15 @@ button { font-family: inherit; }
 }
 
 /* ── One game, on its own screen ──────────────────────────────────────────
-   The scoreboard card is two names and two numbers in a 390px row; here there
-   is a whole screen, so the two teams stand as columns with their score under
-   them and the lineup runs slot against slot underneath. Nothing is squeezed,
-   which is the entire reason it stopped opening inside the card.
+   A face, a name, what he scored, the slot he scored it in, and the same
+   again mirrored. The projection sits under each number in the same column,
+   because the comparison anybody actually makes is whether he beat it.
    ──────────────────────────────────────────────────────────────────────── */
 .ms-head {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   padding-bottom: 14px;
-  border-bottom: 1px solid var(--color-divider);
 }
 .ms-side {
   flex: 1;
@@ -1061,7 +1059,7 @@ button { font-family: inherit; }
 .ms-pts.is-up { color: var(--color-text); }
 /* The forecast under the fact, and smaller than it. */
 .ms-proj {
-  font-size: 10.5px;
+  font-size: 11px;
   color: rgba(233, 233, 237, 0.3);
   font-variant-numeric: tabular-nums;
 }
@@ -1076,56 +1074,82 @@ button { font-family: inherit; }
   margin-top: 60px;
 }
 
-.ms-lineup { display: flex; flex-direction: column; }
+.ms-block { display: flex; flex-direction: column; }
+.ms-block-head {
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  padding: 6px 0 4px;
+  color: rgba(233, 233, 237, 0.75);
+  border-top: 1px solid var(--color-divider);
+}
 .ms-row {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--color-divider);
+  padding: 6px 0;
+  border-top: 1px solid var(--color-divider);
 }
-.ms-row:last-child { border-bottom: none; }
+/* The slot is the spine the two sides hang off, so it keeps its width
+   whatever is beside it and never gives any of it up. */
 .ms-slot {
   flex: none;
-  width: 40px;
+  width: 32px;
+  padding: 3px 0;
+  border-radius: 7px;
   text-align: center;
-  font-size: 9px;
-  letter-spacing: 0.06em;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   color: rgba(233, 233, 237, 0.34);
+  background: rgba(233, 233, 237, 0.05);
 }
+
 .ms-cell {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
+  /* Every pixel here is a pixel off a name, and the names are what run out
+     first: a face, a slot and two numbers are fixed, and "J. Smith-Njigba"
+     is not. */
   gap: 6px;
-  border-radius: 7px;
-  padding: 3px 4px;
+  border-radius: 8px;
+  padding: 2px 3px;
 }
 .ms-cell.is-right { flex-direction: row-reverse; text-align: right; }
 .ms-cell.is-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .ms-cell.is-tap:active { background: rgba(233, 233, 237, 0.06); }
 .ms-cell.is-tap:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
-.ms-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; }
+.ms-who { flex: 1; min-width: 0; }
 .ms-pl-name {
   font-size: 12px;
-  color: rgba(233, 233, 237, 0.82);
+  color: rgba(233, 233, 237, 0.85);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .ms-pl-sub {
   font-size: 9.5px;
-  color: rgba(233, 233, 237, 0.32);
+  margin-top: 1px;
+  color: rgba(233, 233, 237, 0.34);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.ms-num { flex: none; }
 .ms-pl-pts {
-  flex: none;
-  font-size: 12.5px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  color: rgba(233, 233, 237, 0.62);
+  color: var(--color-text);
+}
+.ms-pl-proj {
+  font-size: 9.5px;
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(233, 233, 237, 0.3);
 }
 
 /* ── Trade builder ────────────────────────────────────────────────────────

@@ -204,6 +204,8 @@ export interface SleeperMatchup {
   matchup_id: number | null;
   points: number | null;
   starters?: string[] | null;
+  /** everyone on the roster that week — the bench is this minus the starters */
+  players?: string[] | null;
   players_points?: Record<string, number> | null;
 }
 
