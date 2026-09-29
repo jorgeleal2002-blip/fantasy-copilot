@@ -2017,6 +2017,16 @@ button { font-family: inherit; }
   color: rgba(233, 233, 237, 0.38);
 }
 
+/* A heading inside the comparison, so the two tables are not read as one
+   fourteen-row list of things that happen to be numbers. */
+.cmp-sec {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: var(--hairline) solid var(--color-divider);
+}
 .cmp-charts { display: flex; gap: 12px; margin-top: 20px; }
 .cmp-chart { flex: 1; min-width: 0; }
 .cmp-chart-h {

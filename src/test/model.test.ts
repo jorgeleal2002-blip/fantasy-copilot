@@ -17,7 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
-import { aheadBy, compareSeasons, tally } from '../model/compare';
+import { type CmpUse, aheadBy, compareNumbers, compareSeasons, tally } from '../model/compare';
 import { barHeights, ordinal, pointsInWeek, quantile, rankAmong, seasonLine } from '../model/season';
 import { SCREEN_TRUST, bestHeight } from '../model/viewport';
 import { FULL_SQ, THUMB_SQ, playerPhotoSet } from '../api/sleeper';
@@ -4148,5 +4148,48 @@ describe('two seasons against each other', () => {
     const rows = compareSeasons(line({}), line({}));
     expect(tally(rows)).toEqual({ a: 0, b: 0 });
     expect(aheadBy(rows)).toBe(null);
+  });
+});
+
+/* The other half of a player's card, reduced to what two of them can be asked
+   together — which is not all of it. */
+describe('two players\' numbers against each other', () => {
+  const use = (o: Partial<CmpUse>): CmpUse => ({
+    value: 6000, snap: 0.9, share: 20, shareLabel: 'Target share',
+    eff: 7.0, tdPerGame: 0.5, rzShare: 0.2, ...o,
+  });
+
+  it('compares what both of them measure the same way', () => {
+    const rows = compareNumbers(use({ value: 7000 }), use({ value: 5000 }));
+    expect(rows.find(r => r.key === 'value')?.win).toBe('a');
+    expect(rows.find(r => r.key === 'share')?.win).toBe(null);
+  });
+
+  it('drops the share row when the two positions do not mean the same by it', () => {
+    // A passer's attempts and a receiver's target share are both "his share of
+    // the offence" and are not the same quantity; the row would decide itself
+    // on the units.
+    const rows = compareNumbers(
+      use({ shareLabel: 'Attempts per game', share: 36 }),
+      use({ shareLabel: 'Target share', share: 22 }),
+    );
+    expect(rows.find(r => r.key === 'share')).toBeUndefined();
+  });
+
+  it('keeps the share row for two men at the same position', () => {
+    const rows = compareNumbers(use({ share: 26 }), use({ share: 19 }));
+    expect(rows.find(r => r.key === 'share')?.win).toBe('a');
+  });
+
+  it('writes a share as a percentage rather than a fraction', () => {
+    const rows = compareNumbers(use({ snap: 0.972 }), use({ snap: 0.431 }));
+    expect(rows.find(r => r.key === 'snap')?.a).toBe(97.2);
+    expect(rows.find(r => r.key === 'snap')?.b).toBe(43.1);
+  });
+
+  it('gives a row to nobody where one side has no reading', () => {
+    const rows = compareNumbers(use({}), use({ eff: null, rzShare: null }));
+    expect(rows.find(r => r.key === 'eff')?.win).toBe(null);
+    expect(rows.find(r => r.key === 'rz')?.win).toBe(null);
   });
 });

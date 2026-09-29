@@ -38,7 +38,7 @@ const DATA_NOTE =
   'Fixtures and last season\'s points allowed by each defence ship with the app, from nflverse. ' +
   'The Rating, floor and upside are the app\'s own model on top of those.';
 
-interface Sheet {
+export interface Sheet {
   id: string;
   name: string;
   pos: string;
@@ -55,7 +55,7 @@ interface Sheet {
   use?: Usage;
 }
 
-function resolve(m: Model, id: string, strat: Weights): Sheet | null {
+export function resolve(m: Model, id: string, strat: Weights): Sheet | null {
   const mine = m.myPlayers.find(p => p.id === id);
   if (mine) {
     return {

@@ -1,4 +1,9 @@
-import { aheadBy, compareSeasons } from '../model/compare';
+import { useState } from 'react';
+import { type CmpRow, type CmpUse, aheadBy, compareNumbers, compareSeasons } from '../model/compare';
+import { POS } from '../model/constants';
+import type { Pos } from '../api/types';
+import { resolve } from './PlayerSheet';
+import { Segmented, type SegOption } from '../ui/primitives';
 import { barHeights } from '../model/season';
 import type { Model, PlayerFit } from '../model/types';
 import type { App } from '../state/useApp';
@@ -34,7 +39,7 @@ export function CompareSheet({ app, m, ids }: { app: App; m: Model; ids: string[
   return (
     <Overlay onClose={() => app.setDetail(null)} label="Back" z={7}>
       {b
-        ? <Side a={a} b={b} app={app} />
+        ? <Side a={a} b={b} app={app} m={m} />
         : <Pick app={app} m={m} a={a} />}
     </Overlay>
   );
@@ -42,21 +47,29 @@ export function CompareSheet({ app, m, ids }: { app: App; m: Model; ids: string[
 
 /** The list of men he could be compared with: his position, best first. */
 function Pick({ app, m, a }: { app: App; m: Model; a: PlayerFit }) {
+  /* His own position first, because that is the comparison that can act on
+     something — you start one of them instead of the other. The rest are here
+     because people ask anyway, and a screen that refuses the question is worse
+     than one that answers it and says what the answer is worth. */
+  const [pos, setPos] = useState<'ALL' | Pos>(a.pos);
   const field = m.allFits
-    .filter(x => x.pos === a.pos && x.id !== a.id)
+    .filter(x => x.id !== a.id && (pos === 'ALL' || x.pos === pos))
     .map(x => ({ x, s: app.seasonOf(x.id) }))
     .sort((p, q) => (q.s?.ppg ?? -1) - (p.s?.ppg ?? -1));
+
+  const options: SegOption<'ALL' | Pos>[] =
+    [{ key: 'ALL', label: 'All' }, ...POS.map(k => ({ key: k, label: k }))];
 
   return (
     <>
       <div style={{ fontSize: 19, fontWeight: 500, letterSpacing: '-0.02em' }}>
         Compare {a.name} with
       </div>
-      <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 4, textWrap: 'pretty' }}>
-        The {a.pos}s in this league, by what they have averaged. Only his own
-        position: you cannot start a {a.pos} instead of anything else, so
-        nothing else is a comparison.
+      <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 4, marginBottom: 12, textWrap: 'pretty' }}>
+        This league's players, by what they have averaged.
+        {pos !== a.pos ? ' Across positions the points still compare; what does not is what they cost and who you can start instead of whom.' : ''}
       </div>
+      <Segmented options={options} value={pos} onChange={setPos} size="sm" />
       <div style={{ marginTop: 14 }}>
         {field.map(({ x, s }) => (
           <div
@@ -71,7 +84,7 @@ function Pick({ app, m, a }: { app: App; m: Model; a: PlayerFit }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13.5, ...ellipsis }}>{x.name}</div>
               <div style={{ fontSize: 10.5, color: dim(0.4), marginTop: 2, ...ellipsis }}>
-                {x.team || 'FA'} · {x.mine ? 'yours' : x.owner}
+                {x.pos} · {x.team || 'FA'} · {x.mine ? 'yours' : x.owner}
               </div>
             </div>
             <div style={{ flex: 'none', fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>
@@ -84,11 +97,12 @@ function Pick({ app, m, a }: { app: App; m: Model; a: PlayerFit }) {
   );
 }
 
-function Side({ a, b, app }: { a: PlayerFit; b: PlayerFit; app: App }) {
+function Side({ a, b, app, m }: { a: PlayerFit; b: PlayerFit; app: App; m: Model }) {
   const sa = app.seasonOf(a.id);
   const sb = app.seasonOf(b.id);
   const rows = compareSeasons(sa, sb);
   const ahead = aheadBy(rows);
+  const nums = compareNumbers(useOf(m, a.id), useOf(m, b.id));
 
   return (
     <>
@@ -105,19 +119,7 @@ function Side({ a, b, app }: { a: PlayerFit; b: PlayerFit; app: App }) {
         </div>
       ) : null}
 
-      <div style={{ marginTop: 14 }}>
-        {rows.map(r => (
-          <div className="cmp-row" key={r.key}>
-            <div className={'cmp-val' + (r.win === 'a' ? ' is-win' : '')}>
-              {r.a == null ? '—' : r.a.toFixed(r.key === 'games' ? 0 : 1)}
-            </div>
-            <div className="cmp-label">{r.label}</div>
-            <div className={'cmp-val is-right' + (r.win === 'b' ? ' is-win' : '')}>
-              {r.b == null ? '—' : r.b.toFixed(r.key === 'games' ? 0 : 1)}
-            </div>
-          </div>
-        ))}
-      </div>
+      <Rows rows={rows} />
 
       {/* The shape of each season under the totals: two men on the same average
           can have got there in ways that mean different things next Sunday. */}
@@ -125,8 +127,51 @@ function Side({ a, b, app }: { a: PlayerFit; b: PlayerFit; app: App }) {
         <Bars app={app} id={a.id} name={a.name} />
         <Bars app={app} id={b.id} name={b.name} />
       </div>
+
+      {nums.length ? (
+        <>
+          <div className="cmp-sec">The numbers</div>
+          <Rows rows={nums} />
+        </>
+      ) : null}
     </>
   );
+}
+
+/** How a figure is written, which the row cannot know from its value alone. */
+const DIGITS: Record<string, number> = { games: 0, value: 0, td: 2 };
+const SUFFIX: Record<string, string> = { snap: '%', rz: '%' };
+
+function Rows({ rows }: { rows: CmpRow[] }) {
+  const write = (v: number | null, key: string) =>
+    (v == null ? '—' : v.toFixed(DIGITS[key] ?? 1) + (SUFFIX[key] || ''));
+  return (
+    <div style={{ marginTop: 14 }}>
+      {rows.map(r => (
+        <div className="cmp-row" key={r.key}>
+          <div className={'cmp-val' + (r.win === 'a' ? ' is-win' : '')}>{write(r.a, r.key)}</div>
+          <div className="cmp-label">{r.label}</div>
+          <div className={'cmp-val is-right' + (r.win === 'b' ? ' is-win' : '')}>{write(r.b, r.key)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** What of a player's card two of them can be asked together. */
+function useOf(m: Model, id: string): CmpUse {
+  const sheet = resolve(m, id, m.wUsed);
+  const u = sheet?.use;
+  const val = m.marketValue(id);
+  return {
+    value: val ? val.pts : null,
+    snap: u?.snap ?? null,
+    share: u && Number.isFinite(u.tgt) ? (u.tgt as number) : null,
+    shareLabel: u?.shareLabel ?? null,
+    eff: u && Number.isFinite(u.eff) ? (u.eff as number) : null,
+    tdPerGame: u?.tdPerGame ?? null,
+    rzShare: u?.rzShare ?? null,
+  };
 }
 
 function Who({ app, p, align }: { app: App; p: PlayerFit; align?: 'right' }) {

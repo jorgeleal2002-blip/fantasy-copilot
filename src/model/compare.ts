@@ -70,3 +70,55 @@ export function aheadBy(rows: CmpRow[]): { side: 'a' | 'b'; rows: number } | nul
   if (t.a === t.b) return null;
   return t.a > t.b ? { side: 'a', rows: t.a } : { side: 'b', rows: t.b };
 }
+
+/**
+ * The other half of a player's card, reduced to what two of them can be asked
+ * together.
+ *
+ * Not everything on a card compares. A quarterback's attempts and a receiver's
+ * targets are both "his share of the offence" and are not the same quantity,
+ * so that row appears only when both sides measure it the same way — which,
+ * across positions, they usually do not. The rest are the same question
+ * whoever is being asked: what the league pays for him, how much of his team's
+ * snaps he is on the field for, what he does per touch, how often he scores.
+ */
+export type CmpUse = {
+  /** what the market pays */
+  value: number | null;
+  /** share of his team's snaps, 0..1 */
+  snap: number | null;
+  /** his share of the offence, and what that share is called for his position */
+  share: number | null;
+  shareLabel: string | null;
+  /** yards per touch */
+  eff: number | null;
+  /** touchdowns a game */
+  tdPerGame: number | null;
+  /** share of his team's red-zone work, 0..1 */
+  rzShare: number | null;
+};
+
+export function compareNumbers(a: CmpUse, b: CmpUse): CmpRow[] {
+  const rows: CmpRow[] = [];
+  const add = (key: string, label: string, av: number | null, bv: number | null) => {
+    let win: 'a' | 'b' | null = null;
+    if (av != null && bv != null && av !== bv) win = av > bv ? 'a' : 'b';
+    rows.push({ key, label, a: av, b: bv, win });
+  };
+
+  add('value', 'Market value', a.value, b.value);
+  add('snap', 'Snap share', pct(a.snap), pct(b.snap));
+  /* Only where both sides mean the same thing by it. Comparing a passer's
+     attempts with a receiver's target share is comparing two numbers that were
+     never in competition, and the row would decide itself on the units. */
+  if (a.shareLabel && a.shareLabel === b.shareLabel) {
+    add('share', a.shareLabel, a.share, b.share);
+  }
+  add('eff', 'Yards per touch', a.eff, b.eff);
+  add('td', 'TDs a game', a.tdPerGame, b.tdPerGame);
+  add('rz', 'Red-zone share', pct(a.rzShare), pct(b.rzShare));
+  return rows;
+}
+
+const pct = (n: number | null): number | null =>
+  (n == null ? null : Math.round(n * 1000) / 10);
