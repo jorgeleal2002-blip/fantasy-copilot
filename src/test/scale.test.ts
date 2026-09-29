@@ -394,6 +394,22 @@ describe('the palette carries its colour', () => {
    *  were never muted, sit at 42 and up; the verdict hues now join them. */
   const CHROMA_MIN = 40;
 
+  it('states each verdict hue once, however many files need it', () => {
+    /* The stylesheet needs the same greens the TypeScript does, and a value
+       written in two places is a value that drifts. */
+    const tokens = FILES.find(f => f.path.endsWith('tokens.css'));
+    expect(tokens).toBeTruthy();
+    const read = (name: string) => {
+      const m = (tokens as { text: string }).text.match(
+        new RegExp('--c-' + name + ': *(#[0-9a-f]{6})'));
+      return m ? (m[1] as string) : null;
+    };
+    expect(read('good')).toBe(GOOD);
+    expect(read('bad')).toBe(BAD);
+    expect(read('warn')).toBe(WARN);
+    expect(read('mid')).toBe(MID);
+  });
+
   it('keeps every meaning hue above the floor', () => {
     const dull = Object.entries({ ACCENT, GOOD, BAD, WARN, MID, MARK_GOOD, MARK_MID, MARK_BAD })
       .filter(([, h]) => chroma(h) < CHROMA_MIN)

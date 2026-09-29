@@ -85,6 +85,14 @@
   --color-accent-800: #005050;
   --color-accent-900: #003636;
 
+  /* The verdict hues, mirroring GOOD / BAD / WARN / MID in constants.ts so a
+     stylesheet can state a verdict too. Two files holding one value drift, so
+     `scale.test.ts` fails if they ever disagree. */
+  --c-good: #52dea4;
+  --c-bad: #ee8c64;
+  --c-warn: #ecd880;
+  --c-mid: #7290fa;
+
   --color-section: #1b2e4b;
   --color-section-glow: #24406b;
   --color-section-ghost: #35598f;

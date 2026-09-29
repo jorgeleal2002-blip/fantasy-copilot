@@ -1126,7 +1126,8 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.62);
   font-variant-numeric: tabular-nums;
 }
-.ms-pts.is-up { color: var(--color-text); }
+/* The same verdict as a row's, at the size of the whole game. */
+.ms-pts.is-up { color: var(--c-good); }
 /* The forecast under the fact, and smaller than it. */
 .ms-proj {
   font-size: 12px;
@@ -1295,6 +1296,11 @@ button { font-family: inherit; }
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
+/* The verdict the row exists to give. Neutral about sides — the row compares
+   two players, and whose team each belongs to is already said by which side of
+   the spine he is on. */
+.ms-pl-pts.is-won { color: var(--c-good); }
+.ms-pl-pts.is-lost { color: rgba(242, 253, 254, 0.75); }
 .ms-pl-proj {
   font-size: 10px;
   margin-top: 2px;
