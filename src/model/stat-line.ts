@@ -16,18 +16,28 @@ import type { SleeperStatLine } from '../api/types';
  * zero IS the story, which is a defence's points allowed and a missed kick.
  */
 
+/**
+ * The same line, kept in pieces.
+ *
+ * A game log sets the figure large and its unit small beside it, the way every
+ * football app does — and a joined string cannot be drawn that way. So the line
+ * is built as parts and joined only where a joined line is what is wanted; both
+ * callers then read the same source and cannot drift apart.
+ */
+export type StatBit = { n: string; unit: string };
+
 /** One clause, or nothing when there is nothing to say. */
-const bit = (n: number | undefined, unit: string): string =>
-  (Number.isFinite(n) && (n as number) !== 0 ? Math.round(n as number) + ' ' + unit : '');
+const bit = (n: number | undefined, unit: string): StatBit | null =>
+  (Number.isFinite(n) && (n as number) !== 0 ? { n: String(Math.round(n as number)), unit } : null);
 
-const pair = (made: number | undefined, tried: number | undefined, unit: string): string =>
+const pair = (made: number | undefined, tried: number | undefined, unit: string): StatBit | null =>
   (Number.isFinite(tried) && (tried as number) > 0
-    ? Math.round(made || 0) + '/' + Math.round(tried as number) + ' ' + unit
-    : '');
+    ? { n: Math.round(made || 0) + '/' + Math.round(tried as number), unit }
+    : null);
 
-export function statLine(st: SleeperStatLine | undefined | null, pos: string): string {
-  if (!st) return '';
-  const out: string[] = [];
+export function statBits(st: SleeperStatLine | undefined | null, pos: string): StatBit[] {
+  if (!st) return [];
+  const out: (StatBit | null)[] = [];
 
   const rushing = () => {
     out.push(bit(st.rush_att, 'CAR'), bit(st.rush_yd, 'YD'), bit(st.rush_td, 'TD'));
@@ -54,7 +64,9 @@ export function statLine(st: SleeperStatLine | undefined | null, pos: string): s
     out.push(pair(st.fgm, st.fga, 'FG'), pair(st.xpm, st.xpa, 'XP'));
   } else if (pos === 'DEF') {
     // The one place a zero is the story: nobody scored on them.
-    if (Number.isFinite(st.pts_allow)) out.push(Math.round(st.pts_allow as number) + ' PTS ALLOW');
+    if (Number.isFinite(st.pts_allow)) {
+      out.push({ n: String(Math.round(st.pts_allow as number)), unit: 'PTS ALLOW' });
+    }
     out.push(bit(st.sack, 'SACK'), bit(st.int, 'INT'), bit(st.def_st_td, 'TD'));
   } else {
     rushing();
@@ -62,5 +74,9 @@ export function statLine(st: SleeperStatLine | undefined | null, pos: string): s
   }
 
   out.push(bit(st.fum_lost, 'FUM LOST'));
-  return out.filter(Boolean).join(', ');
+  return out.filter((b): b is StatBit => !!b);
+}
+
+export function statLine(st: SleeperStatLine | undefined | null, pos: string): string {
+  return statBits(st, pos).map(b => b.n + ' ' + b.unit).join(', ');
 }

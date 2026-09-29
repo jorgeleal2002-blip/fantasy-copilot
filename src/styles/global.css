@@ -1829,3 +1829,65 @@ button { font-family: inherit; }
   color: rgba(233, 233, 237, 0.42);
   text-wrap: pretty;
 }
+
+/* ── A game, the way a football feed writes one ───────────────────────────
+   A face, then the week and what he scored, then the figures set large with
+   their units small beside them, then who he played. The stats are the row:
+   a line of prose says the same thing and is read as a caption, while three
+   big numbers are read as a scoreline, which is what they are.
+   ──────────────────────────────────────────────────────────────────────── */
+.ps-feed {
+  display: flex;
+  gap: 11px;
+  padding: 13px 0;
+  border-top: var(--hairline) solid var(--color-divider);
+}
+.ps-feed-body { flex: 1; min-width: 0; }
+.ps-feed-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ps-feed-wk {
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  color: rgba(233, 233, 237, 0.92);
+}
+.ps-feed-pts { color: rgba(233, 233, 237, 0.42); }
+/* How the week compared with his own average, which is the question a log is
+   scrolled to answer: was that a good one for him. */
+.ps-feed-d {
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgba(233, 233, 237, 0.4);
+}
+.ps-feed-d.is-up { color: #8ec9a8; }
+
+.ps-feed-stats {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 4px;
+}
+.ps-feed-stat { display: inline-flex; align-items: baseline; gap: 3px; }
+.ps-feed-n {
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.ps-feed-u {
+  font-size: 10.5px;
+  text-transform: lowercase;
+  color: rgba(233, 233, 237, 0.42);
+}
+.ps-feed-opp {
+  font-size: 11px;
+  margin-top: 5px;
+  color: rgba(233, 233, 237, 0.35);
+}

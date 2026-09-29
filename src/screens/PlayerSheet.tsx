@@ -8,10 +8,10 @@ import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
 import { Meter, SERIES } from '../ui/charts';
-import { Card, Overlay } from '../ui/primitives';
+import { Card, Face, Overlay } from '../ui/primitives';
 import { ALLOWED_SEASON, OPPONENTS, SCHEDULE_SEASON } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
-import { statLine } from '../model/stat-line';
+import { statBits } from '../model/stat-line';
 import { projectConfidence, projectPPG } from '../model/project';
 import { barHeights, ordinal, type Ranked } from '../model/season';
 import { TradePackages } from '../ui/TradePackages';
@@ -602,21 +602,48 @@ function ThisSeason({ app, pos, team, id }: { app: App; pos: string; team: strin
 
       {/* Game by game, newest first — the order somebody scrolls a log in,
           because "what has he done lately" is the question being asked and
-          the answer to it is at the top. */}
+          the answer to it is at the top.
+
+          Written the way a football feed writes a game: the figures large
+          with their units small beside them, rather than a comma-joined
+          sentence. Three big numbers read as a scoreline, which is what they
+          are; the same numbers in prose read as a caption. */}
       <div style={{ marginTop: 18 }}>
         {shown.slice().reverse().map(g => {
-          const did = statLine(app.gameStats[g.week]?.[id], pos);
+          const bits = statBits(app.gameStats[g.week]?.[id], pos).slice(0, FEED_STATS);
           const opp = OPPONENTS[team]?.[g.week - 1] || '';
+          const d = Math.round((g.pts - line.ppg) * 10) / 10;
           return (
-            <div className="ps-log" key={g.week}>
-              <div className="ps-log-top">
-                <div className="ps-log-when">
-                  Week {g.week}
-                  {opp ? <span className="ps-log-opp">{' · ' + opp}</span> : null}
+            <div className="ps-feed" key={g.week}>
+              <Face {...app.photoSet(id)} pos={pos} size={44} round />
+              <div className="ps-feed-body">
+                <div className="ps-feed-top">
+                  <div className="ps-feed-wk">
+                    Week {g.week}
+                    <span className="ps-feed-pts">{' · ' + g.pts.toFixed(1) + ' pts'}</span>
+                  </div>
+                  {line.games > 1 ? (
+                    <div className={'ps-feed-d' + (d >= 0 ? ' is-up' : '')}>
+                      {(d >= 0 ? '▲ ' : '▼ ') + Math.abs(d).toFixed(1)}
+                    </div>
+                  ) : null}
                 </div>
-                <div className="ps-log-pts">{g.pts.toFixed(1)}</div>
+                {bits.length ? (
+                  <div className="ps-feed-stats">
+                    {bits.map(b => (
+                      <span className="ps-feed-stat" key={b.unit + b.n}>
+                        <span className="ps-feed-n">{b.n}</span>
+                        <span className="ps-feed-u">{b.unit}</span>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {/* Who he played. The week is already on the line above it,
+                    and there is no date to put here: Sleeper's own feed says
+                    "September 20 @ CHI" because it has both, and inventing
+                    either would be worse than the shorter line. */}
+                {opp ? <div className="ps-feed-opp">{opp}</div> : null}
               </div>
-              {did ? <div className="ps-log-did">{did}</div> : null}
             </div>
           );
         })}
@@ -634,6 +661,11 @@ function ThisSeason({ app, pos, team, id }: { app: App; pos: string; team: strin
    of stats, and the chart above already carries the whole season — so this is
    how much detail is worth paying for, not how much season there is. */
 const LOG_GAMES = 8;
+
+/* Three figures is what a feed row holds before it wraps into a paragraph,
+   and the first three of a position's line are the ones that decided the
+   week — a quarterback's completions, yards and touchdowns. */
+const FEED_STATS = 3;
 
 function Schedule(
   { pos, team, league }: { pos: string; team: string | null | undefined; league: SleeperLeague },

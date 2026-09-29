@@ -195,12 +195,14 @@ export function Screen({ children, animation = 'fadeUp .3s ease backwards' }: { 
  * which is every kicker, every defence and a long tail of the rest. The letters
  * only give way once the image has actually loaded, and come back if it fails.
  */
-export function Face({ photo, srcSet, pos, size = 34 }: {
+export function Face({ photo, srcSet, pos, size = 34, round }: {
   photo?: string | null;
   /** Both of Sleeper's portraits with their widths, where there are two. */
   srcSet?: string;
   pos: string;
   size?: number;
+  /** A circle rather than a rounded square, for a feed row. */
+  round?: boolean;
 }) {
   const [ok, setOk] = useState(false);
   // A new url is a new question: forget whether the last one worked.
@@ -208,7 +210,7 @@ export function Face({ photo, srcSet, pos, size = 34 }: {
   return (
     <div
       style={{
-        width: size, height: size, flex: 'none', borderRadius: size * 0.27,
+        width: size, height: size, flex: 'none', borderRadius: round ? '50%' : size * 0.27,
         position: 'relative', overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: size * 0.3, fontWeight: 600, letterSpacing: '.04em',
