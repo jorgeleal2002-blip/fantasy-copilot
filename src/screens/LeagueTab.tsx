@@ -290,10 +290,10 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
 }
 
 /* Fifteen was the length of a card that had to share a screen. This one is
-   the screen, so the list runs as far as anybody is likely to scroll — and
-   under a position chip it usually runs out first, which is why the heading
-   says which of the two happened. */
-const TOP_N = 60;
+   the screen, so the list runs the length of a hundred — and under a position
+   chip it usually runs out first, which is why the heading says which of the
+   two happened. */
+const TOP_N = 100;
 
 const POS_OPTIONS: SegOption<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>[] =
   [{ key: 'ALL', label: 'All' }, ...POS.map(p => ({ key: p, label: p }))];
