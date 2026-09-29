@@ -1107,8 +1107,7 @@ button { font-family: inherit; }
   gap: 7px;
   padding: 0 0 12px;
 }
-/* Avatars outside, scores inside, the way a scoreboard puts the two numbers
-   next to each other so they can be compared without crossing the card. */
+/* Nothing between the two figures but the word — see the note on the markup. */
 .ms-scores {
   display: flex;
   align-items: center;
@@ -1180,11 +1179,14 @@ button { font-family: inherit; }
 }
 .ms-edge.is-right { text-align: right; }
 
-.ms-names { display: flex; align-items: flex-start; gap: 12px; margin-top: 2px; }
+.ms-names { display: flex; align-items: flex-start; gap: 12px; }
+/* Where an avatar would be, when there is no opponent to draw one for. */
+.ms-av-sp { width: 38px; flex: none; }
 .ms-who-team { flex: 1; min-width: 0; }
 .ms-who-team.is-right { text-align: right; }
+/* First thing on the card now, and the name of the thing the card is about. */
 .ms-name {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 16px;

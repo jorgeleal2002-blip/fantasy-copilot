@@ -76,18 +76,35 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
       onRefresh={app.refreshScores}
     >
       <div className="ms-head">
+        {/* Who, then what they scored. It used to run the other way: two large
+            numbers with a face each, then the bar, then the projected margin,
+            and only under all of it the names — so you read 148.62 and had a
+            paragraph to cross before learning whose it was.
+
+            The names take the whole width rather than sitting beside the
+            avatars. Indented past a 38px portrait they had 136px, and "All you
+            need is love" and "1-2 (#9) · @vergarahater" are both wider than
+            that; at full width they have 177 and the avatar is directly under
+            its own name anyway. */}
+        <div className="ms-names">
+          <Who s={game.a} place={placeOf(game.a.rosterId)} />
+          {game.b ? <Who s={game.b} place={placeOf(game.b.rosterId)} align="right" /> : <div style={{ flex: 1 }} />}
+        </div>
+
         <div className="ms-scores">
           <Av s={game.a} />
           <div className="ms-score">
             <div className={'ms-pts' + (lead === 'a' ? ' is-up' : '')}>{score(game.a.points)}</div>
-            {game.a.projected != null ? <div className="ms-proj">{game.a.projected.toFixed(1)}</div> : null}
+            {game.a.projected != null
+              ? <div className="ms-proj">proj {game.a.projected.toFixed(1)}</div> : null}
           </div>
           <div className="ms-vs">{game.b ? 'vs' : 'bye'}</div>
           <div className="ms-score is-right">
             <div className={'ms-pts' + (lead === 'b' ? ' is-up' : '')}>{score(game.b?.points ?? null)}</div>
-            {game.b?.projected != null ? <div className="ms-proj">{game.b.projected.toFixed(1)}</div> : null}
+            {game.b?.projected != null
+              ? <div className="ms-proj">proj {game.b.projected.toFixed(1)}</div> : null}
           </div>
-          {game.b ? <Av s={game.b} /> : <div style={{ width: 38, flex: 'none' }} />}
+          {game.b ? <Av s={game.b} /> : <div className="ms-av-sp" />}
         </div>
 
         {split != null ? (
@@ -97,14 +114,9 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
         ) : null}
         {edge != null ? (
           <div className={'ms-edge' + (edge < 0 ? ' is-right' : '')}>
-            {(edge >= 0 ? '+' : '') + edge.toFixed(1) + ' projected'}
+            {(edge >= 0 ? '+' : '') + edge.toFixed(1) + ' projected margin'}
           </div>
         ) : null}
-
-        <div className="ms-names">
-          <Who s={game.a} place={placeOf(game.a.rosterId)} />
-          {game.b ? <Who s={game.b} place={placeOf(game.b.rosterId)} align="right" /> : <div style={{ flex: 1 }} />}
-        </div>
       </div>
 
       {starters.length ? (
