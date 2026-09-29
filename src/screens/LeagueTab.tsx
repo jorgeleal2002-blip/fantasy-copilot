@@ -206,11 +206,11 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
   const valueOf = (x: PlayerFit) => (
     lens === 'pts' ? (season(x)?.ppg.toFixed(1) ?? '—') : String(rankBy(x)));
 
-  const list = m.allFits
+  const pool = m.allFits
     .filter(x => app.topPos === 'ALL' || x.pos === app.topPos)
     .slice()
-    .sort((a, b) => rankBy(b) - rankBy(a))
-    .slice(0, 15);
+    .sort((a, b) => rankBy(b) - rankBy(a));
+  const list = pool.slice(0, TOP_N);
 
   const lensOptions: SegOption<'neutral' | 'pts' | 'me' | 'fut'>[] = [
     { key: 'neutral', label: 'Rating' },
@@ -229,7 +229,9 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
           have to be told to tap. */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <div style={cardTitle}>Best in the league</div>
-        <span style={{ fontSize: 11.5, color: dim(0.45), ...ellipsis }}>top 15</span>
+        <span style={{ fontSize: 11.5, color: dim(0.45), ...ellipsis }}>
+          {pool.length > list.length ? 'top ' + list.length : 'all ' + list.length}
+        </span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
@@ -286,6 +288,12 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
     </Card>
   );
 }
+
+/* Fifteen was the length of a card that had to share a screen. This one is
+   the screen, so the list runs as far as anybody is likely to scroll — and
+   under a position chip it usually runs out first, which is why the heading
+   says which of the two happened. */
+const TOP_N = 60;
 
 const POS_OPTIONS: SegOption<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>[] =
   [{ key: 'ALL', label: 'All' }, ...POS.map(p => ({ key: p, label: p }))];
