@@ -388,7 +388,7 @@ function JoinByCode({ app }: { app: App }) {
         </button>
       </div>
       {problem || app.roomError ? (
-        <div role="alert" style={{ fontSize: 12, lineHeight: '17px', color: BAD, marginTop: 8 }}>
+        <div role="alert" style={{ fontSize: 12, lineHeight: '18px', color: BAD, marginTop: 8 }}>
           {problem || app.roomError}
         </div>
       ) : null}

@@ -68,7 +68,7 @@ export function ConnectScreen({ app }: { app: App }) {
         />
       </div>
       {app.authError ? (
-        <div role="alert" style={{ fontSize: 12, lineHeight: '17px', color: BAD, marginTop: 10 }}>
+        <div role="alert" style={{ fontSize: 12, lineHeight: '18px', color: BAD, marginTop: 10 }}>
           {app.authError}
         </div>
       ) : null}

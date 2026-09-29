@@ -230,7 +230,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
             ))}
           </div>
           {m.isDynasty && m.leagueHasRosters ? (
-            <div style={{ fontSize: 12, lineHeight: '17px', color: dim(0.62), marginTop: 11, textWrap: 'pretty' }}>
+            <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.62), marginTop: 11, textWrap: 'pretty' }}>
               {heroNote}
             </div>
           ) : null}

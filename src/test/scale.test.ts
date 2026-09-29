@@ -281,6 +281,23 @@ describe('the app is drawn on its scales', () => {
     expect(spaces.filter(v => !Number.isInteger(v))).toEqual([]);
   });
 
+  it('sets every line height to an even number of pixels', () => {
+    /* Whole pixels were not enough. A 15px line centred in a 30px row sits at
+       7.5, so its text, its underline and any border on it land between two
+       device pixels — which is the same grey edge the fractional sizes caused,
+       arriving by a different route. Even heights centre on whole pixels. */
+    const odd: string[] = [];
+    for (const f of FILES) {
+      const re = f.path.endsWith('.css')
+        ? /line-height: (\d+)px/g
+        : /lineHeight: '(\d+)px'/g;
+      for (const m of f.text.matchAll(re)) {
+        if (Number(m[1]) % 2) odd.push(`${m[0]} in ${f.path}`);
+      }
+    }
+    expect(odd).toEqual([]);
+  });
+
   it('leaves no fractional pixel anywhere in the stylesheets', () => {
     // Except the hairline, which is deliberately half of one: that is a line a
     // retina screen can draw, and a padding is not.

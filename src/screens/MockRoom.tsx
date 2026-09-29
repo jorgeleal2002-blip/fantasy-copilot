@@ -489,7 +489,7 @@ function MyTeam({ st, m, app }: { st: MockState; m: Model; app: App }) {
           Nothing yet.
         </div>
       )}
-      <div style={{ fontSize: 10, color: dim(0.52), marginTop: 12, lineHeight: '15px' }}>
+      <div style={{ fontSize: 10, color: dim(0.52), marginTop: 12, lineHeight: '16px' }}>
         {POS.map(p => (st.shape[p] || 0) + '/' + (m.slots[p] || 0) + ' ' + p).join(' · ')}
         {' — counting what you already own'}
       </div>

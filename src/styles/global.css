@@ -33,7 +33,7 @@ body {
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: 15px;
-  line-height: 23px;
+  line-height: 24px;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
   /* iOS: keep the rubber-band area the app's colour, not white */
@@ -193,7 +193,14 @@ button { font-family: inherit; }
  * and the first section on a screen needs neither.
  */
 .card {
-  padding: 16px 12px;
+  /* Asymmetric on purpose. Every screen stacks sections in a flex column with a
+     12px gap, so the space above a rule is the previous section's bottom
+     padding PLUS that gap while the space below it is only this one's top
+     padding — 28 against 16, a divider sitting a third of the way into the
+     space it divides. Ten and twenty-two put it in the middle and leave 44px
+     between one section's last line and the next section's first, which is
+     what Sleeper's own screens measure between sections. */
+  padding: 22px 12px 10px;
   border-top: var(--hairline) solid var(--color-divider);
 }
 .card:first-child { border-top: 0; padding-top: 4px; }
@@ -657,7 +664,7 @@ button { font-family: inherit; }
 .pos-chip {
   font: inherit;
   font-size: 12px;
-  line-height: 13px;
+  line-height: 14px;
   padding: 6px 11px;
   border-radius: 999px;
   flex: none;
@@ -922,7 +929,7 @@ button { font-family: inherit; }
 }
 .br-mark {
   font-size: 66px;
-  line-height: 69px;
+  line-height: 70px;
   filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .55));
 }
 .br-art {
@@ -1062,7 +1069,7 @@ button { font-family: inherit; }
 
 .mu-name {
   font-size: 12px;
-  line-height: 15px;
+  line-height: 16px;
   color: rgba(242, 253, 254, 0.9);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1122,7 +1129,7 @@ button { font-family: inherit; }
   font-size: 21px;
   font-weight: 600;
   letter-spacing: -0.035em;
-  line-height: 23px;
+  line-height: 24px;
   color: rgba(242, 253, 254, 0.62);
   font-variant-numeric: tabular-nums;
 }
@@ -1238,7 +1245,9 @@ button { font-family: inherit; }
   flex-direction: column;
   gap: 4px;
   border-radius: 8px;
-  padding: 3px 2px;
+  /* No side padding: the cell is already inset by the row, and the four pixels
+     it was spending were the four "Christian McCaffrey" needed not to be cut. */
+  padding: 2px 0;
 }
 .ms-cell-top {
   display: flex;
@@ -1262,7 +1271,7 @@ button { font-family: inherit; }
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  line-height: 19px;
+  line-height: 20px;
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1429,7 +1438,7 @@ button { font-family: inherit; }
 .tb-asset-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-why {
   font-size: 12px;
-  line-height: 13px;
+  line-height: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1605,7 +1614,7 @@ button { font-family: inherit; }
   cursor: pointer;
   font: inherit;
   font-size: 13px;
-  line-height: 13px;
+  line-height: 14px;
   color: rgba(242, 253, 254, 0.52);
   background: transparent;
 }
@@ -2036,8 +2045,20 @@ button { font-family: inherit; }
 .cmp-pick:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 
 .cmp-head { display: flex; align-items: flex-start; gap: 10px; padding-bottom: 14px; }
-.cmp-who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; }
-.cmp-who.is-right { flex-direction: row-reverse; text-align: right; }
+/* The portrait above the name, not beside it. Beside it, a face and a "vs"
+   left 95px for the name on a 390px screen, so "Jaxon Smith-Njigba" and
+   "Marvin Harrison Jr." were both cut on the screen whose entire job is
+   putting two named players against each other. Stacked, the name gets the
+   half-width: 163px. */
+.cmp-who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.cmp-who.is-right { align-items: flex-end; text-align: right; }
 .cmp-name {
   font-size: 13px;
   font-weight: 500;
