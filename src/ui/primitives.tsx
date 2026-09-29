@@ -1,5 +1,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { type Pull, pullArmed, pullProgress } from '../model/pull';
 import { cardNote, cardTitle, seg, SegSize, surface } from './styles';
+import { usePullToRefresh } from './usePull';
 
 export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return <div style={{ ...surface, ...style }}>{children}</div>;
@@ -106,18 +108,23 @@ export function Empty({ title, body, action }: { title: string; body: string; ac
  * Escape closes it, which is the first thing anyone tries with a keyboard.
  */
 export function Overlay({
-  children, onClose, label = 'Back', z = 5,
+  children, onClose, label = 'Back', z = 5, onRefresh,
 }: {
   children: ReactNode;
   onClose: () => void;
   label?: string;
   z?: number;
+  /** Given, the screen refreshes when it is dragged past either edge. */
+  onRefresh?: () => void | Promise<void>;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  const { ref, pull, busy } = usePullToRefresh(onRefresh);
+  const shift = pull ? (pull.edge === 'top' ? pull.amount : -pull.amount) : 0;
 
   return (
     <div className="overlay-host" style={{ position: 'absolute', inset: 0, zIndex: z }}>
@@ -128,8 +135,44 @@ export function Overlay({
             ‹ {label}
           </button>
         </div>
-        <div className="overlay-body">{children}</div>
+        {pull || busy ? <PullNote pull={pull} busy={busy} /> : null}
+        <div
+          className="overlay-body"
+          ref={ref}
+          style={{
+            transform: shift ? 'translateY(' + shift + 'px)' : undefined,
+            // Snapping back is an animation; following the finger is not.
+            transition: pull ? 'none' : 'transform .22s cubic-bezier(.3,.9,.35,1)',
+          }}
+        >
+          {children}
+        </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * What the pull says while it is happening.
+ *
+ * It sits at the edge being pulled rather than always at the top, because the
+ * gesture works from either one and an indicator at the far end of the screen
+ * from the thumb is an indicator nobody reads. The ring fills as the pull
+ * approaches the distance that arms it, so "how much further" is answered by
+ * looking rather than by guessing.
+ */
+function PullNote({ pull, busy }: { pull: Pull | null; busy: boolean }) {
+  const armed = busy || pullArmed(pull);
+  const pct = Math.round(pullProgress(pull) * 100);
+  return (
+    <div className={'pull-note' + (pull?.edge === 'bottom' ? ' is-bottom' : '')}>
+      <span className="pull-said">
+        <span
+          className={'pull-ring' + (busy ? ' is-busy' : '')}
+          style={{ background: 'conic-gradient(var(--color-accent) ' + pct + '%, transparent 0)' }}
+        />
+        {busy ? 'Updating…' : armed ? 'Release to update' : 'Pull to update'}
+      </span>
     </div>
   );
 }

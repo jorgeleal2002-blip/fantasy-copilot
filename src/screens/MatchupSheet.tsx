@@ -70,7 +70,12 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
   const bench = benchRows(game, players, app.projections);
 
   return (
-    <Overlay onClose={() => app.setDetail(null)} label={app.week ? 'Week ' + app.week : 'Week'} z={6}>
+    <Overlay
+      onClose={() => app.setDetail(null)}
+      label={app.week ? 'Week ' + app.week : 'Week'}
+      z={6}
+      onRefresh={app.refreshScores}
+    >
       <div className="ms-head">
         <div className="ms-scores">
           <Av s={game.a} />

@@ -1030,6 +1030,28 @@ export function useApp() {
    * for something nobody asked for is an interruption, and a toast for
    * something that failed on its own is worse — the next one will try again.
    */
+  /**
+   * Just the numbers on a scoreboard.
+   *
+   * What a scoreboard is refreshed for is the scores, the projections under
+   * them and the lines under those. Rosters, picks, usage and market values do
+   * not move during a game, so a pull on a matchup asks for the three things
+   * that do rather than the whole league.
+   */
+  const refreshScores = useCallback(async () => {
+    if (!leagueId || week == null) return;
+    setSyncing(true);
+    try {
+      await Promise.all([
+        fetchMatchups(leagueId, week, true, true),
+        fetchWeekStats(week, true),
+      ]);
+      setSyncedAt(Date.now());
+    } finally {
+      setSyncing(false);
+    }
+  }, [fetchMatchups, fetchWeekStats, leagueId, week]);
+
   const refreshAll = useCallback(async (quiet = false) => {
     const d = dataRef.current;
     if (!d || !leagueId) return;
@@ -1354,7 +1376,7 @@ export function useApp() {
       });
     },
     setUsername: (v: string) => { setUsername(v); setAuthError(''); },
-    connectUser, pickLeague, switchLeague, logout, refreshAll, refreshPicks, retry,
+    connectUser, pickLeague, switchLeague, logout, refreshAll, refreshScores, refreshPicks, retry,
     setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
     leagueView, setLeagueView,
     setTeamView, setDraftView, setTradeView, setFilter,

@@ -17,6 +17,7 @@ import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedu
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
+import { PULL_MAX, PULL_RESIST, PULL_SLOP, PULL_TRIGGER, edgeAt, pullArmed, pullFrom, pullProgress } from '../model/pull';
 import { PHOTO_PX, PHOTO_Q, PHOTO_Q_FLOOR, pickEncoding } from '../model/photo';
 import { projectionsAreStale, readProjections, scoreProjection, scoringKind, statsForWeek } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
@@ -3850,5 +3851,64 @@ describe('how big an uploaded photo is stored', () => {
     const fit = pickEncoding(like(0.2), 20000);
     expect(PHOTO_PX).toContain(fit?.px);
     expect(PHOTO_Q).toContain(fit?.q);
+  });
+});
+
+/* A drag in the middle of a list is a scroll and has to stay one. The gesture
+   only exists where the scroller has run out of scroll, which is the space the
+   browser would otherwise spend on a rubber band. */
+describe('pulling a screen to refresh it', () => {
+  it('knows which edge a scroller is sitting against', () => {
+    expect(edgeAt(0, 2000, 800)).toBe('top');
+    expect(edgeAt(1200, 2000, 800)).toBe('bottom');
+    expect(edgeAt(600, 2000, 800)).toBe(null);
+  });
+
+  it('calls a screen with nothing to scroll both edges at once', () => {
+    // There is no meaningful top or bottom of a screen that fits; which
+    // gesture it is comes from which way the thumb goes.
+    expect(edgeAt(0, 700, 800)).toBe('both');
+    expect(pullFrom('both', 100)?.edge).toBe('top');
+    expect(pullFrom('both', -100)?.edge).toBe('bottom');
+  });
+
+  it('gives nothing back to a drag away from the edge it started against', () => {
+    expect(pullFrom('top', -100)).toBe(null);
+    expect(pullFrom('bottom', 100)).toBe(null);
+    expect(pullFrom(null, 100)).toBe(null);
+  });
+
+  it('pulls the bottom edge upward, which is the same gesture mirrored', () => {
+    const up = pullFrom('bottom', -100);
+    const down = pullFrom('top', 100);
+    expect(up?.edge).toBe('bottom');
+    expect(up?.amount).toBe(down?.amount);
+  });
+
+  it('ignores a touch too small to have been meant', () => {
+    expect(pullFrom('top', PULL_SLOP)).toBe(null);
+    expect(pullFrom('top', PULL_SLOP + 1)).not.toBe(null);
+  });
+
+  it('moves the indicator less than the finger, and stops it giving', () => {
+    // The resistance is what the gesture pulls against, and it is also what
+    // stops a flick tripping a refresh nobody asked for.
+    const p = pullFrom('top', 106);
+    expect(p?.amount).toBeCloseTo((106 - PULL_SLOP) * PULL_RESIST, 5);
+    expect(pullFrom('top', 10000)?.amount).toBe(PULL_MAX);
+  });
+
+  it('arms only once the pull has gone the distance', () => {
+    const short = { edge: 'top' as const, amount: PULL_TRIGGER - 1 };
+    const there = { edge: 'top' as const, amount: PULL_TRIGGER };
+    expect(pullArmed(short)).toBe(false);
+    expect(pullArmed(there)).toBe(true);
+    expect(pullArmed(null)).toBe(false);
+  });
+
+  it('reports how much further, and never more than all of it', () => {
+    expect(pullProgress(null)).toBe(0);
+    expect(pullProgress({ edge: 'top', amount: PULL_TRIGGER / 2 })).toBeCloseTo(0.5, 5);
+    expect(pullProgress({ edge: 'top', amount: PULL_MAX })).toBe(1);
   });
 });

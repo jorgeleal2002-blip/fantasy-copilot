@@ -8,6 +8,12 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+
+  /* The overlay header's own height, named because the pull indicator has to
+     clear it and the two would otherwise drift apart silently: the header is
+     opaque and above, so an indicator a few pixels too high is not misplaced,
+     it is invisible. 18 + 10 of padding over a 14px/1.2 line. */
+  --overlay-head-h: calc(var(--safe-top) + 51px);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -252,14 +258,26 @@ button { font-family: inherit; }
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   animation: slideIn 0.28s cubic-bezier(0.3, 0.9, 0.35, 1) backwards;
 }
-.overlay-head { padding: calc(var(--safe-top) + 18px) 16px 10px; }
+/* Opaque and above the body, because the body slides under it: a pull from
+   the bottom edge moves the content up, and a transparent header would let it
+   ride over the back button. */
+.overlay-head {
+  padding: calc(var(--safe-top) + 18px) 16px 10px;
+  position: relative;
+  z-index: 3;
+  background: var(--color-bg);
+}
 .overlay-body {
   flex: 1;
   overflow: auto;
   padding: 6px 18px calc(var(--safe-bottom) + 24px);
   -webkit-overflow-scrolling: touch;
+  /* The pull is this scroller's gesture; it does not belong to the document
+     underneath, which would otherwise take over at the edges. */
+  overscroll-behavior-y: contain;
 }
 
 @media (min-width: 900px) {
@@ -1602,3 +1620,43 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.3);
   text-wrap: pretty;
 }
+
+/* ── Pull to refresh ─────────────────────────────────────────────────────
+   The note covers the panel and parks itself against whichever edge is being
+   pulled, rather than being offset from one: an inset box with an alignment
+   is one positioning model instead of two, and it cannot end up measured from
+   the edge it is not on. It sits over the panel rather than in its flow, so
+   nothing under it moves while the gesture runs — the body is already
+   translating with the finger, and a second thing shifting reads as the
+   screen coming apart. */
+.pull-note {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: calc(var(--overlay-head-h) + 9px) 16px calc(var(--safe-bottom) + 20px);
+  pointer-events: none;
+  animation: fadeIn .14s ease;
+}
+.pull-note.is-bottom { align-items: flex-end; }
+.pull-said {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  letter-spacing: .01em;
+  color: color-mix(in srgb, var(--color-text) 52%, transparent);
+}
+.pull-ring {
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  flex: none;
+  /* The fill is a conic gradient set inline; this is the track under it and
+     the hole that turns the disc into a ring. */
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-text) 16%, transparent);
+  mask: radial-gradient(circle, transparent 54%, #000 56%);
+  -webkit-mask: radial-gradient(circle, transparent 54%, #000 56%);
+}
+.pull-ring.is-busy { animation: spin .8s linear infinite; }
