@@ -34,10 +34,9 @@ from pathlib import Path
 W = 512                      # the drawing's own coordinate box
 SS = 3                       # supersampling factor per axis
 
-# ── The palette, off the league's own colours ───────────────────────────────
-BLACK = (0x0B, 0x0B, 0x0F)
-BLUE = (0x00, 0x85, 0xCA)    # the Doctor's side
-GOLD = (0xFF, 0xB6, 0x12)    # Epstein's side
+# ── The palette, off the badge the app opened with ─────────────────────────
+NAVY = (0x00, 0x20, 0x5B)
+RED = (0xC8, 0x10, 0x2E)
 WHITE = (0xFF, 0xFF, 0xFF)
 STEEL = (0xE4, 0xE4, 0xEA)
 SKIN = (0xC9, 0x8A, 0x55)
@@ -45,11 +44,6 @@ SHADE = (0xB6, 0x78, 0x46)
 BROW = (0x4A, 0x2C, 0x17)
 EYE = (0x2B, 0x2B, 0x33)
 LIP = (0x8B, 0x5A, 0x32)
-SKIN_B = (0xE2, 0xB0, 0x8A)  # stein's side
-SHADE_B = (0xD0, 0x9B, 0x74)
-LIP_B = (0xA8, 0x74, 0x4E)
-HAIR = (0xF0, 0xF0, 0xF4)   # white, a shade off the cap so the two read apart
-BROW_B = (0x9A, 0x9A, 0xA4)
 
 
 # ── Path building ───────────────────────────────────────────────────────────
@@ -113,122 +107,80 @@ def thick(pts, width):
 
 # ── The drawing ─────────────────────────────────────────────────────────────
 #
-# Two of them, because the league is two of them. The badge splits down the
-# middle — Carolina blue for the Doctor, Steelers gold for stein — and each
-# side carries its own face. What tells them apart at sixty pixels on a home
-# screen is not a likeness, which is mud at that size, but two silhouettes:
-# a flat white cap and a moustache against parted white hair and a bare lip.
+# One of them, on the navy-and-red badge the app opened with. These are the
+# shapes `assets/icon.svg` carries; this file draws them into the PNGs iOS
+# actually uses for a home-screen icon, and the two are kept in step.
 
-def xform(pts, cx, cy, s):
-    """The original drawing is one head at (256, 266) with rx 100. Every part
-    of a face is placed by moving that head, so a second one is the same
-    shapes at another centre rather than a second set of coordinates."""
-    return [(cx + (x - 256) * s, cy + (y - 266) * s) for x, y in pts]
+HEAD = ellipse(256, 266, 100, 119)
 
 
-def head_at(cx, cy, s):
-    return xform(ellipse(256, 266, 100, 119), cx, cy, s)
-
-
-def cap_at(cx, cy, s):
-    """Flat and pure white — a surgical cap, not hair. It is what tells the
-    Doctor from the other one at sixty pixels."""
+def cap():
     p = [(149, 130), (363, 130), (363, 205)]
     p += quad((363, 205), (256, 227), (149, 205))
-    return xform(p, cx, cy, s)
+    return p
 
 
-def hair_at(cx, cy, s):
-    """Same band, parted rather than flat: a fringe swept to one side is what
-    reads as hair where a straight edge reads as a cap."""
-    p = [(149, 120), (363, 120), (363, 212)]
-    p += quad((363, 212), (300, 232), (286, 196))
-    p += quad((286, 196), (250, 236), (149, 214))
-    return xform(p, cx, cy, s)
-
-
-def tache_at(cx, cy, s):
+def tache():
     p = [(256, 285)]
     p += bezier((256, 285), (280, 283), (298, 276), (315, 266))
     p += bezier((315, 266), (327, 259), (342, 258), (344, 268))
     p += bezier((344, 268), (345, 279), (338, 289), (326, 297))
     p += bezier((326, 297), (309, 306), (285, 313), (256, 313))
-    return xform(p, cx, cy, s)
+    return p
 
 
-def flip(pts, cx):
-    return [(2 * cx - x, y) for x, y in pts]
+def mirror(pts):
+    """The moustache is drawn once and reflected, the way the SVG does it."""
+    return [(W - x, y) for x, y in pts]
 
 
-def nose_at(cx, cy, s):
+def stethoscope():
+    p = [(346, 189)]
+    p += bezier((346, 189), (371, 201), (381, 226), (376, 248))
+    p += bezier((376, 248), (368, 234), (355, 216), (338, 204))
+    return p
+
+
+def nose():
     p = [(256, 249)]
     p += bezier((256, 249), (263, 263), (269, 278), (269, 286))
     p += bezier((269, 286), (269, 291), (243, 291), (243, 286))
     p += bezier((243, 286), (243, 278), (249, 263), (256, 249))
-    return xform(p, cx, cy, s)
+    return p
 
 
-def mouth_at(cx, cy, s, width=6):
-    return xform(thick(quad((234, 327), (256, 333), (278, 327)), width), cx, cy, s)
+def mouth():
+    return thick(quad((234, 327), (256, 333), (278, 327)), 6)
 
 
-def eyes_at(cx, cy, s):
-    return [xform(ellipse(225, 256, 11, 9), cx, cy, s),
-            xform(ellipse(287, 256, 11, 9), cx, cy, s)]
-
-
-def brows_at(cx, cy, s):
-    return [xform([(204, 236), (240, 231), (240, 241), (204, 245)], cx, cy, s),
-            xform([(308, 236), (272, 231), (272, 241), (308, 245)], cx, cy, s)]
-
-
-def face(cx, cy, s, kind):
-    """One manager. `kind` is the only thing that differs, and it differs in
-    the two places a small icon can still show: what is on his head, and
-    whether anything sits under his nose."""
-    doc = kind == 'doctor'
-    skin = SKIN if doc else SKIN_B
-    shade = SHADE if doc else SHADE_B
-    head = head_at(cx, cy, s)
-    out = [
-        ([head], skin, None),
-        ([nose_at(cx, cy, s)], shade, head),
-        ([mouth_at(cx, cy, s)], LIP if doc else LIP_B, head),
-        ([cap_at(cx, cy, s) if doc else hair_at(cx, cy, s)], WHITE if doc else HAIR, head),
-        (brows_at(cx, cy, s), BROW if doc else BROW_B, None),
-        (eyes_at(cx, cy, s), EYE, None),
-    ]
-    if doc:
-        t = tache_at(cx, cy, s)
-        out.append(([t, flip(t, cx)], WHITE, None))
-    return out
-
-
-def half(side):
-    """A half-plane the size of the box. One colour per manager, which is the
-    whole idea of the name."""
-    return ([(0, 0), (256, 0), (256, W), (0, W)] if side == 'left'
-            else [(256, 0), (W, 0), (W, W), (256, W)])
-
-
-# Two heads inside a 202 badge: 0.86 of the original fills it with an even
-# margin all round and leaves them a hair apart at the split line rather than
-# overlapping it.
-SCALE = 0.86
-LEFT, RIGHT, MID = 164, 348, 263
+def seven():
+    """The number on the cap band, in the navy of the ring."""
+    return [(236, 155), (276, 155), (276, 165), (257, 204), (239, 204), (258, 165), (236, 165)]
 
 
 def scene():
     """(polygons, colour, clip) in paint order. `clip` is a polygon the shape
-    is confined to, which is how the SVG's clip paths are expressed."""
-    badge = circle(256, 256, 202)
+    is confined to, which is how the SVG's clip path is expressed."""
     return [
-        ([[(0, 0), (W, 0), (W, W), (0, W)]], BLACK, None),
+        ([[(0, 0), (W, 0), (W, W), (0, W)]], NAVY, None),
         ([circle(256, 256, 212)], WHITE, None),
-        ([badge], BLUE, half('left')),
-        ([badge], GOLD, half('right')),
-        *face(LEFT, MID, SCALE, 'doctor'),
-        *face(RIGHT, MID, SCALE, 'stein'),
+        ([circle(256, 256, 202)], RED, None),
+
+        ([circle(351, 184, 16)], STEEL, None),
+        ([stethoscope()], STEEL, None),
+
+        ([HEAD], SKIN, None),
+        ([nose()], SHADE, HEAD),
+        ([mouth()], LIP, HEAD),
+        ([cap()], WHITE, HEAD),
+
+        ([[(204, 236), (240, 231), (240, 241), (204, 245)]], BROW, None),
+        ([[(308, 236), (272, 231), (272, 241), (308, 245)]], BROW, None),
+        ([ellipse(225, 256, 11, 9)], EYE, None),
+        ([ellipse(287, 256, 11, 9)], EYE, None),
+
+        ([tache(), mirror(tache())], WHITE, None),
+        ([seven()], NAVY, None),
     ]
 
 
