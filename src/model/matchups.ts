@@ -62,7 +62,9 @@ export function pairMatchups(
   const side = (r: SleeperMatchup): MatchupSide | null => {
     const t = byRoster.get(r.roster_id);
     if (!t) return null; // a roster the league no longer lists
-    const p = projectSide(r.starters, proj);
+    // Blended with what the lineup has already scored, so it moves with the
+    // score rather than sitting still beside it.
+    const p = projectSide(r.starters, proj, r.players_points);
     return {
       rosterId: r.roster_id,
       name: t.name,

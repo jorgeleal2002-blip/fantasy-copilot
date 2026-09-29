@@ -1000,90 +1000,132 @@ button { font-family: inherit; }
   text-transform: uppercase;
   color: rgba(233, 233, 237, 0.3);
 }
-.mu-vs.is-open { color: rgba(233, 233, 237, 0.5); }
 
-/* ── The two lineups, once the card is open ───────────────────────────────
-   A row per slot with the slot between the two players, because the question
-   is not "who is on his team" but "who is beating whom at running back". The
-   slot label anchors the middle so both columns stay readable at a glance.
+/* ── One game, on its own screen ──────────────────────────────────────────
+   The scoreboard card is two names and two numbers in a 390px row; here there
+   is a whole screen, so the two teams stand as columns with their score under
+   them and the lineup runs slot against slot underneath. Nothing is squeezed,
+   which is the entire reason it stopped opening inside the card.
    ──────────────────────────────────────────────────────────────────────── */
-.mu-lineup {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-divider);
+.ms-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.ms-side {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
 }
-.mu-row {
+.ms-av {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid var(--color-divider);
+  margin-bottom: 4px;
+}
+.ms-av-blank { background: rgba(233, 233, 237, 0.06); }
+.ms-name {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-name.is-me { color: var(--color-accent); }
+.ms-sub {
+  font-size: 10px;
+  color: rgba(242, 253, 254, 0.35);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-pts {
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  margin-top: 4px;
+  color: rgba(233, 233, 237, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+.ms-pts.is-up { color: var(--color-text); }
+/* The forecast under the fact, and smaller than it. */
+.ms-proj {
+  font-size: 10.5px;
+  color: rgba(233, 233, 237, 0.3);
+  font-variant-numeric: tabular-nums;
+}
+.ms-vs {
+  flex: none;
+  width: 24px;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(233, 233, 237, 0.3);
+  margin-top: 60px;
+}
+
+.ms-lineup { display: flex; flex-direction: column; }
+.ms-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 0;
+  gap: 4px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--color-divider);
 }
-.mu-slot {
+.ms-row:last-child { border-bottom: none; }
+.ms-slot {
   flex: none;
-  width: 38px;
+  width: 40px;
   text-align: center;
   font-size: 9px;
   letter-spacing: 0.06em;
   color: rgba(233, 233, 237, 0.34);
 }
-
-.mu-cell {
+.ms-cell {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
-  border-radius: 6px;
-  padding: 2px 3px;
+  border-radius: 7px;
+  padding: 3px 4px;
 }
-.mu-cell.is-right { flex-direction: row-reverse; }
-.mu-cell.is-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.mu-cell.is-tap:active { background: rgba(233, 233, 237, 0.06); }
-.mu-cell.is-tap:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 1px;
-}
-
-.mu-pl {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  overflow: hidden;
-}
-.is-right .mu-pl { flex-direction: row-reverse; }
-/* The position as a dot rather than a label: at this size the six hues are
-   readable and three more characters of the name are worth more than "WR". */
-.mu-dot {
-  flex: none;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  align-self: center;
-}
-.mu-pl-name {
-  font-size: 11.5px;
-  color: rgba(233, 233, 237, 0.78);
+.ms-cell.is-right { flex-direction: row-reverse; text-align: right; }
+.ms-cell.is-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ms-cell.is-tap:active { background: rgba(233, 233, 237, 0.06); }
+.ms-cell.is-tap:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.ms-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; }
+.ms-pl-name {
+  font-size: 12px;
+  color: rgba(233, 233, 237, 0.82);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mu-pl-pts {
-  flex: none;
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-  color: rgba(233, 233, 237, 0.55);
+.ms-pl-sub {
+  font-size: 9.5px;
+  color: rgba(233, 233, 237, 0.32);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-.mu-empty {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-divider);
-  font-size: 11.5px;
-  color: rgba(233, 233, 237, 0.4);
+.ms-pl-pts {
+  flex: none;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(233, 233, 237, 0.62);
 }
 
 /* ── Trade builder ────────────────────────────────────────────────────────
@@ -1246,12 +1288,132 @@ button { font-family: inherit; }
   font-variant-numeric: tabular-nums;
 }
 
-/* The same thing a slot down: what he is projected for, after what he has
-   actually scored. */
-.mu-pl-proj {
-  margin-left: 4px;
+
+/* ── One game, on its own screen ──────────────────────────────────────────
+   The scoreboard card is two names and two numbers in a 390px row; here there
+   is a whole screen, so the two teams stand as columns with their score under
+   them and the lineup runs slot against slot underneath. Nothing is squeezed,
+   which is the entire reason it stopped opening inside the card.
+   ──────────────────────────────────────────────────────────────────────── */
+.ms-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.ms-side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+}
+.ms-av {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid var(--color-divider);
+  margin-bottom: 4px;
+}
+.ms-av-blank { background: rgba(233, 233, 237, 0.06); }
+.ms-name {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-name.is-me { color: var(--color-accent); }
+.ms-sub {
   font-size: 10px;
+  color: rgba(242, 253, 254, 0.35);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-pts {
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  margin-top: 4px;
+  color: rgba(233, 233, 237, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+.ms-pts.is-up { color: var(--color-text); }
+/* The forecast under the fact, and smaller than it. */
+.ms-proj {
+  font-size: 10.5px;
   color: rgba(233, 233, 237, 0.3);
+  font-variant-numeric: tabular-nums;
+}
+.ms-vs {
+  flex: none;
+  width: 24px;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(233, 233, 237, 0.3);
+  margin-top: 60px;
+}
+
+.ms-lineup { display: flex; flex-direction: column; }
+.ms-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.ms-row:last-child { border-bottom: none; }
+.ms-slot {
+  flex: none;
+  width: 40px;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: rgba(233, 233, 237, 0.34);
+}
+.ms-cell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 7px;
+  padding: 3px 4px;
+}
+.ms-cell.is-right { flex-direction: row-reverse; text-align: right; }
+.ms-cell.is-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ms-cell.is-tap:active { background: rgba(233, 233, 237, 0.06); }
+.ms-cell.is-tap:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.ms-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; }
+.ms-pl-name {
+  font-size: 12px;
+  color: rgba(233, 233, 237, 0.82);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-pl-sub {
+  font-size: 9.5px;
+  color: rgba(233, 233, 237, 0.32);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-pl-pts {
+  flex: none;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(233, 233, 237, 0.62);
 }
 
 /* ── Trade builder ────────────────────────────────────────────────────────

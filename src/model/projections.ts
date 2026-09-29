@@ -116,7 +116,26 @@ export interface SideProjection {
 }
 
 /**
- * What a lineup is projected to score.
+ * What a lineup is projected to score, counting what it has already scored.
+ *
+ * A week's projection does not move while the games are on — it is Sleeper's
+ * opinion of the week, revised on news, not a clock. So a card showed a score
+ * climbing past a number that sat still, which reads as a projection that has
+ * given up. What moves is how much of the week is left, and that is what this
+ * counts: a starter who has scored is worth what he scored, and one who has
+ * not is worth what he is projected for.
+ *
+ * It behaves correctly at both ends. Before kickoff nobody has scored and the
+ * total is the plain projection. By the end everybody has, and it converges on
+ * the real score. In between it walks from one to the other, which is the
+ * number people actually want from a scoreboard.
+ *
+ * THE ONE THING IT CANNOT TELL: a starter on exactly nothing is either yet to
+ * play or has played and scored nothing, and the feed does not say which. He
+ * is treated as yet to play, which is right all morning and overstates a team
+ * by one player's projection if somebody really does finish on a goose egg.
+ * The alternative — dropping a player who has not kicked off — understates
+ * every team every Sunday morning, which is worse and wrong more often.
  *
  * Reports what it could price as well as the total, for the same reason the
  * team projection does: a total over five of nine starters is not a smaller
@@ -125,22 +144,36 @@ export interface SideProjection {
 export function projectSide(
   starters: string[] | null | undefined,
   proj: Record<string, number>,
+  scored?: Record<string, number> | null,
 ): SideProjection | null {
   if (!starters || !starters.length) return null;
   let total = 0;
   let counted = 0;
   let slots = 0;
+  /* Whether the feed has an opinion about this lineup at all. Without it the
+   * blend would hand back the score as the projection — which is harmless
+   * once the games are over and a lie while they are on, since it says the
+   * team will finish on exactly what it has. */
+  let known = 0;
   for (const id of starters) {
     // Sleeper writes "0" for a slot nobody was put in. It is an empty slot, not
     // an unpriced one, so it counts against the lineup rather than against the
     // projection's coverage.
     slots++;
     if (!id || id === '0') { counted++; continue; }
+    if (Number.isFinite(proj[id])) known++;
+    const got = scored?.[id];
+    if (Number.isFinite(got) && (got as number) !== 0) {
+      total += got as number;
+      counted++;
+      continue;
+    }
     const p = proj[id];
     if (!Number.isFinite(p)) continue;
     total += p;
     counted++;
   }
+  if (!known) return null;
   return { total: Math.round(total * 10) / 10, counted, slots };
 }
 

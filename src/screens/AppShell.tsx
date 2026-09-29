@@ -8,6 +8,7 @@ import { MockRoom } from './MockRoom';
 import { PlayerSheet } from './PlayerSheet';
 import { SettingsTab } from './SettingsTab';
 import { TeamSheet } from './TeamSheet';
+import { MatchupSheet } from './MatchupSheet';
 import { TeamTab } from './TeamTab';
 import { TradesTab } from './TradesTab';
 
@@ -48,6 +49,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
   const logo = leagueAvatar(model.league.avatar);
   const detail = app.detail;
   const isTeamDetail = typeof detail === 'string' && detail.startsWith('team-');
+  const isMatchupDetail = typeof detail === 'string' && detail.startsWith('matchup-');
 
   return (
     <div className="shell">
@@ -126,7 +128,11 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
 
       {app.mockOpen ? <MockRoom app={app} m={model} /> : null}
       {isTeamDetail ? <TeamSheet app={app} m={model} rosterId={Number(detail!.slice(5))} /> : null}
-      {detail && !isTeamDetail ? <PlayerSheet app={app} m={model} playerId={detail} /> : null}
+      {isMatchupDetail ? (
+        <MatchupSheet app={app} m={model} ids={detail!.slice(8).split('-').map(Number)} />
+      ) : null}
+      {detail && !isTeamDetail && !isMatchupDetail
+        ? <PlayerSheet app={app} m={model} playerId={detail} /> : null}
     </div>
   );
 }

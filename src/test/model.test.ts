@@ -3218,7 +3218,30 @@ describe('the league\'s matchups', () => {
     });
 
     it('says nothing at all when no projections arrived', () => {
+      // Not even the score: a projection equal to what a team has already put
+      // up says it will finish on exactly that, which is a lie while the games
+      // are on and noise once they are over.
       expect(game().a.projected).toBe(null);
+    });
+
+    it('counts what a lineup has already scored toward the projection', () => {
+      /* The number people want from a scoreboard: it starts at the plain
+         projection, walks with the score, and lands on it. */
+      const kicked = pairMatchups(teams, [
+        withLineup(1, 7, 25.4, ['p1', 'p2'], { p1: 25.4 }),
+      ], { p1: 22.5, p2: 14.2 })[0];
+      // p1 has played and scored 25.4; p2 has not and is worth his 14.2.
+      expect(kicked.a.projected).toBe(39.6);
+
+      const kickoff = pairMatchups(teams, [
+        withLineup(1, 7, 0, ['p1', 'p2'], {}),
+      ], { p1: 22.5, p2: 14.2 })[0];
+      expect(kickoff.a.projected).toBe(36.7);
+
+      const over = pairMatchups(teams, [
+        withLineup(1, 7, 41.1, ['p1', 'p2'], { p1: 25.4, p2: 15.7 }),
+      ], { p1: 22.5, p2: 14.2 })[0];
+      expect(over.a.projected).toBe(41.1);
     });
 
     it('keeps the slot labels when only one side has posted a lineup', () => {
