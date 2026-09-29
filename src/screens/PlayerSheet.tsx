@@ -396,22 +396,11 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </Card>
       ) : null}
 
-      {fill ? null : <ThisSeason app={app} pos={p.pos} team={p.team} id={p.id} />}
+      {fill ? null : <ThisSeason app={app} m={m} p={p} stats={stats} deeper={deeper} />}
 
-      {fill || m.isDynasty ? null : <Schedule pos={p.pos} team={p.team} league={m.league} />}
 
       {fill ? null : <WhatHeCosts app={app} m={m} sheet={p} />}
 
-      {fill ? null : <Tiles rows={stats} />}
-
-      {fill ? null : (
-        <More label="More numbers">
-          <Tiles rows={deeper} />
-          <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), marginTop: 14, textWrap: 'pretty' }}>
-            {DATA_NOTE}
-          </div>
-        </More>
-      )}
     </Overlay>
   );
 }
@@ -442,7 +431,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
  * the choice is between. A rank against every quarterback in the NFL counts
  * thirty nobody here can start.
  */
-function ThisSeason({ app, pos, team, id }: { app: App; pos: string; team: string; id: string }) {
+function ThisSeason(
+  { app, m, p, stats, deeper }:
+  { app: App; m: Model; p: Sheet; stats: Tile[]; deeper: Tile[] },
+) {
+  const { pos, id } = p;
+  const team = p.team;
   const line = app.seasonOf(id);
   const games = app.seasonLog(id);
   const ranks = app.seasonRanks(id, pos);
@@ -458,11 +452,12 @@ function ThisSeason({ app, pos, team, id }: { app: App; pos: string; team: strin
     if (weeks.length) void fetchGameStats(weeks);
   }, [fetchGameStats, logged]);
 
-  // Before he has played there is nothing here but zeroes pretending to be
-  // facts, and the projection above is the whole of what is known.
-  if (!line || !games.length) return null;
+  /* Before he has played, the season block is zeroes pretending to be facts
+     — but the numbers under it and his schedule are as true in week 1 as in
+     week 12, so it is that block that is skipped and not the card. */
+  const played = !!line && !!games.length;
 
-  const cells: { k: string; v: string; r?: Ranked | null }[] = [
+  const cells: { k: string; v: string; r?: Ranked | null }[] = !line ? [] : [
     { k: 'Games', v: String(line.games), r: ranks?.games },
     { k: 'Pts/gm', v: line.ppg.toFixed(1), r: ranks?.ppg },
     { k: 'Total', v: line.total.toFixed(1), r: ranks?.total },
@@ -478,6 +473,8 @@ function ThisSeason({ app, pos, team, id }: { app: App; pos: string; team: strin
 
   return (
     <Card style={{ marginTop: 16 }}>
+      {played && line ? (
+      <div className="ps-sec is-first">
       <div style={cardTitle}>This season</div>
       <div style={{ fontSize: 11.5, color: dim(0.45), marginTop: 3, textWrap: 'pretty' }}>
         In this league's own scoring. Byes and the weeks he did not play are
@@ -568,6 +565,26 @@ function ThisSeason({ app, pos, team, id }: { app: App; pos: string; team: strin
           His last {LOG_GAMES} games. The chart above is the whole season.
         </div>
       ) : null}
+      </div>
+      ) : null}
+
+      {/* The rest of what is known about him, in the same card rather than in
+          three more below it: what he costs, how much of his offence he is,
+          and who he still has to play. They were separate cards because they
+          came from separate places, which is a fact about the app and not
+          about him. */}
+      <div className={'ps-sec' + (played ? '' : ' is-first')}>
+        <div className="ps-sec-h">The numbers</div>
+        <Tiles rows={stats} />
+        <More label="More numbers">
+          <Tiles rows={deeper} />
+          <div style={{ fontSize: 11, lineHeight: 1.5, color: dim(0.33), marginTop: 14, textWrap: 'pretty' }}>
+            {DATA_NOTE}
+          </div>
+        </More>
+      </div>
+
+      {m.isDynasty ? null : <Schedule pos={pos} team={team} league={m.league} />}
     </Card>
   );
 }
@@ -591,10 +608,8 @@ function Schedule(
   const say = (rank: number) => (rank <= 10 ? 'One of the easiest runs'
     : rank >= 23 ? 'One of the hardest runs' : 'A middling run');
   return (
-    <Card style={{ marginTop: 12 }}>
-      <div style={{ fontSize: 12, color: dim(0.45), marginBottom: 10 }}>
-        Schedule — {SCHEDULE_SEASON}, for a {pos}
-      </div>
+    <div className="ps-sec">
+      <div className="ps-sec-h">Schedule — {SCHEDULE_SEASON}, for a {pos}</div>
       <div style={{ fontSize: 14, lineHeight: 1.5, textWrap: 'pretty' }}>
         {ord(s.rank)} easiest of 32. {say(s.rank)} of opponents in the league for a {pos}:
         they gave up {s.perGame} points a game to {pos}s in {ALLOWED_SEASON}.
@@ -610,7 +625,7 @@ function Schedule(
         {s.weeks.map(w => sched[w - 1] || 'bye').join(' · ')} — {ord(s.playoffRank)} easiest
         of 32 ({s.playoffPerGame} a game allowed).
       </div>
-    </Card>
+    </div>
   );
 }
 

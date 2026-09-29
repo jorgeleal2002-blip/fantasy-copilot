@@ -1891,3 +1891,16 @@ button { font-family: inherit; }
   margin-top: 5px;
   color: rgba(233, 233, 237, 0.35);
 }
+
+/* Sections inside one card. They were separate cards because the numbers in
+   them came from separate places, which is a fact about the app and not about
+   the player; a rule between them says the same thing without the gap. */
+.ps-sec { padding-top: 18px; margin-top: 18px; border-top: var(--hairline) solid var(--color-divider); }
+.ps-sec.is-first { padding-top: 0; margin-top: 0; border-top: 0; }
+.ps-sec-h {
+  font-size: 10px;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  color: rgba(233, 233, 237, 0.4);
+  margin-bottom: 10px;
+}
