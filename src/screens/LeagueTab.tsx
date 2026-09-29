@@ -8,13 +8,6 @@ import { Matchups } from './Matchups';
 import { PowerRankings } from './PowerRankings';
 import { hasPlayed } from '../model/record';
 
-const STATUS_TEXT: Record<string, string> = {
-  pre_draft: 'draft not started',
-  drafting: 'draft in progress',
-  complete: 'draft complete',
-  paused: 'draft paused',
-};
-
 /**
  * "Rebuilding" is a dynasty word. A redraft league has nothing to rebuild
  * toward — every roster is torn up at the end of the season — so there the
@@ -66,32 +59,20 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
         : mode === 'fitFut' ? b.fitFut - a.fitFut
           : b.now - a.now
   ));
-  const facts = [
-    { label: 'Teams', value: String(m.teamCount) },
-    {
-      label: 'Type',
-      value: m.league.settings?.type === 2 ? 'Dynasty' : m.league.settings?.type === 1 ? 'Keeper' : 'Redraft',
-    },
-    { label: 'Draft', value: (m.draft ? m.draft.type || 'snake' : '—') + ' · ' + m.rounds + ' rounds' },
-    {
-      label: 'Starters',
-      value: (m.league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR').join(', '),
-    },
-    {
-      label: 'Season',
-      value: m.league.season + ' · ' + (m.draft ? STATUS_TEXT[m.draft.status || ''] || m.draft.status : 'no draft'),
-    },
-  ];
-
   /* The league's own screens, the way the Team page has its own: the week you
    * are in, where everybody stands, and what the league is. They used to be
    * one column in reading order, which put the rankings six matchup cards
-   * below the fold and the format below those — a page you had to scroll to
-   * find out what was on it. */
+   * below the fold and everything else under those — a page you had to scroll
+   * to find out what was on it.
+   *
+   * The third screen used to be the league's format — its size, its starters,
+   * its draft type — five lines that are set once and read once, and did not
+   * earn a third of the only control at the top of this tab. The best players
+   * in the league did. */
   const screens: SegOption<LeagueView>[] = [
     { key: 'weeks', label: 'Weeks' },
     { key: 'rankings', label: 'Rankings' },
-    { key: 'format', label: 'Format' },
+    { key: 'players', label: 'Players' },
   ];
 
   return (
@@ -193,24 +174,10 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
             ))}
           </div>
           )}
-
-          {/* The best players in the league belong beside the best teams in it. */}
-          <TopPlayers app={app} m={m} />
         </>
       ) : null}
-      {app.leagueView === 'format' ? (
-      <Card>
-        <div style={{ ...cardTitle, marginBottom: 10 }}>Format</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {facts.map(f => (
-            <div key={f.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
-              <span style={{ color: dim(0.5) }}>{f.label}</span>
-              <span style={{ textAlign: 'right' }}>{f.value}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
-      ) : null}
+
+      {app.leagueView === 'players' ? <TopPlayers app={app} m={m} /> : null}
     </Screen>
   );
 }
@@ -256,24 +223,16 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
 
   return (
     <Card>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => app.setTopOpen(!app.topOpen)}
-        onKeyDown={e => { if (e.key === 'Enter') app.setTopOpen(!app.topOpen); }}
-        style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, cursor: 'pointer' }}
-      >
+      {/* No longer a disclosure. It used to share a screen with the team
+          table, where a collapsed heading was how it kept out of the way;
+          now it IS the screen, and a screen that opens shut is a screen you
+          have to be told to tap. */}
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <div style={cardTitle}>Best in the league</div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={{ fontSize: 11.5, color: dim(0.45), ...ellipsis }}>
-            {app.topOpen ? 'top 15' : `${list[0]?.name ?? 'top 15'} ${list[0] ? valueOf(list[0]) : ''}`}
-          </span>
-          <span style={{ color: 'var(--color-accent)', fontSize: 13 }}>{app.topOpen ? '⌄' : '›'}</span>
-        </div>
+        <span style={{ fontSize: 11.5, color: dim(0.45), ...ellipsis }}>top 15</span>
       </div>
 
-      {app.topOpen ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
           <Segmented options={POS_OPTIONS} value={app.topPos} onChange={app.setTopPos} size="sm" />
           <Segmented options={lensOptions} value={lens} onChange={app.setTopLens} size="sm" />
 
@@ -322,9 +281,8 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
                 </span>
               </div>
             ))}
-          </div>
         </div>
-      ) : null}
+      </div>
     </Card>
   );
 }

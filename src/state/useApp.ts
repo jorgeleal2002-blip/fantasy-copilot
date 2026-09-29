@@ -30,7 +30,7 @@ import { nextDetailStack, topDetail } from './detail-stack';
 export type Stage = 'connect' | 'leagues' | 'app';
 export type Tab = 'team' | 'trades' | 'draft' | 'league' | 'settings';
 export type TeamView = 'resumen' | 'lineup' | 'roster' | 'activos';
-export type LeagueView = 'weeks' | 'rankings' | 'format';
+export type LeagueView = 'weeks' | 'rankings' | 'players';
 export type FeedState = 'idle' | 'loading' | 'ok' | 'fail';
 
 export const BOOT_STEPS = [
@@ -212,7 +212,6 @@ export function useApp() {
   const [query, setQuery] = useState('');
   const [topPos, setTopPos] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [topLens, setTopLens] = useState<'neutral' | 'pts' | 'me' | 'fut'>('neutral');
-  const [topOpen, setTopOpen] = useState(false);
   const [passed, setPassed] = useState<string[]>([]);
   // Every league's shortlist lives in one record; the screens only ever see
   // the current league's, so a saved deal cannot follow you somewhere it
@@ -1463,7 +1462,7 @@ export function useApp() {
     clearRoomError: () => setRoomError(''),
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, photoBy, photoShared,
-    query, topPos, topLens, topOpen,
+    query, topPos, topLens,
     week, nflWeek, matchups, matchupState, projections, projState, fetchWeekStats,
     weekStats: statsForWeek(weekStats, week),
     gameStats, fetchGameStats,
@@ -1562,7 +1561,7 @@ export function useApp() {
     },
     clearMockChoices: () => setMockChoices({}), setRosterFilter, setRosterSort,
     setBoardMode, setRankMode, setPickSel, setStrat, setDetail,
-    setQuery, setTopPos, setTopLens, setTopOpen, setWeek,
+    setQuery, setTopPos, setTopLens, setWeek,
     toggleTradeTeam, toggleTradeAsset, cycleTradeTo, clearTrade,
     refreshMatchups: () => { if (leagueId && week != null) void fetchMatchups(leagueId, week, false, true); },
     passOffer: (key: string) => setPassed(p => p.concat(key)),
