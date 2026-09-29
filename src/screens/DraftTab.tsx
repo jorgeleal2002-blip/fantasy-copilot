@@ -101,7 +101,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
         </button>
       </div>
 
-      <div style={heroCard}>
+      <div className="card is-hero" style={heroCard}>
         <div style={{ position: 'relative' }}>
           <div style={kicker}>
             {done
@@ -409,7 +409,7 @@ function MockLauncher({ app, m }: { app: App; m: Model }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ ...heroCard, padding: '18px 16px' }}>
+      <div className="card is-hero" style={{ ...heroCard, padding: '18px 16px' }}>
         <div style={{ position: 'relative' }}>
           <div style={kicker}>Mock draft</div>
           <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 6 }}>

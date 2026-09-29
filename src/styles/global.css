@@ -178,6 +178,41 @@ button { font-family: inherit; }
 }
 
 
+/*
+ * A section of a screen, without a box around it.
+ *
+ * Measured against Sleeper on the same phone: 6 to 7 per cent of their pixels
+ * are a raised surface, against 22 here. They put content straight on the dark
+ * ground and let space and a rule do the grouping; this drew a lifted rectangle
+ * around every group, and a screen of boxes inside boxes reads as a form rather
+ * than as a place.
+ *
+ * The padding stays, because on a phone it IS the screen's gutter — the column
+ * has none of its own — so losing the fill moves nothing sideways. What is left
+ * is a hairline between sections and the air the box used to spend on itself,
+ * and the first section on a screen needs neither.
+ */
+.card {
+  padding: 16px 12px;
+  border-top: var(--hairline) solid var(--color-divider);
+}
+.card:first-child { border-top: 0; padding-top: 4px; }
+/* A hero is the same section, told first by weight and space rather than by a
+   second, lighter box inside the first. */
+.card.is-hero { padding-top: 6px; border-top: 0; }
+
+/* Figures in a grid, ruled rather than boxed. Four lifted rectangles in a 2×2
+   was the densest patch of surface on the team screen. */
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: var(--hairline) solid var(--color-divider);
+}
+.tile { padding: 14px 12px; }
+.tile:nth-child(2n) { border-left: var(--hairline) solid var(--color-divider); }
+.tile:nth-child(n + 3) { border-top: var(--hairline) solid var(--color-divider); }
+.tile.is-wide { grid-column: span 2; border-left: 0; }
+
 /* ─────────────────────────────────────────────────────────────────────────
    The shell. On a phone: header, scrolling body, tab bar along the bottom.
    The desktop rules below re-lay the same three elements without the screens

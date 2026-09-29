@@ -177,7 +177,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
       ) : null}
 
       {empty ? (
-        <div style={heroCard}>
+        <div className="card is-hero" style={heroCard}>
             <div style={{ position: 'relative' }}>
             <div style={kicker}>
               {m.foundMyTeam ? 'Nothing on your roster yet' : 'We could not find your team'}
@@ -210,7 +210,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
           mid-table. The quality columns beside it measure only the optimal
           starters, which is the honest read. Shown together, the gap between
           them is itself the information. */}
-      {empty ? null : <div style={heroCard}>
+      {empty ? null : <div className="card is-hero" style={heroCard}>
         <div style={{ position: 'relative' }}>
           <div style={kicker}>Your place in the league</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', marginTop: 10 }}>
@@ -280,16 +280,13 @@ function Summary({ app, m }: { app: App; m: Model }) {
         </div>
       </Card>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div className="tiles">
         {stats.map((s, i) => (
           <div
             key={s.label}
-            style={{
-              background: 'var(--color-surface)', borderRadius: 12, padding: 13,
-              // An odd count leaves the last tile alone in half a row, which
-              // reads as a missing one. It takes the width instead.
-              gridColumn: i === stats.length - 1 && stats.length % 2 ? 'span 2' : undefined,
-            }}
+            /* An odd count leaves the last tile alone in half a row, which
+               reads as a missing one. It takes the width instead. */
+            className={'tile' + (i === stats.length - 1 && stats.length % 2 ? ' is-wide' : '')}
           >
             <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.52) }}>{s.label}</div>
             <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.03em', marginTop: 4, color: s.color }}>{s.value}</div>

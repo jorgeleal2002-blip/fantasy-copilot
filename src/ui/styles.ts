@@ -99,6 +99,11 @@ export function tabStyle(on: boolean): CSSProperties {
 }
 
 
+/**
+ * Kept for the few surfaces that genuinely have to lift off the ground — a
+ * search field, a dropdown over content, a tappable offer. A SECTION of a
+ * screen is not one of those: see `.card` in global.css.
+ */
 export const surface: CSSProperties = {
   background: 'var(--color-surface)',
   borderRadius: 12,
@@ -114,12 +119,15 @@ export const surface: CSSProperties = {
  * is a single step above the regular cards: enough to say "this one first" and
  * nothing more.
  */
+/**
+ * The hero, which is now a section like any other — see `.card.is-hero`.
+ *
+ * It used to be a lighter box inside a screen of boxes, which is two levels of
+ * lifting to say one thing. What makes it first is that it is first, and that
+ * its figures are the largest on the screen.
+ */
 export const heroCard: CSSProperties = {
-  borderRadius: 12,
-  padding: 13,
-  background: 'var(--color-section)',
   position: 'relative',
-  overflow: 'hidden',
 };
 
 export const kicker: CSSProperties = {

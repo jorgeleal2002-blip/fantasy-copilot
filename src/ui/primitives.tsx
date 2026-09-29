@@ -5,7 +5,7 @@ import { usePullToRefresh } from './usePull';
 import { FS, boxRadius, boxType } from './scale';
 
 export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
-  return <div style={{ ...surface, ...style }}>{children}</div>;
+  return <div className="card" style={style}>{children}</div>;
 }
 
 export function CardHead({ title, right, note }: { title: string; right?: ReactNode; note?: string }) {
