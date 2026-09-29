@@ -15,6 +15,7 @@ import type {
   TeamSheet, Window,
 } from './types';
 import { projectLineup } from './team-points';
+import { projectPPG } from './project';
 import type { UsageMap } from './usage';
 import { isInLeague, isMockEligible } from './mock-pool';
 import { readRecord } from './record';
@@ -1126,6 +1127,8 @@ export function buildModel(input: ModelInput): Model {
         fit: neutral.fit,
         fitMe: Number.isFinite(forMe.fit) ? forMe.fit : neutral.fit,
         fit2: Number.isFinite(ahead.fit) ? ahead.fit : neutral.fit,
+        value: quality(p.raw) * 100,
+        proj: projectPPG(uFor(p.id)),
         owner, mine,
       });
     });

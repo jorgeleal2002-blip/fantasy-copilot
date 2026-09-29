@@ -396,6 +396,11 @@ export interface PlayerFit {
   fitMe: number;
   /** aged two seasons */
   fit2: number;
+  /** what the market pays for him — the league's own answer to "how good" */
+  value: number;
+  /** points a game the model expects next season, half-PPR. Null off too
+   *  small a sample to mean anything. */
+  proj: number | null;
   owner: string;
   mine: boolean;
 }

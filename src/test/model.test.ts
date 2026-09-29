@@ -2740,6 +2740,43 @@ describe('the season\'s trades', () => {
   });
 });
 
+/* ── the players, ranked ────────────────────────────────────────────────────
+   "Best in the league" was ordered by the Rating, which is a DRAFT score: it
+   prices the hole on your roster, the replacement at the position and where
+   the board has him, and it is on record here as a worse predictor of points
+   than ordering by production. Sorted by it, the list was answering a question
+   nobody asked it. */
+describe('ranking the league\'s players', () => {
+  it('carries the price the rest of the app shows for the same player', () => {
+    // A list whose number disagrees with the card it opens is a list nobody
+    // can check, and the Rating is not a price.
+    const some = model.allFits.slice(0, 12);
+    expect(some.length).toBeGreaterThan(0);
+    for (const x of some) {
+      expect(x.value).toBeGreaterThan(0);
+      expect(Math.round(x.value)).toBe(model.marketValue(x.id)!.pts);
+    }
+  });
+
+  it('carries the projection, and withholds it off too small a sample', () => {
+    const withProj = model.allFits.filter(x => x.proj != null);
+    expect(withProj.length).toBeGreaterThan(0);
+    for (const x of withProj) expect(x.proj).toBeGreaterThan(0);
+    // The same number the player's own card prints, from the same function.
+    const one = withProj[0];
+    expect(one.proj).toBe(projectPPG(model.scoreAny(one.id)!.use));
+  });
+
+  it('does not put the Rating and the price in the same order', () => {
+    /* If they agreed there would be nothing to fix. The two answer different
+       questions — how good he is, and who to take at this pick — and a list
+       sorted by one and read as the other is the whole of the bug. */
+    const byValue = model.allFits.slice().sort((a, b) => b.value - a.value).map(x => x.id);
+    const byFit = model.allFits.slice().sort((a, b) => b.fit - a.fit).map(x => x.id);
+    expect(byValue.slice(0, 10)).not.toEqual(byFit.slice(0, 10));
+  });
+});
+
 /* ── what a player actually did ─────────────────────────────────────────────
    A number of fantasy points says how much he was worth and nothing about how
    he got there, and the second is most of what anybody wants from a

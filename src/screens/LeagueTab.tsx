@@ -1,4 +1,4 @@
-import { BAD, GOOD, MID, POS } from '../model/constants';
+import { ACCENT, BAD, GOOD, MID, POS } from '../model/constants';
 import { num } from '../model/math';
 import type { LeagueRow, Model, PlayerFit } from '../model/types';
 import type { App, LeagueView } from '../state/useApp';
@@ -313,7 +313,10 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
                 <span style={{
                   fontSize: 12.5, flex: 'none', padding: '2px 8px', borderRadius: 6,
                   fontVariantNumeric: 'tabular-nums',
-                  background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)', color: fitColor(valueOf(x)),
+                  background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)',
+                  /* The Rating's colour scale means nothing applied to a price
+                     or to points a game, so it is only worn where it is one. */
+                  color: lens === 'me' ? fitColor(x.fitMe) : lens === 'fut' ? fitColor(x.fit2) : ACCENT,
                 }}>
                   {valueOf(x)}
                 </span>

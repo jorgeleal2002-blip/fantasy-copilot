@@ -163,7 +163,7 @@ export function useApp() {
 
   const [query, setQuery] = useState('');
   const [topPos, setTopPos] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
-  const [topLens, setTopLens] = useState<'neutral' | 'me' | 'fut'>('neutral');
+  const [topLens, setTopLens] = useState<'neutral' | 'pts' | 'me' | 'fut'>('neutral');
   const [topOpen, setTopOpen] = useState(false);
   const [passed, setPassed] = useState<string[]>([]);
   // Every league's shortlist lives in one record; the screens only ever see
