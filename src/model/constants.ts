@@ -8,6 +8,18 @@ export const ACCENT = '#8eeded';
 export const GOOD = '#8ec9a8';
 export const BAD = '#d9a08e';
 /**
+ * The third state, for a reading that is neither good nor bad but wary — a man
+ * listed Questionable, a run of opponents that is middling.
+ *
+ * Measured against everything it shares a screen with, the way `--color-mid`
+ * below had to be: ΔE2000 22.7 from the green, 23.3 from the salmon, 29.7 from
+ * the accent and 54.3 from the mid, at 11.7:1 on a card. Chroma 31 against the
+ * others' 26-29, so it belongs to the same muted family rather than arriving as
+ * a traffic light — a saturated yellow cleared the distances by ten more but
+ * read as an alarm on a card that is mostly quiet.
+ */
+export const WARN = '#eedaa0';
+/**
  * The middle of the good/bad scale.
  *
  * It used to be the accent, which worked while the accent was violet and stops

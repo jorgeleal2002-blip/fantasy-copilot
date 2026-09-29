@@ -1,5 +1,21 @@
 import { useEffect, useState } from 'react';
-import { ACCENT, POS, type Weights } from '../model/constants';
+import { ACCENT, BAD, GOOD, POS, WARN, type Weights } from '../model/constants';
+
+const TONE = { good: GOOD, warn: WARN, bad: BAD };
+
+/**
+ * What a status word means for Sunday.
+ *
+ * Doubtful sits with Out rather than with Questionable: it is the league
+ * saying he is unlikely to play, and a colour that treats "probably not" as a
+ * caution is the one that gets somebody left in a lineup.
+ */
+function availabilityTone(state: string): Tile['tone'] {
+  const s = state.toLowerCase();
+  if (/^healthy$/.test(s)) return 'good';
+  if (/question|probable|day/.test(s)) return 'warn';
+  return 'bad';
+}
 import { num } from '../model/math';
 import type { Metrics } from '../model/score';
 import type { SleeperPlayer } from '../api/types';
@@ -107,6 +123,11 @@ export type Tile = {
    *  grid, because "where does he come" is one question asked all over this
    *  card and it should look like one question wherever it is answered. */
   rank?: boolean;
+  /** A reading the colour itself can carry: a man who is Out, a playoff run
+   *  against the three hardest defences left. Only where the figure has a
+   *  direction — most of them do not, and a coloured number that means nothing
+   *  spends the one signal the card has. */
+  tone?: 'good' | 'warn' | 'bad';
 };
 
 function Tiles({ rows }: { rows: Tile[] }) {
@@ -118,7 +139,12 @@ function Tiles({ rows }: { rows: Tile[] }) {
           {/* A word is not a figure: "Questionable" set at the size of "36.2"
               is wider than its third of the row and shoulders the columns
               either side of it out of line. */}
-          <div className={'ps-v' + (/\d/.test(r.value) || r.value.length < 7 ? '' : ' is-word')}>{r.value}</div>
+          <div
+            className={'ps-v' + (/\d/.test(r.value) || r.value.length < 7 ? '' : ' is-word')}
+            style={r.tone ? { color: TONE[r.tone] } : undefined}
+          >
+            {r.value}
+          </div>
           <div className={'ps-r' + (r.note ? (r.rank ? '' : ' is-note') : ' is-none')}>{r.note || ''}</div>
         </div>
       ))}
@@ -204,18 +230,20 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       note: val?.posRank ? val.pos + val.posRank : undefined,
       rank: true,
     },
-    {
-      label: 'Availability',
-      value: (() => {
-        const status = String(p.raw.status || '');
-        const inj = String(p.raw.injury_status || '');
-        return inj || (status && status.toLowerCase() !== 'active' ? status : 'Healthy');
-      })(),
-      note: (() => {
-        const dco = Number(p.raw.depth_chart_order);
-        return fin(dco) ? (dco === 1 ? 'starter' : ord(dco) + ' on depth') : undefined;
-      })(),
-    },
+    (() => {
+      const status = String(p.raw.status || '');
+      const inj = String(p.raw.injury_status || '');
+      const state = inj || (status && status.toLowerCase() !== 'active' ? status : 'Healthy');
+      const dco = Number(p.raw.depth_chart_order);
+      return {
+        label: 'Availability',
+        value: state,
+        note: fin(dco) ? (dco === 1 ? 'starter' : ord(dco) + ' on depth') : undefined,
+        /* The one word on this card that is about whether he plays at all,
+           so it is worn rather than read: healthy, wary, or not playing. */
+        tone: availabilityTone(state),
+      } as Tile;
+    })(),
     {
       /* This season, in this league's scoring — which is what somebody means
        * when they ask what a player is averaging. `Usage.ppg` is a blend of
@@ -273,6 +301,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         label: 'Playoff foes',
         value: sos.weeks.map(w => fixtures[w - 1] || 'bye').join(' '),
         note: 'wks ' + sos.weeks[0] + '–' + sos.weeks[sos.weeks.length - 1],
+        /* Three team codes say nothing on their own — the whole point of
+           naming them was that "a hard finish" is abstract until you see who
+           it is against, and the colour is that sentence without the words.
+           The thresholds are the ones the prose used: a top-ten run was "one
+           of the easiest", 23rd or worse "one of the hardest". */
+        tone: sos.playoffRank <= 10 ? 'good' : sos.playoffRank >= 23 ? 'bad' : 'warn',
       },
     );
   }
