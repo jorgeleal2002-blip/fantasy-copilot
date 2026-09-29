@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { ACCENT, POS, type Weights } from '../model/constants';
 import { num } from '../model/math';
 import type { Metrics } from '../model/score';
-import type { SleeperLeague, SleeperPlayer } from '../api/types';
+import type { SleeperPlayer } from '../api/types';
 import type { Model } from '../model/types';
 import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
 import { Card, Face, Overlay } from '../ui/primitives';
-import { ALLOWED_SEASON, OPPONENTS, SCHEDULE_SEASON } from '../model/schedule';
+import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { statBits } from '../model/stat-line';
 import { projectPPG } from '../model/project';
@@ -238,6 +238,31 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
     },
   ];
 
+  /* His schedule, as figures rather than as a sentence about them. It read
+     "22nd easiest of 32. A middling run of opponents in the league for a QB:
+     they gave up 16 points a game to QBs in 2025", which is four lines to
+     carry two ranks and a rate — and all three belong in the same grid as the
+     rest, so they can be compared with them and with the next player's.
+
+     The three playoff opponents keep their names, because "a hard finish"
+     means nothing until you see who it is against.
+
+     Not for dynasty, where a fixture list eighteen weeks long says nothing
+     about a roster measured in seasons. */
+  const sos = m.isDynasty ? null : sosFor(p.team, p.pos, m.league);
+  const fixtures = p.team ? OPPONENTS[p.team] : null;
+  if (sos && fixtures) {
+    stats.push(
+      { label: 'Schedule', value: ord(sos.rank), note: 'easiest of 32' },
+      { label: 'Playoffs', value: ord(sos.playoffRank), note: 'easiest of 32' },
+      {
+        label: 'Playoff foes',
+        value: sos.weeks.map(w => fixtures[w - 1] || 'bye').join(' '),
+        note: 'wks ' + sos.weeks[0] + '–' + sos.weeks[sos.weeks.length - 1],
+      },
+    );
+  }
+
   const deeper: Tile[] = [
     {
       label: 'Red zone',
@@ -269,6 +294,11 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
     // The market's own order across every player it prices — not a search
     // index dressed up as an ADP.
     { label: 'Market rank', value: p.rank ? '#' + p.rank : '—' },
+    ...(sos ? [{
+      label: 'Opp allowed',
+      value: String(sos.perGame),
+      note: 'to ' + p.pos + 's a gm',
+    }] : []),
     {
       label: 'Seasons',
       value: u && u.seasons ? String(u.seasons) : '—',
@@ -396,7 +426,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </Card>
       ) : null}
 
-      {fill ? null : <ThisSeason app={app} m={m} p={p} stats={stats} deeper={deeper} />}
+      {fill ? null : <ThisSeason app={app} p={p} stats={stats} deeper={deeper} />}
 
 
       {fill ? null : <WhatHeCosts app={app} m={m} sheet={p} />}
@@ -405,17 +435,6 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   );
 }
 
-/**
- * Who he actually has to play.
- *
- * The breakdown above already scores the schedule, but a percentile does not
- * tell you anything you can argue with. This is the measurement under it: where
- * his run of opponents ranks AT HIS POSITION among the 32, what those defences
- * gave up per game last year, and the three weeks that decide most leagues,
- * named — because "a hard finish" means nothing until you see who it is against.
- *
- * Redraft only. A dynasty roster outlives this table.
- */
 /**
  * What he has actually done this season, in this league's points.
  *
@@ -432,8 +451,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
  * thirty nobody here can start.
  */
 function ThisSeason(
-  { app, m, p, stats, deeper }:
-  { app: App; m: Model; p: Sheet; stats: Tile[]; deeper: Tile[] },
+  { app, p, stats, deeper }:
+  { app: App; p: Sheet; stats: Tile[]; deeper: Tile[] },
 ) {
   const { pos, id } = p;
   const team = p.team;
@@ -584,7 +603,6 @@ function ThisSeason(
         </More>
       </div>
 
-      {m.isDynasty ? null : <Schedule pos={pos} team={team} league={m.league} />}
     </Card>
   );
 }
@@ -599,44 +617,6 @@ const LOG_GAMES = 8;
    week — a quarterback's completions, yards and touchdowns. */
 const FEED_STATS = 3;
 
-function Schedule(
-  { pos, team, league }: { pos: string; team: string | null | undefined; league: SleeperLeague },
-) {
-  const s = sosFor(team, pos, league);
-  const sched = team ? OPPONENTS[team] : null;
-  if (!s || !sched) return null;
-  const say = (rank: number) => (rank <= 10 ? 'One of the easiest runs'
-    : rank >= 23 ? 'One of the hardest runs' : 'A middling run');
-  return (
-    <div className="ps-sec">
-      <div className="ps-sec-h">Schedule — {SCHEDULE_SEASON}, for a {pos}</div>
-      <div style={{ fontSize: 14, lineHeight: 1.5, textWrap: 'pretty' }}>
-        {ord(s.rank)} easiest of 32. {say(s.rank)} of opponents in the league for a {pos}:
-        they gave up {s.perGame} points a game to {pos}s in {ALLOWED_SEASON}.
-      </div>
-      {/* The weeks the league is actually decided in, off its own settings —
-          a season that averages out fine can still end against the two best
-          defences left, and that is the half of a schedule people check. */}
-      <div style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 10, textWrap: 'pretty' }}>
-        <span style={{ color: dim(0.55) }}>
-          Your playoffs, week{s.weeks.length > 1 ? 's ' : ' '}
-          {s.weeks.length > 1 ? s.weeks[0] + '–' + s.weeks[s.weeks.length - 1] : s.weeks[0]}:
-        </span>{' '}
-        {s.weeks.map(w => sched[w - 1] || 'bye').join(' · ')} — {ord(s.playoffRank)} easiest
-        of 32 ({s.playoffPerGame} a game allowed).
-      </div>
-    </div>
-  );
-}
-
-/**
- * You have decided you want him. Now: what would it take?
- *
- * The Trades tab answers the opposite question — it starts from your spare
- * parts and finds anything worth doing. This starts from one name, so it is
- * allowed to cost you a starter, and it says so rather than quietly excluding
- * every package that would.
- */
 function WhatHeCosts({ app, m, sheet }: { app: App; m: Model; sheet: Sheet }) {
   if (sheet.owned) return null;
 
