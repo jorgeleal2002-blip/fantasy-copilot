@@ -1899,6 +1899,14 @@ button { font-family: inherit; }
   text-transform: lowercase;
   color: rgba(233, 233, 237, 0.42);
 }
+/* The tail of the line, under the figures that are set large. */
+.ps-feed-rest {
+  font-size: 10.5px;
+  line-height: 1.45;
+  margin-top: 4px;
+  color: rgba(233, 233, 237, 0.5);
+  text-wrap: pretty;
+}
 .ps-feed-opp {
   font-size: 11px;
   margin-top: 5px;

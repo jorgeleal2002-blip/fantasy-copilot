@@ -610,7 +610,19 @@ function ThisSeason(
           are; the same numbers in prose read as a caption. */}
       <div>
         {shown.slice().reverse().map(g => {
-          const bits = statBits(app.gameStats[g.week]?.[id], pos).slice(0, FEED_STATS);
+          const bits = statBits(app.gameStats[g.week]?.[id], pos);
+          /* The first few set large, the rest on a line under them. A
+             quarterback's week is eight figures — completions, yards, scores,
+             an interception, then what he ran for and what he lost — and all
+             eight at scoreline size is three rows of shouting. Cut at three
+             and the rushing simply vanished, which is what a reader noticed.
+             Split, nothing is lost and the row still reads as a score.
+
+             The tail keeps its order and its commas because a passer's line
+             says "yd" twice and "td" twice, and it is the sequence that says
+             which is which. */
+          const head = bits.slice(0, FEED_STATS);
+          const rest = bits.slice(FEED_STATS);
           const opp = OPPONENTS[team]?.[g.week - 1] || '';
           const d = Math.round((g.pts - line.ppg) * 10) / 10;
           const fin = app.weekRank(id, pos, g.week);
@@ -635,14 +647,19 @@ function ThisSeason(
                     </div>
                   ) : null}
                 </div>
-                {bits.length ? (
+                {head.length ? (
                   <div className="ps-feed-stats">
-                    {bits.map(b => (
+                    {head.map(b => (
                       <span className="ps-feed-stat" key={b.unit + b.n}>
                         <span className="ps-feed-n">{b.n}</span>
                         <span className="ps-feed-u">{b.unit}</span>
                       </span>
                     ))}
+                  </div>
+                ) : null}
+                {rest.length ? (
+                  <div className="ps-feed-rest">
+                    {rest.map(b => b.n + ' ' + b.unit).join(', ')}
                   </div>
                 ) : null}
                 {/* Who he played. The week is already on the line above it,
