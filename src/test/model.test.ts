@@ -2429,20 +2429,22 @@ describe('the season in progress', () => {
   const prior = () => one({ ppgAdj: 12, gp: 16, gpTotal: 45, seasons: 3, seasonList: '2025, 2024, 2023', rank: 12 });
 
   it('weighs this year by how much of it has been played', () => {
-    // Three games: a third of the answer, not the answer. Six: half.
+    // The prior is fifty games of a player who may not exist any more, so it
+    // is not worth fifty games: by game three the year you are watching leads.
     const wk3 = withCurrentSeason(prior(), { year: 2026, usage: one({ ppgAdj: 24, gp: 3 }) }, CATALOG);
-    expect(wk3.a.ppgAdj as number).toBeCloseTo(12 + 12 * (3 / 9), 6);
+    expect(wk3.a.ppgAdj as number).toBeCloseTo(12 + 12 * (3 / 7), 6);
+    expect(wk3.a.curWeight as number).toBeCloseTo(0.5, 6);
     const wk6 = withCurrentSeason(prior(), { year: 2026, usage: one({ ppgAdj: 24, gp: 6 }) }, CATALOG);
-    expect(wk6.a.ppgAdj as number).toBeCloseTo(18, 6);
+    expect(wk6.a.ppgAdj as number).toBeGreaterThan(18);
     // and it keeps growing, so by December the year in front of you leads
     const wk13 = withCurrentSeason(prior(), { year: 2026, usage: one({ ppgAdj: 24, gp: 13 }) }, CATALOG);
-    expect(wk13.a.curWeight as number).toBeGreaterThan(0.65);
+    expect(wk13.a.curWeight as number).toBeGreaterThan(0.75);
   });
 
   it('lets one big Sunday move a player without repainting him', () => {
     const after = withCurrentSeason(prior(), { year: 2026, usage: one({ ppgAdj: 40, gp: 1 }) }, CATALOG);
     expect(after.a.ppgAdj as number).toBeGreaterThan(12);
-    expect(after.a.ppgAdj as number).toBeLessThan(17);
+    expect(after.a.ppgAdj as number).toBeLessThan(20);
   });
 
   it('does nothing at all before a snap has been played', () => {
@@ -4320,10 +4322,10 @@ describe('how fast the season in progress is believed', () => {
 
   it('believes a changed role faster than a hot streak', () => {
     const u = after(3);
-    // Role: half the answer by game three, so three games move it halfway.
-    expect((u.snap as number)).toBeCloseTo(0.5 + 0.5 * (3 / 6), 6);
-    // Scoring: a twelfth-game constant, so three games move it a fifth.
-    expect((u.tdPerGame as number)).toBeCloseTo(0.3 + 0.6 * (3 / 15), 6);
+    // Role: three fifths of the answer by game three.
+    expect((u.snap as number)).toBeCloseTo(0.5 + 0.5 * (3 / 5), 6);
+    // Scoring: still the slowest of them, a little over a quarter.
+    expect((u.tdPerGame as number)).toBeCloseTo(0.3 + 0.6 * (3 / 11), 6);
   });
 
   it('moves every metric in the right direction', () => {
@@ -4343,14 +4345,16 @@ describe('how fast the season in progress is believed', () => {
   });
 
   it('still reports one number for how much of the year is counted', () => {
-    // The card says "33% this year" about the player, not about one column.
-    expect(after(3).curWeight as number).toBeCloseTo(3 / 9, 6);
+    // The card says one percentage about the player, not one per column.
+    expect(after(3).curWeight as number).toBeCloseTo(3 / 6, 6);
   });
 
   it('never lets one Sunday repaint a player', () => {
+    // One game may move him. It may not make him a different player: the
+    // scoring rate stays nearer where it was than where one Sunday put it.
     const u = after(1);
-    expect(u.tdPerGame as number).toBeLessThan(0.35);
-    expect(u.eff as number).toBeLessThan(8);
+    expect(u.tdPerGame as number).toBeLessThan(0.3 + 0.6 * 0.25);
+    expect(u.eff as number).toBeLessThan(7 + 7 * 0.3);
   });
 });
 

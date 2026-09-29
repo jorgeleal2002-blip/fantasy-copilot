@@ -185,29 +185,36 @@ export const USAGE_WEIGHTS: [number, number, number] = [0.5, 0.3, 0.2];
  *
  * Role first, because it is both the fastest to settle and the most predictive
  * thing here: three games of a man playing every snap is most of what there is
- * to know about whether he plays every snap. Efficiency next, which needs a
- * while before it is about him rather than about two broken tackles. Scoring
- * last, because touchdown rate is the noisiest number in the sport — one big
- * Sunday should not repaint a player, which is the whole failure mode of
- * looking at the season in progress at all.
+ * to know about whether he plays every snap. What he does with the ball next.
+ * Scoring last, because touchdown rate is the noisiest number in the sport.
+ *
+ * Retuned once the shape was right and the level was not. The prior is a big
+ * sample — three finished seasons, fifty-odd games — but it is a big sample of
+ * a player who may not exist any more: different team, different coordinator,
+ * different depth chart, a year older. Weighting it as fifty games of evidence
+ * about the man playing now overstates it badly, and that is what held the
+ * season in progress to a third of the answer in October. Treated as what it
+ * is — a handful of games' worth of evidence about THIS player — the constants
+ * come down by about half, and by game three the year you are watching leads.
  */
-export const CURRENT_SEASON_K = 6;
+export const CURRENT_SEASON_K = 3;
 
 /** Per metric, because they do not settle at the same rate. */
 export const CURRENT_K: Record<string, number> = {
-  /* Role: half the answer by game three. */
-  snap: 3,
-  tgt: 3,
-  vol: 3,
-  /* What he does with it: half by game eight. */
-  eff: 8,
-  ppg: 6,
-  ppgAdj: 6,
-  /* Scoring: half by game twelve, and still regressed hard before that. */
-  ltr: 12,
-  tdPerGame: 12,
-  rzPerGame: 8,
-  xtdPerGame: 10,
+  /* Role: two thirds of the answer by game four. */
+  snap: 2,
+  tgt: 2,
+  vol: 2,
+  /* What he does with it: half by game four. */
+  eff: 4,
+  ppg: 4,
+  ppgAdj: 4,
+  /* Scoring: still the slowest, because one big Sunday must not repaint a
+     player — which is the whole failure mode of looking at this at all. */
+  ltr: 8,
+  tdPerGame: 8,
+  rzPerGame: 5,
+  xtdPerGame: 6,
 };
 
 export type MetricKey =
