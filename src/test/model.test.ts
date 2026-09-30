@@ -23,7 +23,7 @@ import { PROD_SHARE_BASE, PROD_SHARE_MAX, PROD_SHARE_MAX_REDRAFT, poolFloor, pro
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
 import { type CmpUse, aheadBy, compareMetrics, compareNumbers, compareSeasons, tally } from '../model/compare';
 import { countTds, gapsIn, mergeSeason } from '../model/season';
-import { barHeights, ordinal, pointsInWeek, quantile, rankAmong, seasonLine } from '../model/season';
+import { barHeights, ordinal, pointsInWeek, quantile, rankAmong, rankCount, seasonLine } from '../model/season';
 import { SCREEN_TRUST, bestHeight } from '../model/viewport';
 import { FULL_SQ, THUMB_SQ, playerPhotoSet } from '../api/sleeper';
 import { PULL_MAX, PULL_RESIST, PULL_SLOP, PULL_TRIGGER, edgeAt, pullArmed, pullFrom, pullProgress } from '../model/pull';
@@ -4063,6 +4063,40 @@ describe('a player\'s season in fantasy points', () => {
     expect(rankAmong(99, [30, 20])).toEqual({ rank: 1, of: 2 });
     expect(rankAmong(1, [30, 20])).toEqual({ rank: 3, of: 2 });
     expect(rankAmong(5, [])).toBe(null);
+  });
+
+  it('ranks a field that is mostly ties, which a touchdown count is', () => {
+    /* Points a game separate everybody; touchdowns are small whole numbers and
+       most of a position has the same one. A man on none is not last — he is
+       level with everybody else on none, behind only the men who scored. */
+    const none = [0, 0, 0, 0, 0, 3, 2, 1];
+    expect(rankAmong(0, none)).toEqual({ rank: 4, of: 8 });
+    expect(rankAmong(1, none)).toEqual({ rank: 3, of: 8 });
+    expect(rankAmong(11, none)).toEqual({ rank: 1, of: 8 });
+    // And the subject sitting in his own field does not push himself down.
+    expect(rankAmong(3, [0, 0, 3, 1])).toEqual({ rank: 1, of: 4 });
+  });
+
+  it('gives a count no place when there is no count', () => {
+    // The touchdown tile was the one figure in the season grid with nothing
+    // under it. A subject with no number has no place — not last.
+    expect(rankCount(null, [3, 2, 1])).toBe(null);
+    expect(rankCount(undefined, [3, 2, 1])).toBe(null);
+    expect(rankCount(NaN, [3, 2, 1])).toBe(null);
+    expect(rankCount(2, [])).toBe(null);
+  });
+
+  it('leaves a man with no count out of the field rather than scoring him nil', () => {
+    /* A player whose weeks are not in hand has not scored none — nothing is
+       known about him. Filling him in as a zero does not move anybody's PLACE,
+       since he lands at the bottom either way; what it moves is the size of
+       the field, and the size is what `placing` divides by to decide whether a
+       figure is painted as a strength. Two unknowns counted as nils turn a man
+       third of three into a man third of five, and third of five is green. */
+    expect(rankCount(1, [1, 3, 2, null, undefined])).toEqual({ rank: 3, of: 3 });
+    expect(rankCount(1, [1, 3, 2, 0, 0])).toEqual({ rank: 3, of: 5 });
+    expect(placing(3, 3)).toBe(0);
+    expect(placing(3, 5)).toBe(0.5);
   });
 
   it('writes an ordinal the way it is said', () => {

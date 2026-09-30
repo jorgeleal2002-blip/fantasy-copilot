@@ -170,3 +170,20 @@ export function countTds(lines: (Record<string, number> | undefined | null)[]): 
   }
   return seen ? Math.round(n * 10) / 10 : null;
 }
+
+/**
+ * Where a count places among the men it is comparable with.
+ *
+ * Two things here can be got wrong and neither is visible in the result. A
+ * subject with no count has no place — not last — and a man whose stat lines
+ * are not in hand has no count, which is NOT the same as having scored none:
+ * counting him as a zero would push everybody who did score up a place. So he
+ * is left out of the field rather than filled in.
+ */
+export function rankCount(
+  mine: number | null | undefined,
+  field: (number | null | undefined)[],
+): Ranked | null {
+  if (mine == null || !Number.isFinite(mine)) return null;
+  return rankAmong(mine, field.filter((v): v is number => v != null && Number.isFinite(v)));
+}

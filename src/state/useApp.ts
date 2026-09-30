@@ -21,7 +21,7 @@ import { buildModel } from '../model/model';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
 import { pickEncoding } from '../model/photo';
 import { scoreProjection, scoringKind } from '../model/projections';
-import { type Game, type SeasonLine, countTds, mergeSeason, pointsInWeek, rankAmong, seasonLine } from '../model/season';
+import { countTds, mergeSeason, pointsInWeek, rankAmong, rankCount, seasonLine, type Game, type SeasonLine } from '../model/season';
 import { type HeldStats, projectionsAreStale, readProjections, statsForWeek } from '../model/projections';
 import type { WeekScore } from '../model/power';
 import { nextDetailStack, topDetail } from './detail-stack';
@@ -1278,13 +1278,21 @@ export function useApp() {
       for (const pid of r.players || []) rostered.add(pid);
     }
     const field: SeasonLine[] = [];
+    /* Touchdowns are counted from the weekly stat lines rather than read off a
+       SeasonLine, so they need their own field — gathered from the same men,
+       and only from those a count exists for. Before the week's stats land
+       nobody has one, including the subject, and then the tile shows no figure
+       to rank anyway. */
+    const tdField: (number | null)[] = [];
     for (const pid of rostered) {
       if (players[pid]?.position !== pos) continue;
       const line = seasonOf(pid);
       if (line) field.push(line);
+      tdField.push(seasonTds(pid));
     }
     const of = (pick: (l: SeasonLine) => number) => rankAmong(pick(mine), field.map(pick));
     return {
+      tds: rankCount(seasonTds(id), tdField),
       ppg: of(l => l.ppg),
       total: of(l => l.total),
       high: of(l => l.high),
@@ -1293,7 +1301,7 @@ export function useApp() {
       ceiling: of(l => l.ceiling),
       games: of(l => l.games),
     };
-  }, [seasonOf]);
+  }, [seasonOf, seasonTds]);
 
   /** Who set the photo on screen, where the league set it. */
   const photoBy = useCallback((id: string) => leaguePhotos[id]?.by || '', [leaguePhotos]);

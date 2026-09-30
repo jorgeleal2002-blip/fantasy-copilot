@@ -593,7 +593,7 @@ function ThisSeason(
     /* How many he has scored, which is what anybody asking about touchdowns
        means. The rate under "The numbers" is a four-season blend feeding the
        model and answers a different question. */
-    ...(tds != null ? [{ k: 'TDs', v: String(tds), r: undefined }] : []),
+    ...(tds != null ? [{ k: 'TDs', v: String(tds), r: ranks?.tds }] : []),
     { k: 'Best', v: line.high.toFixed(1), r: ranks?.high },
     { k: 'Floor', v: line.floor.toFixed(1), r: ranks?.floor },
     { k: 'Ceiling', v: line.ceiling.toFixed(1), r: ranks?.ceiling },
