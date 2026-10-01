@@ -1,4 +1,4 @@
-# Doctors Fantasy
+# Doctors
 
 A Sleeper-connected dynasty assistant for fantasy football. Sign in with your
 Sleeper username, pick a league, and the app reads your real rosters, draft
@@ -433,10 +433,18 @@ Sign in with Google once and a new phone, a reinstall or a second browser
 arrives already in your league instead of asking for a username you chose years
 ago.
 
-**It does not replace the Sleeper username, and it cannot.** Sleeper has no
-Google sign-in and no exchange that turns a Google account into a Sleeper one,
-so nothing here can work out which Sleeper team is yours. The first time, you
-still type it once. What Google buys is that it is the last time.
+Where it is configured it is the ONLY way in: the front door is one button,
+and the Sleeper username is not a door beside it.
+
+**It still cannot replace the Sleeper username, and nothing can.** Sleeper has
+no Google sign-in and no exchange that turns a Google account into a Sleeper
+one, so the first time somebody has to say which Sleeper account is theirs.
+That happens once, on a screen reached from inside the sign-in rather than
+instead of it, and never again on any device. What Google buys is that it is
+the last time.
+
+With no Google client configured the app falls back to the username box it has
+always had, because the alternative is an app nobody can open.
 
 What gets written down is two strings: your Sleeper username and the league you
 had open, against an identifier Firebase makes up. Not your email and not your

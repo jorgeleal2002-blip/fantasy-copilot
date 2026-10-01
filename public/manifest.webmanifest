@@ -1,6 +1,6 @@
 {
-  "name": "Doctor x stein",
-  "short_name": "Doctor x stein",
+  "name": "Doctors",
+  "short_name": "Doctors",
   "description": "Sleeper-connected dynasty assistant: optimal lineup, trade engine and rookie draft AI.",
   "start_url": "./",
   "scope": "./",

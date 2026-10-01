@@ -30,7 +30,9 @@ import { type HeldStats, projectionsAreStale, readProjections, statsForWeek } fr
 import type { WeekScore } from '../model/power';
 import { nextDetailStack, topDetail } from './detail-stack';
 
-export type Stage = 'connect' | 'leagues' | 'app';
+/** `link` is the one-time "which Sleeper account is yours" step, reached only
+ *  from a Google sign-in that found no saved setup. */
+export type Stage = 'connect' | 'link' | 'leagues' | 'app';
 export type Tab = 'team' | 'trades' | 'draft' | 'league' | 'settings';
 export type TeamView = 'resumen' | 'lineup' | 'roster' | 'activos';
 export type LeagueView = 'weeks' | 'rankings' | 'players';
@@ -935,6 +937,8 @@ export function useApp() {
       if (saved) {
         setUsername(saved.username);
         openLeague(saved.leagueId, saved.username);
+      } else {
+        setStage('link');
       }
     } catch {
       setGoogleError('Google signed you in, but this app could not finish. Try again.');

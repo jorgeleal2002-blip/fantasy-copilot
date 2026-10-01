@@ -43,11 +43,9 @@ function GoogleBlock({ app }: { app: App }) {
       <div ref={host} style={{ minHeight: 44, display: 'flex' }} />
       <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.52), marginTop: 10, textWrap: 'pretty' }}>
         {app.googleBusy
-          ? 'Looking for your setup…'
-          : app.google
-            ? 'Signed in. Pick your league below and this phone will not ask again.'
-            : 'Carries your Sleeper username and league to your other phones. '
-              + 'Sleeper has no Google sign-in, so the first time you still enter it once.'}
+          ? 'Looking for your leagues…'
+          : 'Your league follows your Google account, so a new phone is one tap. '
+            + 'The first time, it asks which Sleeper account is yours — once, ever.'}
       </div>
       {app.googleError ? (
         <div role="alert" style={{ fontSize: 12, lineHeight: '18px', color: BAD, marginTop: 8 }}>
@@ -79,17 +77,76 @@ export function ConnectScreen({ app }: { app: App }) {
           animation: 'pulseGlow 3s ease-in-out infinite',
         }}
       >
-        <Mark size={72} title="Doctor x stein" />
+        <Mark size={72} title="Doctors" />
       </div>
       <h1 style={{ fontSize: 31, lineHeight: '34px', fontWeight: 500, letterSpacing: '-0.025em', margin: '26px 0 8px' }}>
-        Doctor x stein
+        Doctors
       </h1>
-      <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 28px', maxWidth: '30ch' }}>
-        Connect your Sleeper account. Read-only.
+      <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 28px', maxWidth: '32ch' }}>
+        {app.googleOn
+          ? 'Sign in and your leagues are here. Read-only — nothing is ever changed in Sleeper.'
+          : 'Connect your Sleeper account. Read-only.'}
       </p>
 
       <GoogleBlock app={app} />
 
+      {/* The way in when there is no Google client configured. It is NOT a
+          second door beside the Google button: where Google is on, this is
+          reached once, from `LinkScreen`, and never again on any device. */}
+      {app.googleOn ? null : <SleeperForm app={app} />}
+    </div>
+  );
+}
+
+/**
+ * Naming the Sleeper account, which has to happen exactly once.
+ *
+ * Google says who a person is and nothing about which Sleeper team is theirs —
+ * Sleeper publishes no way to ask. So the first time, somebody has to say. This
+ * screen is that moment, and the copy is careful to be a continuation of the
+ * sign-in rather than a second sign-in: you are already in, this is the last
+ * thing standing between you and your leagues, and it will not be asked again
+ * on this phone or any other.
+ */
+export function LinkScreen({ app }: { app: App }) {
+  return (
+    <div
+      style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        padding: `${topPad(34)} 24px calc(var(--safe-bottom) + 26px)`,
+        animation: 'fadeUp .4s ease backwards',
+      }}
+    >
+      <div style={{ width: 72, height: 72, borderRadius: '50%' }}>
+        <Mark size={72} title="Doctors" />
+      </div>
+      <h1 style={{ fontSize: 31, lineHeight: '34px', fontWeight: 500, letterSpacing: '-0.025em', margin: '26px 0 8px' }}>
+        One last thing
+      </h1>
+      <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 28px', maxWidth: '32ch' }}>
+        Which Sleeper account is yours? Google cannot tell us — Sleeper does not
+        publish a way to ask — so you enter it once and never again, on this
+        phone or any other.
+      </p>
+
+      <SleeperForm app={app} />
+
+      <button
+        type="button"
+        onClick={app.logout}
+        className="btn btn-ghost"
+        style={{ marginTop: 16, alignSelf: 'flex-start', fontSize: 12 }}
+      >
+        Use a different Google account
+      </button>
+    </div>
+  );
+}
+
+/** The username, the people who have used this phone, and the way on. */
+function SleeperForm({ app }: { app: App }) {
+  return (
+    <>
       <label
         htmlFor="sleeper-user"
         style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: dim(0.52), marginBottom: 8 }}
@@ -192,7 +249,7 @@ export function ConnectScreen({ app }: { app: App }) {
       >
         {app.authBusy ? 'Searching…' : 'Continue'}
       </button>
-    </div>
+    </>
   );
 }
 

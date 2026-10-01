@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { AppShell } from './screens/AppShell';
-import { BootScreen, ConnectScreen, LeaguesScreen } from './screens/Onboarding';
+import { BootScreen, ConnectScreen, LeaguesScreen, LinkScreen } from './screens/Onboarding';
 import { Splash } from './screens/Splash';
 import { useApp } from './state/useApp';
 import { Mark } from './ui/Mark';
@@ -26,6 +26,7 @@ export default function App() {
     <div className="app-frame">
       <div className={inApp ? 'app-column app-column-wide' : 'app-column'}>
         {app.stage === 'connect' && <ConnectScreen app={app} />}
+        {app.stage === 'link' && <LinkScreen app={app} />}
         {app.stage === 'leagues' && <LeaguesScreen app={app} />}
         {app.stage === 'app' && !app.model && <BootScreen app={app} />}
         {app.stage === 'app' && app.model && <AppShell app={app} model={app.model} />}
