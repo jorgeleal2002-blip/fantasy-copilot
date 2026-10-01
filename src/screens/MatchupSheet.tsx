@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Fragment, useEffect } from 'react';
 import { benchRows, leaderOf, lineupRows, pairMatchups, type LineupCell, type MatchupSide } from '../model/matchups';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -68,6 +68,16 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
   const starters = lineupRows(game, m.league.roster_positions, players, app.projections);
   const bench = benchRows(game, players, app.projections);
 
+  /* What state this week is in, which a scoreboard says and this one did not:
+   * 0.00 against 0.00 is three different facts — a week that has not kicked
+   * off, a week nobody has played yet, and a feed that failed — and the card
+   * drew the same thing for all three. The league's own clock answers it. */
+  const played = (game.a.points || 0) + (game.b?.points || 0) > 0;
+  const state = app.nflWeek == null || app.week == null ? null
+    : app.week > app.nflWeek ? 'Upcoming'
+      : app.week < app.nflWeek ? 'Final'
+        : played ? 'Live' : 'Not started';
+
   return (
     <Overlay
       onClose={() => app.setDetail(null)}
@@ -75,17 +85,26 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
       z={6}
       onRefresh={app.refreshScores}
     >
-      <div className="ms-head">
+      {/* A card, not a column of loose text on the page ground. A scoreboard is
+          one object — two teams and the state between them — and the thing that
+          says so is an edge around it. Everything below is a list, and a list
+          under a bordered block reads as the detail of it. */}
+      <div className="ms-board">
+        <div className="ms-board-top">
+          <span>{app.week ? 'Week ' + app.week : 'This week'}</span>
+          {state ? <span className={'ms-state is-' + state.split(' ')[0].toLowerCase()}>{state}</span> : null}
+        </div>
+
         {/* Who, then what they scored. It used to run the other way: two large
             numbers with a face each, then the bar, then the projected margin,
             and only under all of it the names — so you read 148.62 and had a
             paragraph to cross before learning whose it was.
 
             The names take the whole width rather than sitting beside the
-            avatars. Indented past a 38px portrait they had 136px, and "All you
-            need is love" and "1-2 (#9) · @vergarahater" are both wider than
-            that; at full width they have 177 and the avatar is directly under
-            its own name anyway. */}
+            avatars. Indented past a portrait they have about 98px, and
+            "@vergarahater · 1-2 (#9)" wants 115 — tried, and it cut every
+            record on the card to "3-0 (...". At full width they have 150 and
+            the avatar is directly under its own name anyway. */}
         <div className="ms-names">
           <Who s={game.a} place={placeOf(game.a.rosterId)} />
           {game.b ? <Who s={game.b} place={placeOf(game.b.rosterId)} align="right" /> : <div style={{ flex: 1 }} />}
@@ -108,13 +127,22 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
         </div>
 
         {split != null ? (
-          <div className="ms-bar" role="img" aria-label="projected split">
-            <div className="ms-bar-fill" style={{ width: (split * 100).toFixed(1) + '%' }} />
-          </div>
-        ) : null}
-        {edge != null ? (
-          <div className={'ms-edge' + (edge < 0 ? ' is-right' : '')}>
-            {(edge >= 0 ? '+' : '') + edge.toFixed(1) + ' projected margin'}
+          <div className="ms-split">
+            {/* Two colours meeting, not one fill on a track. A single bar on
+                grey reads as a progress bar — a thing filling up — and this is
+                a tug of war: both ends are a team and the seam is the question.
+                The tick marks even, so a split near the middle is readable as
+                near the middle rather than guessed at. */}
+            <div className="ms-bar" role="img"
+              aria-label={'projected split ' + Math.round(split * 100) + ' to ' + Math.round((1 - split) * 100)}>
+              <div className={'ms-bar-a' + (game.a.isMe ? ' is-me' : '')} style={{ width: (split * 100).toFixed(1) + '%' }} />
+              <div className="ms-bar-tick" />
+            </div>
+            {edge != null ? (
+              <div className={'ms-edge' + (edge < 0 ? ' is-right' : '')}>
+                {(edge >= 0 ? '+' : '') + edge.toFixed(1) + ' projected margin'}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -146,13 +174,41 @@ function Av({ s }: { s: MatchupSide }) {
     : <div className="ms-av ms-av-blank" />;
 }
 
+/**
+ * A team's name, and under it the two facts about them a scoreboard wants.
+ *
+ * The record and the place are one span and the handle is another, rather than
+ * one joined string, so that the HANDLE is what truncates. Joined, whichever
+ * fact happened to be last died — and the two sides are mirrored, so on the
+ * left that was the record. On a 375px screen "3-0 (#2) · @ManuelMont" does not
+ * fit either way; losing "@ManuelMon…" costs nothing, and losing the record
+ * costs the only competitive fact on the card.
+ *
+ * The records sit on the INSIDE, nearest the centre, on both sides: they are
+ * what the two teams are being compared on, and a comparison reads best with
+ * its terms together.
+ */
 function Who({ s, place, align }: { s: MatchupSide; place: number; align?: 'right' }) {
-  const sub = [s.record + (place ? ' (#' + place + ')' : ''), s.user ? '@' + s.user : '']
-    .filter(Boolean);
+  const rec = s.record + (place ? ' (#' + place + ')' : '');
+  const user = s.user ? '@' + s.user : '';
+  const parts = [
+    rec ? <span className="ms-rec" key="r">{rec}</span> : null,
+    user ? <span className="ms-user" key="u">{user}</span> : null,
+  ].filter(Boolean);
+  const ordered = align === 'right' ? parts : parts.slice().reverse();
   return (
     <div className={'ms-who-team' + (align === 'right' ? ' is-right' : '')}>
       <div className={'ms-name' + (s.isMe ? ' is-me' : '')}>{s.name}</div>
-      {sub.length ? <div className="ms-sub">{(align === 'right' ? sub : sub.slice().reverse()).join(' · ')}</div> : null}
+      {ordered.length ? (
+        <div className="ms-sub">
+          {ordered.map((el, i) => (
+            <Fragment key={i}>
+              {i ? <span className="ms-dot">·</span> : null}
+              {el}
+            </Fragment>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1101,34 +1101,115 @@ button { font-family: inherit; }
    again mirrored. The projection sits under each number in the same column,
    because the comparison anybody actually makes is whether he beat it.
    ──────────────────────────────────────────────────────────────────────── */
-.ms-head {
+/* The scoreboard itself: a bordered card, so two teams and the state between
+   them read as one object and everything under it reads as its detail. It was
+   a column of loose text on the page ground — the same ground the list below
+   sits on — so there was nothing to say where the game stopped and the roster
+   started but a hairline. */
+.ms-board {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 0 0 12px;
+  gap: 10px;
+  background: var(--color-surface);
+  border: var(--hairline) solid var(--color-divider);
+  border-radius: var(--radius-xl);
+  padding: 11px 13px 13px;
+  margin-bottom: 4px;
 }
-/* Nothing between the two figures but the word — see the note on the markup. */
-.ms-scores {
+
+/* The week, and what state it is in. 0.00 against 0.00 is a week that has not
+   kicked off, a week nobody has played, and a feed that failed — three facts
+   drawn identically until something named which. */
+.ms-board-top {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(242, 253, 254, 0.52);
 }
+.ms-state {
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: rgba(242, 253, 254, 0.07);
+  color: rgba(242, 253, 254, 0.62);
+}
+/* Live is the only one that earns a colour: it is the one that means the
+   number beside it is still moving. */
+.ms-state.is-live {
+  background: color-mix(in srgb, var(--c-good) 18%, transparent);
+  color: var(--c-good);
+}
+.ms-state.is-final { color: rgba(242, 253, 254, 0.75); }
+
+.ms-names { display: flex; align-items: flex-start; gap: 10px; }
+.ms-who-team { flex: 1; min-width: 0; }
+.ms-who-team.is-right { text-align: right; }
+/* Where an avatar would be, when there is no opponent to draw one for. */
+.ms-av-sp { width: 34px; flex: none; }
 .ms-av {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   flex: none;
   border-radius: 50%;
   object-fit: cover;
   border: var(--hairline) solid var(--color-divider);
 }
 .ms-av-blank { background: rgba(242, 253, 254, 0.07); }
+
+/* First thing on the card, and the name of the thing the card is about. */
+.ms-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ms-name.is-me { color: var(--color-accent); }
+/* Two spans rather than one string, so the handle is what gives way — see the
+   note on `Who`. */
+.ms-sub {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+  margin-top: 2px;
+  color: rgba(242, 253, 254, 0.52);
+  white-space: nowrap;
+}
+.ms-who-team.is-right .ms-sub { justify-content: flex-end; }
+.ms-rec, .ms-dot { flex: none; }
+.ms-user { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.ms-vs {
+  flex: none;
+  align-self: center;
+  width: 26px;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(242, 253, 254, 0.52);
+}
+
+/* The two figures, on the same grid as the two names above them — each sits
+   under its own team rather than indented past an avatar that is no longer
+   there. */
+.ms-scores {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .ms-score { flex: 1; min-width: 0; }
 .ms-score.is-right { text-align: right; }
 .ms-pts {
-  font-size: 21px;
+  font-size: 26px;
   font-weight: 600;
-  letter-spacing: -0.035em;
-  line-height: 24px;
+  letter-spacing: -0.04em;
+  line-height: 28px;
   color: rgba(242, 253, 254, 0.62);
   font-variant-numeric: tabular-nums;
 }
@@ -1141,36 +1222,41 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.52);
   font-variant-numeric: tabular-nums;
 }
-.ms-vs {
-  flex: none;
-  width: 22px;
-  text-align: center;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.52);
-}
 
 /* The two projections against each other. Deliberately not a win probability
    — that needs the spread of what is left to play, which nothing here
    measures, and a confident "100%" that is wrong is the worst number a
    scoreboard can carry. */
+.ms-split { display: flex; flex-direction: column; gap: 5px; }
 .ms-bar {
-  height: 4px;
+  position: relative;
+  height: 6px;
   border-radius: var(--radius-pill);
-  background: rgba(242, 253, 254, 0.12);
+  /* The RIGHT side of the tug of war, which the left is painted over. A track
+     is the absence of a bar; this is the other team. */
+  background: var(--c-mark-mid);
   overflow: hidden;
 }
-.ms-bar-fill {
+.ms-bar-a {
   height: 100%;
-  border-radius: 4px;
-  /* The FILL step, not the text one. This bar carried the old muted green as a
-     literal, and swapping that for the palette's name kept the value current
-     while keeping the mistake: a text step is light because it has to be
-     legible at 11px, and painted four pixels tall across a card it reads
+  /* The FILL step, not the text one: a text step is light because it has to be
+     legible at 11px, and painted six pixels tall across a card it reads
      washed. Which is exactly how it looked. */
   background: var(--c-mark-good);
   transition: width .5s ease;
+}
+/* Your own game gets your own colour on your own side, the way your name
+   does three lines above it. */
+.ms-bar-a.is-me { background: var(--color-accent-400); }
+/* Even, so a split near the middle reads as near the middle instead of being
+   estimated against the ends of the bar. */
+.ms-bar-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: var(--hairline);
+  background: var(--bg-base);
 }
 .ms-edge {
   font-size: 10px;
@@ -1178,31 +1264,6 @@ button { font-family: inherit; }
   font-variant-numeric: tabular-nums;
 }
 .ms-edge.is-right { text-align: right; }
-
-.ms-names { display: flex; align-items: flex-start; gap: 12px; }
-/* Where an avatar would be, when there is no opponent to draw one for. */
-.ms-av-sp { width: 38px; flex: none; }
-.ms-who-team { flex: 1; min-width: 0; }
-.ms-who-team.is-right { text-align: right; }
-/* First thing on the card now, and the name of the thing the card is about. */
-.ms-name {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 16px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ms-name.is-me { color: var(--color-accent); }
-.ms-sub {
-  font-size: 12px;
-  margin-top: 3px;
-  color: rgba(242, 253, 254, 0.52);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .ms-block { display: flex; flex-direction: column; }
 .ms-block-head {

@@ -47,6 +47,11 @@ const usageCache = new Map<string, UsageMap>();
 /** Sleeper's projections for one week of one season, with when they were
  *  read: they move as news breaks, so the entry ages out — see `PROJ_TTL_MS`. */
 const projCache = new Map<string, { at: number; map: Record<string, number> }>();
+/** Weeks whose projections are in the air. Two callers now ask for the same
+ *  week at once — the matchup fetch and the effect that waits for the league —
+ *  and without this they both go, which doubles the traffic to an undocumented
+ *  endpoint on every week change for no second answer. */
+const projInFlight = new Set<string>();
 /** One week of every player's stats. Big, and only wanted where a stat line
  *  is drawn, so it ages out rather than polling with the scores. */
 const statCache = new Map<string, { at: number; map: Record<string, SleeperStatLine> }>();
@@ -309,8 +314,10 @@ export function useApp() {
     const hit = projCache.get(key);
     if (hit) { setProjections(hit.map); setProjState('ok'); }
     if (!projectionsAreStale(hit, Date.now(), PROJ_TTL_MS, force)) return;
+    if (projInFlight.has(key)) return;
     if (!hit) setProjState('loading');
 
+    projInFlight.add(key);
     try {
       const raw = await getWeekProjections(season, wk);
       const map = readProjections(raw, d.league.scoring_settings);
@@ -324,6 +331,8 @@ export function useApp() {
       // The scoreboard is a scoreboard without them; it just stops pretending
       // they are on their way. The next poll tries again.
       if (!hit) setProjState('fail');
+    } finally {
+      projInFlight.delete(key);
     }
   }, []);
 
@@ -775,6 +784,26 @@ export function useApp() {
     );
     return () => window.clearInterval(id);
   }, [leagueId, week, fetchMatchups]);
+
+  /**
+   * Projections need the LEAGUE, not just the week: they are re-totalled
+   * against its own scoring settings, so `fetchProjections` can do nothing
+   * until the bundle is in. It was only ever called from `fetchMatchups`,
+   * which on a cold start runs first — the clock answers before the league
+   * does — so it returned at the `!d` guard and nothing came back to it. The
+   * week you landed on was the one week with no projections on it: no figure
+   * under either score, no bar, no projected margin, for as long as you stayed
+   * on it. Stepping a week fixed it, which is why it read as "that week has
+   * none" rather than as a bug.
+   *
+   * Stating the dependency as an effect is the fix: it fires when both halves
+   * exist, whichever arrives last. The staleness guard inside means the extra
+   * call costs nothing when the fetch already happened.
+   */
+  useEffect(() => {
+    if (!data || week == null) return;
+    void fetchProjections(week);
+  }, [data, week, fetchProjections]);
 
   const connectUser = useCallback(async () => {
     const name = (username || '').trim().replace(/^@/, '');

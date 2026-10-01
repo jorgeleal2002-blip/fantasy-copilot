@@ -143,12 +143,27 @@ export function makeRosters(byPos: Record<string, string[]>): SleeperRoster[] {
   return users.map((u, i) => {
     const players = (Object.keys(PER_TEAM) as (keyof typeof PER_TEAM)[])
       .flatMap(pos => byPos[pos].slice(i * PER_TEAM[pos], (i + 1) * PER_TEAM[pos]));
+    /* A season already under way, so a standing, a record and a place are on
+       screen to be designed around. A fixture at 0-0 draws a scoreboard header
+       with its subtitle missing, which is a different header from the one that
+       ships. Spread deliberately: a 3-0 at the top, a 0-3 at the bottom and a
+       tie in the middle, so every shape of the line is drawn by somebody. */
+    const wins = [3, 3, 2, 2, 2, 1, 1, 1, 0, 0][i];
+    const ties = i === 4 ? 1 : 0;
+    const fpts = 420 - i * 17;
     return {
       roster_id: i + 1,
       owner_id: u.user_id,
       players,
       // Deliberately not the optimal set, so "changes vs Sleeper" is non-zero.
       starters: players.slice(1, 10),
+      settings: {
+        wins,
+        losses: 3 - wins - ties,
+        ties,
+        fpts: Math.floor(fpts),
+        fpts_decimal: Math.round((fpts % 1) * 100),
+      },
     };
   });
 }
@@ -288,5 +303,75 @@ export function makeMatchups(byPos: Record<string, string[]>, week: number): Sle
       starters: i === 1 ? starters.map((id, j) => (j === 4 ? '0' : id)) : starters,
       players_points,
     };
+  });
+}
+
+/**
+ * One week of per-player STAT LINES — what each man actually did, which is the
+ * line under his name on the matchup sheet.
+ *
+ * Shaped by position, because `statBits` reads a quarterback's line and a
+ * receiver's differently, and a fixture that fed everybody carries and catches
+ * would draw a screen nobody will ever see.
+ */
+export function makeWeekStats(
+  players: PlayerCatalog,
+  week: number,
+): Record<string, SleeperStatLine> {
+  const r = rng(week * 104729 + 7);
+  const out: Record<string, SleeperStatLine> = {};
+  for (const id of Object.keys(players)) {
+    const pos = players[id].position;
+    // Not everybody plays, so the "—" path stays on screen too.
+    if (r() < 0.12) continue;
+    const s: SleeperStatLine = { gp: 1 };
+    if (pos === 'QB') {
+      s.pass_att = 20 + Math.round(r() * 20);
+      s.pass_cmp = Math.round(s.pass_att * (0.55 + r() * 0.2));
+      s.pass_yd = 120 + Math.round(r() * 230);
+      s.pass_td = Math.round(r() * 3.4);
+      s.pass_int = Math.round(r() * 1.6);
+      s.rush_att = Math.round(r() * 7);
+      s.rush_yd = Math.round(r() * 45);
+    } else if (pos === 'RB') {
+      s.rush_att = 4 + Math.round(r() * 18);
+      s.rush_yd = 10 + Math.round(r() * 110);
+      s.rush_td = Math.round(r() * 1.4);
+      s.rec_tgt = Math.round(r() * 6);
+      s.rec = Math.round((s.rec_tgt || 0) * (0.5 + r() * 0.5));
+      s.rec_yd = Math.round((s.rec || 0) * (4 + r() * 8));
+    } else {
+      s.rec_tgt = 2 + Math.round(r() * 10);
+      s.rec = Math.round((s.rec_tgt || 0) * (0.4 + r() * 0.5));
+      s.rec_yd = Math.round((s.rec || 0) * (6 + r() * 11));
+      s.rec_td = Math.round(r() * 1.3);
+    }
+    out[id] = s;
+  }
+  return out;
+}
+
+/**
+ * Sleeper's weekly projections, in the shape the live endpoint answers with:
+ * an array of rows, each a `player_id` and a nested `stats` object. The app
+ * re-totals that line against the league's own scoring rather than trusting a
+ * pre-totalled number, so a fixture that carried only `pts_half_ppr` would
+ * exercise the fallback instead of the path that runs.
+ */
+export function makeProjections(players: PlayerCatalog, week: number): unknown[] {
+  const r = rng(week * 15485863 + 11);
+  return Object.keys(players).map(id => {
+    const pos = players[id].position;
+    const stats: Record<string, number> = {};
+    if (pos === 'QB') {
+      stats.pass_yd = 180 + Math.round(r() * 120);
+      stats.pass_td = Math.round(r() * 25) / 10;
+      stats.rush_fd = Math.round(r() * 20) / 10;
+    } else {
+      stats.rec = Math.round(r() * 70) / 10;
+      stats.rush_fd = Math.round(r() * 25) / 10;
+    }
+    stats.pts_half_ppr = Math.round(r() * 190) / 10;
+    return { player_id: id, stats };
   });
 }
