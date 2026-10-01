@@ -427,6 +427,77 @@ that connection drops. The mock is a pure function of the seed and that map, so
 every phone in the room derives the identical draft, bots included, without any
 of it being sent.
 
+## Carrying your setup between phones
+
+Sign in with Google once and a new phone, a reinstall or a second browser
+arrives already in your league instead of asking for a username you chose years
+ago.
+
+**It does not replace the Sleeper username, and it cannot.** Sleeper has no
+Google sign-in and no exchange that turns a Google account into a Sleeper one,
+so nothing here can work out which Sleeper team is yours. The first time, you
+still type it once. What Google buys is that it is the last time.
+
+What gets written down is two strings: your Sleeper username and the league you
+had open, against an identifier Firebase makes up. Not your email and not your
+name — Google tells the app both and it keeps neither. Local storage still
+holds the same two, so the whole feature is a convenience on top of a setup
+that already works offline, and a database having a bad day costs nobody their
+league.
+
+It needs the same Realtime Database the rooms use, plus two values from the
+console. **With either of them missing the button is simply not drawn.**
+
+1. In the same Firebase project: **Build → Authentication → Get started →
+   Google → Enable.** Give it a support email and save. Enabling the provider
+   is what creates the OAuth web client this needs; you do not have to visit
+   the Google Cloud console at all.
+2. Still under Authentication → **Settings → Authorised domains**, add the
+   domain the app is served from — `your-name.github.io`, and `localhost` is
+   already there for development. A domain missing here is the commonest
+   failure, and it fails by the button doing nothing rather than by saying so.
+3. **Project settings** (the gear, top left) → **General** → your web app →
+   **SDK setup and configuration**. Two fields out of that block:
+   `apiKey` and the Google provider's web client id, which Authentication
+   → Sign-in method → Google → **Web SDK configuration** prints in full.
+4. Add `/users` to the database rules, under the `rooms` and `photos` blocks
+   you already published:
+
+   ```json
+   "users": {
+     "$uid": {
+       ".read": "$uid === auth.uid",
+       ".write": "$uid === auth.uid"
+     }
+   }
+   ```
+
+   **This one is not optional.** A room is a seed and some seat names and is
+   deliberately open to anyone holding its code; a profile is tied to a person.
+   Without this rule the whole `users` subtree is readable by anybody who asks
+   the database for it, which is a list of who uses this app and what their
+   Sleeper username is. The rule is what makes the path private — the path
+   being hard to guess is not.
+
+5. Locally, add both to `.env`:
+
+   ```
+   VITE_GOOGLE_CLIENT_ID=0000000000-xxxxxxxx.apps.googleusercontent.com
+   VITE_FIREBASE_KEY=AIza...
+   ```
+
+   For the deployed copy, add them as repository **variables** next to
+   `VITE_RTDB_URL`. Variables rather than secrets for the same reason: both
+   ship to every browser that loads the page and neither authorises anything
+   on its own. The rule in step 4 is what protects the data.
+
+6. **Run the deploy again**, as with the database URL — these are read when the
+   site is compiled, so adding them rebuilds nothing by itself.
+
+Signing out of the app signs out of Google too, and tells Google's script not
+to sign the same person back in on the next tap. On a shared phone that is the
+difference between handing it over and handing over your league.
+
 ## Data sources
 
 | Source | What it provides |

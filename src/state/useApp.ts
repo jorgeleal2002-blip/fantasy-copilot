@@ -7,7 +7,7 @@ import {
 import type {
   LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup, SleeperStatLine, SleeperTransaction,
 } from '../api/types';
-import { DRAFT_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, RESUME_REFRESH_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import { DRAFT_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, RESUME_REFRESH_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_GOOGLE, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
   EMPTY_ROOM, PHOTO_MAX_BYTES, claimSeat, createRoom as createRoomAt, dropPhoto, liveEnabled,
   liveReason, newRoomId, pushPick, putPhoto, readPhotos, readRoom, restartRoom, startRoom,
@@ -16,6 +16,10 @@ import {
 import {
   ROOM_LEN, cleanRoomCode, clearInvite, isRoomCode, parseInvite, roomCodeProblem, type Invite,
 } from '../model/invite';
+import {
+  exchange, forgetGoogle, googleEnabled, refresh as refreshGoogle, stale, type Session,
+} from '../api/identity';
+import { profileEnabled, readProfile, writeProfile } from '../api/profile';
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
@@ -830,17 +834,79 @@ export function useApp() {
     }
   }, [username]);
 
-  const pickLeague = useCallback((id: string) => {
-    writeJson(STORAGE_SESSION, { username, leagueId: id });
+  /* ── Signing in with Google ──────────────────────────────────────────────
+   *
+   * This does NOT replace the Sleeper username, and cannot: Sleeper has no
+   * Google sign-in, so nothing here can work out which Sleeper team is yours.
+   * What it does is remember the answer against your Google account, so a new
+   * phone arrives already set up instead of asking for a username you chose
+   * years ago. See `api/identity.ts`.
+   * ───────────────────────────────────────────────────────────────────────── */
+  const [google, setGoogle] = useState<Session | null>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const [googleError, setGoogleError] = useState('');
+  /* The callbacks below are created once and must not be re-created every time
+   * a token is minted, so they read it through a ref rather than closing over
+   * it — the same trick `dataRef` plays three hundred lines up. */
+  const googleRef = useRef<Session | null>(null);
+  googleRef.current = google;
+
+  const keepGoogle = useCallback((s: Session | null) => {
+    googleRef.current = s;
+    setGoogle(s);
+    // Only the long-lived half is written down. The other one is stale within
+    // the hour and is minted from this whenever it is wanted.
+    if (s) writeJson(STORAGE_GOOGLE, { refreshToken: s.refreshToken });
+    else { try { localStorage.removeItem(STORAGE_GOOGLE); } catch { /* private mode */ } }
+  }, []);
+
+  /** A token the database will actually accept, minting a new one if the one
+   *  in hand has gone off. Null when there is no session or it cannot be
+   *  renewed — a signed-out state, not an error to put on a screen. */
+  const liveSession = useCallback(async (): Promise<Session | null> => {
+    const s = googleRef.current;
+    if (!s) return null;
+    if (!stale(s, Date.now())) return s;
+    try {
+      const next = await refreshGoogle(s.refreshToken);
+      keepGoogle(next);
+      return next;
+    } catch {
+      // A refresh token is revoked by signing out of Google, by changing a
+      // password, or by ninety days of not opening the app. None of those is
+      // worth an alarm: the username box is still there.
+      keepGoogle(null);
+      return null;
+    }
+  }, [keepGoogle]);
+
+  /**
+   * Open a league.
+   *
+   * `who` is here because the one caller that is not a tap — a Google account
+   * arriving with a saved setup — knows the username before React has finished
+   * putting it in state, and reading it from state there picked up the empty
+   * string it was replacing.
+   */
+  const openLeague = useCallback((id: string, who: string) => {
+    writeJson(STORAGE_SESSION, { username: who, leagueId: id });
     // Remember who just signed in, newest first, so the next person — or this
     // one coming back — is one tap rather than a username typed from memory.
     setAccounts(prev => {
-      const next = [{ username, leagueId: id }]
-        .concat(prev.filter(a => a.username.toLowerCase() !== username.toLowerCase()))
+      const next = [{ username: who, leagueId: id }]
+        .concat(prev.filter(a => a.username.toLowerCase() !== who.toLowerCase()))
         .slice(0, 8);
       writeJson(STORAGE_ACCOUNTS, next);
       return next;
     });
+    /* And against the Google account, if there is one, so the next phone does
+     * not ask again. Deliberately not awaited and deliberately unable to fail:
+     * this is a convenience over a setup that already works from local
+     * storage, and a database having a bad day must cost nobody their league. */
+    void (async () => {
+      const g = await liveSession();
+      if (g) void writeProfile(g, { username: who, leagueId: id });
+    })();
     window.clearInterval(poll.current);
     setLeagueId(id);
     setStage('app');
@@ -849,8 +915,74 @@ export function useApp() {
     setPassed([]);
     setDetailStack([]);
     setTab('team');
-    void load(id, username);
-  }, [load, username]);
+    void load(id, who);
+  }, [load, liveSession]);
+
+  const pickLeague = useCallback((id: string) => openLeague(id, username), [openLeague, username]);
+
+  /** Google has said who this is. Turn that into a session the database will
+   *  accept and, if this account has been here before, straight into its
+   *  league — which is the whole point of the button. */
+  const signInWithGoogle = useCallback(async (googleIdToken: string) => {
+    setGoogleBusy(true);
+    setGoogleError('');
+    try {
+      const s = await exchange(googleIdToken);
+      keepGoogle(s);
+      const saved = await readProfile(s).catch(() => null);
+      // Nothing saved yet is the ordinary first time, not a failure: the
+      // username box is right there and what they type gets written down.
+      if (saved) {
+        setUsername(saved.username);
+        openLeague(saved.leagueId, saved.username);
+      }
+    } catch {
+      setGoogleError('Google signed you in, but this app could not finish. Try again.');
+    } finally {
+      setGoogleBusy(false);
+    }
+  }, [keepGoogle, openLeague]);
+
+  /** Sign out of the app, not out of Google. `forgetGoogle` stops their script
+   *  signing the same person straight back in on the next tap, which otherwise
+   *  makes the button look broken to anyone switching accounts. */
+  const signOutGoogle = useCallback(() => {
+    forgetGoogle();
+    keepGoogle(null);
+  }, [keepGoogle]);
+
+  /**
+   * A Google session outlives a launch, and on a phone that has never opened
+   * this app it IS the setup.
+   *
+   * Once per launch, guarded rather than left to the dependency list: every
+   * callback this reaches for is rebuilt whenever a league loads, and an effect
+   * that followed them would sign in again on each one.
+   */
+  const bootedGoogle = useRef(false);
+  useEffect(() => {
+    if (!googleEnabled() || bootedGoogle.current) return;
+    bootedGoogle.current = true;
+    const kept = readJson<{ refreshToken?: string } | null>(STORAGE_GOOGLE, null);
+    if (!kept || !kept.refreshToken) return;
+    void (async () => {
+      try {
+        const s = await refreshGoogle(kept.refreshToken as string);
+        keepGoogle(s);
+        /* Only where this device has nothing of its own. Somebody already in a
+         * league must not be yanked out of it by a profile written from
+         * another phone — the device they are holding wins. */
+        if (readJson<{ leagueId?: string } | null>(STORAGE_SESSION, null)?.leagueId) return;
+        const saved = await readProfile(s).catch(() => null);
+        if (saved) {
+          setUsername(saved.username);
+          openLeague(saved.leagueId, saved.username);
+        }
+      } catch {
+        keepGoogle(null);
+      }
+    })();
+  }, [keepGoogle, openLeague]);
 
 
 
@@ -1076,6 +1208,11 @@ export function useApp() {
 
   const logout = useCallback(() => {
     try { localStorage.removeItem(STORAGE_SESSION); } catch { /* ignore */ }
+    /* And out of Google, or signing out does not sign anybody out: the next
+     * launch would restore the session, read the profile and walk straight
+     * back into the league the person just left — on a phone that may now be
+     * in somebody else's hands. */
+    signOutGoogle();
     window.clearInterval(poll.current);
     marketCache.clear();
     // The next person to meet this screen may not be the last one. Leaving
@@ -1090,7 +1227,7 @@ export function useApp() {
     setTab('team');
     setMarket(null);
     setMarketState('idle');
-  }, []);
+  }, [signOutGoogle]);
 
   /**
    * Re-ask for rosters, traded picks, market values and usage, then recompute.
@@ -1478,6 +1615,10 @@ export function useApp() {
     weekScores, powerState, fetchWeekScores, seasonPpg, seasonLog, seasonOf, seasonRanks, seasonTds, weekRank,
 
     accounts, switchAccount, forgetAccount,
+    /* Signing in with Google carries your setup between phones; it does not
+     * replace the Sleeper username, which Sleeper gives no way to skip. */
+    googleOn: googleEnabled() && profileEnabled(),
+    google, googleBusy, googleError, signInWithGoogle, signOutGoogle,
     block: (leagueId ? blocks[username + '/' + leagueId] : undefined) || [],
     isOnBlock: (id: string) => (
       (leagueId ? blocks[username + '/' + leagueId] : undefined) || []

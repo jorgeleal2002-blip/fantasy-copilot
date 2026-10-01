@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_ROOM, PHOTO_MAX_BYTES, keepPhotos, newRoomId } from '../api/live';
+import { sessionFrom, stale } from '../api/identity';
 import { caretAfterClean, cleanRoomCode, isRoomCode, roomCodeProblem } from '../model/invite';
 import { LOOKS, type ClipName } from '../ui/brainrot';
 
@@ -243,5 +244,73 @@ describe('photos the league shares', () => {
   it('has nothing to say about a payload that never arrived', () => {
     expect(keepPhotos(null)).toEqual({});
     expect(keepPhotos('nope')).toEqual({});
+  });
+});
+
+/* ── Signing in with Google ──────────────────────────────────────────────────
+   The two things worth pinning down are the ones that are silent when wrong:
+   a session read out of the wrong field shape, and a token sent after it has
+   stopped being accepted. Both fail at the database, two screens away from the
+   code that caused them. */
+describe('a Google session', () => {
+  const IDP = {
+    localId: 'u-123', idToken: 'short', refreshToken: 'long', expiresIn: '3600',
+    email: 'someone@example.com', displayName: 'Someone',
+  };
+  /* The refresh endpoint answers in snake_case where the sign-in answers in
+     camelCase — the same session, spelled two ways, which is exactly the kind
+     of thing a second near-identical parser gets wrong a year later. */
+  const REFRESHED = {
+    user_id: 'u-123', id_token: 'short2', refresh_token: 'long2', expires_in: '3600',
+  };
+
+  it('reads the shape the sign-in answers with', () => {
+    expect(sessionFrom(IDP, 1_000)).toEqual({
+      uid: 'u-123', idToken: 'short', refreshToken: 'long', expiresAt: 1_000 + 3_600_000,
+    });
+  });
+
+  it('reads the shape the refresh answers with', () => {
+    expect(sessionFrom(REFRESHED, 1_000)).toEqual({
+      uid: 'u-123', idToken: 'short2', refreshToken: 'long2', expiresAt: 1_000 + 3_600_000,
+    });
+  });
+
+  /* Google tells the app the person's email and name. Neither is wanted and
+     neither is kept: a session is an id and two tokens. */
+  it('keeps nothing about the person beyond an id', () => {
+    const s = sessionFrom(IDP, 0) as unknown as Record<string, unknown>;
+    expect(Object.keys(s).sort()).toEqual(['expiresAt', 'idToken', 'refreshToken', 'uid']);
+    expect(JSON.stringify(s)).not.toContain('example.com');
+    expect(JSON.stringify(s)).not.toContain('Someone');
+  });
+
+  it('refuses a half-answer rather than building a session out of it', () => {
+    expect(sessionFrom({ ...IDP, refreshToken: '' }, 0)).toBeNull();
+    expect(sessionFrom({ ...IDP, localId: undefined }, 0)).toBeNull();
+    expect(sessionFrom(null, 0)).toBeNull();
+    expect(sessionFrom('nope', 0)).toBeNull();
+  });
+
+  /* A lifetime that cannot be read is treated as none. Refreshing early costs
+     one request; refreshing late costs a database call that fails for no
+     reason the screen can explain. */
+  it('treats an unreadable lifetime as already expired', () => {
+    const s = sessionFrom({ ...IDP, expiresIn: 'soon' }, 5_000);
+    expect(s?.expiresAt).toBe(5_000);
+    expect(stale(s, 5_000)).toBe(true);
+  });
+
+  it('calls a token stale a minute before it really goes, and not after', () => {
+    const s = sessionFrom(IDP, 0) as NonNullable<ReturnType<typeof sessionFrom>>;
+    expect(stale(s, 0)).toBe(false);
+    expect(stale(s, 3_600_000 - 61_000)).toBe(false);
+    // the clock on the other end is not this one's
+    expect(stale(s, 3_600_000 - 60_000)).toBe(true);
+    expect(stale(s, 3_600_000)).toBe(true);
+  });
+
+  it('has nothing to send when nobody is signed in', () => {
+    expect(stale(null, 0)).toBe(true);
   });
 });

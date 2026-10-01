@@ -448,3 +448,7 @@ export const STORAGE_TEAM = 'fc.team';
 export const STORAGE_ACCOUNTS = 'fc.accounts';
 /** "username/leagueId" → player ids you have put up for trade. */
 export const STORAGE_BLOCK = 'fc.block';
+/** The long-lived half of a Google sign-in, so a launch does not need the
+ *  account chooser again. Never the short-lived token, which is minted from
+ *  this one and is stale within the hour anyway. */
+export const STORAGE_GOOGLE = 'fc.google';

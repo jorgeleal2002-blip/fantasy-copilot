@@ -40,6 +40,14 @@ jobs:
       - run: npm run build
         env:
           VITE_RTDB_URL: ${{ vars.VITE_RTDB_URL || secrets.VITE_RTDB_URL }}
+          # The two halves of signing in with Google. Neither is a secret in
+          # any real sense — a web client id and a Firebase web API key are
+          # both shipped to every browser that loads the page, and both
+          # authorise nothing on their own; what guards the data is the
+          # database's rules. Read from either tab for the same reason as
+          # above. With either one missing the button is simply not drawn.
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID || secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_FIREBASE_KEY: ${{ vars.VITE_FIREBASE_KEY || secrets.VITE_FIREBASE_KEY }}
       # enablement: true turns Pages on for the repo the first time this runs,
       # instead of failing with "Get Pages site failed / Not Found".
       - uses: actions/configure-pages@v5

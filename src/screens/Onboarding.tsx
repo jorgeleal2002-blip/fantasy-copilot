@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react';
 import { BAD } from '../model/constants';
+import { mountGoogleButton } from '../api/identity';
 import { leagueAvatar } from '../api/sleeper';
 import type { SleeperLeague } from '../api/types';
 import { BOOT_STEPS, type App } from '../state/useApp';
@@ -6,6 +8,55 @@ import { Mark } from '../ui/Mark';
 import { dim, ellipsis } from '../ui/styles';
 
 const topPad = (extra: number) => `calc(var(--safe-top) + ${extra}px)`;
+
+/**
+ * Signing in with Google, above the username box.
+ *
+ * It is above it because for anybody who has been here before on another phone
+ * it is the whole of the sign-in, and under the box it would be the thing you
+ * find after typing. For everybody else it is one tap that makes this the last
+ * time they type the username — which is what the line under it says, because
+ * a Google button on a screen asking for a Sleeper username reads as a promise
+ * to skip it, and it is not one. Sleeper has no Google sign-in; nothing here
+ * can work out which Sleeper team is yours.
+ *
+ * Absent entirely when the app has no Google client configured, like every
+ * other optional piece of this app.
+ */
+function GoogleBlock({ app }: { app: App }) {
+  const host = useRef<HTMLDivElement | null>(null);
+  const { googleOn, signInWithGoogle } = app;
+
+  useEffect(() => {
+    const el = host.current;
+    if (!googleOn || !el) return;
+    mountGoogleButton(el, t => { void signInWithGoogle(t); }, () => {
+      // Their script is blocked or offline. The username box below is
+      // untouched, so this is one missing shortcut and not a dead end.
+      el.replaceChildren();
+    });
+  }, [googleOn, signInWithGoogle]);
+
+  if (!googleOn) return null;
+  return (
+    <div style={{ marginBottom: 26 }}>
+      <div ref={host} style={{ minHeight: 44, display: 'flex' }} />
+      <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.52), marginTop: 10, textWrap: 'pretty' }}>
+        {app.googleBusy
+          ? 'Looking for your setup…'
+          : app.google
+            ? 'Signed in. Pick your league below and this phone will not ask again.'
+            : 'Carries your Sleeper username and league to your other phones. '
+              + 'Sleeper has no Google sign-in, so the first time you still enter it once.'}
+      </div>
+      {app.googleError ? (
+        <div role="alert" style={{ fontSize: 12, lineHeight: '18px', color: BAD, marginTop: 8 }}>
+          {app.googleError}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function leagueMeta(l: SleeperLeague) {
   const type = l.settings?.type === 2 ? 'Dynasty' : l.settings?.type === 1 ? 'Keeper' : 'Redraft';
@@ -36,6 +87,8 @@ export function ConnectScreen({ app }: { app: App }) {
       <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 28px', maxWidth: '30ch' }}>
         Connect your Sleeper account. Read-only.
       </p>
+
+      <GoogleBlock app={app} />
 
       <label
         htmlFor="sleeper-user"
