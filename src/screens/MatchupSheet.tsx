@@ -117,7 +117,21 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
             {game.a.projected != null
               ? <div className="ms-proj">proj {game.a.projected.toFixed(1)}</div> : null}
           </div>
-          <div className="ms-vs">{game.b ? 'vs' : 'bye'}</div>
+          {/* The two teams' own faces, behind the mark, meeting where they
+              play each other. It is a background and is treated as one: dim
+              enough that the figures either side of it stay readable over a
+              white avatar, which is the case it has to survive — see the note
+              on `.ms-vs-crest`. */}
+          <div className="ms-vs">
+            {game.a.avatar || game.b?.avatar ? (
+              <span className="ms-vs-crest" aria-hidden="true">
+                <span className="ms-vs-half" style={bg(game.a.avatar)} />
+                {/* A bye has one team, so one face fills the circle. */}
+                {game.b ? <span className="ms-vs-half" style={bg(game.b.avatar)} /> : null}
+              </span>
+            ) : null}
+            <span className="ms-vs-txt">{game.b ? 'vs' : 'bye'}</span>
+          </div>
           <div className="ms-score is-right">
             <div className={'ms-pts' + (lead === 'b' ? ' is-up' : '')}>{score(game.b?.points ?? null)}</div>
             {game.b?.projected != null
@@ -167,6 +181,10 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
 }
 
 const score = (p: number | null) => (p == null ? '—' : p.toFixed(2));
+
+/** A team's own picture as a background, or nothing where it has none. */
+const bg = (url: string | null) =>
+  (url ? { backgroundImage: 'url("' + encodeURI(url) + '")' } : undefined);
 
 function Av({ s }: { s: MatchupSide }) {
   return s.avatar
