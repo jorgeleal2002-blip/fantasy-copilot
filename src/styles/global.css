@@ -1109,7 +1109,7 @@ button { font-family: inherit; }
 .ms-board {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   background: var(--color-surface);
   border: var(--hairline) solid var(--color-divider);
   border-radius: var(--radius-xl);
@@ -1125,6 +1125,12 @@ button { font-family: inherit; }
   align-items: center;
   justify-content: space-between;
   font-size: 10px;
+  /* Every line in this card inherited the body's 24px leading — set for 15px
+     text — so a 10px label stood in 24 pixels and a 10px figure under a score
+     stood in another 24. That is where the card's height was going, and it is
+     why it read as thick rather than as full. Each line gets the leading its
+     own size wants, on the even-pixel grid the scale test enforces. */
+  line-height: 14px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(242, 253, 254, 0.52);
@@ -1176,6 +1182,7 @@ button { font-family: inherit; }
   align-items: baseline;
   gap: 4px;
   font-size: 12px;
+  line-height: 16px;
   margin-top: 2px;
   color: rgba(242, 253, 254, 0.52);
   white-space: nowrap;
@@ -1190,6 +1197,7 @@ button { font-family: inherit; }
   width: 26px;
   text-align: center;
   font-size: 10px;
+  line-height: 14px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(242, 253, 254, 0.52);
@@ -1218,6 +1226,7 @@ button { font-family: inherit; }
 /* The forecast under the fact, and smaller than it. */
 .ms-proj {
   font-size: 12px;
+  line-height: 16px;
   margin-top: 2px;
   color: rgba(242, 253, 254, 0.52);
   font-variant-numeric: tabular-nums;
@@ -1260,6 +1269,7 @@ button { font-family: inherit; }
 }
 .ms-edge {
   font-size: 10px;
+  line-height: 14px;
   color: rgba(242, 253, 254, 0.52);
   font-variant-numeric: tabular-nums;
 }
@@ -1270,7 +1280,8 @@ button { font-family: inherit; }
   font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
-  padding: 14px 0 8px;
+  line-height: 18px;
+  padding: 12px 0 6px;
   color: rgba(242, 253, 254, 0.9);
   border-top: var(--hairline) solid var(--color-divider);
 }
@@ -1279,11 +1290,19 @@ button { font-family: inherit; }
    padding the rest of the sheet keeps, which is ten pixels that would
    otherwise come off two names. It also puts the tap target at the edge. */
 .ms-row {
+  /* The two numbers a row is about sit in a band of their own, under the names
+     and over the stat lines, and the slot is the spine THAT band hangs off —
+     so it has to be on it. Centred against the whole row it floated between
+     the name and the face, which only became obvious once the row stopped
+     being tall enough to hide it. The drop is declared here, next to the two
+     lengths it is made of, so the three cannot drift apart. */
+  --name-line: 20px;
+  --cell-gap: 4px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 3px;
   margin: 0 -5px;
-  padding: 13px 5px;
+  padding: 9px 5px;
   border-top: var(--hairline) solid var(--color-divider);
 }
 /* The slot is the spine the two sides hang off, so it keeps its width
@@ -1293,10 +1312,12 @@ button { font-family: inherit; }
 .ms-slot {
   flex: none;
   width: 30px;
+  margin-top: calc(var(--name-line) + var(--cell-gap));
   padding: 6px 0;
   border-radius: 8px;
   text-align: center;
   font-size: 10px;
+  line-height: 14px;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -1306,11 +1327,13 @@ button { font-family: inherit; }
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--cell-gap);
   border-radius: 8px;
-  /* No side padding: the cell is already inset by the row, and the four pixels
-     it was spending were the four "Christian McCaffrey" needed not to be cut. */
-  padding: 2px 0;
+  /* No padding at all: the row insets it on both axes, and the four side
+     pixels it used to spend were the four "Christian McCaffrey" needed not to
+     be cut. Vertical padding here would also put the slot's band and the
+     cell's band two pixels apart. */
+  padding: 0;
 }
 .ms-cell-top {
   display: flex;
@@ -1334,7 +1357,7 @@ button { font-family: inherit; }
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  line-height: 20px;
+  line-height: var(--name-line);
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1342,6 +1365,7 @@ button { font-family: inherit; }
 }
 .ms-pl-sub {
   font-size: 10px;
+  line-height: 14px;
   text-transform: uppercase;
   margin-top: 0;
   color: rgba(242, 253, 254, 0.52);
@@ -1367,6 +1391,7 @@ button { font-family: inherit; }
 .ms-num { flex: none; }
 .ms-pl-pts {
   font-size: 17px;
+  line-height: 20px;
   font-weight: 600;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -1374,6 +1399,7 @@ button { font-family: inherit; }
 }
 .ms-pl-proj {
   font-size: 10px;
+  line-height: 12px;
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
   color: rgba(242, 253, 254, 0.52);
