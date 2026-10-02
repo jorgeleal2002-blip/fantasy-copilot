@@ -1245,10 +1245,6 @@ button { font-family: inherit; }
   border-top: var(--hairline) solid var(--color-divider);
 }
 .mt-row.is-tap { cursor: pointer; }
-.mt-row.is-live {
-  background: color-mix(in srgb, var(--c-good) 8%, transparent);
-  box-shadow: inset 3px 0 0 var(--c-good);
-}
 .mt-slot {
   flex: none;
   width: 36px;
