@@ -2246,8 +2246,11 @@ button { font-family: inherit; }
   height: 100%;
   object-fit: cover;
   object-position: center 22%;
-  -webkit-mask-image: linear-gradient(to right, transparent 0, black 14%, black 55%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, black 14%, black 55%, transparent 100%);
+  /* Dimmed, because a bright photo — a white wall, a flag — otherwise outshines
+     the name on top of it; and gone before the text starts. */
+  filter: brightness(0.62) saturate(0.9);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 12%, black 40%, transparent 76%);
+  mask-image: linear-gradient(to right, transparent 0, black 12%, black 40%, transparent 76%);
 }
 .ps-hero-edit {
   position: absolute;

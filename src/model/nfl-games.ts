@@ -78,10 +78,14 @@ export function gameLeftOf(g: NflGame): number {
   return Math.max(0, Math.min(1, ((4 - Math.max(1, g.period)) * 15 + inQ) / 60));
 }
 
-/** "Q2 2:00", "Half", "OT 4:12", "Final" — the corner of the card. */
+/** "Sun 11:00 AM", in the phone's own time zone — the way Sleeper writes it. */
+export const kickoffLabel = (ms: number): string =>
+  new Date(ms).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }).replace(',', '');
+
+/** "Q2 2:00", "Half", "OT 4:12", "Final", "Sun 1:00 PM" — the corner of the card. */
 export function clockLabel(g: NflGame): string {
   if (g.state === 'post') return 'Final';
-  if (g.state === 'pre') return g.detail.replace(/\s+E[DS]T$/, '');
+  if (g.state === 'pre') return g.start != null ? kickoffLabel(g.start) : g.detail.replace(/\s+E[DS]T$/, '');
   if (/half/i.test(g.detail)) return 'Half';
   const q = g.period > 4 ? 'OT' : 'Q' + g.period;
   return g.clock ? q + ' ' + g.clock : q;

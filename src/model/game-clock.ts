@@ -1,5 +1,5 @@
 import type { PlayerCatalog } from '../api/types';
-import { clockLabel, gameLeftOf, type NflGame } from './nfl-games';
+import { clockLabel, gameLeftOf, kickoffLabel, type NflGame } from './nfl-games';
 import { KICKOFF_MIN, OPPONENTS, SCHEDULE_SEASON } from './schedule';
 
 /** Wall-clock length of an NFL game, halftime and stoppages included. */
@@ -80,9 +80,6 @@ export function weekLive(week: number, season: number, now: number, games?: Reco
   return false;
 }
 
-/** "Sun 11:00 AM", in the phone's own time zone — the way Sleeper writes it. */
-export const kickoffLabel = (ms: number): string =>
-  new Date(ms).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }).replace(',', '');
 
 /**
  * When and who he plays this week, for a player row: "Sun 11:00 AM vs NE",
@@ -99,10 +96,7 @@ export function gameLine(
   if (g) {
     const home = g.home === team;
     const opp = (home ? 'vs ' : '@ ') + (home ? g.away : g.home);
-    const when = g.state === 'pre'
-      ? (g.start != null ? kickoffLabel(g.start) : clockLabel(g))
-      : clockLabel(g);
-    return when + ' ' + opp;
+    return clockLabel(g) + ' ' + opp;
   }
   if (season !== SCHEDULE_SEASON) return null;
   const opp = OPPONENTS[team]?.[week - 1];
