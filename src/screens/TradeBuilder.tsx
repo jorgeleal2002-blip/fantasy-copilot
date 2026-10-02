@@ -88,7 +88,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
             season={seasons[t.id] || null} avatar={m.leagueRows.find(r => r.id === t.id)?.avatar || null} />
         ) : null;
       })}
-      <HowJudged band={v.band} />
+      <HowJudged />
     </div>
   ) : null;
 
@@ -241,15 +241,22 @@ function Scorecard({ l, c, moved, dynasty, season, avatar }: {
         <span className={'fb-sc-verdict is-' + o}>{vd.mark} {l.isMe ? vd.you : vd.them}</span>
       </div>
 
+      {/* The share of what the deal moves, and nothing else. It used to read
+          "+5 · +3%": two numbers glued together, the first in a currency with
+          no name and no scale anywhere on the card — five of something, against
+          players worth six thousand of it — and the second a percentage of
+          something unstated. The share is the one that means anything, and it
+          is the unit the verdict above is already decided in: even is inside
+          four per cent. */}
       <Meter icon="💰" label="Value" share={moved ? l.net / moved : 0} tone={valueTone}
-        text={sign(Math.round(l.net), 0) + (pct ? ' · ' + sign(pct, 0) + '%' : '')} />
+        text={moved ? sign(pct, 0) + '%' : '—'} />
       {c.perWeek != null ? (
         <Meter icon="📈" label="Season" share={c.perWeek / PTS_FULL} tone={ptsTone(c.perWeek)}
-          text={sign(c.perWeek) + ' /wk'} />
+          text={sign(c.perWeek) + ' pts/wk'} />
       ) : null}
       {c.playoffs != null ? (
         <Meter icon="🏆" label="Playoffs" share={c.playoffs / PTS_FULL} tone={ptsTone(c.playoffs)}
-          text={sign(c.playoffs) + ' /wk'} />
+          text={sign(c.playoffs) + ' pts/wk'} />
       ) : null}
 
       {season?.byes.length || season?.injured.length || l.cuts.length ? (
@@ -264,11 +271,15 @@ function Scorecard({ l, c, moved, dynasty, season, avatar }: {
               🩹 {i.name} <b>{injuryCode(i.status)}</b>
             </span>
           ))}
-          {l.cuts.map(x => (
-            <span key={'c' + x.name} className="fb-tag is-bad" title="Full roster: has to be cut">
-              ✂️ {x.name}
+          {/* The spot, not the man. It named him — "✂️ Evan McPherson" — which
+              is the app deciding who somebody else drops, and nobody drops the
+              player a model picked for them. The cost is real and stays; the
+              casting does not. */}
+          {l.cuts.length ? (
+            <span className="fb-tag is-bad" title="Roster full: a spot has to come from somewhere">
+              ✂️ Roster full · <b>{l.cuts.length}</b> to drop
             </span>
-          ))}
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -305,7 +316,7 @@ const injuryCode = (s: string) => {
 };
 
 /** The rules behind the cards, folded away: one glance each. */
-function HowJudged({ band }: { band: number }) {
+function HowJudged() {
   const [open, setOpen] = useState(false);
   return (
     <div className="fb-how">
@@ -318,9 +329,10 @@ function HowJudged({ band }: { band: number }) {
           <span>🌱 Building → value decides</span>
           <span>⚖️ In the hunt → needs both</span>
           <span>⭐ One star &gt; two pieces that add up to him</span>
-          <span>✂️ Full roster → whoever is cut counts against</span>
+          <span>✂️ Full roster → a dropped player’s worth counts against, priced at the cheapest spare</span>
           <span>💤 🩹 Byes and injuries score 0 · 🏆 playoff weeks ×1.5</span>
-          <span>= Even within ±{Math.round(band).toLocaleString()} value or ±0.5 pts</span>
+          <span>💰 Value → the share of everything the deal moves</span>
+          <span>= Even inside ±4% of that, or ±0.5 pts a week</span>
         </div>
       ) : null}
     </div>
