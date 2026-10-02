@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { cutOut } from '../model/cutout';
-import { segmentPerson } from './segment';
+import { crop, segmentPerson } from './segment';
 
 /** Big enough for a banner on a 3x screen, small enough to clear in a frame. */
-const MAX_SIDE = 420;
+const MAX_SIDE = 1024;
 const done = new Map<string, Promise<string | null>>();
 
 function flat(url: string): Promise<string | null> {
@@ -22,16 +22,13 @@ function flat(url: string): Promise<string | null> {
         c.height = h;
         const ctx = c.getContext('2d');
         if (!ctx) return resolve(null);
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, w, h);
         const px = ctx.getImageData(0, 0, w, h);
         const box = cutOut(px);
         if (!box) return resolve(null);
         ctx.putImageData(px, 0, 0);
-        const out = document.createElement('canvas');
-        out.width = box.w;
-        out.height = box.h;
-        out.getContext('2d')?.drawImage(c, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
-        resolve(out.toDataURL('image/png'));
+        resolve(crop(c, box.x, box.y, box.w, box.h));
       } catch {
         resolve(null);
       }
@@ -43,7 +40,7 @@ function flat(url: string): Promise<string | null> {
 
 /* Kept on the phone, so each photo is worked out once and not on every open.
    Keyed by a hash of the photo itself: a new photo is a new key. */
-const KEY = 'doctors-cutout:v2:';
+const KEY = 'doctors-cutout:v3:';
 const hash = (s: string) => {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);

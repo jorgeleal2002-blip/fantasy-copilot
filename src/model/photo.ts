@@ -17,8 +17,13 @@
  * when nothing does is the smallest square allowed to go as low as it must.
  */
 
-/** Squares to try, largest first. */
-export const PHOTO_PX = [288, 224, 160] as const;
+/** Widths to try, largest first. The photo is stored 4:5 — a portrait, the
+ *  shape a person is — so 480 is a 480×600 picture: enough for the banner on a
+ *  3x screen, where 288 was visibly soft. A modern encoder usually fits it in
+ *  the ceiling at a decent quality; when not, it steps down. */
+export const PHOTO_PX = [480, 400, 320, 288, 224, 160] as const;
+/** Height over width of a stored photo. */
+export const PHOTO_ASPECT = 1.25;
 /** Encoder qualities to try, best first. */
 export const PHOTO_Q = [0.9, 0.82, 0.74, 0.66, 0.55, 0.45] as const;
 /** Below this, a bigger square is no longer worth what it costs in blocking. */

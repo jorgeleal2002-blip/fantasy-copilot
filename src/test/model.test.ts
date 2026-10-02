@@ -3834,14 +3834,17 @@ describe('the trade on the screen', () => {
 describe('how big an uploaded photo is stored', () => {
   /** Bytes roughly as an encoder makes them: with the area, and with quality. */
   const like = (k: number) => (px: number, q: number) => Math.round(px * px * q * k);
+  /* The algorithm, on the three squares it was written against. */
+  const SQ = [288, 224, 160];
+  const pick = (f: (px: number, q: number) => number, cap: number) => pickEncoding(f, cap, SQ);
 
   it('takes the biggest square that fits under the ceiling', () => {
-    expect(pickEncoding(like(0.2), 20000)).toEqual({ px: 288, q: 0.9 });
+    expect(pick(like(0.2), 20000)).toEqual({ px: 288, q: 0.9 });
   });
 
   it('drops the quality before it drops the pixels', () => {
     // 288 at 0.9 is over, 288 at 0.82 is not: more picture beats more fidelity.
-    const fit = pickEncoding(like(0.2), 288 * 288 * 0.85 * 0.2);
+    const fit = pick(like(0.2), 288 * 288 * 0.85 * 0.2);
     expect(fit).toEqual({ px: 288, q: 0.82 });
   });
 
@@ -3849,7 +3852,7 @@ describe('how big an uploaded photo is stored', () => {
     // Nothing at 288 fits above the quality floor, so the 224 square takes it
     // at a quality worth having instead of a big blocky 288.
     const cap = 288 * 288 * 0.6 * 0.2;
-    const fit = pickEncoding(like(0.2), cap);
+    const fit = pick(like(0.2), cap);
     expect(fit?.px).toBe(224);
     expect(fit?.q).toBeGreaterThanOrEqual(PHOTO_Q_FLOOR);
   });
@@ -3857,12 +3860,16 @@ describe('how big an uploaded photo is stored', () => {
   it('lets the smallest square go rough rather than store nothing', () => {
     // A tight ceiling no square clears at a decent quality: a rough photo is
     // still a photo, and the alternative on screen is a grey badge.
-    const fit = pickEncoding(like(0.2), 160 * 160 * 0.5 * 0.2);
+    const fit = pick(like(0.2), 160 * 160 * 0.5 * 0.2);
     expect(fit).toEqual({ px: 160, q: 0.45 });
   });
 
   it('gives up when even the smallest square cannot fit', () => {
-    expect(pickEncoding(like(0.2), 10)).toBe(null);
+    expect(pick(like(0.2), 10)).toBe(null);
+  });
+
+  it('stores the biggest portrait the ceiling allows by default', () => {
+    expect(pickEncoding(like(0.05), 1e9)).toEqual({ px: PHOTO_PX[0], q: PHOTO_Q[0] });
   });
 
   it('never picks a size or quality it was not offered', () => {

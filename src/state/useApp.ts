@@ -27,7 +27,7 @@ import { profileEnabled, readProfile, writeProfile } from '../api/profile';
 import { loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
-import { pickEncoding } from '../model/photo';
+import { PHOTO_ASPECT, pickEncoding } from '../model/photo';
 import { scoreProjection, scoringKind } from '../model/projections';
 import { countTds, mergeSeason, pointsInWeek, rankAmong, rankCount, seasonLine, type Game, type SeasonLine } from '../model/season';
 import { type HeldStats, projectionsAreStale, readProjections, statsForWeek } from '../model/projections';
@@ -84,16 +84,23 @@ function bestPhotoType(): string {
   return photoType;
 }
 
-/** A square crop of an upload, as large as the ceiling allows. */
+/** A portrait crop of an upload, as large as the ceiling allows — a little
+ *  above centre, because a face is in the top half of a photo of a person and
+ *  a centred square cut the top of the head off. */
 function encodePhoto(img: HTMLImageElement): string {
   const type = bestPhotoType();
-  const side = Math.min(img.width, img.height);
+  const tall = img.width / img.height < 1 / PHOTO_ASPECT;
+  const cw = tall ? img.width : img.height / PHOTO_ASPECT;
+  const ch = tall ? img.width * PHOTO_ASPECT : img.height;
+  const cx = (img.width - cw) / 2;
+  const cy = (img.height - ch) * 0.25;
   const drawn = new Map<number, HTMLCanvasElement>();
   const at = (px: number, q: number): number => {
     let c = drawn.get(px);
     if (!c) {
       c = document.createElement('canvas');
-      c.width = c.height = px;
+      c.width = px;
+      c.height = Math.round(px * PHOTO_ASPECT);
       const ctx = c.getContext('2d');
       if (!ctx) return Infinity;
       // Downscaling a phone photo by a factor of ten is where a cheap resample
@@ -101,7 +108,7 @@ function encodePhoto(img: HTMLImageElement): string {
       // and a sharpened mess of it.
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, px, px);
+      ctx.drawImage(img, cx, cy, cw, ch, 0, 0, c.width, c.height);
       drawn.set(px, c);
     }
     return c.toDataURL(type, q).length;
