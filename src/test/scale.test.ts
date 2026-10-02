@@ -254,7 +254,7 @@ describe('the app is drawn on its scales', () => {
     // Each remaining one holds a glyph or a bare code and is listed by name,
     // so adding to this list is a decision somebody has to write down.
     const GLYPHS = ['.bd-live', '.bd-arrow', '.bd-pos', '.bd-head', '.bd-round',
-      '.pos-count', '.ms-slot', '.ms-edge', '.fb-pill', '.pw-tag', '.ps-bar-n'];
+      '.pos-count', '.ms-slot', '.fb-pill', '.pw-tag', '.ps-bar-n', '.ps-hero-edit'];
     expect(bad.filter(sel => !GLYPHS.some(g => sel.includes(g)))).toEqual([]);
   });
 
@@ -422,7 +422,7 @@ describe('the palette carries its colour', () => {
        Three files may hold colour literals and each has a reason: the two that
        ARE the palette, and the map of NFL team colours, which belong to the
        teams rather than to this app. The meme overlay keeps its own tints. */
-    const ALLOWED = ['model/constants.ts', 'styles/tokens.css', 'ui/Mark.tsx', 'ui/brainrot.tsx'];
+    const ALLOWED = ['model/constants.ts', 'styles/tokens.css', 'ui/Mark.tsx', 'ui/brainrot.tsx', 'model/nfl-colors.ts'];
     const stray: string[] = [];
     for (const f of FILES) {
       if (ALLOWED.some(a => f.path.endsWith(a))) continue;

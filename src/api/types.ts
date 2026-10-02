@@ -29,6 +29,12 @@ export interface SleeperPlayer {
   age?: number | null;
   team?: string | null;
   years_exp?: number | null;
+  /** Inches as a string ("77"), or occasionally already written out. */
+  height?: string | null;
+  /** Pounds, as a string. */
+  weight?: string | null;
+  birth_date?: string | null;
+  number?: number | string | null;
   /** Sleeper's internal SEARCH ordering over the whole catalogue — a relevance
    *  index, not an ADP. Only a last-resort fallback behind the market's rank. */
   search_rank?: number | null;

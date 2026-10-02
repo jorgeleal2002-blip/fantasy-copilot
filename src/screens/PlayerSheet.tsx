@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ACCENT, BAD, GOOD, POS, WARN, type Weights } from '../model/constants';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { BAD, GOOD, POS, WARN, type Weights } from '../model/constants';
 
 const TONE = { good: GOOD, warn: WARN, bad: BAD };
 
@@ -27,12 +27,14 @@ import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
 import { WeekBars } from '../ui/charts';
-import { Card, Face, Overlay, TdBalls, TeamBadge } from '../ui/primitives';
+import { Card, Face, Overlay, TdBalls } from '../ui/primitives';
 import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { gameLeft, phaseFor } from '../model/game-clock';
 import { clockLabel, gameLeftOf } from '../model/nfl-games';
 import { headlineBits, statBits, touchdowns } from '../model/stat-line';
+import { NFL_COLOR, ageFrom, heightLabel } from '../model/nfl-colors';
+import { teamLogo } from '../api/sleeper';
 import { projectPPG } from '../model/project';
 import { gapsIn, ordinal, type Ranked } from '../model/season';
 import { type Tone, placing, toneOf, toneOfRank } from '../model/standing';
@@ -230,6 +232,11 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const custom = !!app.photos[p.id];
   const setter = app.photoBy(p.id);
   const shared = app.photoShared(p.id);
+  const raw = app.data?.players[p.id];
+  const age = ageFrom(raw?.birth_date, Date.now());
+  // First name over surname, the surname set large — a DEF is one line.
+  const first = p.pos === 'DEF' ? '' : (raw?.first_name || '');
+  const last = p.pos === 'DEF' ? p.name : (raw?.last_name || p.name);
   const season = app.seasonPpg(p.id);
   const u = p.use;
 
@@ -443,38 +450,21 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
 
   return (
     <Overlay onClose={() => app.setDetail(null)}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <label style={{ position: 'relative', cursor: 'pointer', flex: 'none' }}>
-          <div
-            style={photo
-              ? {
-                width: 64, height: 64, flex: 'none', borderRadius: 12,
-                background: `color-mix(in srgb, var(--color-accent) 12%, transparent) url(${photo}) center/cover no-repeat`,
-                border: 'var(--hairline) solid var(--color-divider)',
-              }
-              : {
-                width: 64, height: 64, flex: 'none', borderRadius: 12,
-                background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)', border: 'var(--hairline) solid var(--color-divider)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: ACCENT, fontSize: 13, fontWeight: 600,
-              }}
-          >
-            {photo ? '' : p.pos}
-          </div>
-          {/* His team's logo on the corner the pencil leaves free. */}
-          {p.team && p.pos !== 'DEF' ? (
-            <TeamBadge team={p.team} size={24} style={{ left: -4, right: 'auto', bottom: -4 }} />
-          ) : null}
-          <div style={{
-            position: 'absolute', right: -4, bottom: -4, width: 22, height: 22, borderRadius: '50%',
-            background: 'var(--color-bg)', border: '1px solid var(--color-accent)', color: 'var(--color-accent)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10,
-          }}>
-            ✎
-          </div>
+      {/* A banner in his team's colour, the way Sleeper's card opens: the
+          logo large and faded behind his face, whose team he is on, his name
+          across two lines, and the four facts about the man himself. */}
+      <div className="ps-hero" style={{ '--team': (p.team && NFL_COLOR[p.team]) || 'var(--color-surface)' } as CSSProperties}>
+        {p.team ? <img className="ps-hero-logo" src={teamLogo(p.team) || ''} alt="" aria-hidden="true"
+          onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
+        <label className="ps-hero-face">
+          {photo
+            ? <img src={photo} alt="" />
+            : <span>{p.pos}</span>}
+          <span className="ps-hero-edit" aria-hidden="true">✎</span>
           <input
             type="file"
             accept="image/*"
+            aria-label="Change photo"
             onChange={e => {
               const f = e.target.files && e.target.files[0];
               if (f) app.setPhoto(p.id, f);
@@ -483,41 +473,48 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
             style={{ display: 'none' }}
           />
         </label>
-
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-0.025em' }}>{p.name}</div>
-          <div style={{ fontSize: 12, color: dim(0.62), marginTop: 4 }}>
-            {[p.pos, p.team]
-              .concat(p.age ? [p.age + ' yrs'] : [])
-              // The bye is a draft-room fact — you count them as you go — and it
-              // is sitting in the schedule table already.
-              .concat(byeOf(p.team) ? ['bye ' + byeOf(p.team)] : [])
-              .concat([p.ownerLabel]).join(' · ')}
+        <div className="ps-hero-body">
+          <div className="ps-hero-owner">→ {p.ownerLabel}</div>
+          {first ? <div className="ps-hero-first">{first}</div> : null}
+          <div className="ps-hero-last">{last}</div>
+          <div className="ps-hero-tag">
+            {[p.pos, (p.team || 'FA') + (raw?.number != null && raw.number !== '' ? ' #' + raw.number : '')]
+              .concat(byeOf(p.team) ? ['bye ' + byeOf(p.team)] : []).join(' · ')}
           </div>
-          {custom ? (
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => app.clearPhoto(p.id)}
-                style={{ fontSize: 10, padding: 0 }}
-              >
-                Restore original photo
-              </button>
-              {/* Always, not only when it is shared. "Does everybody see
-                  this" is a question about a photo that outlives the toast
-                  that answered it, and a photo with nothing beside it is one
-                  somebody has to come and ask about. */}
-              <span style={{ fontSize: 10, color: dim(0.52) }}>
-                {shared
-                  ? (setter ? 'set by ' + setter + ' · the league sees it' : 'the league sees it')
-                  : 'only on this device'}
-              </span>
-            </div>
-          ) : null}
+          <div className="ps-hero-facts">
+            {[
+              ['Age', age != null ? age.toFixed(1) : p.age ? String(p.age) : '—'],
+              ['Height', heightLabel(raw?.height) || '—'],
+              ['Weight', raw?.weight ? raw.weight + ' lbs' : '—'],
+              ['Exp', raw?.years_exp != null ? String(raw.years_exp) : '—'],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <div className="ps-hero-k">{k}</div>
+                <div className="ps-hero-v">{v}</div>
+              </div>
+            ))}
+          </div>
         </div>
-
       </div>
+      {custom ? (
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => app.clearPhoto(p.id)}
+            style={{ fontSize: 10, padding: 0 }}
+          >
+            Restore original photo
+          </button>
+          {/* Always, not only when it is shared: "does everybody see this" is a
+              question a photo with nothing beside it gets asked. */}
+          <span style={{ fontSize: 10, color: dim(0.52) }}>
+            {shared
+              ? (setter ? 'set by ' + setter + ' · the league sees it' : 'the league sees it')
+              : 'only on this device'}
+          </span>
+        </div>
+      ) : null}
 
       {/* Under the name rather than beside it. Squeezed into the strip left
           over by a 64px photo, "Jaxon Smith-Njigba" wrapped onto three lines
