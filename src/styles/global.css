@@ -1153,56 +1153,79 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.62);
 }
 .mt-head {
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--color-accent) 22%, transparent), transparent 60%),
+    var(--color-surface);
   border: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
-  border-radius: 12px;
-  padding: 11px 12px;
+  border-radius: 16px;
+  padding: 12px;
   cursor: pointer;
 }
-.mt-head-top { display: flex; align-items: center; gap: 10px; }
+.mt-score { display: flex; align-items: center; gap: 8px; }
+.mt-team { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+.mt-team.is-right { flex-direction: row-reverse; text-align: right; }
+.mt-team-body { min-width: 0; }
 .mt-av {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   flex: none;
-  border-radius: 8px;
+  border-radius: 12px;
   object-fit: cover;
   background: rgba(242, 253, 254, 0.07);
 }
-.mt-name {
-  font-size: 15px;
-  line-height: 18px;
+.mt-tname {
+  font-size: 12px;
+  line-height: 16px;
   font-weight: 600;
-  color: var(--color-accent);
+  color: rgba(242, 253, 254, 0.9);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mt-sub {
+.mt-tname.is-me { color: var(--color-accent); }
+.mt-tpts {
+  font-size: 21px;
+  line-height: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: rgba(242, 253, 254, 0.75);
+  font-variant-numeric: tabular-nums;
+}
+.mt-tpts.is-up { color: var(--color-text); }
+.mt-tproj {
   font-size: 12px;
   line-height: 16px;
   color: rgba(242, 253, 254, 0.62);
   font-variant-numeric: tabular-nums;
 }
-.mt-pts {
-  font-size: 21px;
-  line-height: 24px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
+.mt-vs {
+  flex: none;
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(242, 253, 254, 0.52);
 }
+.mt-bar {
+  height: 4px;
+  margin-top: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--c-mark-mid);
+  overflow: hidden;
+}
+.mt-bar-a { height: 100%; background: var(--color-accent-400); }
 .mt-head-foot {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 9px;
-  padding-top: 8px;
-  border-top: var(--hairline) solid var(--color-divider);
+  margin-top: 8px;
   font-size: 12px;
   line-height: 16px;
   color: rgba(242, 253, 254, 0.62);
   white-space: nowrap;
 }
-.mt-head-foot > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .mt-live { color: var(--c-good); font-weight: 600; }
 .mt-list { background: var(--color-surface); border-radius: 12px; overflow: hidden; }
 .mt-list-h {
@@ -1221,6 +1244,10 @@ button { font-family: inherit; }
   border-top: var(--hairline) solid var(--color-divider);
 }
 .mt-row.is-tap { cursor: pointer; }
+.mt-row.is-live {
+  background: color-mix(in srgb, var(--c-good) 8%, transparent);
+  box-shadow: inset 3px 0 0 var(--c-good);
+}
 .mt-slot {
   flex: none;
   width: 36px;
@@ -1237,14 +1264,16 @@ button { font-family: inherit; }
 }
 .mt-who { flex: 1; min-width: 0; }
 .mt-pl {
-  font-size: 13px;
+  font-size: 15px;
   line-height: 18px;
   font-weight: 600;
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mt-pl-sub, .mt-when {
+.mt-when {
+  margin-top: 2px;
   font-size: 12px;
   line-height: 16px;
   color: rgba(242, 253, 254, 0.62);
@@ -1262,13 +1291,20 @@ button { font-family: inherit; }
 }
 .mt-num { flex: none; text-align: right; }
 .mt-pl-pts {
-  font-size: 15px;
+  font-size: 17px;
+  color: var(--color-text);
   line-height: 18px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .mt-pl-pts.is-live { color: var(--c-good); }
-.mt-pl-proj { font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
+.mt-pl-proj {
+  font-size: 12px;
+  line-height: 16px;
+  color: rgba(242, 253, 254, 0.62);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 /* ── One game, on its own screen ──────────────────────────────────────────
    A face, a name, what he scored, the slot he scored it in, and the same

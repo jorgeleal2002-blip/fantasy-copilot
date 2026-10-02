@@ -210,7 +210,7 @@ export function useApp() {
   const [rankMode, setRankMode] = useState<'power' | 'now' | 'future' | 'fit' | 'fitFut'>('power');
   /** Which of the league page's three screens is showing. They were one
    *  column and the rankings sat six matchup cards below the fold. */
-  const [leagueView, setLeagueView] = useState<LeagueView>('weeks');
+  const [leagueView, setLeagueView] = useState<LeagueView>('myteam');
   const [pickSel, setPickSel] = useState(0);
   const [strat, setStrat] = useState<StratKey>('balanced');
   /* Sheets stack: opening a player from a rival's team has to come back to

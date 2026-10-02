@@ -6,7 +6,6 @@ import { statLine, touchdowns } from '../model/stat-line';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { Face, TdBalls } from '../ui/primitives';
-import { dim } from '../ui/styles';
 
 /**
  * Your own lineup for the week, the way Sleeper's TEAM tab has it: a row per
@@ -46,6 +45,10 @@ export function MyTeam({ app, m }: { app: App; m: Model }) {
     c.id ? phaseFor(players[c.id]?.team, week, season, now, app.nflGames) : null;
   const left = starters.filter(r => phase(r.c) === 'pre').length;
   const playing = starters.filter(r => phase(r.c) === 'live').length;
+  const gameId = 'matchup-' + [g.a.rosterId, g.b?.rosterId].filter(n => n != null).join('-');
+  const openGame = () => app.setDetail(gameId);
+  const pa = me.projected, pb = opp?.projected ?? null;
+  const split = pa != null && pb != null && pa + pb > 0 ? pa / (pa + pb) : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -53,26 +56,21 @@ export function MyTeam({ app, m }: { app: App; m: Model }) {
         className="mt-head"
         role="button"
         tabIndex={0}
-        onClick={() => app.setDetail('matchup-' + [g.a.rosterId, g.b?.rosterId].filter(n => n != null).join('-'))}
-        onKeyDown={e => { if (e.key === 'Enter') app.setDetail('matchup-' + [g.a.rosterId, g.b?.rosterId].filter(n => n != null).join('-')); }}
+        onClick={openGame}
+        onKeyDown={e => { if (e.key === 'Enter') openGame(); }}
       >
-        <div className="mt-head-top">
-          {me.avatar ? <img className="mt-av" src={me.avatar} alt="" /> : <div className="mt-av" />}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="mt-name">{me.name}</div>
-            <div className="mt-sub">{['Week ' + week, me.record].filter(Boolean).join(' · ')}</div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div className="mt-pts">{me.points == null ? '—' : me.points.toFixed(2)}</div>
-            {me.projected != null ? <div className="mt-sub">proj {me.projected.toFixed(1)}</div> : null}
-          </div>
+        <div className="mt-score">
+          <Team s={me} up={lead(me, opp)} />
+          <span className="mt-vs">VS</span>
+          {opp ? <Team s={opp} up={lead(opp, me)} right /> : <div className="mt-team is-right"><div className="mt-tname">Bye</div></div>}
         </div>
+        {split != null ? (
+          <div className="mt-bar"><div className="mt-bar-a" style={{ width: (split * 100).toFixed(1) + '%' }} /></div>
+        ) : null}
         <div className="mt-head-foot">
+          <span>Week {week}{me.record ? ' · ' + me.record : ''}</span>
           <span>
-            {opp ? 'vs ' + opp.name + (opp.points != null ? ' · ' + opp.points.toFixed(2) : '') : 'Bye'}
-          </span>
-          <span>
-            {playing ? <b className="mt-live">{playing} playing</b> : null}
+            {playing ? <b className="mt-live">● {playing} playing</b> : null}
             {playing && left ? ' · ' : ''}
             {left ? left + ' yet to play' : playing ? '' : 'All played'}
           </span>
@@ -94,6 +92,22 @@ export function MyTeam({ app, m }: { app: App; m: Model }) {
   );
 }
 
+const lead = (a: MatchupSide, b: MatchupSide | null) =>
+  !!b && a.points != null && b.points != null && a.points > b.points;
+
+function Team({ s, up, right }: { s: MatchupSide; up: boolean; right?: boolean }) {
+  return (
+    <div className={'mt-team' + (right ? ' is-right' : '')}>
+      {s.avatar ? <img className="mt-av" src={s.avatar} alt="" /> : <div className="mt-av" />}
+      <div className="mt-team-body">
+        <div className={'mt-tname' + (s.isMe ? ' is-me' : '')}>{s.name}</div>
+        <div className={'mt-tpts' + (up ? ' is-up' : '')}>{s.points == null ? '—' : s.points.toFixed(2)}</div>
+        {s.projected != null ? <div className="mt-tproj">proj {s.projected.toFixed(1)}</div> : null}
+      </div>
+    </div>
+  );
+}
+
 function Row({ app, m, slot, c, phase }: {
   app: App; m: Model; slot: string; c: LineupCell; phase: GamePhase | null;
 }) {
@@ -104,7 +118,7 @@ function Row({ app, m, slot, c, phase }: {
   const open = c.id ? () => app.setDetail(c.id as string) : undefined;
   return (
     <div
-      className={'mt-row' + (open ? ' is-tap' : '')}
+      className={'mt-row' + (open ? ' is-tap' : '') + (phase === 'live' ? ' is-live' : '')}
       role={open ? 'button' : undefined}
       tabIndex={open ? 0 : undefined}
       onClick={open}
@@ -116,8 +130,9 @@ function Row({ app, m, slot, c, phase }: {
       <Face {...(c.id ? app.photoSet(c.id) : { photo: null })} pos={c.pos || '—'} size={36} />
       <div className="mt-who">
         <div className="mt-pl">{c.name}</div>
-        <div className="mt-pl-sub">{[c.pos, c.team].filter(Boolean).join(' · ') || 'Empty slot'}</div>
-        {when ? <div className={'mt-when' + (phase === 'live' ? ' is-live' : '')}>{when}</div> : null}
+        <div className={'mt-when' + (phase === 'live' ? ' is-live' : '')}>
+          {c.id ? [c.team, when].filter(Boolean).join(' · ') : 'Empty slot'}
+        </div>
         {did ? (
           <div className="mt-did">
             <TdBalls n={touchdowns(st)} />
@@ -127,9 +142,9 @@ function Row({ app, m, slot, c, phase }: {
       </div>
       <div className="mt-num">
         <div className={'mt-pl-pts' + (phase === 'live' ? ' is-live' : '')}>
-          {c.points == null || phase === 'pre' ? '—' : c.points.toFixed(2)}
+          {c.points == null || phase === 'pre' ? '–' : c.points.toFixed(2)}
         </div>
-        {c.projected != null ? <div className="mt-pl-proj" style={{ color: dim(0.62) }}>{c.projected.toFixed(2)}</div> : null}
+        {c.projected != null ? <div className="mt-pl-proj">proj {c.projected.toFixed(1)}</div> : null}
       </div>
     </div>
   );

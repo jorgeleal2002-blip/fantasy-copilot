@@ -71,8 +71,8 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
    * earn a third of the only control at the top of this tab. The best players
    * in the league did. */
   const screens: SegOption<LeagueView>[] = [
-    { key: 'weeks', label: 'Weeks' },
     { key: 'myteam', label: 'My team' },
+    { key: 'weeks', label: 'Weeks' },
     { key: 'rankings', label: 'Rankings' },
     { key: 'players', label: 'Players' },
   ];
