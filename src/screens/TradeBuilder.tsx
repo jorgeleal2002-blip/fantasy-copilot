@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { colorOf } from '../model/constants';
-import { evaluateTrade, fitLine, type TeamLedger, type TradeAsset } from '../model/trade-eval';
+import { evaluateTrade, fitLine, tradeHeadline, type TeamLedger, type TradeAsset } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -50,7 +50,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 
   return (
     <div className="fb">
-      <Balance v={v} fit={fit} pivot={teams.find(t => t.isMe)?.id ?? teams[0]?.id ?? null} />
+      <Balance v={v} fit={fit} pivot={teams.find(t => t.isMe)?.id ?? teams[0]?.id ?? null} dynasty={m.isDynasty} />
 
       {teams.length < 2 ? (
         <div className="fb-empty">
@@ -120,7 +120,9 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 }
 
 /** The headline and the one bar that answers the whole screen. */
-function Balance({ v, fit, pivot }: { v: ReturnType<typeof evaluateTrade>; fit: string | null; pivot: number | null }) {
+function Balance({ v, fit, pivot, dynasty }: {
+  v: ReturnType<typeof evaluateTrade>; fit: string | null; pivot: number | null; dynasty: boolean;
+}) {
   const [open, setOpen] = useState(false);
   // The bar is read from one team's side: yours when you are in it, else the
   // first team added.
@@ -129,12 +131,10 @@ function Balance({ v, fit, pivot }: { v: ReturnType<typeof evaluateTrade>; fit: 
   // Green and red are you winning and you losing; a trade you are not in is
   // neither, and is told in the plain accent.
   const inIt = v.ledgers.some(l => l.isMe);
-  const tone = !v.moved ? dim(0.62) : !v.winner ? dim(0.9)
-    : !inIt ? 'var(--color-accent)' : v.winner.isMe ? GOOD : BAD;
-
-  const head = !v.moved ? 'Nothing in the trade yet'
-    : !v.winner ? 'Even trade'
-      : v.winner.isMe ? 'You win this trade' : v.winner.name + ' wins this trade';
+  const h = tradeHeadline(v, dynasty);
+  const tone = !v.moved ? dim(0.62) : !h.winner ? dim(0.9)
+    : !inIt ? 'var(--color-accent)' : h.winner.isMe ? GOOD : BAD;
+  const head = h.title;
 
   /* The bar reads as a tug of war: dead centre is even, and it travels toward
    * whoever is gaining. Measured against the whole deal rather than against
@@ -144,6 +144,7 @@ function Balance({ v, fit, pivot }: { v: ReturnType<typeof evaluateTrade>; fit: 
   return (
     <div className="fb-bal">
       <div className="fb-bal-head" style={{ color: tone }}>{head}</div>
+      {h.why ? <div className="fb-fit" style={{ marginTop: 2 }}>{h.why}</div> : null}
       <div className="fb-bar">
         <span
           className="fb-bar-fill"
@@ -178,8 +179,9 @@ function Balance({ v, fit, pivot }: { v: ReturnType<typeof evaluateTrade>; fit: 
             <div className="fb-rows">
               {v.ledgers.map(l => <LedgerRow key={l.id} l={l} moved={v.moved} />)}
               <div className="fb-note">
-                Even is anything inside ±{Math.round(v.band).toLocaleString()} — four
-                percent of the {Math.round(v.moved).toLocaleString()} that changes hands.
+                Value counts a star above the pieces that add up to him: each player is
+                weighed against the best one in the deal, so two lesser players are worth
+                less than their sum. Even is anything inside ±{Math.round(v.band).toLocaleString()}.
               </div>
             </div>
           ) : null}

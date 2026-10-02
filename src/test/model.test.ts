@@ -39,7 +39,7 @@ import { seasonOutlook, teamStrength } from '../model/outlook';
 import { returnLine, whyMe, whyThem } from '../model/offer-copy';
 import { tradeHeadline, type LeagueTrade } from '../model/league-trades';
 import type { Offer } from '../model/types';
-import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
+import { effectiveValue, evaluateTrade, fitLine, tradeHeadline as builderHeadline, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
 import {
@@ -2606,10 +2606,11 @@ describe('the season\'s trades', () => {
   });
 
   it('names the winner with the same engine that judges a proposal', () => {
-    // 4000 out, 3000 in: you lose this one by a thousand.
+    // 4000 out, 3000 in: you lose — by more than the thousand of the raw sum,
+    // since the 4000 piece is the best in the deal and the 3000 is not.
     const [t] = readLeagueTrades([trade()], look);
     expect(t.verdict!.winner!.name).toBe('Team 2');
-    expect(t.sides[0].net).toBe(-1000);
+    expect(t.sides[0].net).toBeCloseTo(effectiveValue(3000, 4000) - 4000);
     expect(tradeOutcome(t)).toContain('Team 2 came out ahead');
   });
 
@@ -2760,7 +2761,9 @@ describe('the season\'s trades', () => {
     // A ring, which is the case sides cannot describe at all: you pay 4000 for
     // 900, team 2 pays 3000 for 4000, team 3 pays 900 for 3000. Nobody traded
     // "with" anybody and team 3 still walks away with the most.
-    expect(t.sides.map(s => s.net)).toEqual([-3100, 1000, 2100]);
+    const e = (v: number) => effectiveValue(v, 4000);
+    t.sides.map(s => s.net).forEach((n, i) =>
+      expect(n).toBeCloseTo([e(900) - 4000, 4000 - e(3000), e(3000) - e(900)][i]));
     expect(t.verdict!.winner!.name).toBe('Team 3');
   });
 });
@@ -3453,8 +3456,8 @@ describe('who wins a proposed trade', () => {
   it('names you the winner when you take back more than you send', () => {
     const v = evaluateTrade(teams.slice(0, 2), [a('gibbs', 8000, 2, 1), a('spare', 3000, 1, 2)]);
     expect(v.winner?.isMe).toBe(true);
-    expect(v.ledgers[0].net).toBe(5000);
-    expect(v.ledgers[1].net).toBe(-5000);
+    expect(v.ledgers[0].net).toBeCloseTo(8000 - effectiveValue(3000, 8000));
+    expect(v.ledgers[1].net).toBeCloseTo(-(8000 - effectiveValue(3000, 8000)));
     expect(verdictLine(v)).toContain('You win');
   });
 
@@ -3814,8 +3817,9 @@ describe('the trade on the screen', () => {
   it('gives the win to whoever takes back more, whichever team that is', () => {
     const v = evaluateTrade(teams, [a('bijan', 104, 2, 1), a('montgomery', 46, 1, 2)]);
     expect(v.winner?.isMe).toBe(true);
-    expect(v.ledgers.find(l => l.isMe)!.net).toBe(58);
-    expect(v.ledgers.find(l => l.name === 'The Price Is Right')!.net).toBe(-58);
+    const net = 104 - effectiveValue(46, 104);
+    expect(v.ledgers.find(l => l.isMe)!.net).toBeCloseTo(net);
+    expect(v.ledgers.find(l => l.name === 'The Price Is Right')!.net).toBeCloseTo(-net);
   });
 
   it('is unmoved by a third team that nothing passes through', () => {
@@ -3826,7 +3830,7 @@ describe('the trade on the screen', () => {
 
   it('still reads correctly when the player comes from the third team', () => {
     const v = evaluateTrade(teams, [a('bijan', 104, 3, 1), a('montgomery', 46, 1, 2)]);
-    expect(v.ledgers.find(l => l.isMe)!.net).toBe(58);
+    expect(v.ledgers.find(l => l.isMe)!.net).toBeCloseTo(104 - effectiveValue(46, 104));
     expect(v.ledgers.find(l => l.name === 'Third')!.net).toBe(-104);
     expect(v.winner?.isMe).toBe(true);
   });
@@ -5299,5 +5303,26 @@ describe('taking the backdrop out of an edge', () => {
     const px = { width: 2, height: 1, data: new Uint8ClampedArray([10, 20, 30, 255, 40, 50, 60, 0]) };
     defringe(px, [0, 0, 0]);
     expect(Array.from(px.data)).toEqual([10, 20, 30, 255, 40, 50, 60, 0]);
+  });
+});
+
+describe('a star against the pieces that add up to him', () => {
+  const teams = [{ id: 1, name: 'I Am Inevitable', isMe: false }, { id: 2, name: 'we are charlie kirk', isMe: false }];
+  const a = (id: string, value: number, from: number, to: number) => ({ id, name: id, value, from, to });
+
+  it('does not hand a two-for-one to the side taking two', () => {
+    // The screenshot: Swift 38 + Chase 88 for Bijan 102. Summed, 126 "beat" 102.
+    const v = evaluateTrade(teams, [a('swift', 38, 2, 1), a('chase', 88, 2, 1), a('bijan', 102, 1, 2)]);
+    expect(v.winner?.name).not.toBe('I Am Inevitable');
+  });
+
+  it('still lets a real overpay win', () => {
+    const v = evaluateTrade(teams, [a('x', 90, 2, 1), a('y', 85, 2, 1), a('bijan', 102, 1, 2)]);
+    expect(v.winner?.name).toBe('I Am Inevitable');
+  });
+
+  it('lets the lineup decide when value is even, and this season decide a redraft split', () => {
+    const v = evaluateTrade(teams, [a('swift', 38, 2, 1), a('chase', 88, 2, 1), a('bijan', 102, 1, 2)], { 1: 3.5, 2: -5.9 });
+    expect(builderHeadline(v, false).title).toMatch(/^I Am Inevitable wins this trade/);
   });
 });

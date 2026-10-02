@@ -68,6 +68,23 @@ export function fairnessBand(moved: number): number {
   return Math.max(1, moved * 0.04);
 }
 
+/**
+ * The consolidation premium: one star is worth more than two lesser players
+ * who add up to him. He takes one roster spot instead of two, and only one
+ * of them can start where he does. Summing market values ignored that, so
+ * the side taking two pieces won every two-for-one — 38 + 88 "beat" 102.
+ *
+ * Each piece counts at its value scaled by how close it is to the best piece
+ * in the deal: the best keeps all of its value, one at half his value keeps
+ * about seventy percent of it, a throw-in much less. The same rule every
+ * dynasty trade calculator applies, in a form that needs no table.
+ */
+export const CONSOLIDATION = 0.5;
+export function effectiveValue(v: number, top: number): number {
+  if (!(v > 0) || !(top > 0)) return 0;
+  return v * Math.pow(Math.min(1, v / top), CONSOLIDATION);
+}
+
 export function evaluateTrade(
   teams: TradeTeam[],
   assets: TradeAsset[],
@@ -77,7 +94,11 @@ export function evaluateTrade(
   const known = new Set(teams.map(t => t.id));
   // An asset routed to a team that is not in the deal has nowhere to land, and
   // one sent home is not a trade; both are dropped rather than scored.
-  const live = assets.filter(a => known.has(a.from) && known.has(a.to) && a.from !== a.to);
+  const raw = assets.filter(a => known.has(a.from) && known.has(a.to) && a.from !== a.to);
+  const best = raw.reduce((m, a) => Math.max(m, a.value), 0);
+  // Scored at their worth inside this deal; the asset keeps its own `value`
+  // field for anyone printing it.
+  const live = raw.map(a => ({ ...a, value: effectiveValue(a.value, best) }));
 
   const ledgers: TeamLedger[] = teams.map(t => {
     const gave = live.filter(a => a.from === t.id);
@@ -161,4 +182,39 @@ export function fitLine(v: TradeVerdict): string | null {
     return head + ', even though you win on value — you are selling from your starters';
   }
   return head + ' a week in your best lineup';
+}
+
+/**
+ * The headline: who won, weighing value and lineup the way the league's own
+ * trade log does. When they agree, one winner. When value is even, the lineup
+ * decides. When they disagree, a redraft league is decided by this season's
+ * lineup and a dynasty is a split.
+ */
+export interface Headline { title: string; winner: TeamLedger | null; why: string }
+
+export function tradeHeadline(v: TradeVerdict, dynasty: boolean): Headline {
+  const name = (l: TeamLedger) => (l.isMe ? 'You' : l.name);
+  const wins = (l: TeamLedger) => (l.isMe ? 'You win this trade' : l.name + ' wins this trade');
+  if (!v.moved) return { title: 'Nothing in the trade yet', winner: null, why: '' };
+  const measured = v.ledgers.filter(l => l.fitDelta != null);
+  const lu = measured.slice().sort((a, b) => (b.fitDelta as number) - (a.fitDelta as number))[0];
+  const lineupWin = lu && (lu.fitDelta as number) >= 0.5 ? lu : null;
+  const vw = v.winner;
+  const pts = (l: TeamLedger) => (l.fitDelta as number).toFixed(1);
+
+  if (vw && (!lineupWin || lineupWin.id === vw.id)) {
+    return { title: wins(vw), winner: vw, why: 'More value' + (lineupWin ? ' and +' + pts(lineupWin) + ' pts a week in the lineup' : '') };
+  }
+  if (!vw && lineupWin) {
+    return { title: wins(lineupWin), winner: lineupWin, why: 'Even on value, +' + pts(lineupWin) + ' pts a week in the lineup' };
+  }
+  if (!vw) return { title: 'Even trade', winner: null, why: 'Even on value and on lineup' };
+  const lw = lineupWin as TeamLedger;
+  if (!dynasty) {
+    return {
+      title: wins(lw) + ' for this season', winner: lw,
+      why: '+' + pts(lw) + ' pts a week in the lineup; ' + name(vw) + ' gets more market value',
+    };
+  }
+  return { title: 'Split: ' + name(vw) + ' on value, ' + name(lw) + ' on lineup', winner: null, why: '' };
 }
