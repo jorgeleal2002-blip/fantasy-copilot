@@ -1171,6 +1171,28 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.62);
 }
 .ps-now-state.is-live { color: var(--c-good); }
+/* How much of his projection he has, under the points: a fact while his game
+   is on, a verdict once it is over. */
+.ps-reach {
+  height: 4px;
+  margin-top: 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(242, 253, 254, 0.12);
+  overflow: hidden;
+}
+.ps-reach-fill { height: 100%; background: rgba(242, 253, 254, 0.62); }
+.ps-reach-fill.is-live { background: var(--c-mark-good); }
+/* Under the projection: where he is on pace to finish, or what he beat it by. */
+.ps-vs-proj {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 14px;
+  white-space: nowrap;
+  color: rgba(242, 253, 254, 0.62);
+  font-variant-numeric: tabular-nums;
+}
+.ps-vs-proj.is-up { color: var(--c-good); }
+.ps-vs-proj.is-down { color: var(--c-bad); }
 
 .ms-names { display: flex; align-items: flex-start; gap: 10px; }
 .ms-who-team { flex: 1; min-width: 0; }

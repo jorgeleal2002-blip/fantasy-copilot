@@ -30,8 +30,8 @@ import { WeekBars } from '../ui/charts';
 import { Card, Face, Overlay, TdBalls } from '../ui/primitives';
 import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
-import { phaseFor } from '../model/game-clock';
-import { clockLabel } from '../model/nfl-games';
+import { gameLeft, phaseFor } from '../model/game-clock';
+import { clockLabel, gameLeftOf } from '../model/nfl-games';
 import { headlineBits, statBits, touchdowns } from '../model/stat-line';
 import { projectPPG } from '../model/project';
 import { gapsIn, ordinal, type Ranked } from '../model/season';
@@ -217,6 +217,15 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   /* The game he is in — score and clock — at the top of the week's card, the
    * way Sleeper's own card has it. His side is the bright one. */
   const game = p.team ? app.nflGames[p.team] : undefined;
+  /* Against his projection, the comparison Sleeper's own card is built on:
+   * how much of it he has, where he is on pace to finish while the game is
+   * on, and what he beat it or missed it by once it is over. */
+  const got = phase && phase !== 'pre' ? (wkPts as number) : null;
+  const left = game ? gameLeftOf(game)
+    : app.week ? gameLeft(p.team, app.week, Number(app.data?.league.season), Date.now()) : null;
+  const reached = got != null && weekProj ? Math.max(0, Math.min(1, got / weekProj)) : null;
+  const pace = phase === 'live' && got != null && weekProj != null && left != null ? got + weekProj * left : null;
+  const beat = phase === 'final' && got != null && weekProj != null ? got - weekProj : null;
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
   const setter = app.photoBy(p.id);
@@ -523,19 +532,34 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         {phase ? (
           <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
             <div className={'ps-now is-' + phase}>
-              {phase === 'pre' ? '—' : (wkPts as number).toFixed(1)}
+              {phase === 'pre' ? '—' : (wkPts as number).toFixed(2)}
             </div>
             <div className={'ps-now-state is-' + phase}>
               {phase === 'live' ? 'Live' : phase === 'final' ? 'Final' : 'Not started'}
             </div>
+            {reached != null ? (
+              <div className="ps-reach" role="img" aria-label={Math.round(reached * 100) + '% of his projection'}>
+                <div className={'ps-reach-fill is-' + phase} style={{ width: (reached * 100).toFixed(1) + '%' }} />
+              </div>
+            ) : null}
           </div>
         ) : null}
         {proj != null ? (
           <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
-            <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.03em' }}>{proj.toFixed(1)}</div>
+            <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.03em' }}>
+              {proj.toFixed(weekProj != null ? 2 : 1)}
+            </div>
             <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.62), marginTop: 3 }}>
               {weekProj == null ? 'proj pts/gm' : phase ? 'proj wk ' + app.week : 'proj this week'}
             </div>
+            {pace != null ? (
+              <div className="ps-vs-proj">pace {pace.toFixed(1)}</div>
+            ) : beat != null ? (
+              <div className={'ps-vs-proj ' + (beat >= 0 ? 'is-up' : 'is-down')}
+                aria-label={(beat >= 0 ? 'beat his projection by ' : 'missed his projection by ') + Math.abs(beat).toFixed(2)}>
+                {(beat >= 0 ? '▲ ' : '▼ ') + Math.abs(beat).toFixed(2)}
+              </div>
+            ) : null}
           </div>
         ) : null}
         <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>

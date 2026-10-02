@@ -1445,8 +1445,14 @@ export function useApp() {
     for (const [wk, map] of Object.entries(gameStats)) {
       scored[Number(wk)] = scoreProjection(map[id] as Record<string, number> | undefined, scoring, kind);
     }
-    return mergeSeason(seasonPoints[id], scored);
-  }, [gameStats, seasonPoints]);
+    const log = mergeSeason(seasonPoints[id], scored);
+    /* The week being played comes off the live scoreboard, not the season
+     * payload: that one is read once and cached, so a bar for this week froze
+     * at whatever he had when the card was first opened. */
+    const now = week ? liveMatchups.find(r => r.players_points?.[id])?.players_points?.[id] : undefined;
+    if (!week || !Number.isFinite(now) || now === 0) return log;
+    return log.filter(g => g.week !== week).concat({ week, pts: now as number }).sort((a, b) => a.week - b.week);
+  }, [gameStats, seasonPoints, liveMatchups, week]);
 
   /**
    * Touchdowns this season, out of the weeks whose stat lines are in hand.
