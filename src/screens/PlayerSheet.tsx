@@ -177,7 +177,13 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const wk = app.week;
   useEffect(() => { if (wk) void app.fetchWeekStats(wk); }, [app.fetchWeekStats, wk]);
   // His photo with a plain background lifted off, for the banner.
-  const cut = useCutout(app.photoFor(playerId, 'full'));
+  /* An uploaded photo is somebody in somebody else's shirt; it gets his own
+     team's colours and number. Sleeper's own portraits are already in them. */
+  const heroPl = app.data?.players[playerId];
+  const heroColor = app.photos[playerId] && heroPl?.team && heroPl.position !== 'DEF'
+    ? NFL_COLOR[heroPl.team] : undefined;
+  const cut = useCutout(app.photoFor(playerId, 'full'),
+    heroColor ? { color: heroColor, number: heroPl?.number != null ? String(heroPl.number) : null } : null);
 
   if (!p) {
     return (

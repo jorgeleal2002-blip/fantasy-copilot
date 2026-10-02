@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { cutOut } from '../model/cutout';
 import { segmentPerson } from './segment';
+import { hexRgb, recolorClothing, rowSpan, shoulderRow } from '../model/jersey';
 
 /** Big enough for a banner on a 3x screen, small enough to clear in a frame. */
 const MAX_SIDE = 420;
@@ -73,16 +74,84 @@ async function make(url: string): Promise<string | null> {
  * The photo with its background taken off, cropped to the person — or null
  * while it is being worked out and whenever it cannot be.
  */
-export function useCutout(url: string | null): string | null {
+/** His team's colour and number, for a photo that is not in them. */
+export interface Dress { color: string; number?: string | null }
+
+const dressed = new Map<string, Promise<string | null>>();
+
+/* Recoloured off the cut-out rather than off the photo: the cut-out already
+   says which pixels are him, and the clothing is the part of him under the
+   shoulders that is not skin. */
+function dress(cut: string, how: Dress): Promise<string | null> {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        const ctx = c.getContext('2d');
+        if (!ctx) return resolve(cut);
+        ctx.drawImage(img, 0, 0);
+        const px = ctx.getImageData(0, 0, c.width, c.height);
+        const from = shoulderRow(px);
+        const changed = recolorClothing(px, hexRgb(how.color), from);
+        // His number on the chest — a little under the shoulders, in the
+        // middle of him rather than of the picture, and sized to his chest —
+        // and only where there is a shirt to put it on.
+        const chest = Math.min(c.height - 1, Math.round(from + (c.height - from) * 0.28));
+        const span = rowSpan(px, chest);
+        ctx.putImageData(px, 0, 0);
+        if (how.number && span && changed > c.width * c.height * 0.04) {
+          const size = Math.round(Math.min(span.width * 0.38, c.height * 0.2));
+          const y = chest;
+          ctx.save();
+          ctx.globalCompositeOperation = 'source-atop';
+          ctx.font = '800 ' + size + 'px system-ui, -apple-system, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.lineWidth = Math.max(2, size * 0.1);
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+          ctx.fillStyle = 'rgba(242, 253, 254, 0.9)';
+          ctx.strokeText(how.number, span.mid, y);
+          ctx.fillText(how.number, span.mid, y);
+          ctx.restore();
+        }
+        resolve(c.toDataURL('image/png'));
+      } catch {
+        resolve(cut);
+      }
+    };
+    img.onerror = () => resolve(cut);
+    img.src = cut;
+  });
+}
+
+/**
+ * The photo with its background taken off, cropped to the person and — given
+ * `how` — put in his team's colours. Null while it is being worked out and
+ * whenever it cannot be.
+ */
+export function useCutout(url: string | null, how?: Dress | null): string | null {
   const [src, setSrc] = useState<string | null>(null);
+  const color = how?.color || '';
+  const number = how?.number || '';
   useEffect(() => {
     setSrc(null);
     if (!url) return;
     let live = true;
     let job = done.get(url);
     if (!job) { job = make(url); done.set(url, job); }
-    void job.then(s => { if (live) setSrc(s); });
+    const key = url + '|' + color + '|' + number;
+    const out = color
+      ? (dressed.get(key) || (() => {
+        const j = job.then(cut => (cut ? dress(cut, { color, number }) : null));
+        dressed.set(key, j);
+        return j;
+      })())
+      : job;
+    void out.then(s => { if (live) setSrc(s); });
     return () => { live = false; };
-  }, [url]);
+  }, [url, color, number]);
   return src;
 }

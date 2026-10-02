@@ -35,6 +35,7 @@ import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
 import { headlineBits, statLine, touchdowns } from '../model/stat-line';
 import { cutOut } from '../model/cutout';
+import { hexRgb, isSkin, recolorClothing, shoulderRow } from '../model/jersey';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -5172,6 +5173,49 @@ describe('a kicker or a defence opened from a roster', () => {
       const got = model.scoreAny(pl!.player_id as string);
       expect(got?.pos).toBe(pos);
       expect(got?.fit).toBeGreaterThanOrEqual(0);
+    }
+  });
+});
+
+describe('putting him in his team colours', () => {
+  // A cut-out: a skin-toned head on top of a wider white shirt, ground clear.
+  const W = 40, H = 50;
+  const make = () => {
+    const data = new Uint8ClampedArray(W * H * 4);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const head = (x - 20) ** 2 + (y - 12) ** 2 < 64;
+      const shirt = y >= 24 && x >= 4 && x < 36;
+      const c = head ? [198, 134, 66, 255] : shirt ? [235, 235, 235, 255] : [0, 0, 0, 0];
+      data.set(c, (y * W + x) * 4);
+    }
+    return { width: W, height: H, data };
+  };
+
+  it('finds the shoulders where the body widens past the head', () => {
+    expect(shoulderRow(make())).toBe(24);
+  });
+
+  it('turns the shirt the team colour and leaves the skin alone', () => {
+    const px = make();
+    const n = recolorClothing(px, hexRgb('#00338D'), 24);
+    expect(n).toBe(32 * 26);
+    const at = (x: number, y: number) => Array.from(px.data.slice((y * W + x) * 4, (y * W + x) * 4 + 3));
+    const [r, g, b] = at(20, 40);
+    expect(b).toBeGreaterThan(r);
+    expect(b).toBeGreaterThan(g);
+    expect(at(20, 12)).toEqual([198, 134, 66]);
+    expect(isSkin(198, 134, 66)).toBe(true);
+    expect(isSkin(235, 235, 235)).toBe(false);
+  });
+});
+
+describe('telling skin from a red jersey', () => {
+  it('takes skin tones as skin and red or maroon cloth as cloth', () => {
+    for (const s of [[224, 172, 105], [198, 134, 66], [141, 85, 36], [95, 60, 40]]) {
+      expect(isSkin(s[0], s[1], s[2]), String(s)).toBe(true);
+    }
+    for (const c of [[180, 30, 50], [120, 20, 40], [165, 0, 52]]) {
+      expect(isSkin(c[0], c[1], c[2]), String(c)).toBe(false);
     }
   });
 });
