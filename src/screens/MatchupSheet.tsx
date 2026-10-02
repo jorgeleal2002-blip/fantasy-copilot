@@ -2,7 +2,8 @@ import { Fragment, useEffect } from 'react';
 import { benchRows, leaderOf, lineupRows, pairMatchups, type LineupCell, type MatchupSide } from '../model/matchups';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
-import { CELL_INK, slotFill } from '../model/constants';
+import { CELL_INK, MATCHUP_LIVE_POLL_MS, slotFill } from '../model/constants';
+import { clockFor, weekLive } from '../model/game-clock';
 import { byeOf } from '../model/sos';
 import { statLine } from '../model/stat-line';
 import { Face, Overlay } from '../ui/primitives';
@@ -28,9 +29,22 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
   // The whole league's week in one payload, so it is asked for here — the one
   // screen that draws a stat line — rather than polled beside the scores.
   const wk = app.week;
-  useEffect(() => { if (wk) void app.fetchWeekStats(wk); }, [app.fetchWeekStats, wk]);
+  const season = m.league.season;
+  useEffect(() => {
+    if (!wk) return;
+    void app.fetchWeekStats(wk);
+    // The stat lines move every play, so while games are on they follow the
+    // scores instead of waiting out the projections' five-minute clock.
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible' && weekLive(wk, Number(season), Date.now())) {
+        void app.fetchWeekStats(wk, true);
+      }
+    }, MATCHUP_LIVE_POLL_MS * 2);
+    return () => window.clearInterval(id);
+  }, [app.fetchWeekStats, wk, season]);
 
-  const games = pairMatchups(m.leagueRows, app.matchups, app.projections);
+  const games = pairMatchups(m.leagueRows, app.matchups, app.projections,
+    clockFor(app.data?.players || {}, wk, season, Date.now()));
   const game = games.find(g => ids.includes(g.a.rosterId) && (g.b ? ids.includes(g.b.rosterId) : ids.length === 1));
 
   if (!game) {

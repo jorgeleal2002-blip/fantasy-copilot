@@ -7,7 +7,8 @@ import {
 import type {
   LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup, SleeperStatLine, SleeperTransaction,
 } from '../api/types';
-import { DRAFT_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, RESUME_REFRESH_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_GOOGLE, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import { weekLive } from '../model/game-clock';
+import { DRAFT_POLL_MS, MATCHUP_LIVE_POLL_MS, MATCHUP_POLL_MS,PROJ_TTL_MS, RESUME_REFRESH_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_GOOGLE, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
   EMPTY_ROOM, PHOTO_MAX_BYTES, claimSeat, createRoom as createRoomAt, dropPhoto, liveEnabled,
   liveReason, newRoomId, pushPick, putPhoto, readPhotos, readRoom, restartRoom, startRoom,
@@ -296,6 +297,7 @@ export function useApp() {
   nflWeekRef.current = nflWeek;
   const syncedAtRef = useRef<number | null>(null);
   syncedAtRef.current = syncedAt;
+  const scoresAtRef = useRef(0);
 
   /**
    * Sleeper's projections for the week, scored in this league's own settings.
@@ -509,6 +511,7 @@ export function useApp() {
     // A poll must not blank the scores it is refreshing, so it stays quiet and
     // only a first load or a week change shows the loading state.
     if (!quiet) setMatchupState('loading');
+    scoresAtRef.current = Date.now();
     try {
       const rows = await getMatchups(lid, wk);
       setMatchups(Array.isArray(rows) ? rows : []);
@@ -781,13 +784,19 @@ export function useApp() {
   }, [leagueId, syncClock]);
 
   /* Scores move while games are on. Quietly, so the numbers change under you
-   * instead of the section blinking through a loading state every minute. */
+   * instead of the section blinking through a loading state. Fast while a game
+   * of the week is being played, slow otherwise, and not at all from the
+   * background — coming back re-reads them through `syncClock`. */
   useEffect(() => {
     if (!leagueId || week == null) return;
-    const id = window.setInterval(
-      () => void fetchMatchups(leagueId, week, true),
-      MATCHUP_POLL_MS,
-    );
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      const now = Date.now();
+      const season = Number(dataRef.current?.league.season);
+      const every = weekLive(week, season, now) ? MATCHUP_LIVE_POLL_MS : MATCHUP_POLL_MS;
+      if (now - scoresAtRef.current < every - 1000) return;
+      void fetchMatchups(leagueId, week, true);
+    }, MATCHUP_LIVE_POLL_MS);
     return () => window.clearInterval(id);
   }, [leagueId, week, fetchMatchups]);
 

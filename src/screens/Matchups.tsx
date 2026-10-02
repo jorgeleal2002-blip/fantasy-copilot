@@ -1,3 +1,4 @@
+import { clockFor } from '../model/game-clock';
 import { leaderOf, pairMatchups, type Matchup, type MatchupSide } from '../model/matchups';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -17,7 +18,8 @@ const score = (p: number | null) => (p == null ? '—' : p.toFixed(2));
  */
 export function Matchups({ app, m }: { app: App; m: Model }) {
   const week = app.week;
-  const games = pairMatchups(m.leagueRows, app.matchups, app.projections);
+  const games = pairMatchups(m.leagueRows, app.matchups, app.projections,
+    clockFor(app.data?.players || {}, week, m.league.season, Date.now()));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>

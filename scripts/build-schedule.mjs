@@ -67,6 +67,30 @@ games.forEach(r => {
 const teams = Object.keys(opp).sort();
 teams.forEach(t => { for (let i = 0; i < weeks; i++) opp[t][i] = opp[t][i] || ''; });
 
+/* nflverse writes kickoff as a date and a time in US Eastern, on whichever
+ * side of daylight saving that date falls. */
+const nyOffsetMin = (utcMs) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', hourCycle: 'h23',
+    year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric',
+  }).formatToParts(new Date(utcMs));
+  const n = (t) => Number(parts.find(p => p.type === t).value);
+  return (Date.UTC(n('year'), n('month') - 1, n('day'), n('hour'), n('minute')) - utcMs) / 60000;
+};
+const kickoffMin = (day, time) => {
+  const [y, m, d] = day.split('-').map(Number);
+  const [h, mi] = (time || '13:00').split(':').map(Number);
+  const wall = Date.UTC(y, m - 1, d, h, mi);
+  return Math.round((wall - nyOffsetMin(wall) * 60000) / 60000);
+};
+const kick = {};
+teams.forEach(t => { kick[t] = new Array(weeks).fill(0); });
+games.forEach(r => {
+  const w = Number(r.week) - 1, at = kickoffMin(r.gameday, r.gametime);
+  kick[team(r.home_team)][w] = at;
+  kick[team(r.away_team)][w] = at;
+});
+
 const rows = await csv(WEEKS);
 const pts = {}, played = {};
 rows.forEach(r => {
@@ -89,7 +113,7 @@ teams.forEach(t => {
 
 const q = (s) => "'" + s + "'";
 const out = `/**
- * The NFL season, as two small tables.
+ * The NFL season, as three small tables.
  *
  * GENERATED — do not edit by hand. \`node scripts/build-schedule.mjs ${SEASON}\`
  * rebuilds it from nflverse; the header of that script says what from and why
@@ -110,6 +134,12 @@ export const PLAYOFF_WEEKS: number[] = [${weeks - 3}, ${weeks - 2}, ${weeks - 1}
 /** Who each team plays, week 1 first. An empty string is their bye. */
 export const OPPONENTS: Record<string, string[]> = {
 ${teams.map(t => '  ' + t + ': [' + opp[t].map(q).join(', ') + '],').join('\n')}
+};
+
+/** Each team's kickoff, week 1 first, in minutes since the Unix epoch (UTC).
+ *  0 is their bye. Minutes rather than milliseconds only to keep it small. */
+export const KICKOFF_MIN: Record<string, number[]> = {
+${teams.map(t => '  ' + t + ': [' + kick[t].join(', ') + '],').join('\n')}
 };
 
 /** PPR fantasy points per game each defence gave up in ${PRIOR}, by the

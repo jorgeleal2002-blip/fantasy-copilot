@@ -409,9 +409,12 @@ export const BASE_ROUND_VALUE: Record<number, number> = { 1: 42, 2: 16, 3: 7, 4:
 
 /** How often the draft board re-reads picks while a draft is live. */
 export const DRAFT_POLL_MS = 20000;
-/** Scores move while games are on; a minute is often enough to feel live
- *  without asking Sleeper for the same numbers every few seconds. */
-export const MATCHUP_POLL_MS = 45000;
+/** Scores while a game of the week is on. Sleeper's own app moves about this
+ *  often, and forty-five seconds read as a scoreboard that had stalled. */
+export const MATCHUP_LIVE_POLL_MS = 15000;
+/** Scores while nothing is being played — stat corrections, a flexed kickoff
+ *  the bundled schedule does not know about. */
+export const MATCHUP_POLL_MS = 60000;
 /**
  * How long a week's projections stand before they are re-read.
  *

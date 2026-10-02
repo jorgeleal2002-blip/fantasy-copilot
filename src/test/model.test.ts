@@ -14,7 +14,8 @@ import { projectConfidence, projectPPG } from '../model/project';
 import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS } from './fixture';
 import { nextDetailStack, topDetail } from '../state/detail-stack';
 import { isInLeague, isMockEligible } from '../model/mock-pool';
-import { ALLOWED, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedule';
+import { ALLOWED, KICKOFF_MIN, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedule';
+import { GAME_MIN, OVER_MIN, gameLeft, weekLive } from '../model/game-clock';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
@@ -28,7 +29,7 @@ import { SCREEN_TRUST, bestHeight } from '../model/viewport';
 import { FULL_SQ, THUMB_SQ, playerPhotoSet } from '../api/sleeper';
 import { PULL_MAX, PULL_RESIST, PULL_SLOP, PULL_TRIGGER, edgeAt, pullArmed, pullFrom, pullProgress } from '../model/pull';
 import { PHOTO_PX, PHOTO_Q, PHOTO_Q_FLOOR, pickEncoding } from '../model/photo';
-import { projectionsAreStale, readProjections, scoreProjection, scoringKind, statsForWeek } from '../model/projections';
+import { projectSide, projectionsAreStale, readProjections, scoreProjection, scoringKind, statsForWeek } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
 import { statLine } from '../model/stat-line';
@@ -4994,5 +4995,41 @@ describe('who gets to age well', () => {
     // replacement-level 31-year-old receiver is a rising asset.
     expect(Math.max(...gains)).toBeLessThanOrEqual(1);
     expect(gains.filter(g => g > 0).length).toBeLessThan(past.length * 0.1);
+  });
+});
+
+describe('game clock and the live projection', () => {
+  const PIT_W4 = Date.UTC(2026, 9, 2, 0, 15);
+  const MIN = 60000;
+
+  it('reads kickoff in UTC across daylight saving', () => {
+    expect(KICKOFF_MIN.PIT[3] * MIN).toBe(PIT_W4);
+    expect(KICKOFF_MIN.PIT[9] * MIN).toBe(Date.UTC(2026, 10, 16, 1, 20));
+  });
+
+  it('runs the clock from kickoff to the end of the game', () => {
+    expect(gameLeft('PIT', 4, 2026, PIT_W4 - MIN)).toBe(1);
+    expect(gameLeft('PIT', 4, 2026, PIT_W4 + (GAME_MIN / 2) * MIN)).toBeCloseTo(0.5);
+    expect(gameLeft('PIT', 4, 2026, PIT_W4 + 300 * MIN)).toBe(0);
+    expect(gameLeft('PIT', 4, 2025, PIT_W4)).toBeNull();
+    expect(gameLeft(null, 4, 2026, PIT_W4)).toBeNull();
+  });
+
+  it('knows when a week has a game on', () => {
+    expect(weekLive(4, 2026, PIT_W4 + 60 * MIN)).toBe(true);
+    expect(weekLive(4, 2026, PIT_W4 - 60 * MIN)).toBe(false);
+    expect(weekLive(4, 2026, PIT_W4 + (OVER_MIN + 1) * MIN)).toBe(false);
+  });
+
+  it('adds what is left of a projection to a player whose game is on', () => {
+    const proj = { a: 15, b: 10 };
+    const half = (id: string) => (id === 'a' ? 0.5 : 1);
+    expect(projectSide(['a', 'b'], proj, { a: 6 }, half)?.total).toBe(23.5);
+    // over: what he scored, and nothing more
+    expect(projectSide(['a', 'b'], proj, { a: 6 }, () => 0)?.total).toBe(16);
+    // no clock: the old reading, what he has so far
+    expect(projectSide(['a', 'b'], proj, { a: 6 })?.total).toBe(16);
+    // on zero, still read as yet to play whatever the clock says
+    expect(projectSide(['a', 'b'], proj, { a: 0 }, () => 0)?.total).toBe(25);
   });
 });

@@ -58,6 +58,7 @@ export function pairMatchups(
   teams: TeamLike[],
   rows: SleeperMatchup[],
   projections?: Record<string, number> | null,
+  left?: (id: string) => number | null,
 ): Matchup[] {
   const byRoster = new Map(teams.map(t => [t.id, t]));
   const proj = projections || {};
@@ -66,7 +67,7 @@ export function pairMatchups(
     if (!t) return null; // a roster the league no longer lists
     // Blended with what the lineup has already scored, so it moves with the
     // score rather than sitting still beside it.
-    const p = projectSide(r.starters, proj, r.players_points);
+    const p = projectSide(r.starters, proj, r.players_points, left);
     return {
       rosterId: r.roster_id,
       name: t.name,

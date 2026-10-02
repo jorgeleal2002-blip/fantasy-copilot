@@ -6,8 +6,8 @@ import type {
 
 const API = 'https://api.sleeper.app/v1';
 
-export async function get<T>(path: string): Promise<T> {
-  const r = await fetch(API + path);
+export async function get<T>(path: string, init?: RequestInit): Promise<T> {
+  const r = await fetch(API + path, init);
   if (!r.ok) throw new Error(path.split('/')[1] + ' ' + r.status);
   return r.json() as Promise<T>;
 }
@@ -118,7 +118,8 @@ export const getUsers = (lid: string) => get<SleeperUser[]>('/league/' + lid + '
 export const getTradedPicks = (lid: string) => get<SleeperTradedPick[]>('/league/' + lid + '/traded_picks');
 export const getDraftPicks = (draftId: string) => get<SleeperPick[]>('/draft/' + draftId + '/picks');
 export const getMatchups = (lid: string, week: number) =>
-  get<SleeperMatchup[]>('/league/' + lid + '/matchups/' + week);
+  // A live score the browser answers from its own cache is a stale one.
+  get<SleeperMatchup[]>('/league/' + lid + '/matchups/' + week, { cache: 'no-store' });
 export const getNflState = () => get<SleeperNflState>('/state/nfl');
 /** Sleeper keeps transactions a week at a time; there is no endpoint for the
  *  season, so a season is that call repeated. */
