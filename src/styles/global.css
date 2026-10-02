@@ -2270,18 +2270,21 @@ button { font-family: inherit; }
    Sleeper's portraits do — nothing to fade, because there is no ground left
    to hide. Only a little dimming, so a white shirt does not outshine the name. */
 .ps-hero-face.is-cut img {
-  left: 6px;
-  top: auto;
-  bottom: 0;
-  width: auto;
-  /* Up to where the name begins — see `.ps-hero-body` — and no further. */
-  max-width: 120px;
-  height: 94%;
-  object-fit: contain;
-  object-position: left bottom;
+  /* The space up to where the name begins, filled from the head down: a
+     full-body or wide-shouldered photo is cropped, never shrunk, so every face
+     comes out the same size — the way Sleeper's portraits do. */
+  left: 0;
+  top: 8px;
+  bottom: auto;
+  width: 132px;
+  height: calc(100% - 8px);
+  max-width: none;
+  object-fit: cover;
+  object-position: center top;
   filter: brightness(0.92);
-  -webkit-mask-image: none;
-  mask-image: none;
+  /* Whatever is cut off at the right fades rather than ending on a line. */
+  -webkit-mask-image: linear-gradient(to right, black 82%, transparent 100%);
+  mask-image: linear-gradient(to right, black 82%, transparent 100%);
 }
 .ps-hero-edit {
   position: absolute;
@@ -2358,7 +2361,7 @@ button { font-family: inherit; }
      "237 lbs" under WEIGHT alone wants a third of it. */
   .ps-hero { gap: 10px; padding-left: 12px; padding-right: 12px; }
   .ps-hero-body { margin-left: 90px; }
-  .ps-hero-face.is-cut img { max-width: 90px; }
+  .ps-hero-face.is-cut img { width: 102px; }
   .ps-hero-facts { gap: 6px; }
   .ps-hero-last { font-size: 21px; line-height: 24px; }
   .ps-hero-v { font-size: 13px; line-height: 16px; }
