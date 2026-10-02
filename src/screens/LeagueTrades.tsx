@@ -8,7 +8,7 @@ import {
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
-import { Card, Empty } from '../ui/primitives';
+import { Card, Empty, Face } from '../ui/primitives';
 import { cardNote, dim, ellipsis } from '../ui/styles';
 
 /**
@@ -141,7 +141,7 @@ function TradeCard({ app, m, t }: { app: App; m: Model; t: LeagueTrade }) {
               {s.name} {s.isMe ? 'get' : 'gets'}
             </div>
             {s.got.length
-              ? s.got.map(mv => <Piece key={mv.id} mv={mv} />)
+              ? s.got.map(mv => <Piece key={mv.id} app={app} mv={mv} />)
               : <div style={{ fontSize: 10, color: dim(0.52) }}>nothing</div>}
             {s.net != null ? (
               <div style={{
@@ -249,9 +249,20 @@ function Column({ app, label, list }: { app: App; label: string; list: TradeMove
   );
 }
 
-function Piece({ mv }: { mv: TradeMove }) {
+function Piece({ app, mv }: { app: App; mv: TradeMove }) {
+  // A player's face, with his team's logo on its corner, above his name; a
+  // pick or a budget line has neither, and keeps its name alone.
+  const pid = mv.kind === 'player' ? mv.id.slice(1) : null;
+  const open = pid ? () => app.setDetail(pid) : undefined;
   return (
-    <div style={{ marginBottom: 4 }}>
+    <div
+      style={{ marginBottom: 10, cursor: open ? 'pointer' : 'default' }}
+      role={open ? 'button' : undefined}
+      tabIndex={open ? 0 : undefined}
+      onClick={open}
+      onKeyDown={open ? e => { if (e.key === 'Enter') open(); } : undefined}
+    >
+      {pid ? <div style={{ marginBottom: 6 }}><Face {...app.photoSet(pid)} pos={mv.pos || '—'} size={44} round /></div> : null}
       <div style={{ fontSize: 12, ...ellipsis }}>{mv.name}</div>
       {mv.note ? <div style={{ fontSize: 10, color: dim(0.52), ...ellipsis }}>{mv.note}</div> : null}
     </div>

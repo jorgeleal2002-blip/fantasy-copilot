@@ -6,7 +6,8 @@ import type { BlockReturn, Model, Offer, TradeAsset } from '../model/types';
 import type { App } from '../state/useApp';
 import { clockTime } from '../ui/format';
 import { PlayerSearch } from '../ui/PlayerSearch';
-import { Card, Empty, Screen, Segmented, type SegOption } from '../ui/primitives';
+import { Card, Empty, Face, Screen, Segmented, type SegOption } from '../ui/primitives';
+import type { PhotoSet } from '../api/sleeper';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
 import { TradeBuilder } from './TradeBuilder';
 import { LeagueTrades } from './LeagueTrades';
@@ -262,6 +263,7 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
           label="Receive"
           color={GOOD}
           asset={o.get}
+          photo={o.get.isPick ? undefined : app.photoSet(o.get.id)}
           onOpen={o.get.isPick ? undefined : () => app.setDetail(o.get.id)}
         />
         <div className="of-swap">⇄</div>
@@ -270,6 +272,7 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
           color={BAD}
           asset={o.give}
           align="right"
+          photo={o.give.isPick ? undefined : app.photoSet(o.give.id)}
           onOpen={o.give.isPick ? undefined : () => app.setDetail(o.give.id)}
         />
       </div>
@@ -291,9 +294,10 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
 }
 
 function Side({
-  label, color, asset, onOpen, align,
+  label, color, asset, onOpen, align, photo,
 }: {
   label: string; color: string; asset: TradeAsset; onOpen?: () => void; align?: 'right';
+  photo?: PhotoSet;
 }) {
   return (
     <div
@@ -305,6 +309,9 @@ function Side({
       style={{ cursor: onOpen ? 'pointer' : 'default' }}
     >
       <div className="of-k" style={{ color }}>{label}</div>
+      {!asset.isPick && photo ? (
+        <div className="of-face"><Face {...photo} pos={asset.pos} size={44} round /></div>
+      ) : null}
       <div className="of-name">{asset.name}</div>
       <div className="of-meta">{assetMeta(asset)}</div>
       {/* "market" said once, in the verdict above, rather than after each of

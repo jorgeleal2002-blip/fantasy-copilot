@@ -2837,6 +2837,8 @@ button { font-family: inherit; }
   text-transform: uppercase;
   margin-bottom: 4px;
 }
+.of-face { margin: 4px 0 6px; }
+.of-side.is-right .of-face { display: flex; justify-content: flex-end; }
 .of-name {
   font-size: 13px;
   font-weight: 500;
