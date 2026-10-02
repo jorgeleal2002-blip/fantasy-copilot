@@ -64,9 +64,14 @@ export function depthAfter(
     if (!starts) continue;
     const have = Math.max(0, (before[pos] || 0) + (inn[pos] || 0) - (out[pos] || 0));
     const spare = have - starts;
-    // Short of the slots it must fill, or filling them with nobody behind.
-    if (spare < 0) result.push({ pos, have, starts, state: 'short' });
-    else if (spare === 0) result.push({ pos, have, starts, state: 'thin' });
+    /* Short of the slots it must fill, or filling them with nobody behind —
+       but only where this trade took somebody away. Nearly every team holds
+       one quarterback and one tight end, so "thin at QB and TE" came up on
+       both sides of a trade of backs and receivers, about a roster the deal
+       never touched. */
+    const sent = (out[pos] || 0) > (inn[pos] || 0);
+    if (sent && spare < 0) result.push({ pos, have, starts, state: 'short' });
+    else if (sent && spare === 0) result.push({ pos, have, starts, state: 'thin' });
     /* Only where the trade ADDED to the pile. A team already deep at a
        position has not been handed a problem by a deal that swapped one of
        them for another — it is as deep as it was — and a card about this deal
@@ -83,30 +88,10 @@ export function depthAfter(
     || a.pos.localeCompare(b.pos));
 }
 
-/**
- * The depth readings as one line instead of a chip each.
- *
- * Three chips saying "Thin at QB · 1 for 1", "Thin at TE · 1 for 1" and
- * "Stacked at WR · 6 for 2" is three boxes to read one thought, on a card that
- * already carries a verdict, three meters and the byes. And none of them said
- * WHEN: a man holding two tight ends and sending one read "Thin at TE · 1 for
- * 1" as a statement about his team as it stands, and asked why it could not
- * count the one on his bench. It is counting it. The one left is the one on his
- * bench, and he is about to be the only one.
- *
- * So the line says after, once, for all of them.
- */
-export function depthSentence(depth: PosDepth[]): string {
-  if (!depth.length) return '';
-  const names = (s: DepthState) => depth.filter(d => d.state === s).map(d => d.pos);
-  const list = (xs: string[]) =>
-    (xs.length > 1 ? xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1] : xs[0]) as string;
-  const bits: string[] = [];
-  const short = names('short');
-  const thin = names('thin');
-  const stacked = names('stacked');
-  if (short.length) bits.push('short at ' + list(short));
-  if (thin.length) bits.push('thin at ' + list(thin));
-  if (stacked.length) bits.push('stacked at ' + list(stacked));
-  return 'After this: ' + bits.join(' · ');
+/** One reading as a chip: what it leaves the lineup, in a manager's words. */
+export function depthChip(d: PosDepth): { icon: string; pos: Pos; text: string } {
+  const spots = d.starts + (d.starts === 1 ? ' spot' : ' spots');
+  if (d.state === 'short') return { icon: '⚠️', pos: d.pos, text: 'only ' + d.have + ' for ' + spots };
+  if (d.state === 'thin') return { icon: '⚠️', pos: d.pos, text: 'no backup left' };
+  return { icon: '📦', pos: d.pos, text: d.have + ' for ' + spots };
 }

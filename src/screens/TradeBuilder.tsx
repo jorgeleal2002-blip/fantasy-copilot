@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { colorOf } from '../model/constants';
 import { evaluateTrade, type RosterRoom, type TeamLedger, type TradeAsset } from '../model/trade-eval';
 import { fitHeadline, outcomeFor, situationLabel, situationOf, type FitHeadline, type Outcome, type TeamCase } from '../model/team-verdict';
-import { depthAfter, depthSentence, type PosDepth } from '../model/depth';
+import { depthAfter, depthChip, type PosDepth } from '../model/depth';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import type { Pos } from '../api/types';
 import type { Model } from '../model/types';
@@ -278,46 +278,46 @@ function Scorecard({ l, c, moved, dynasty, season, avatar, depth }: {
           text={sign(c.playoffs) + ' pts/wk'} />
       ) : null}
 
-      {season?.byes.length || season?.injured.length || l.cuts.length ? (
-        <div className="fb-sc-tags">
-          {season?.byes.map(b => (
-            <span key={'b' + b.week} className="fb-tag" title={'Bye week ' + b.week}>
-              💤 <b>W{b.week}</b> {b.names.join(', ')}
-            </span>
-          ))}
-          {season?.injured.map(i => (
-            <span key={'i' + i.name} className="fb-tag is-bad" title={i.status}>
-              🩹 {i.name} <b>{injuryCode(i.status)}</b>
-            </span>
-          ))}
-          {/* The spot, not the man. It named him — "✂️ Evan McPherson" — which
-              is the app deciding who somebody else drops, and nobody drops the
-              player a model picked for them. The cost is real and stays; the
-              casting does not. */}
-          {l.cuts.length ? (
-            <span className="fb-tag is-bad" title="Roster full: a spot has to come from somewhere">
-              ✂️ Roster full · <b>{l.cuts.length}</b> to drop
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* One line, not a chip each. Three boxes saying "Thin at QB · 1 for 1",
-          "Thin at TE · 1 for 1" and "Stacked at WR · 6 for 2" is three things
-          to read for one thought, on a card that already carries a verdict,
-          three meters and the byes — and none of them said WHEN, so a man
-          holding two tight ends and sending one read it as a statement about
-          the team he has. */}
-      {depth.length || (season && Math.abs(season.thinner) >= 0.3) ? (
-        <div className="fb-sc-after">
-          {depthSentence(depth)}
-          {depth.length && season && Math.abs(season.thinner) >= 0.3 ? ' · ' : ''}
-          {season && Math.abs(season.thinner) >= 0.3
-            ? (season.thinner > 0 ? 'byes cost ' : 'byes save ')
-              + Math.abs(season.thinner).toFixed(1) + ' pts/wk more'
-            : ''}
-        </div>
-      ) : null}
+      {(() => {
+        /* The bye cost is already inside the Season bar; the chip says how
+           much of that bar it is, as points like everything else here. */
+        const bye = season && Math.abs(season.thinner) >= 0.3 ? season.thinner : 0;
+        const any = season?.byes.length || season?.injured.length || l.cuts.length || depth.length || bye;
+        return any ? (
+          <div className="fb-sc-tags">
+            {depth.map(x => {
+              const chip = depthChip(x);
+              return (
+                <span key={'d' + x.pos} className={'fb-tag' + (x.state === 'stacked' ? '' : ' is-bad')}>
+                  {chip.icon} <b>{chip.pos}</b> {chip.text}
+                </span>
+              );
+            })}
+            {season?.byes.map(b => (
+              <span key={'b' + b.week} className="fb-tag" title={'Bye week ' + b.week}>
+                💤 Bye <b>W{b.week}</b> {b.names.join(', ')}
+              </span>
+            ))}
+            {bye ? (
+              <span className={'fb-tag' + (bye > 0 ? ' is-bad' : ' is-good')}
+                title="Points the bye weeks take from the lineup, versus before the trade">
+                💤 Bye holes <b>{bye > 0 ? '−' : '+'}{Math.abs(bye).toFixed(1)} pts/wk</b>
+              </span>
+            ) : null}
+            {season?.injured.map(i => (
+              <span key={'i' + i.name} className="fb-tag is-bad" title={i.status}>
+                🩹 {i.name} <b>{injuryCode(i.status)}</b>
+              </span>
+            ))}
+            {/* The spot, not the man: nobody drops the player a model picked for them. */}
+            {l.cuts.length ? (
+              <span className="fb-tag is-bad" title="Roster full: a spot has to come from somewhere">
+                ✂️ Roster full · <b>{l.cuts.length}</b> to drop
+              </span>
+            ) : null}
+          </div>
+        ) : null;
+      })()}
     </div>
   );
 }

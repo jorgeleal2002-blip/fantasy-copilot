@@ -2940,13 +2940,6 @@ button { font-family: inherit; }
 }
 /* The shape the deal leaves, in one quiet line under the chips rather than a
    filled box per reading. */
-.fb-sc-after {
-  font-size: 12px;
-  line-height: 18px;
-  color: rgba(242, 253, 254, 0.62);
-  margin-top: 8px;
-  text-wrap: pretty;
-}
 .fb-sc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
 .fb-tag {
   font-size: 12px;
@@ -2959,6 +2952,8 @@ button { font-family: inherit; }
 .fb-tag b { font-weight: 600; color: rgba(242, 253, 254, 0.9); }
 .fb-tag.is-bad { color: var(--c-bad); background: color-mix(in srgb, var(--c-bad) 12%, transparent); }
 .fb-tag.is-bad b { color: var(--c-bad); }
+.fb-tag.is-good { color: var(--c-good); background: color-mix(in srgb, var(--c-good) 12%, transparent); }
+.fb-tag.is-good b { color: var(--c-good); }
 .fb-how { display: flex; flex-direction: column; }
 .fb-how-list {
   display: flex;

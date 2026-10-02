@@ -20,7 +20,7 @@ import { clockLabel, gameLeftOf, readNflGames } from '../model/nfl-games';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots, withLiveStats } from '../model/matchups';
-import { depthAfter, depthSentence } from '../model/depth';
+import { depthAfter, depthChip } from '../model/depth';
 import { PRIOR_MIN, USAGE_DECAY, USAGE_WEIGHTS } from '../model/constants';
 import { PROD_SHARE_BASE, PROD_SHARE_MAX, PROD_SHARE_MAX_REDRAFT, poolFloor, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
@@ -5506,10 +5506,17 @@ describe('what a trade leaves a roster looking like', () => {
   });
 
   it('puts the worst first, because that is the one worth reading', () => {
-    const roster = [...many('QB', 1), ...many('RB', 3), ...many('WR', 6), ...many('TE', 1)];
-    const d = depthAfter(roster, ['WR'], [], SLOTS);
+    const roster = [...many('QB', 1), ...many('RB', 4), ...many('WR', 6), ...many('TE', 1)];
+    const d = depthAfter(roster, ['WR'], ['RB'], SLOTS);
     expect(d[0]?.state).toBe('thin');
     expect(d[d.length - 1]?.state).toBe('stacked');
+  });
+
+  it('says nothing about a position the trade did not take from', () => {
+    // One quarterback and one tight end, as most teams hold: a trade of a
+    // back for a back leaves them exactly as they were.
+    const roster = [...many('QB', 1), ...many('RB', 5), ...many('WR', 5), ...many('TE', 1)];
+    expect(depthAfter(roster, ['RB'], ['RB'], SLOTS)).toEqual([]);
   });
 
 });
@@ -5622,32 +5629,18 @@ describe('what being thin costs, in the points themselves', () => {
   });
 });
 
-/* Three chips to read one thought, and not one of them said WHEN. A man
-   holding two tight ends and sending one read "Thin at TE · 1 for 1" as a
-   statement about the team he has, and asked why it could not count the one on
-   his bench. It was counting it: the one left IS the one on his bench. */
-describe('the depth readings as a sentence', () => {
-  const d = (pos: string, state: 'short' | 'thin' | 'stacked') =>
-    ({ pos: pos as Pos, have: 1, starts: 1, state });
+/* "After this: thin at QB and TE" read as a riddle on a card about a trade
+   of backs. Each reading now says what it means for the lineup, in words a
+   manager uses. */
+describe('the depth readings as chips', () => {
+  const d = (pos: string, have: number, starts: number, state: 'short' | 'thin' | 'stacked') =>
+    ({ pos: pos as Pos, have, starts, state });
 
-  it('says nothing when there is nothing to say', () => {
-    expect(depthSentence([])).toBe('');
-  });
-
-  it('says when, because that was the whole confusion', () => {
-    expect(depthSentence([d('TE', 'thin')])).toBe('After this: thin at TE');
-  });
-
-  it('gathers the positions in a state rather than repeating the state', () => {
-    expect(depthSentence([d('QB', 'thin'), d('TE', 'thin')]))
-      .toBe('After this: thin at QB and TE');
-    expect(depthSentence([d('QB', 'thin'), d('TE', 'thin'), d('RB', 'thin')]))
-      .toBe('After this: thin at QB, TE and RB');
-  });
-
-  it('keeps the states apart and in the order they matter', () => {
-    expect(depthSentence([d('RB', 'short'), d('QB', 'thin'), d('WR', 'stacked')]))
-      .toBe('After this: short at RB · thin at QB · stacked at WR');
+  it('says what each state does to the lineup', () => {
+    expect(depthChip(d('RB', 2, 3, 'short'))).toEqual({ icon: '⚠️', pos: 'RB', text: 'only 2 for 3 spots' });
+    expect(depthChip(d('TE', 1, 1, 'thin'))).toEqual({ icon: '⚠️', pos: 'TE', text: 'no backup left' });
+    expect(depthChip(d('WR', 6, 3, 'stacked'))).toEqual({ icon: '📦', pos: 'WR', text: '6 for 3 spots' });
+    expect(depthChip(d('TE', 3, 1, 'stacked')).text).toBe('3 for 1 spot');
   });
 });
 
