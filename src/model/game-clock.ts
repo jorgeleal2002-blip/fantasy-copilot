@@ -28,6 +28,16 @@ export function gameLeft(team: string | null | undefined, week: number, season: 
   return Math.max(0, 1 - run / GAME_MIN);
 }
 
+export type GamePhase = 'pre' | 'live' | 'final';
+
+/** Where a team's game is: not kicked off, on (overtime included), or over. */
+export function gamePhase(team: string | null | undefined, week: number, season: number, now: number): GamePhase | null {
+  const at = kickoff(team, week, season);
+  if (at == null) return null;
+  if (now < at) return 'pre';
+  return now < at + OVER_MIN * 60000 ? 'live' : 'final';
+}
+
 /** `gameLeft` by player id, for the week on screen. */
 export function clockFor(
   players: PlayerCatalog,

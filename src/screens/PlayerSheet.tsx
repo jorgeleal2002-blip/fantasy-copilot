@@ -30,6 +30,7 @@ import { WeekBars } from '../ui/charts';
 import { Card, Face, Overlay } from '../ui/primitives';
 import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
+import { gamePhase } from '../model/game-clock';
 import { statBits } from '../model/stat-line';
 import { projectPPG } from '../model/project';
 import { gapsIn, ordinal, type Ranked } from '../model/season';
@@ -194,6 +195,15 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const weekProj = Number.isFinite(app.projections[p.id]) ? app.projections[p.id] : null;
   const modelProj = projectPPG(p.use);
   const proj = weekProj ?? modelProj;
+  /* What he has this week, out of the scoreboard feed — his league's own
+   * scoring, and moving with it while his game is on. Only a rostered player
+   * is in that feed, and only a rostered player is worth a live number. */
+  const wkPts = app.week
+    ? app.matchups.find(r => r.players?.includes(p.id))?.players_points?.[p.id]
+    : undefined;
+  const phase = app.week && Number.isFinite(wkPts)
+    ? gamePhase(p.team, app.week, Number(app.data?.league.season), Date.now())
+    : null;
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
   const setter = app.photoBy(p.id);
@@ -497,11 +507,21 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           the better draft board, and printing one under both labels is what
           made the model look wrong. */}
       <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+        {phase ? (
+          <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
+            <div className={'ps-now is-' + phase}>
+              {phase === 'pre' ? '—' : (wkPts as number).toFixed(1)}
+            </div>
+            <div className={'ps-now-state is-' + phase}>
+              {phase === 'live' ? 'Live' : phase === 'final' ? 'Final' : 'Not started'}
+            </div>
+          </div>
+        ) : null}
         {proj != null ? (
           <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
             <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.03em' }}>{proj.toFixed(1)}</div>
             <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.62), marginTop: 3 }}>
-              {weekProj != null ? 'proj this week' : 'proj pts/gm'}
+              {weekProj == null ? 'proj pts/gm' : phase ? 'proj wk ' + app.week : 'proj this week'}
             </div>
           </div>
         ) : null}

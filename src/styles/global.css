@@ -1148,6 +1148,43 @@ button { font-family: inherit; }
   color: var(--c-good);
 }
 .ms-state.is-final { color: rgba(242, 253, 254, 0.75); }
+/* A dot that breathes, so "live" reads as a thing happening and not a label. */
+.ms-state.is-live::before,
+.ps-now-state.is-live::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: 1px;
+  animation: live-dot 1.6s ease-in-out infinite;
+}
+@keyframes live-dot { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) {
+  .ms-state.is-live::before,
+  .ps-now-state.is-live::before { animation: none; }
+}
+
+/* A player's points this week, coloured by where his game is. */
+.ps-now {
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.ps-now.is-live { color: var(--c-good); }
+.ps-now.is-pre { color: rgba(242, 253, 254, 0.52); }
+.ps-now-state {
+  margin-top: 3px;
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(242, 253, 254, 0.62);
+}
+.ps-now-state.is-live { color: var(--c-good); }
 
 .ms-names { display: flex; align-items: flex-start; gap: 10px; }
 .ms-who-team { flex: 1; min-width: 0; }
