@@ -70,9 +70,10 @@ export async function segmentPerson(url: string): Promise<string | null> {
     for (let x = 0; x < W; x++) {
       const mx = Math.min(mw - 1, Math.floor((x * mw) / W));
       const p = conf[my * mw + mx] ?? 0;
-      // A soft edge rather than a hard threshold: hair and shoulders are where
-      // the model is least sure, and a gradient there reads as a photo.
-      const t = Math.max(0, Math.min(1, (p - 0.3) / 0.4));
+      // A soft edge rather than a hard threshold — but a low one. Dark hair on
+      // a dark ground is where the model is least sure, and an even split
+      // there let the banner show through a beard.
+      const t = Math.max(0, Math.min(1, (p - 0.1) / 0.3));
       const a = Math.round(t * t * (3 - 2 * t) * 255);
       px.data[(y * W + x) * 4 + 3] = a;
       if (a > 24) {
