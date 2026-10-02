@@ -34,7 +34,7 @@ import { gameLeft, phaseFor } from '../model/game-clock';
 import { clockLabel, gameLeftOf } from '../model/nfl-games';
 import { headlineBits, statBits, touchdowns } from '../model/stat-line';
 import { NFL_COLOR, ageFrom, heightLabel } from '../model/nfl-colors';
-import { teamLogo } from '../api/sleeper';
+import { teamLogo, teamLogoLarge } from '../api/sleeper';
 import { projectPPG } from '../model/project';
 import { gapsIn, ordinal, type Ranked } from '../model/season';
 import { type Tone, placing, toneOf, toneOfRank } from '../model/standing';
@@ -454,8 +454,13 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           logo large and faded behind his face, whose team he is on, his name
           across two lines, and the four facts about the man himself. */}
       <div className="ps-hero" style={{ '--team': (p.team && NFL_COLOR[p.team]) || 'var(--color-surface)' } as CSSProperties}>
-        {p.team ? <img className="ps-hero-logo" src={teamLogo(p.team) || ''} alt="" aria-hidden="true"
-          onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
+        {p.team ? <img className="ps-hero-logo" src={teamLogoLarge(p.team) || ''} alt="" aria-hidden="true"
+          onError={e => {
+            // ESPN's first, Sleeper's small one if that fails, then nothing.
+            const small = teamLogo(p.team);
+            if (small && e.currentTarget.src !== small) e.currentTarget.src = small;
+            else e.currentTarget.style.display = 'none';
+          }} /> : null}
         <div className="ps-hero-face">
           {photo
             ? <img src={photo} alt="" />

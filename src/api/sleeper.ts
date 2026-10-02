@@ -86,6 +86,11 @@ export type PhotoSet = { photo: string | null; srcSet?: string; team?: string | 
 export const teamLogo = (team: string | null | undefined): string | null =>
   team ? 'https://sleepercdn.com/images/team_logos/nfl/' + team.toLowerCase() + '.png' : null;
 
+/** The same logo at 500px, off ESPN, for where it is drawn large: Sleeper's is
+ *  a badge-sized file and goes soft when a banner stretches it. */
+export const teamLogoLarge = (team: string | null | undefined): string | null =>
+  team ? 'https://a.espncdn.com/i/teamlogos/nfl/500/' + (team === 'WAS' ? 'wsh' : team.toLowerCase()) + '.png' : null;
+
 export function playerPhotoSet(id: string): { photo: string; srcSet: string } | null {
   const thumb = playerPhoto(id, 'thumb');
   const full = playerPhoto(id, 'full');
