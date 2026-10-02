@@ -104,6 +104,15 @@ export function headlineBits(st: SleeperStatLine | undefined | null, pos: string
   return out;
 }
 
+/** Every touchdown he had a hand in — thrown, run, caught, or a defence's and a
+ *  returner's — which is what a football per score on the card counts. */
+const TD_KEYS = ['pass_td', 'rush_td', 'rec_td', 'def_st_td', 'def_td', 'st_td', 'fum_rec_td'];
+export function touchdowns(st: SleeperStatLine | undefined | null): number {
+  if (!st) return 0;
+  const r = st as Record<string, number | undefined>;
+  return TD_KEYS.reduce((n, k) => n + (Number.isFinite(r[k]) ? Math.round(r[k] as number) : 0), 0);
+}
+
 export function statLine(st: SleeperStatLine | undefined | null, pos: string): string {
   return statBits(st, pos).map(b => b.n + ' ' + b.unit).join(', ');
 }

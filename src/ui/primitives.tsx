@@ -242,3 +242,13 @@ export function Face({ photo, srcSet, pos, size = 34, round }: {
     </div>
   );
 }
+
+/** A football per touchdown. Past five it is a count, not a row of balls. */
+export function TdBalls({ n }: { n: number }) {
+  if (!(n > 0)) return null;
+  return (
+    <span className="td-balls" role="img" aria-label={n + (n === 1 ? ' touchdown' : ' touchdowns')}>
+      {n > 5 ? '🏈×' + n : '🏈'.repeat(n)}
+    </span>
+  );
+}

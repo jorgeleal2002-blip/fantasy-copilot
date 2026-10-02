@@ -32,7 +32,7 @@ import { PHOTO_PX, PHOTO_Q, PHOTO_Q_FLOOR, pickEncoding } from '../model/photo';
 import { projectSide, projectionsAreStale, readProjections, scoreProjection, scoringKind, statsForWeek } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
-import { headlineBits, statLine } from '../model/stat-line';
+import { headlineBits, statLine, touchdowns } from '../model/stat-line';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -5060,5 +5060,14 @@ describe('the week headline', () => {
   });
   it('gives a quarterback his interceptions only when he threw one', () => {
     expect(headlineBits({ pass_yd: 200, pass_td: 1 }, 'QB').map(x => x.unit)).toEqual(['yards', 'tds']);
+  });
+});
+
+describe('touchdowns on the card', () => {
+  it('counts every kind, thrown included', () => {
+    expect(touchdowns({ pass_td: 2, rush_td: 1 })).toBe(3);
+    expect(touchdowns({ rec_td: 1 })).toBe(1);
+    expect(touchdowns({ def_st_td: 1 })).toBe(1);
+    expect(touchdowns(undefined)).toBe(0);
   });
 });

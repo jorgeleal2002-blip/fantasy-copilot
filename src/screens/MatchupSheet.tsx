@@ -5,8 +5,8 @@ import type { App } from '../state/useApp';
 import { CELL_INK, slotFill } from '../model/constants';
 import { clockFor } from '../model/game-clock';
 import { byeOf } from '../model/sos';
-import { statLine } from '../model/stat-line';
-import { Face, Overlay } from '../ui/primitives';
+import { statLine, touchdowns } from '../model/stat-line';
+import { Face, Overlay, TdBalls } from '../ui/primitives';
 import { dim } from '../ui/styles';
 
 /**
@@ -301,7 +301,7 @@ function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'righ
       {/* What he actually did, across the whole of his half rather than down
           the sliver left between a face and a score. A number of points says
           how much he was worth and nothing about how he got there. */}
-      {did ? <div className="ms-pl-did">{did}</div> : null}
+      {did ? <div className="ms-pl-did"><TdBalls n={touchdowns(app.weekStats[c.id as string])} />{did}</div> : null}
     </div>
   );
 }

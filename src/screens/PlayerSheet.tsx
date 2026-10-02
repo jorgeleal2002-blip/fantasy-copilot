@@ -27,11 +27,11 @@ import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
 import { WeekBars } from '../ui/charts';
-import { Card, Face, Overlay } from '../ui/primitives';
+import { Card, Face, Overlay, TdBalls } from '../ui/primitives';
 import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { gamePhase } from '../model/game-clock';
-import { headlineBits, statBits } from '../model/stat-line';
+import { headlineBits, statBits, touchdowns } from '../model/stat-line';
 import { projectPPG } from '../model/project';
 import { gapsIn, ordinal, type Ranked } from '../model/season';
 import { type Tone, placing, toneOf, toneOfRank } from '../model/standing';
@@ -552,6 +552,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
                 <span className="ps-feed-u">{b.unit}</span>
               </span>
             ))}
+            <TdBalls n={touchdowns(wkLine)} />
           </div>
           {wkRest.length ? (
             <div className="ps-feed-rest">{wkRest.map(b => b.n + ' ' + b.unit).join(', ')}</div>

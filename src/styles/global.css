@@ -1469,6 +1469,14 @@ button { font-family: inherit; }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+/* A football per touchdown, ahead of the line that says how he got them. */
+.td-balls {
+  font-size: 12px;
+  letter-spacing: 1px;
+  margin-right: 4px;
+  text-transform: none;
+}
+.ps-feed-stats .td-balls { font-size: 17px; margin-right: 0; }
 .ms-num { flex: none; }
 .ms-pl-pts {
   font-size: 17px;
