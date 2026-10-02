@@ -5,6 +5,7 @@ import type { App, LeagueView } from '../state/useApp';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { cardTitle, dim, ellipsis, fitColor } from '../ui/styles';
 import { Matchups } from './Matchups';
+import { MyTeam } from './MyTeam';
 import { PowerRankings } from './PowerRankings';
 import { hasPlayed } from '../model/record';
 
@@ -71,6 +72,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
    * in the league did. */
   const screens: SegOption<LeagueView>[] = [
     { key: 'weeks', label: 'Weeks' },
+    { key: 'myteam', label: 'My team' },
     { key: 'rankings', label: 'Rankings' },
     { key: 'players', label: 'Players' },
   ];
@@ -83,6 +85,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
       <Segmented options={screens} value={app.leagueView} onChange={app.setLeagueView} size="sm" />
 
       {app.leagueView === 'weeks' ? <Matchups app={app} m={m} /> : null}
+      {app.leagueView === 'myteam' ? <MyTeam app={app} m={m} /> : null}
 
       {app.leagueView === 'rankings' ? (
         <>

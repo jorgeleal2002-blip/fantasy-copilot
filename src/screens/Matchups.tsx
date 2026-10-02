@@ -1,4 +1,4 @@
-import { clockFor } from '../model/game-clock';
+import { clockFor, phaseFor } from '../model/game-clock';
 import { leaderOf, pairMatchups, type Matchup, type MatchupSide } from '../model/matchups';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -96,6 +96,52 @@ function Game({ app, g }: { app: App; g: Matchup }) {
             goes somewhere. */}
         <div className="mu-vs">{g.b ? '›' : 'bye'}</div>
         {g.b ? <Side s={g.b} winning={lead === 'b'} align="right" /> : <div style={{ flex: 1 }} />}
+      </div>
+      <Detail app={app} g={g} />
+    </div>
+  );
+}
+
+/**
+ * Under the score line: the two projections against each other as a bar, and
+ * for each side how much of the lineup is playing and how much is still to
+ * play — the second thing anybody reads off a scoreboard, after the score.
+ */
+function Detail({ app, g }: { app: App; g: Matchup }) {
+  const week = app.week;
+  if (!week || !g.b) return null;
+  const players = app.data?.players || {};
+  const season = Number(app.data?.league.season);
+  const now = Date.now();
+  const tally = (s: MatchupSide) => {
+    let live = 0, left = 0;
+    for (const id of s.starters || []) {
+      if (!id || id === '0') continue;
+      const ph = phaseFor(players[id]?.team, week, season, now, app.nflGames);
+      if (ph === 'live') live++;
+      else if (ph === 'pre') left++;
+    }
+    return { live, left };
+  };
+  const words = ({ live, left }: { live: number; left: number }) => (
+    <>
+      {live ? <b className="mu-live">{live} playing</b> : null}
+      {live && left ? ' · ' : ''}
+      {left ? left + ' to play' : live ? '' : 'done'}
+    </>
+  );
+  const pa = g.a.projected, pb = g.b.projected;
+  const split = pa != null && pb != null && pa + pb > 0 ? pa / (pa + pb) : null;
+  return (
+    <div className="mu-detail">
+      {split != null ? (
+        <div className="mu-bar" role="img" aria-label={'projected split ' + Math.round(split * 100) + ' to ' + Math.round((1 - split) * 100)}>
+          <div className={'mu-bar-a' + (g.a.isMe ? ' is-me' : '')} style={{ width: (split * 100).toFixed(1) + '%' }} />
+        </div>
+      ) : null}
+      <div className="mu-left">
+        <span>{words(tally(g.a))}</span>
+        <span>{words(tally(g.b))}</span>
       </div>
     </div>
   );

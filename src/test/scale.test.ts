@@ -254,7 +254,7 @@ describe('the app is drawn on its scales', () => {
     // Each remaining one holds a glyph or a bare code and is listed by name,
     // so adding to this list is a decision somebody has to write down.
     const GLYPHS = ['.bd-live', '.bd-arrow', '.bd-pos', '.bd-head', '.bd-round',
-      '.pos-count', '.ms-slot', '.fb-pill', '.pw-tag', '.ps-bar-n', '.ps-hero-edit'];
+      '.pos-count', '.ms-slot', '.mt-slot', '.fb-pill', '.pw-tag', '.ps-bar-n', '.ps-hero-edit'];
     expect(bad.filter(sel => !GLYPHS.some(g => sel.includes(g)))).toEqual([]);
   });
 

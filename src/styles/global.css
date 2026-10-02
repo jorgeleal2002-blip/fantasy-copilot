@@ -751,7 +751,6 @@ button { font-family: inherit; }
   font-size: 12px;
   color: rgba(242, 253, 254, 0.52);
   margin-top: 1px;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1086,6 +1085,27 @@ button { font-family: inherit; }
 }
 .mu-pts.is-up { color: var(--color-text); }
 
+/* Under the score line: the projected split, then what is left to play. */
+.mu-detail { margin-top: 9px; }
+.mu-bar {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--c-mark-mid);
+  overflow: hidden;
+}
+.mu-bar-a { height: 100%; background: var(--c-mark-good); }
+.mu-bar-a.is-me { background: var(--color-accent-400); }
+.mu-left {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 16px;
+  color: rgba(242, 253, 254, 0.52);
+  white-space: nowrap;
+}
+.mu-live { color: var(--c-good); font-weight: 600; }
 .mu-vs {
   flex: none;
   width: 22px;
@@ -1095,6 +1115,134 @@ button { font-family: inherit; }
   text-transform: uppercase;
   color: rgba(242, 253, 254, 0.52);
 }
+
+/* ── My team ──────────────────────────────────────────────────────────────
+   Your own lineup for the week: a header with your score against theirs and
+   how much of it is left to play, then a row per slot. */
+.mt-note {
+  background: var(--color-surface);
+  border-radius: 12px;
+  padding: 14px 13px;
+  font-size: 12px;
+  color: rgba(242, 253, 254, 0.62);
+}
+.mt-head {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+  border-radius: 12px;
+  padding: 11px 12px;
+  cursor: pointer;
+}
+.mt-head-top { display: flex; align-items: center; gap: 10px; }
+.mt-av {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 8px;
+  object-fit: cover;
+  background: rgba(242, 253, 254, 0.07);
+}
+.mt-name {
+  font-size: 15px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--color-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-sub {
+  font-size: 12px;
+  line-height: 16px;
+  color: rgba(242, 253, 254, 0.62);
+  font-variant-numeric: tabular-nums;
+}
+.mt-pts {
+  font-size: 21px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.mt-head-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: var(--hairline) solid var(--color-divider);
+  font-size: 12px;
+  line-height: 16px;
+  color: rgba(242, 253, 254, 0.62);
+  white-space: nowrap;
+}
+.mt-head-foot > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.mt-live { color: var(--c-good); font-weight: 600; }
+.mt-list { background: var(--color-surface); border-radius: 12px; overflow: hidden; }
+.mt-list-h {
+  padding: 10px 12px 6px;
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(242, 253, 254, 0.52);
+}
+.mt-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: var(--hairline) solid var(--color-divider);
+}
+.mt-row.is-tap { cursor: pointer; }
+.mt-slot {
+  flex: none;
+  width: 36px;
+  margin-top: 6px;
+  padding: 4px 0;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(242, 253, 254, 0.07);
+  color: rgba(242, 253, 254, 0.62);
+}
+.mt-who { flex: 1; min-width: 0; }
+.mt-pl {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-pl-sub, .mt-when {
+  font-size: 12px;
+  line-height: 16px;
+  color: rgba(242, 253, 254, 0.62);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-when.is-live { color: var(--c-good); }
+.mt-did {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 14px;
+  text-transform: uppercase;
+  color: rgba(242, 253, 254, 0.52);
+}
+.mt-num { flex: none; text-align: right; }
+.mt-pl-pts {
+  font-size: 15px;
+  line-height: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.mt-pl-pts.is-live { color: var(--c-good); }
+.mt-pl-proj { font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
 
 /* ── One game, on its own screen ──────────────────────────────────────────
    A face, a name, what he scored, the slot he scored it in, and the same
@@ -1693,9 +1841,12 @@ button { font-family: inherit; }
    Small and dim on purpose: the score is the fact and this is the guess, and
    two numbers at the same weight would make you read both to find out which
    is which. */
+/* On its own line under the score: beside it, a three-figure score and its
+   projection did not fit a 320px phone's half-card and ran into the other side. */
 .mu-proj {
-  margin-left: 6px;
+  display: block;
   font-size: 12px;
+  line-height: 16px;
   font-weight: 400;
   letter-spacing: 0;
   color: rgba(242, 253, 254, 0.52);
