@@ -1,3 +1,5 @@
+import type { Pos } from '../api/types';
+
 /**
  * What a proposed trade does to everyone in it.
  *
@@ -31,6 +33,8 @@ export interface RosterRoom {
   open: number;
   /** who goes first if a spot is needed, cheapest first */
   cuttable: { id: string; name: string; value: number }[];
+  /** the positions he is holding, for the depth a trade leaves behind */
+  pos: Pos[];
 }
 
 export interface TradeTeam {

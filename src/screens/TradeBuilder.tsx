@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { colorOf } from '../model/constants';
 import { evaluateTrade, type RosterRoom, type TeamLedger, type TradeAsset } from '../model/trade-eval';
 import { fitHeadline, outcomeFor, situationLabel, situationOf, type FitHeadline, type Outcome, type TeamCase } from '../model/team-verdict';
+import { depthAfter, depthLabel, type PosDepth } from '../model/depth';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
+import type { Pos } from '../api/types';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { Overlay } from '../ui/primitives';
@@ -62,6 +64,21 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
   }
   const v = evaluateTrade(teams, assets, fits, room);
 
+  /* What the deal leaves each roster looking like — see `depthAfter`. It
+     changes no verdict: a slot that cannot be filled is already paid for in
+     lineup points and a man who cannot start already earns none. It is here
+     because the points go quiet in both cases and nothing said why. */
+  const posOf = (id: string) => m.marketValue(id)?.pos as Pos | undefined;
+  const depth: Record<number, ReturnType<typeof depthAfter>> = {};
+  for (const t of teams) {
+    const r = room[t.id];
+    if (!r) continue;
+    const got = assets.filter(x => x.to === t.id && !x.isPick).map(x => posOf(x.id)).filter(Boolean) as Pos[];
+    const gave = assets.filter(x => x.from === t.id && !x.isPick).map(x => posOf(x.id)).filter(Boolean) as Pos[];
+    if (!got.length && !gave.length) continue;
+    depth[t.id] = depthAfter(r.pos, got, gave, m.slots);
+  }
+
   // What each team should want, from where it stands.
   const order = m.leagueRows.slice().sort((a, b) =>
     b.record.wins - a.record.wins || b.record.pointsFor - a.record.pointsFor);
@@ -85,7 +102,8 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
         const c = cases.find(x => x.id === t.id);
         return l && c ? (
           <Scorecard key={t.id} l={l} c={c} moved={v.moved} dynasty={m.isDynasty}
-            season={seasons[t.id] || null} avatar={m.leagueRows.find(r => r.id === t.id)?.avatar || null} />
+            season={seasons[t.id] || null} depth={depth[t.id] || []}
+            avatar={m.leagueRows.find(r => r.id === t.id)?.avatar || null} />
         ) : null;
       })}
       <HowJudged />
@@ -221,9 +239,10 @@ const sign = (x: number, d = 1) => (x > 0 ? '+' : x < 0 ? '−' : '±')
  * One team's side of the deal, drawn: what it is playing for, whether this
  * suits that, and each number behind the call as a bar rather than a sentence.
  */
-function Scorecard({ l, c, moved, dynasty, season, avatar }: {
+function Scorecard({ l, c, moved, dynasty, season, avatar, depth }: {
   l: TeamLedger; c: TeamCase; moved: number; dynasty: boolean;
   season: ReturnType<Model['seasonWith']>; avatar: string | null;
+  depth: PosDepth[];
 }) {
   const o = outcomeFor(c, dynasty);
   const vd = VERDICT[o];
@@ -259,7 +278,7 @@ function Scorecard({ l, c, moved, dynasty, season, avatar }: {
           text={sign(c.playoffs) + ' pts/wk'} />
       ) : null}
 
-      {season?.byes.length || season?.injured.length || l.cuts.length ? (
+      {season?.byes.length || season?.injured.length || l.cuts.length || depth.length ? (
         <div className="fb-sc-tags">
           {season?.byes.map(b => (
             <span key={'b' + b.week} className="fb-tag" title={'Bye week ' + b.week}>
@@ -275,6 +294,18 @@ function Scorecard({ l, c, moved, dynasty, season, avatar }: {
               is the app deciding who somebody else drops, and nobody drops the
               player a model picked for them. The cost is real and stays; the
               casting does not. */}
+          {/* Whether he could afford what the deal takes, and whether what it
+              gives him is any use where he already is. */}
+          {depth.map(d => (
+            <span key={'d' + d.pos + d.state}
+              className={'fb-tag' + (d.state === 'stacked' ? '' : ' is-bad')}
+              title={d.state === 'stacked'
+                ? 'More than the lineup can start'
+                : 'Not enough to field the lineup with cover'}
+            >
+              {d.state === 'stacked' ? '📚' : '⚠️'} {depthLabel(d)}
+            </span>
+          ))}
           {l.cuts.length ? (
             <span className="fb-tag is-bad" title="Roster full: a spot has to come from somewhere">
               ✂️ Roster full · <b>{l.cuts.length}</b> to drop
@@ -329,6 +360,7 @@ function HowJudged() {
           <span>🌱 Building → value decides</span>
           <span>⚖️ In the hunt → needs both</span>
           <span>⭐ One star &gt; two pieces that add up to him</span>
+          <span>⚠️ 📚 Depth after the deal → can he spare them, is the return any use</span>
           <span>✂️ Full roster → a dropped player’s worth counts against, priced at the cheapest spare</span>
           <span>💤 🩹 Byes and injuries score 0 · 🏆 playoff weeks ×1.5</span>
           <span>💰 Value → the share of everything the deal moves</span>

@@ -20,6 +20,7 @@ import { clockLabel, gameLeftOf, readNflGames } from '../model/nfl-games';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots, withLiveStats } from '../model/matchups';
+import { depthAfter, depthLabel } from '../model/depth';
 import { PRIOR_MIN, USAGE_DECAY, USAGE_WEIGHTS } from '../model/constants';
 import { PROD_SHARE_BASE, PROD_SHARE_MAX, PROD_SHARE_MAX_REDRAFT, poolFloor, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
@@ -5332,7 +5333,7 @@ describe('a star against the pieces that add up to him', () => {
 describe('a full roster has to make room', () => {
   const teams = [{ id: 1, name: 'Two', isMe: false }, { id: 2, name: 'One', isMe: false }];
   const a = (id: string, value: number, from: number, to: number, isPick = false) => ({ id, name: id, value, from, to, isPick });
-  const full = { open: 0, cuttable: [{ id: 'bench', name: 'Bench Guy', value: 30 }, { id: 'b2', name: 'B2', value: 40 }] };
+  const full = { open: 0, pos: [] as Pos[], cuttable: [{ id: 'bench', name: 'Bench Guy', value: 30 }, { id: 'b2', name: 'B2', value: 40 }] };
 
   it('charges the side taking two for one the player it has to cut', () => {
     const deal = [a('x', 60, 2, 1), a('y', 50, 2, 1), a('star', 100, 1, 2)];
@@ -5402,5 +5403,87 @@ describe('whether a trade suits each team', () => {
     expect(situationOf(2, 4, 12, 6)).toBe('contender');
     expect(situationOf(11, 4, 12, 6)).toBe('out');
     expect(situationOf(11, 1, 12, 6)).toBe('middle');
+  });
+});
+
+/* The scorecard priced a trade in value and in lineup points and said nothing
+   about the shape of the roster underneath — whether a side can afford to send
+   two men from one position, or whether what it receives lands where it is
+   already full. */
+describe('what a trade leaves a roster looking like', () => {
+  const SLOTS = { QB: 1, RB: 3, WR: 3, TE: 1 } as Partial<Record<Pos, number>>;
+  const many = (pos: Pos, n: number): Pos[] => Array.from({ length: n }, () => pos);
+  const states = (d: ReturnType<typeof depthAfter>) =>
+    d.map(x => x.pos + ':' + x.state);
+
+  it('says nothing about a roster the trade leaves comfortable', () => {
+    const roster = [...many('QB', 2), ...many('RB', 5), ...many('WR', 5), ...many('TE', 2)];
+    expect(depthAfter(roster, ['RB'], ['RB'], SLOTS)).toEqual([]);
+  });
+
+  it('calls a team thin where it is left with starters and no cover', () => {
+    const roster = [...many('QB', 2), ...many('RB', 4), ...many('WR', 5), ...many('TE', 2)];
+    // Sends two backs: four become two, and two is one short of the three it
+    // has to field.
+    expect(states(depthAfter(roster, [], ['RB', 'RB'], SLOTS))).toEqual(['RB:short']);
+    // Sends one: three left, which fields the lineup with nobody behind it.
+    expect(states(depthAfter(roster, [], ['RB'], SLOTS))).toEqual(['RB:thin']);
+  });
+
+  it('answers the question the user asked: can he afford to send two', () => {
+    const deep = [...many('QB', 2), ...many('RB', 6), ...many('WR', 5), ...many('TE', 2)];
+    const shallow = [...many('QB', 2), ...many('RB', 4), ...many('WR', 5), ...many('TE', 2)];
+    expect(depthAfter(deep, [], ['RB', 'RB'], SLOTS)).toEqual([]);
+    expect(states(depthAfter(shallow, [], ['RB', 'RB'], SLOTS))).toEqual(['RB:short']);
+  });
+
+  it('calls a position stacked only where this trade put somebody in it', () => {
+    const loaded = [...many('QB', 2), ...many('RB', 6), ...many('WR', 5), ...many('TE', 2)];
+    // Already six backs for three slots, and the deal sends another: the extra
+    // one cannot play, which is why the lineup points will not move.
+    expect(states(depthAfter(loaded, ['RB'], ['WR'], SLOTS))).toContain('RB:stacked');
+    // The same roster, with the deal touching nothing at back. It was deep
+    // before this trade and that is not this trade's doing.
+    expect(states(depthAfter(loaded, ['TE'], ['WR'], SLOTS))).not.toContain('RB:stacked');
+  });
+
+  it('ignores a position the league does not start', () => {
+    // No slots, no opinion: a league that starts no kicker does not care how
+    // many are on a bench. The rest of the roster is comfortable, so a kicker
+    // piling up is the only thing that could be reported — and is not.
+    const roster = [...many('QB', 2), ...many('RB', 5), ...many('WR', 5),
+      ...many('TE', 2), ...many('K' as Pos, 4)];
+    expect(depthAfter(roster, ['K' as Pos], [], SLOTS)).toEqual([]);
+  });
+
+  it('does not call a deep position stacked for a swap inside it', () => {
+    // Five backs for three slots, sending one and taking one: as deep as he
+    // was. This deal did not do that to him.
+    const loaded = [...many('QB', 2), ...many('RB', 5), ...many('WR', 5), ...many('TE', 2)];
+    expect(depthAfter(loaded, ['RB'], ['RB'], SLOTS)).toEqual([]);
+    // Two in for one out does.
+    expect(states(depthAfter(loaded, ['RB', 'RB'], ['RB'], SLOTS))).toEqual(['RB:stacked']);
+  });
+
+  it('counts picks as nothing, because they take no position', () => {
+    const roster = [...many('QB', 2), ...many('RB', 4), ...many('WR', 5), ...many('TE', 2)];
+    // A back for a pick is still a back gone.
+    expect(states(depthAfter(roster, [], ['RB'], SLOTS))).toEqual(['RB:thin']);
+  });
+
+  it('puts the worst first, because that is the one worth reading', () => {
+    const roster = [...many('QB', 1), ...many('RB', 3), ...many('WR', 6), ...many('TE', 1)];
+    const d = depthAfter(roster, ['WR'], [], SLOTS);
+    expect(d[0]?.state).toBe('thin');
+    expect(d[d.length - 1]?.state).toBe('stacked');
+  });
+
+  it('writes a label that says the shortfall, not just the word', () => {
+    expect(depthLabel({ pos: 'RB' as Pos, have: 2, starts: 3, state: 'short' }))
+      .toBe('No RB to start · 2 for 3');
+    expect(depthLabel({ pos: 'WR' as Pos, have: 3, starts: 3, state: 'thin' }))
+      .toBe('Thin at WR · 3 for 3');
+    expect(depthLabel({ pos: 'TE' as Pos, have: 3, starts: 1, state: 'stacked' }))
+      .toBe('Stacked at TE · 3 for 1');
   });
 });

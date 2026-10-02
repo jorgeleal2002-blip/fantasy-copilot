@@ -1232,7 +1232,13 @@ export function buildModel(input: ModelInput): Model {
       // A kicker or a defence is not on the market and is the cheapest cut there is.
       value: valued.get(id) ?? 0,
     })).sort((x, y) => x.value - y.value);
-    return { open: rosterSpots - active.length, cuttable };
+    return {
+      open: rosterSpots - active.length,
+      cuttable,
+      // What he is holding, by position — see `depthAfter`. Reserve and taxi
+      // are already out: a man on IR cannot cover a slot this Sunday.
+      pos: active.map(id => players[id]?.position).filter(Boolean) as Pos[],
+    };
   };
 
   const teamInfo = (rid: number): TeamSheet | null => {
