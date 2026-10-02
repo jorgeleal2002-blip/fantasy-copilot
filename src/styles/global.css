@@ -2271,13 +2271,59 @@ button { font-family: inherit; }
 }
 .ps-hero-body { position: relative; flex: 1; min-width: 0; margin-left: 118px; }
 .ps-hero-owner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   font-size: 12px;
-  line-height: 16px;
+  line-height: 18px;
   color: rgba(242, 253, 254, 0.75);
-  white-space: nowrap;
+}
+.ps-hero-arrow { flex: none; color: var(--color-accent); }
+.ps-hero-owner-av {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.ps-hero-owner-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: rgba(242, 253, 254, 0.9);
 }
+.ps-hero-owner-name.is-me { color: var(--color-accent); }
+/* The owner's standing and what they are doing with him this week. */
+.ps-hero-owner-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 16px;
+  color: rgba(242, 253, 254, 0.62);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ps-hero-role {
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(242, 253, 254, 0.12);
+  color: rgba(242, 253, 254, 0.9);
+}
+.ps-hero-role.is-starting {
+  background: color-mix(in srgb, var(--c-good) 18%, transparent);
+  color: var(--c-good);
+}
+.ps-hero-role.is-ir { color: var(--c-bad); }
 .ps-hero-first {
   margin-top: 4px;
   font-size: 15px;
