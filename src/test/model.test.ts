@@ -15,7 +15,7 @@ import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS 
 import { nextDetailStack, topDetail } from '../state/detail-stack';
 import { isInLeague, isMockEligible } from '../model/mock-pool';
 import { ALLOWED, KICKOFF_MIN, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedule';
-import { GAME_MIN, OVER_MIN, gameLeft, phaseFor, weekLive } from '../model/game-clock';
+import { GAME_MIN, OVER_MIN, gameLeft, gameLine, phaseFor, weekLive } from '../model/game-clock';
 import { clockLabel, gameLeftOf, readNflGames } from '../model/nfl-games';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
@@ -5110,5 +5110,23 @@ describe('the NFL scoreboard', () => {
     const g = readNflGames(espn('post', 4, '0:00', 'Final'));
     expect(phaseFor('CLE', 4, 2026, Date.UTC(2026, 9, 2, 1, 0), g)).toBe('final');
     expect(phaseFor('CLE', 4, 2026, Date.UTC(2026, 9, 2, 1, 0))).toBe('live');
+  });
+});
+
+describe('when and who he plays', () => {
+  const g = (state: 'pre' | 'in' | 'post') => ({
+    home: 'CLE', away: 'PIT', homeScore: 14, awayScore: 7, state, period: 2, clock: '2:00',
+    detail: '', start: Date.UTC(2026, 9, 2, 0, 15),
+  });
+  it('reads the real game: home or away, then the clock', () => {
+    expect(gameLine('CLE', 4, 2026, 0, { CLE: g('in'), PIT: g('in') })).toBe('Q2 2:00 vs PIT');
+    expect(gameLine('PIT', 4, 2026, 0, { CLE: g('in'), PIT: g('in') })).toBe('Q2 2:00 @ CLE');
+    expect(gameLine('PIT', 4, 2026, 0, { PIT: g('post') })).toBe('Final @ CLE');
+    expect(gameLine('PIT', 4, 2026, 0, { PIT: g('pre') })).toMatch(/^\w{3} \d{1,2}:15 [AP]M @ CLE$/);
+  });
+  it('falls back to the bundled schedule, byes included', () => {
+    expect(gameLine('ARI', 14, 2026, 0)).toBe('BYE');
+    expect(gameLine('PIT', 4, 2026, Date.UTC(2026, 9, 9))).toBe('Final vs CLE');
+    expect(gameLine(null, 4, 2026, 0)).toBeNull();
   });
 });

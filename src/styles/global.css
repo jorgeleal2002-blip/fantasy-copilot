@@ -1491,6 +1491,18 @@ button { font-family: inherit; }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+/* When and who he plays: "Sun 11:00 AM vs NE", or the quarter and clock
+   while the game is on — in green, the colour everything live wears. */
+.ms-pl-game {
+  font-size: 12px;
+  line-height: 16px;
+  color: rgba(242, 253, 254, 0.62);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.ms-pl-game.is-live { color: var(--c-good); }
 /* A football per touchdown, ahead of the line that says how he got them. */
 .td-balls {
   font-size: 12px;

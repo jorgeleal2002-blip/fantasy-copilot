@@ -1,4 +1,5 @@
 import { ACCENT, BAD, GOOD, MID, PEAK, POS, POS_COLOR } from '../model/constants';
+import { gameLine } from '../model/game-clock';
 import { ageCurve, grade, num } from '../model/math';
 import type { Model, RosterPlayer } from '../model/types';
 import type { App, TeamView } from '../state/useApp';
@@ -483,6 +484,14 @@ function Roster({ app, m }: { app: App; m: Model }) {
                 <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{p.name}</span>
               </div>
               <div style={{ fontSize: 12, color: dim(0.62), marginTop: 2 }}>{rosterMeta(p)}</div>
+              {(() => {
+                const when = gameLine(p.team, app.week, Number(m.league.season), Date.now(), app.nflGames);
+                return when ? (
+                  <div className={'ms-pl-game' + (/^(Q\d|OT|Half|Live)/.test(when) ? ' is-live' : '')} style={{ marginTop: 2 }}>
+                    {when}
+                  </div>
+                ) : null;
+              })()}
             </div>
             <div style={{ fontSize: 12, color: dim(0.62), flex: 'none' }}>{grade(p.fit / 100)}</div>
           </div>

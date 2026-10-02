@@ -1,6 +1,6 @@
 import type { PlayerCatalog } from '../api/types';
-import { gameLeftOf, type NflGame } from './nfl-games';
-import { KICKOFF_MIN, SCHEDULE_SEASON } from './schedule';
+import { clockLabel, gameLeftOf, type NflGame } from './nfl-games';
+import { KICKOFF_MIN, OPPONENTS, SCHEDULE_SEASON } from './schedule';
 
 /** Wall-clock length of an NFL game, halftime and stoppages included. */
 export const GAME_MIN = 190;
@@ -78,4 +78,38 @@ export function weekLive(week: number, season: number, now: number, games?: Reco
     if (at != null && now >= at && now < at + OVER_MIN * 60000) return true;
   }
   return false;
+}
+
+/** "Sun 11:00 AM", in the phone's own time zone — the way Sleeper writes it. */
+export const kickoffLabel = (ms: number): string =>
+  new Date(ms).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }).replace(',', '');
+
+/**
+ * When and who he plays this week, for a player row: "Sun 11:00 AM vs NE",
+ * "Q2 2:00 @ NE", "Final vs NE", "BYE". Off the real scoreboard when it has
+ * the game — which knows home from away and a flexed kickoff — and off the
+ * bundled schedule when it does not.
+ */
+export function gameLine(
+  team: string | null | undefined, week: number | null, season: number, now: number,
+  games?: Record<string, NflGame> | null,
+): string | null {
+  if (!team || !week) return null;
+  const g = games?.[team];
+  if (g) {
+    const home = g.home === team;
+    const opp = (home ? 'vs ' : '@ ') + (home ? g.away : g.home);
+    const when = g.state === 'pre'
+      ? (g.start != null ? kickoffLabel(g.start) : clockLabel(g))
+      : clockLabel(g);
+    return when + ' ' + opp;
+  }
+  if (season !== SCHEDULE_SEASON) return null;
+  const opp = OPPONENTS[team]?.[week - 1];
+  if (opp === '') return 'BYE';
+  if (!opp) return null;
+  const at = kickoff(team, week, season);
+  const phase = gamePhase(team, week, season, now);
+  const when = phase === 'final' ? 'Final' : phase === 'live' ? 'Live' : at != null ? kickoffLabel(at) : '';
+  return (when ? when + ' ' : '') + 'vs ' + opp;
 }

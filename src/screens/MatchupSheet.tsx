@@ -3,7 +3,7 @@ import { benchRows, leaderOf, lineupRows, pairMatchups, type LineupCell, type Ma
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
 import { CELL_INK, slotFill } from '../model/constants';
-import { clockFor } from '../model/game-clock';
+import { clockFor, gameLine } from '../model/game-clock';
 import { byeOf } from '../model/sos';
 import { statLine, touchdowns } from '../model/stat-line';
 import { Face, Overlay, TdBalls } from '../ui/primitives';
@@ -269,6 +269,9 @@ function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'righ
   const tappable = !!c.id;
   const bye = c.team ? byeOf(c.team) : 0;
   const did = c.id ? statLine(app.weekStats[c.id], c.pos) : '';
+  const when = c.team
+    ? gameLine(c.team, app.week, Number(app.data?.league.season), Date.now(), app.nflGames)
+    : null;
   return (
     <div
       className={'ms-cell' + (right ? ' is-right' : '') + (tappable ? ' is-tap' : '')}
@@ -301,6 +304,7 @@ function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'righ
       {/* What he actually did, across the whole of his half rather than down
           the sliver left between a face and a score. A number of points says
           how much he was worth and nothing about how he got there. */}
+      {when ? <div className={'ms-pl-game' + (/^(Q\d|OT|Half|Live)/.test(when) ? ' is-live' : '')}>{when}</div> : null}
       {did ? <div className="ms-pl-did"><TdBalls n={touchdowns(app.weekStats[c.id as string])} />{did}</div> : null}
     </div>
   );

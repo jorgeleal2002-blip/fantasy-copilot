@@ -20,6 +20,8 @@ export interface NflGame {
   clock: string;
   /** ESPN's own short line — "Final", "Halftime", "Sun 1:00 PM EDT". */
   detail: string;
+  /** Kickoff, epoch ms, when ESPN gave one. */
+  start: number | null;
 }
 
 /** ESPN's abbreviations, where they are not Sleeper's. */
@@ -55,6 +57,10 @@ export function readNflGames(raw: unknown): Record<string, NflGame> {
       period: num(st.period) ?? 0,
       clock: typeof st.displayClock === 'string' ? st.displayClock : '',
       detail: typeof type.shortDetail === 'string' ? type.shortDetail : '',
+      start: (() => {
+        const t = Date.parse(String((comp.date ?? (ev as { date?: unknown }).date) || ''));
+        return Number.isFinite(t) ? t : null;
+      })(),
     };
     out[h] = g;
     out[a] = g;
