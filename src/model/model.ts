@@ -14,7 +14,7 @@ import type {
   TeamEntry, TeamProfile,
   TeamSheet, Window,
 } from './types';
-import { projectLineup } from './team-points';
+import { leagueProjectionScale, projectLineup, projectionIsSound } from './team-points';
 import { projectPPG } from './project';
 import type { UsageMap } from './usage';
 import { isInLeague, isMockEligible } from './mock-pool';
@@ -1240,26 +1240,41 @@ export function buildModel(input: ModelInput): Model {
    * so counting one here would claim a lineup gain that does not arrive for a
    * year. They still carry their full weight on the value side.
    */
+  /* Points, not quality. `lineupSum` is the engine's quality index — what it
+   * picks lineups and weighs deals by — and printing it as "pts a week" made
+   * a three-for-three swap of starters read as forty-six points. What a
+   * screen prints is the best lineup's projection in this league's points. */
+  const ptScale = leagueProjectionScale(leagueRows) ?? 1;
+  const lineupPts = (list: LineupItem[]): number | null => {
+    const p = lineupProjection(list);
+    return projectionIsSound(p) ? p.total * ptScale : null;
+  };
+  const ptsDelta = (before: number | null, after: number | null) =>
+    (before == null || after == null ? null : Math.round((after - before) * 10) / 10);
+
   const lineupWith = (rid: number, incoming: string[], outgoing: string[]) => {
     const r = (d.rosters || []).find(x => x.roster_id === rid);
-    if (!r) return { before: 0, after: 0, delta: 0 };
+    if (!r) return { before: 0, after: 0, delta: 0, measured: false };
     const out = new Set(outgoing);
     const cur = mapRoster(r.players);
-    const before = lineupSum(cur);
     const kept = cur.filter(p => !out.has(p.id));
     const added = mapRoster(incoming.filter(id => !!players[id]));
-    const after = lineupSum(kept.concat(added));
-    return { before, after, delta: after - before };
+    const before = lineupPts(cur);
+    const after = lineupPts(kept.concat(added));
+    if (before == null || after == null) return { before: 0, after: 0, delta: 0, measured: false };
+    return { before, after, delta: Math.round((after - before) * 10) / 10, measured: true };
   };
 
   // ── Trade engine. Every offer is simulated on both sides: your optimal
   //    lineup and theirs are recomputed with the swap applied, and the deal
   //    only survives if you gain and they would plausibly say yes.
   const offers: Offer[] = [];
+  const myPtsBase = lineupPts(myPlayers as LineupItem[]);
   (d.rosters || []).filter(r => !isMine(r)).forEach(r => {
     const them = mapRoster(r.players);
     if (!them.length) return;
     const theirBase = lineupSum(them);
+    const theirPtsBase = lineupPts(them);
     const partner = teamName(r.owner_id);
     const prof = teamProfile[r.roster_id] || ({ window: 'medio', worst: null } as TeamProfile);
 
@@ -1299,7 +1314,11 @@ export function buildModel(input: ModelInput): Model {
         50 + gainRel * 34 + myEdge * 70 + Math.min(Math.max(theirGain, 0), 6) * 1.2 + (fillsTheirNeed ? 6 : 0),
       ), 40, 93);
       if (!best || fit > best.fit) {
-        best = { partner, give, get, gain, theirGain, fit, edge: myEdge, kind: 'lineup', prof, fillsTheirNeed };
+        best = {
+          partner, give, get, gain, theirGain, fit, edge: myEdge, kind: 'lineup', prof, fillsTheirNeed,
+          ptsGain: ptsDelta(myPtsBase, lineupPts((myPlayers as LineupItem[]).filter(p => p.id !== give.id).concat([get]))),
+          theirPtsGain: ptsDelta(theirPtsBase, lineupPts((them as LineupItem[]).filter(p => p.id !== get.id).concat([give]))),
+        };
       }
     }));
     if (best) offers.push(best);
@@ -1323,7 +1342,11 @@ export function buildModel(input: ModelInput): Model {
         const fillsTheirNeed = !!prof.worst && give.pos === prof.worst;
         const fit = clamp(Math.round(50 + edge * 120 + Math.min(theirGain, 5) * 2.2 + (fillsTheirNeed ? 6 : 0)), 40, 90);
         if (!bestPick || fit > bestPick.fit) {
-          bestPick = { partner, give, get, gain: myValueGain, theirGain, fit, edge, kind: 'capital', prof, fillsTheirNeed };
+          bestPick = {
+            partner, give, get, gain: myValueGain, theirGain, fit, edge, kind: 'capital', prof, fillsTheirNeed,
+            ptsGain: ptsDelta(myPtsBase, lineupPts((myPlayers as LineupItem[]).filter(p => p.id !== give.id))),
+            theirPtsGain: ptsDelta(theirPtsBase, lineupPts((them as LineupItem[]).concat([give]))),
+          };
         }
       }));
     if (bestPick) offers.push(bestPick);
@@ -1402,7 +1425,11 @@ export function buildModel(input: ModelInput): Model {
           - (get.length > 1 ? 3 : 0),
         ), 5, 95);
 
-        out.push({ partner, send, get, back, edge, accept, myGain, theirGain, fillsTheirNeed, prof });
+        out.push({
+          partner, send, get, back, edge, accept, myGain, theirGain, fillsTheirNeed, prof,
+          myPts: ptsDelta(lineupPts(myPlayers as LineupItem[]), lineupPts(mineWithout.concat(get.filter(x => !x.isPick) as LineupItem[]))),
+          theirPts: ptsDelta(lineupPts(them as LineupItem[]), lineupPts((them as LineupItem[]).filter(x => getIds.indexOf(x.id) < 0).concat([send as LineupItem]))),
+        });
       });
     });
 
@@ -1488,7 +1515,11 @@ export function buildModel(input: ModelInput): Model {
         - (give.length > 1 ? 3 : 0),   // two-for-one is always a harder sell
       ), 5, 95);
 
-      out.push({ partner, target, give, cost, edge, accept, myGain, theirGain, fillsTheirNeed, prof });
+      out.push({
+        partner, target, give, cost, edge, accept, myGain, theirGain, fillsTheirNeed, prof,
+        myPts: ptsDelta(lineupPts(myPlayers as LineupItem[]), lineupPts((myPlayers as LineupItem[]).filter(p => giveIds.indexOf(p.id) < 0).concat([target as LineupItem]))),
+        theirPts: ptsDelta(lineupPts(themWithout.concat([target]) as LineupItem[]), lineupPts((themWithout as LineupItem[]).concat(give.filter(x => !x.isPick) as LineupItem[]))),
+      });
     });
 
     // Cheapest acceptable package first — the question is "what would it TAKE",

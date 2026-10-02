@@ -2609,7 +2609,7 @@ describe('the season\'s trades', () => {
     const [t] = readLeagueTrades([trade()], look);
     expect(t.verdict!.winner!.name).toBe('Team 2');
     expect(t.sides[0].net).toBe(-1000);
-    expect(tradeOutcome(t)).toContain('Team 2 wins this one');
+    expect(tradeOutcome(t)).toContain('Team 2 came out ahead');
   });
 
   it('calls an even trade even rather than inventing a winner', () => {
@@ -2712,25 +2712,30 @@ describe('the season\'s trades', () => {
       // The whole reason a value column is not enough: overpaying for the
       // position you cannot field is a good trade it calls a bad one.
       const line = sideRead(side(-800), ctx({ lineup: 2.4, worst: 'RB' }), 200);
-      expect(line).toContain('Paid over the market');
-      expect(line).toContain('2.4 pts');
-      expect(line).toContain('thinnest spot');
+      expect(line).toContain('Paid more than market');
+      expect(line).toContain('2.4 more pts');
+      expect(line).toContain('thinnest position was RB');
     });
 
     it('says when a team won the value by selling its starters', () => {
       const line = sideRead(side(900), ctx({ lineup: -3.1, window: 'rebuild' }), 200);
-      expect(line).toContain('Won the value');
-      expect(line).toContain('3.1 pts');
+      expect(line).toContain('Won on value');
+      expect(line).toContain('3.1 fewer pts');
       expect(line).toContain('rebuild');
     });
 
     it('does not call a tenth of a point a lineup change', () => {
-      expect(sideRead(side(0), ctx({ lineup: 0.04 }), 200)).toContain('lineup is unchanged');
+      expect(sideRead(side(0), ctx({ lineup: 0.04 }), 200)).toContain('lineup is about the same');
+    });
+
+    it('says "your" of you and "their" of anybody else', () => {
+      expect(sideRead(side(0), ctx({ lineup: 1.8 }), 200)).toMatch(/^Your lineup scores 1\.8 more pts a week/);
+      expect(sideRead({ ...side(0), isMe: false }, ctx({ lineup: -1.8 }), 200)).toBe('Their lineup scores 1.8 fewer pts a week.');
     });
 
     it('names the contender buying now', () => {
       expect(sideRead(side(0), ctx({ lineup: 1.8, window: 'contender' }), 200))
-        .toContain('contender buying now');
+        .toContain('contender buying for now');
     });
 
     it('only calls it their thinnest spot when they actually received one', () => {
@@ -2739,7 +2744,7 @@ describe('the season\'s trades', () => {
     });
 
     it('still reads a side whose lineup was never measured', () => {
-      expect(sideRead(side(900), ctx(), 200)).toContain('Took the value');
+      expect(sideRead(side(900), ctx(), 200)).toContain('Came out ahead on value');
       expect(sideRead(side(0), ctx(), 200)).toBe('Even on value.');
     });
   });
@@ -5220,7 +5225,8 @@ describe('the words under a suggested trade', () => {
   const offer = (o: Partial<Offer>): Offer => ({
     partner: 'Konoha', give: { id: 'a', name: 'A', isPick: false } as never, get: { id: 'b', name: 'B', isPick: false } as never,
     gain: 2, theirGain: 0, fit: 70, edge: 0, kind: 'lineup',
-    prof: { window: 'mid', worst: 'RB', rank: 4, avgAge: 26 } as never, fillsTheirNeed: false, ...o,
+    prof: { window: 'mid', worst: 'RB', rank: 4, avgAge: 26 } as never, fillsTheirNeed: false,
+    ptsGain: o.gain ?? 2, theirPtsGain: o.theirGain ?? 0, ...o,
   });
 
   it('never prints a sign the words already carry', () => {

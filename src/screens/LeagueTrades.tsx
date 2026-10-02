@@ -188,7 +188,7 @@ function SideDetail({ app, m, t, s }: { app: App; m: Model; t: LeagueTrade; s: T
   // counting one here would claim a lineup change that has not arrived.
   const players = (list: TradeMove[]) => list.filter(mv => mv.kind === 'player').map(mv => mv.id.slice(1));
   const undone = m.lineupWith(s.id, players(s.gave), players(s.got));
-  const lineup = row ? Math.round((undone.before - undone.after) * 10) / 10 : null;
+  const lineup = row && undone.measured ? Math.round((undone.before - undone.after) * 10) / 10 : null;
 
   const read = sideRead(s, {
     window: row?.window || 'medio',

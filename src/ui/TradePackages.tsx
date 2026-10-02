@@ -16,11 +16,13 @@ export function priceRead(t: TargetTrade): string {
   const price = t.edge > 0.04 ? `You buy ${pct}% under market`
     : t.edge < -0.04 ? `You overpay by ${pct}%`
       : 'Roughly market price';
-  const lineup = t.myGain > 0.3 ? `your lineup rises ${t.myGain.toFixed(1)}`
-    : t.myGain < -0.3 ? `costs you ${Math.abs(t.myGain).toFixed(1)} of starter value`
-      : 'your lineup barely moves';
+  const p = t.myPts;
+  const lineup = p == null ? 'its effect on your lineup cannot be measured yet'
+    : p > 0.3 ? `your lineup scores ${p.toFixed(1)} more pts a week`
+      : p < -0.3 ? `your lineup scores ${Math.abs(p).toFixed(1)} fewer pts a week`
+        : 'your lineup stays about the same';
   const why = t.fillsTheirNeed ? ' — and it fills the hole they actually have'
-    : t.theirGain > 0.3 ? ` — their lineup rises ${t.theirGain.toFixed(1)}`
+    : t.theirPts != null && t.theirPts > 0.3 ? ` — their lineup scores ${t.theirPts.toFixed(1)} more a week`
       : '';
   return `${price}, ${lineup}${why}.`;
 }

@@ -228,7 +228,7 @@ function ReturnCard({ r }: { r: BlockReturn }) {
       </div>
 
       <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), marginTop: 10, textWrap: 'pretty' }}>
-        {returnLine({ edge: r.edge, myGain: r.myGain, fillsTheirNeed: r.fillsTheirNeed, worst: r.prof.worst, sendName: r.send.name })}
+        {returnLine({ edge: r.edge, myGain: r.myPts, fillsTheirNeed: r.fillsTheirNeed, worst: r.prof.worst, sendName: r.send.name })}
       </div>
     </Card>
   );
@@ -239,10 +239,10 @@ function ReturnCard({ r }: { r: BlockReturn }) {
 function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty: boolean }) {
   const fitTint = o.fit >= 75 ? GOOD : o.fit >= 62 ? MID : dim(0.75);
   const kind = o.edge > 0.04 ? 'Buying under market'
-    : o.edge < -0.04 ? (o.kind === 'lineup' && o.gain > 0.3 ? 'Overpay that helps you' : 'Overpay') : 'Fair price';
-  const gain = o.kind === 'capital'
-    ? `${o.gain >= 0 ? '+' : ''}${num(o.gain * 100)} market value`
-    : `${o.gain >= 0 ? '+' : ''}${o.gain.toFixed(1)} lineup pts`;
+    : o.edge < -0.04 ? (o.kind === 'lineup' && (o.ptsGain ?? 0) > 0.3 ? 'Overpay that helps you' : 'Overpay') : 'Fair price';
+  const gain = o.kind === 'capital' || o.ptsGain == null
+    ? `${o.gain >= 0 ? '+' : ''}${num(o.gain * 100)} ${o.kind === 'capital' ? 'market value' : 'lineup quality'}`
+    : `${o.ptsGain >= 0 ? '+' : '−'}${Math.abs(o.ptsGain).toFixed(1)} pts a week`;
 
   return (
     <div className="of">

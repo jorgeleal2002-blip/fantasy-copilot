@@ -170,6 +170,11 @@ export interface Offer {
   kind: 'lineup' | 'capital';
   prof: TeamProfile;
   fillsTheirNeed: boolean;
+  /** what the deal does to each best lineup, in this league's points a week —
+   *  `gain`/`theirGain` are the engine's own quality index and are for
+   *  choosing deals, not for printing. Null when it cannot be measured. */
+  ptsGain: number | null;
+  theirPtsGain: number | null;
 }
 
 /**
@@ -190,6 +195,8 @@ export interface TargetTrade {
   /** starter points your lineup gains — negative when the package costs you one */
   myGain: number;
   theirGain: number;
+  myPts: number | null;
+  theirPts: number | null;
   fillsTheirNeed: boolean;
   prof: TeamProfile;
 }
@@ -297,6 +304,9 @@ export interface BlockReturn {
   /** starter points your lineup gains — usually negative, since he was yours */
   myGain: number;
   theirGain: number;
+  /** the same two in this league's points a week, null when unmeasured */
+  myPts: number | null;
+  theirPts: number | null;
   fillsTheirNeed: boolean;
   prof: TeamProfile;
 }
@@ -484,7 +494,7 @@ export interface Model {
   /** What a trade would do to a team's best available lineup. Picks are
    *  excluded — one cannot start a game. */
   lineupWith: (rosterId: number, incoming: string[], outgoing: string[]) =>
-    { before: number; after: number; delta: number };
+    { before: number; after: number; delta: number; measured: boolean };
   posRankOf: (rosterId: number, pos: Pos) => number;
   scoreAny: (playerId: string) => BoardPlayer | null;
   /** the price tag for one player, with its rank inside his position */

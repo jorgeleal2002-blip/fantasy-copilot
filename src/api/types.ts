@@ -142,6 +142,8 @@ export interface SleeperTransaction {
   transaction_id?: string;
   type?: string;
   status?: string;
+  /** The week, as Sleeper actually names it on a transaction. */
+  leg?: number;
   week?: number;
   /** ms since epoch, when the trade actually went through */
   status_updated?: number;

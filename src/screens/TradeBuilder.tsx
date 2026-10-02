@@ -41,7 +41,8 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
     const incoming = assets.filter(x => x.to === t.id).map(x => x.id);
     const outgoing = assets.filter(x => x.from === t.id).map(x => x.id);
     if (!incoming.length && !outgoing.length) continue;
-    fits[t.id] = m.lineupWith(t.id, incoming, outgoing).delta;
+    const w = m.lineupWith(t.id, incoming, outgoing);
+    if (w.measured) fits[t.id] = w.delta;
   }
 
   const v = evaluateTrade(teams, assets, fits);

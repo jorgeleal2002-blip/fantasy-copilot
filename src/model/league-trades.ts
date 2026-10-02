@@ -200,7 +200,7 @@ export function readLeagueTrades(
 
     out.push({
       id: t.transaction_id || (t.status_updated || 0) + ':' + ids.join('-'),
-      week: t.week || 0,
+      week: t.leg || t.week || 0,
       at: t.status_updated || t.created || 0,
       teams: ids,
       sides: teams.map(tm => ({
@@ -256,35 +256,41 @@ export function sideRead(side: TradeSide, ctx: SideContext, band: number): strin
   const lu = ctx.lineup;
   const moved = lu != null && Math.abs(lu) >= FELT;
   const pts = moved ? Math.abs(lu as number).toFixed(1) : '';
+  // Said of you as "your", of anybody else as "their".
+  const their = side.isMe ? 'your' : 'their';
+  const Their = side.isMe ? 'Your' : 'Their';
+  // The thinnest spot is a separate fact from the lineup change — the points
+  // come from every player who moved, not from one position — so it is its
+  // own clause rather than a place the points were "at".
   const fills = !!ctx.worst && side.got.some(mv => mv.pos === ctx.worst);
-  const spot = fills ? ' at ' + ctx.worst + ', their thinnest spot' : '';
+  const spot = fills ? ' ' + Their + ' thinnest position was ' + ctx.worst + ', and this brought one in.' : '';
   const won = net != null && net > band;
   const lost = net != null && net < -band;
 
   // The two disagreements first, because they are the whole reason a value
   // column is not enough on its own.
   if (lost && moved && (lu as number) > 0) {
-    return 'Paid over the market and bought ' + pts + ' pts a week of lineup' + spot + '.';
+    return 'Paid more than market, but ' + their + ' lineup scores ' + pts + ' more pts a week.' + spot;
   }
   if (won && moved && (lu as number) < 0) {
-    return 'Won the value and sold ' + pts + ' pts a week out of their starters'
-      + (ctx.window === 'rebuild' ? ' — which is what a rebuild is for.' : '.');
+    return 'Won on value, but ' + their + ' lineup scores ' + pts + ' fewer pts a week'
+      + (ctx.window === 'rebuild' ? ' — the price of a rebuild.' : '.');
   }
 
   if (moved && (lu as number) > 0) {
-    return 'Their starters gain ' + pts + ' pts a week' + spot
-      + (ctx.window === 'contender' ? ' — a contender buying now.' : '.');
+    return Their + ' lineup scores ' + pts + ' more pts a week'
+      + (ctx.window === 'contender' ? ' — a contender buying for now.' : '.') + spot;
   }
-  if (moved) return 'Their starters lose ' + pts + ' pts a week' + '.';
+  if (moved) return Their + ' lineup scores ' + pts + ' fewer pts a week.';
 
   // Nothing in the lineup moved, so the deal was about what it is worth.
   if (won) {
-    return 'Took the value without touching their lineup'
-      + (ctx.window === 'rebuild' ? ', a rebuild banking assets.' : '.');
+    return 'Came out ahead on value without hurting ' + their + ' lineup'
+      + (ctx.window === 'rebuild' ? ' — a rebuild banking assets.' : '.');
   }
-  if (lost) return 'Gave up value and their lineup is unchanged.';
+  if (lost) return 'Gave up value and ' + their + ' lineup did not get better.';
   if (lu == null) return 'Even on value.';
-  return 'Even on value, and their lineup is unchanged.';
+  return 'Even on value, and ' + their + ' lineup is about the same.';
 }
 
 /**
@@ -304,7 +310,10 @@ export function tradeOutcome(t: LeagueTrade): string {
   const v = t.verdict;
   if (!v || !v.moved) return 'Nothing of value changed hands';
   if (!v.winner) return 'Even trade at today\'s prices';
-  const pct = Math.round((v.winner.net / v.moved) * 100);
-  return (v.winner.isMe ? 'You win this one' : v.winner.name + ' wins this one')
-    + ' — ' + pct + '% of the value moved';
+  /* The margin in plain terms: how far ahead the winner came out, as a
+   * share of what they gave up. "25% of the value moved" read as nothing. */
+  const ahead = v.winner.isMe ? 'You came out ahead' : v.winner.name + ' came out ahead';
+  const gave = v.ledgers.find(l => l.id === v.winner?.id)?.out ?? 0;
+  const pct = gave > 0 ? Math.round((v.winner.net / gave) * 100) : null;
+  return pct != null ? ahead + ' — ' + pct + '% more value than ' + (v.winner.isMe ? 'you' : 'they') + ' gave' : ahead;
 }
