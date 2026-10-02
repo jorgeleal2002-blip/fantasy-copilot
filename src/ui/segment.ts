@@ -1,6 +1,7 @@
 import type { ImageSegmenter } from '@mediapipe/tasks-vision';
 import wasmLoaderPath from '@mediapipe/tasks-vision/vision_wasm_internal.js?url';
 import wasmBinaryPath from '@mediapipe/tasks-vision/vision_wasm_internal.wasm?url';
+import { defringe } from '../model/cutout';
 
 /**
  * Lifting a person off ANY background — a car, a crowd, a flag — with
@@ -69,6 +70,18 @@ export async function segmentPerson(url: string): Promise<string | null> {
   result.close();
 
   const px = ctx.getImageData(0, 0, W, H);
+  // The backdrop's colour: the average of what the model is sure is not him.
+  let br = 0, bgc = 0, bb = 0, bn = 0;
+  const confAt = (x: number, y: number) =>
+    conf[Math.min(mh - 1, Math.floor((y * mh) / H)) * mw + Math.min(mw - 1, Math.floor((x * mw) / W))] ?? 0;
+  for (let y = 0; y < H; y += 2) {
+    for (let x = 0; x < W; x += 2) {
+      if (confAt(x, y) > 0.05) continue;
+      const i = (y * W + x) * 4;
+      br += px.data[i]; bgc += px.data[i + 1]; bb += px.data[i + 2]; bn++;
+    }
+  }
+  const bg: [number, number, number] = bn ? [br / bn, bgc / bn, bb / bn] : [0, 0, 0];
   let x0 = W, y0 = H, x1 = -1, y1 = -1, kept = 0;
   for (let y = 0; y < H; y++) {
     // The mask is a fraction of the photo's size; sampled to the nearest of
@@ -81,10 +94,10 @@ export async function segmentPerson(url: string): Promise<string | null> {
       const top = (conf[y0m * mw + x0m] ?? 0) * (1 - tx) + (conf[y0m * mw + x1m] ?? 0) * tx;
       const bot = (conf[y1m * mw + x0m] ?? 0) * (1 - tx) + (conf[y1m * mw + x1m] ?? 0) * tx;
       const p = top * (1 - ty) + bot * ty;
-      // A soft edge rather than a hard threshold — but a low one. Dark hair on
-      // a dark ground is where the model is least sure, and an even split
-      // there let the banner show through a beard.
-      const t = Math.max(0, Math.min(1, (p - 0.1) / 0.3));
+      // A soft edge rather than a hard threshold, kept low enough that a dark
+      // beard on a dark ground stays solid — the colour that low keep drags in
+      // from the backdrop is taken back out by `defringe` below.
+      const t = Math.max(0, Math.min(1, (p - 0.15) / 0.35));
       const a = Math.round(t * t * (3 - 2 * t) * 255);
       px.data[(y * W + x) * 4 + 3] = a;
       if (a > 24) {
@@ -97,6 +110,7 @@ export async function segmentPerson(url: string): Promise<string | null> {
     }
   }
   if (kept < W * H * 0.03) return null;
+  defringe(px, bg);
   ctx.putImageData(px, 0, 0);
 
   return crop(c, x0, y0, x1 - x0 + 1, y1 - y0 + 1);

@@ -94,5 +94,31 @@ export function cutOut(px: Pixels): { x: number; y: number; w: number; h: number
       }
     }
   }
+  defringe(px, bg);
   return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
+
+/**
+ * Takes the old background's colour back out of the edge.
+ *
+ * A pixel on the outline of hair is part hair and part whatever was behind
+ * it, and once the ground is cut away the "behind" part is still in its
+ * colour: dark curls on a dark studio backdrop came out ringed in that
+ * backdrop, a jagged halo against the team colour. Each pixel the cut left
+ * partly transparent is solved for the colour it would have had on its own,
+ * given how much of it is kept — the standard un-premultiply.
+ */
+export function defringe(px: Pixels, bg: [number, number, number]): void {
+  const d = px.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3];
+    if (a === 0 || a === 255) continue;
+    // Below a fifth kept, the solve divides by almost nothing and invents
+    // colour; those pixels are nearly invisible anyway.
+    const f = Math.max(a / 255, 0.2);
+    for (let c = 0; c < 3; c++) {
+      const v = (d[i + c] - (1 - f) * bg[c]) / f;
+      d[i + c] = v < 0 ? 0 : v > 255 ? 255 : Math.round(v);
+    }
+  }
 }

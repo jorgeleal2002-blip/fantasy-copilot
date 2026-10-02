@@ -40,7 +40,7 @@ function flat(url: string): Promise<string | null> {
 
 /* Kept on the phone, so each photo is worked out once and not on every open.
    Keyed by a hash of the photo itself: a new photo is a new key. */
-const KEY = 'doctors-cutout:v3:';
+const KEY = 'doctors-cutout:v4:';
 const hash = (s: string) => {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);

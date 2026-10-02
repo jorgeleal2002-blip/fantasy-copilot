@@ -34,7 +34,7 @@ import { projectSide, projectionsAreStale, readProjections, scoreProjection, sco
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
 import { headlineBits, statLine, touchdowns } from '../model/stat-line';
-import { cutOut } from '../model/cutout';
+import { cutOut, defringe } from '../model/cutout';
 import { seasonOutlook, teamStrength } from '../model/outlook';
 import { returnLine, whyMe, whyThem } from '../model/offer-copy';
 import { tradeHeadline, type LeagueTrade } from '../model/league-trades';
@@ -5280,5 +5280,24 @@ describe('who won a finished trade', () => {
     const h = tradeHeadline(t, { 1: 3, 2: -3 }, false);
     expect(h.title).toBe('I Am Inevitable won this trade');
     expect(h.detail).toBe('I Am Inevitable +596 in value · I Am Inevitable +3.0 pts a week');
+  });
+});
+
+describe('taking the backdrop out of an edge', () => {
+  it('turns a half-kept dark-red edge pixel back into the hair it is', () => {
+    const bg: [number, number, number] = [120, 20, 20];
+    const hair = [60, 40, 30];
+    // Half hair, half backdrop, half kept.
+    const mix = hair.map((h, i) => Math.round(0.5 * h + 0.5 * bg[i]));
+    const px = { width: 1, height: 1, data: new Uint8ClampedArray([...mix, 128]) };
+    defringe(px, bg);
+    const got = Array.from(px.data.slice(0, 3));
+    got.forEach((v, i) => expect(Math.abs(v - hair[i])).toBeLessThan(3));
+  });
+
+  it('leaves solid and empty pixels alone', () => {
+    const px = { width: 2, height: 1, data: new Uint8ClampedArray([10, 20, 30, 255, 40, 50, 60, 0]) };
+    defringe(px, [0, 0, 0]);
+    expect(Array.from(px.data)).toEqual([10, 20, 30, 255, 40, 50, 60, 0]);
   });
 });
