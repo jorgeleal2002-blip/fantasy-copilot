@@ -1729,7 +1729,8 @@ export function useApp() {
     },
     setUsername: (v: string) => { setUsername(v); setAuthError(''); },
     connectUser, pickLeague, switchLeague, logout, refreshAll, refreshScores, refreshPicks, retry,
-    setTab: (t: Tab) => { setTab(t); setDetailStack([]); },
+    // League always opens on your own lineup, wherever you left it.
+    setTab: (t: Tab) => { setTab(t); setDetailStack([]); if (t === 'league') setLeagueView('myteam'); },
     leagueView, setLeagueView,
     setTeamView, setDraftView, setTradeView, setFilter,
     /**
