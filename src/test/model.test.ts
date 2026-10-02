@@ -36,6 +36,8 @@ import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/
 import { headlineBits, statLine, touchdowns } from '../model/stat-line';
 import { cutOut } from '../model/cutout';
 import { seasonOutlook, teamStrength } from '../model/outlook';
+import { returnLine, whyMe, whyThem } from '../model/offer-copy';
+import type { Offer } from '../model/types';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -5204,5 +5206,35 @@ describe('the season played out', () => {
     expect(teamStrength(150, 100, 0, 0)).toBe(100);
     expect(teamStrength(150, 100, 9, 0)).toBeCloseTo(137.5);
     expect(teamStrength(null, null, 0, 111)).toBe(111);
+  });
+});
+
+describe('the words under a suggested trade', () => {
+  const offer = (o: Partial<Offer>): Offer => ({
+    partner: 'Konoha', give: { id: 'a', name: 'A', isPick: false } as never, get: { id: 'b', name: 'B', isPick: false } as never,
+    gain: 2, theirGain: 0, fit: 70, edge: 0, kind: 'lineup',
+    prof: { window: 'mid', worst: 'RB', rank: 4, avgAge: 26 } as never, fillsTheirNeed: false, ...o,
+  });
+
+  it('never prints a sign the words already carry', () => {
+    const txt = whyThem(offer({ theirGain: -2.3, edge: -0.1 }), true) + whyMe(offer({ gain: -1.4 }));
+    expect(txt).not.toMatch(/-\d/);
+    expect(txt).toContain('2.3 fewer pts');
+    expect(txt).toContain('1.4 fewer pts');
+  });
+
+  it('calls a value deal value, not points', () => {
+    expect(whyMe(offer({ kind: 'capital', gain: 4.5, edge: -0.1 }))).not.toMatch(/pts/);
+  });
+
+  it('says a losing deal for them will be a hard sell', () => {
+    expect(whyThem(offer({ theirGain: -3, edge: 0.1 }), true)).toMatch(/expect a no/);
+    expect(whyThem(offer({ theirGain: -3, edge: -0.1, prof: { window: 'rebuild', worst: null } as never }), true))
+      .toMatch(/10% more value back — the kind of deal/);
+  });
+
+  it('describes a block return without a zero or a sign', () => {
+    expect(returnLine({ edge: 0, myGain: -2, fillsTheirNeed: true, worst: 'WR', sendName: 'J. Doe' }))
+      .toBe('You get back about what he is worth. Your lineup scores 2.0 fewer pts a week without him. J. Doe goes straight into WR, their weakest spot.');
   });
 });

@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import { returnLine, whyMe, whyThem } from '../model/offer-copy';
 import { BAD, GOOD, MID } from '../model/constants';
 import { num } from '../model/math';
 import type { BlockReturn, Model, Offer, TradeAsset } from '../model/types';
 import type { App } from '../state/useApp';
-import { clockTime, ord } from '../ui/format';
+import { clockTime } from '../ui/format';
 import { PlayerSearch } from '../ui/PlayerSearch';
 import { Card, Empty, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
@@ -197,7 +198,6 @@ function Block({ app, m }: { app: App; m: Model }) {
 
 /** One return: who pays, what comes back, and what it does to your lineup. */
 function ReturnCard({ r }: { r: BlockReturn }) {
-  const under = r.edge >= 0;
   return (
     <Card>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
@@ -228,18 +228,7 @@ function ReturnCard({ r }: { r: BlockReturn }) {
       </div>
 
       <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), marginTop: 10, textWrap: 'pretty' }}>
-        {under
-          ? `You get back ${Math.round(r.edge * 100)}% more than he is worth.`
-          : `You take ${Math.round(-r.edge * 100)}% under his market price.`}
-        {' '}
-        {/* Losing lineup points is expected when you sell a starter, so it is
-            stated rather than buried — that is the cost of the deal. */}
-        {r.myGain < -0.1
-          ? `Your lineup drops ${(-r.myGain).toFixed(1)} pts this week.`
-          : r.myGain > 0.1
-            ? `Your lineup still rises ${r.myGain.toFixed(1)} pts.`
-            : 'Your lineup is unchanged.'}
-        {r.fillsTheirNeed ? ` He lands on ${r.prof.worst}, their weakest spot.` : ''}
+        {returnLine({ edge: r.edge, myGain: r.myGain, fillsTheirNeed: r.fillsTheirNeed, worst: r.prof.worst, sendName: r.send.name })}
       </div>
     </Card>
   );
@@ -250,7 +239,7 @@ function ReturnCard({ r }: { r: BlockReturn }) {
 function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty: boolean }) {
   const fitTint = o.fit >= 75 ? GOOD : o.fit >= 62 ? MID : dim(0.75);
   const kind = o.edge > 0.04 ? 'Buying under market'
-    : o.edge < -0.04 ? 'Justified overpay' : 'Fair price';
+    : o.edge < -0.04 ? (o.kind === 'lineup' && o.gain > 0.3 ? 'Overpay that helps you' : 'Overpay') : 'Fair price';
   const gain = o.kind === 'capital'
     ? `${o.gain >= 0 ? '+' : ''}${num(o.gain * 100)} market value`
     : `${o.gain >= 0 ? '+' : ''}${o.gain.toFixed(1)} lineup pts`;
@@ -323,33 +312,4 @@ function Side({
       <div className="of-meta">{num(asset.q * 100)}</div>
     </div>
   );
-}
-
-/** Overpaying is fine when the lineup jump pays for it; buying cheap is fine
- *  when they would still say yes. The copy has to say which one this is. */
-function whyMe(o: Offer): string {
-  const base = o.edge < -0.02
-    ? `You pay ${Math.round(-o.edge * 100)}% over market, and it is worth it: your lineup rises ${o.gain.toFixed(1)} pts.`
-    : o.edge > 0.02
-      ? `You buy ${Math.round(o.edge * 100)}% under market` +
-        (o.kind === 'lineup' ? ` and it still lifts your lineup ${o.gain.toFixed(1)} pts.` : '.')
-      : 'Even money at market price' + (o.kind === 'lineup' ? `, with +${o.gain.toFixed(1)} pts for your lineup.` : '.');
-  return base + (o.give.isPick ? ' You send draft capital, not players from your lineup.' : '');
-}
-
-function whyThem(o: Offer, dynasty: boolean): string {
-  // "Rebuilding" needs a next season to build toward, and redraft has none.
-  const window = o.prof.window === 'contender' ? 'They are going for the title now'
-    : o.prof.window === 'rebuild'
-      ? (dynasty ? 'They are rebuilding' : 'They are out of the race')
-      : 'They are mid-table';
-  const need = o.fillsTheirNeed
-    ? `It lands right on ${o.prof.worst}, their weakest position. `
-    : o.prof.worst ? `Their real hole is ${o.prof.worst}. ` : '';
-  const outcome = o.theirGain > 0.3
-    ? `Their lineup rises ${o.theirGain.toFixed(1)}.`
-    : o.give.isPick
-      ? `Their lineup drops ${o.theirGain.toFixed(1)}, but they take ${Math.round(-o.edge * 100)}% extra value in future capital — which is exactly what a team with nothing to play for wants.`
-      : `Their lineup barely moves (${o.theirGain.toFixed(1)}), so they take it on market value.`;
-  return `${window} (${ord(o.prof.rank)} in value, age ${o.prof.avgAge.toFixed(1)}). ${need}${outcome}`;
 }
