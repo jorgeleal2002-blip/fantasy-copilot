@@ -93,33 +93,24 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
           says so is an edge around it. Everything below is a list, and a list
           under a bordered block reads as the detail of it. */}
       <div className="ms-board">
-        {/* Who, then what they scored. It used to run the other way: two large
-            numbers with a face each, then the bar, then the projected margin,
-            and only under all of it the names — so you read 148.62 and had a
-            paragraph to cross before learning whose it was.
-
-            The names take the whole width rather than sitting beside the
-            avatars. Indented past a portrait they have about 98px, and
-            "@vergarahater · 1-2 (#9)" wants 115 — tried, and it cut every
-            record on the card to "3-0 (...". At full width they have 150 and
-            the avatar is directly under its own name anyway. */}
-        <div className="ms-names">
-          <Who s={game.a} place={placeOf(game.a.rosterId)} />
-          {game.b ? <Who s={game.b} place={placeOf(game.b.rosterId)} align="right" /> : <div style={{ flex: 1 }} />}
-        </div>
-
+        {/* Laid out the way Sleeper's own scoreboard is, because that is the
+            one everybody reading this has open in the other app: each face
+            with its score beside it, the bar under both, and the names under
+            the bar at full width — indented past a portrait they had about 98px
+            and cut every record to "3-0 (...". */}
         <div className="ms-scores">
           <Av s={game.a} />
           <div className="ms-score">
             <div className={'ms-pts' + (lead === 'a' ? ' is-up' : '')}>{score(game.a.points)}</div>
             {game.a.projected != null
-              ? <div className="ms-proj">proj {game.a.projected.toFixed(1)}</div> : null}
+              ? <div className="ms-proj">{game.a.projected.toFixed(1)}</div> : null}
           </div>
           {/* The two teams' own faces, behind the mark, meeting where they
               play each other. It is a background and is treated as one: dim
               enough that the figures either side of it stay readable over a
               white avatar, which is the case it has to survive — see the note
-              on `.ms-vs-crest`. */}
+              on `.ms-vs-crest`. The mark itself says what state the game is
+              in once that is anything but "vs". */}
           <div className="ms-vs">
             {game.a.avatar || game.b?.avatar ? (
               <span className="ms-vs-crest" aria-hidden="true">
@@ -128,31 +119,33 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
                 {game.b ? <span className="ms-vs-half" style={bg(game.b.avatar)} /> : null}
               </span>
             ) : null}
-            <span className="ms-vs-txt">{game.b ? 'vs' : 'bye'}</span>
+            <span className={'ms-vs-txt' + (state === 'Live' ? ' is-live' : '')}>
+              {state === 'Live' || state === 'Final' ? state : game.b ? 'vs' : 'bye'}
+            </span>
           </div>
           <div className="ms-score is-right">
             <div className={'ms-pts' + (lead === 'b' ? ' is-up' : '')}>{score(game.b?.points ?? null)}</div>
             {game.b?.projected != null
-              ? <div className="ms-proj">proj {game.b.projected.toFixed(1)}</div> : null}
+              ? <div className="ms-proj">{game.b.projected.toFixed(1)}</div> : null}
           </div>
           {game.b ? <Av s={game.b} /> : <div className="ms-av-sp" />}
         </div>
 
+        {/* Two colours meeting, not one fill on a track: a tug of war, both
+            ends a team and the seam the question. The tick marks even. */}
         {split != null ? (
-          <div className="ms-split">
-            {/* Two colours meeting, not one fill on a track. A single bar on
-                grey reads as a progress bar — a thing filling up — and this is
-                a tug of war: both ends are a team and the seam is the question.
-                The tick marks even, so a split near the middle is readable as
-                near the middle rather than guessed at. */}
-            <div className="ms-bar" role="img"
-              aria-label={'projected split ' + Math.round(split * 100) + ' to ' + Math.round((1 - split) * 100)}>
-              <div className={'ms-bar-a' + (game.a.isMe ? ' is-me' : '')} style={{ width: (split * 100).toFixed(1) + '%' }} />
-              <div className="ms-bar-tick" />
-            </div>
-            <Foot state={state} edge={edge} />
+          <div className="ms-bar" role="img"
+            aria-label={'projected split ' + Math.round(split * 100) + ' to ' + Math.round((1 - split) * 100)
+              + (edge != null ? ', margin ' + edge.toFixed(1) : '')}>
+            <div className={'ms-bar-a' + (game.a.isMe ? ' is-me' : '')} style={{ width: (split * 100).toFixed(1) + '%' }} />
+            <div className="ms-bar-tick" />
           </div>
-        ) : state ? <Foot state={state} edge={null} /> : null}
+        ) : null}
+
+        <div className="ms-names">
+          <Who s={game.a} place={placeOf(game.a.rosterId)} />
+          {game.b ? <Who s={game.b} place={placeOf(game.b.rosterId)} align="right" /> : <div style={{ flex: 1 }} />}
+        </div>
       </div>
 
       {starters.length ? (
@@ -175,19 +168,6 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
 }
 
 const score = (p: number | null) => (p == null ? '—' : p.toFixed(2));
-
-/* The week's state and the projected margin on one line, under the bar — the
- * header above the sheet already names the week, so a row of its own for the
- * state was height spent on a word. The margin sits on the side it favours and
- * the state takes the other. */
-function Foot({ state, edge }: { state: string | null; edge: number | null }) {
-  const right = edge != null && edge < 0;
-  const pill = state ? <span className={'ms-state is-' + state.split(' ')[0].toLowerCase()}>{state}</span> : <span />;
-  const margin = edge != null
-    ? <span className="ms-edge">{(edge >= 0 ? '+' : '') + edge.toFixed(1) + ' projected margin'}</span>
-    : <span />;
-  return <div className="ms-foot">{right ? <>{pill}{margin}</> : <>{margin}{pill}</>}</div>;
-}
 
 /** A team's own picture as a background, or nothing where it has none. */
 const bg = (url: string | null) =>

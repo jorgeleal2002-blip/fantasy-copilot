@@ -1176,10 +1176,10 @@ button { font-family: inherit; }
 .ms-who-team { flex: 1; min-width: 0; }
 .ms-who-team.is-right { text-align: right; }
 /* Where an avatar would be, when there is no opponent to draw one for. */
-.ms-av-sp { width: 26px; flex: none; }
+.ms-av-sp { width: 36px; flex: none; }
 .ms-av {
-  width: 26px;
-  height: 26px;
+  width: 36px;
+  height: 36px;
   flex: none;
   border-radius: 50%;
   object-fit: cover;
@@ -1218,7 +1218,7 @@ button { font-family: inherit; }
   position: relative;
   flex: none;
   align-self: center;
-  width: 26px;
+  width: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1267,6 +1267,20 @@ button { font-family: inherit; }
   text-transform: uppercase;
   color: rgba(242, 253, 254, 0.9);
 }
+.ms-vs-txt.is-live { color: var(--c-good); }
+.ms-vs-txt.is-live::before {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 6px;
+  margin: 0 auto 2px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: live-dot 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ms-vs-txt.is-live::before { animation: none; }
+}
 
 /* The two figures, on the same grid as the two names above them — each sits
    under its own team rather than indented past an avatar that is no longer
@@ -1300,8 +1314,6 @@ button { font-family: inherit; }
    — that needs the spread of what is left to play, which nothing here
    measures, and a confident "100%" that is wrong is the worst number a
    scoreboard can carry. */
-.ms-split { display: flex; flex-direction: column; gap: 6px; }
-.ms-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ms-bar {
   position: relative;
   height: 6px;
@@ -1332,17 +1344,16 @@ button { font-family: inherit; }
   width: var(--hairline);
   background: var(--bg-base);
 }
-.ms-edge {
-  font-size: 10px;
-  line-height: 14px;
-  color: rgba(242, 253, 254, 0.52);
-  font-variant-numeric: tabular-nums;
-}
 
-/* A narrow phone gets the air between the columns back: three of the five in
-   the score row are fixed, so every pixel out of a gap goes to the scores. */
+/* A narrow phone gives the scores everything the fixed columns can spare. */
 @media (max-width: 380px) {
-  .ms-scores { gap: 6px; }
+  .ms-scores { gap: 4px; }
+  /* "118.70" at 21px wants 72px, and a 320px phone leaves each score about
+     that once two 36px faces and the mark are in — so they give way first. */
+  .ms-av, .ms-av-sp { width: 26px; }
+  .ms-av { height: 26px; }
+  .ms-vs { width: 34px; }
+  .ms-vs-crest { width: 36px; height: 36px; margin: -18px 0 0 -18px; }
 }
 
 .ms-block { display: flex; flex-direction: column; }
