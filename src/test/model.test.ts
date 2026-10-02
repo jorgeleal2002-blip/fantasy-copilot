@@ -35,6 +35,8 @@ import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
 import { headlineBits, statLine, touchdowns } from '../model/stat-line';
 import { cutOut, defringe } from '../model/cutout';
+import { availability, byesOf, seasonFit } from '../model/season-fit';
+import { fitHeadline, outcomeFor, situationOf, type TeamCase } from '../model/team-verdict';
 import { seasonOutlook, teamStrength } from '../model/outlook';
 import { returnLine, whyMe, whyThem } from '../model/offer-copy';
 import { tradeHeadline, type LeagueTrade } from '../model/league-trades';
@@ -5348,5 +5350,57 @@ describe('a full roster has to make room', () => {
     expect(evaluateTrade(teams, deal, undefined, { 1: { ...full, open: 1 } }).ledgers.find(l => l.id === 1)!.cuts).toEqual([]);
     const forPick = [a('x', 60, 2, 1), a('pk', 50, 2, 1, true), a('star', 100, 1, 2)];
     expect(evaluateTrade(teams, forPick, undefined, { 1: full }).ledgers.find(l => l.id === 1)!.cuts).toEqual([]);
+  });
+});
+
+describe('the rest of the season, week by week', () => {
+  const cal = {
+    slots: ['RB', 'WR'], weeks: [5, 6, 7], playoffWeeks: [7],
+    opponent: (team: string, w: number) => (team === 'BYE6' && w === 6 ? '' : 'XXX'),
+    matchup: () => 1,
+  };
+  const p = (id: string, pos: string, ppg: number, team = 'T', injury = '') => ({ id, name: id, pos, team, ppg, injury });
+
+  it('scores nothing on a bye and fills the slot from the bench', () => {
+    const fit = seasonFit([p('a', 'RB', 15, 'BYE6'), p('b', 'RB', 5), p('w', 'WR', 10)], cal);
+    // weeks 5 and 7: 15 + 10; week 6: 5 + 10 — week 7 counts 1.5x.
+    expect(fit.perWeek).toBeCloseTo((25 + 15 + 25 * 1.5) / 3.5);
+    expect(fit.playoffs).toBe(25);
+  });
+
+  it('takes an injured player out for as long as his status says', () => {
+    expect(availability('Out', 0)).toBe(0);
+    expect(availability('Out', 1)).toBe(1);
+    expect(availability('IR', 3)).toBe(0);
+    expect(availability('Questionable', 0)).toBe(0.8);
+  });
+
+  it('lists the byes a trade brings in', () => {
+    expect(byesOf([p('a', 'RB', 15, 'BYE6')], cal)).toEqual([{ week: 6, names: ['a'] }]);
+  });
+});
+
+describe('whether a trade suits each team', () => {
+  const c = (o: Partial<TeamCase>): TeamCase => ({
+    id: 1, name: 'A', isMe: false, situation: 'middle', net: 0, band: 5, perWeek: 0, playoffs: null, ...o,
+  });
+
+  it('lets a contender pay for points and a rebuild take the value — both win', () => {
+    const buyer = c({ id: 1, name: 'Buyer', situation: 'contender', net: -20, perWeek: 2.5 });
+    const seller = c({ id: 2, name: 'Seller', situation: 'out', net: 20, perWeek: -2.5 });
+    expect(outcomeFor(buyer, true)).toBe('good');
+    expect(outcomeFor(seller, true)).toBe('good');
+    expect(fitHeadline([buyer, seller], true, 100).title).toBe('Win-win: it suits Buyer and Seller');
+  });
+
+  it('does not let a redraft team out of the race win by hoarding value', () => {
+    const seller = c({ id: 2, name: 'Seller', situation: 'out', net: 20, perWeek: -2.5 });
+    expect(outcomeFor(seller, false)).toBe('bad');
+  });
+
+  it('places teams by their record', () => {
+    expect(situationOf(2, 4, 12, 6)).toBe('contender');
+    expect(situationOf(11, 4, 12, 6)).toBe('out');
+    expect(situationOf(11, 1, 12, 6)).toBe('middle');
   });
 });

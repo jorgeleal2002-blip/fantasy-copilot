@@ -493,6 +493,14 @@ export interface Model {
   teamInfo: (rosterId: number) => TeamSheet | null;
   /** free roster spots, and who would be cut first to make one */
   rosterRoom: (rosterId: number) => import('./trade-eval').RosterRoom | null;
+  /** What a trade does to a team over every week left — byes, injuries,
+   *  matchups and the playoff weeks weighed in — or null off the calendar. */
+  seasonWith: (rosterId: number, incoming: string[], outgoing: string[], fromWeek: number) => {
+    perWeek: number;
+    playoffs: number | null;
+    byes: { week: number; names: string[] }[];
+    injured: { name: string; status: string }[];
+  } | null;
   /** What a trade would do to a team's best available lineup. Picks are
    *  excluded — one cannot start a game. */
   lineupWith: (rosterId: number, incoming: string[], outgoing: string[]) =>

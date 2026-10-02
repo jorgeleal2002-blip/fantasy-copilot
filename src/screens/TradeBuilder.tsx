@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { colorOf } from '../model/constants';
-import { evaluateTrade, fitLine, tradeHeadline, type RosterRoom, type TeamLedger, type TradeAsset } from '../model/trade-eval';
+import { evaluateTrade, fitLine, type RosterRoom, type TeamLedger, type TradeAsset } from '../model/trade-eval';
+import { caseLine, fitHeadline, situationOf, type FitHeadline, type TeamCase } from '../model/team-verdict';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -37,11 +38,19 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
     return { id, name: found?.name || id, value: found?.q || 0, from: a.from, to: a.to, isPick };
   });
 
+  /* Each team's season with and without the trade, week by week: byes,
+     injuries, matchups and the playoff weeks in. Falls back to the plain
+     best-lineup difference off the bundled calendar. */
+  const fromWeek = app.week || app.nflWeek || 1;
   const fits: Record<number, number> = {};
+  const seasons: Record<number, ReturnType<Model['seasonWith']>> = {};
   for (const t of teams) {
-    const incoming = assets.filter(x => x.to === t.id).map(x => x.id);
-    const outgoing = assets.filter(x => x.from === t.id).map(x => x.id);
+    const incoming = assets.filter(x => x.to === t.id && !x.isPick).map(x => x.id);
+    const outgoing = assets.filter(x => x.from === t.id && !x.isPick).map(x => x.id);
     if (!incoming.length && !outgoing.length) continue;
+    const sw = m.seasonWith(t.id, incoming, outgoing, fromWeek);
+    seasons[t.id] = sw;
+    if (sw) { fits[t.id] = sw.perWeek; continue; }
     const w = m.lineupWith(t.id, incoming, outgoing);
     if (w.measured) fits[t.id] = w.delta;
   }
@@ -52,11 +61,27 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
     if (r) room[t.id] = r;
   }
   const v = evaluateTrade(teams, assets, fits, room);
+
+  // What each team should want, from where it stands.
+  const order = m.leagueRows.slice().sort((a, b) =>
+    b.record.wins - a.record.wins || b.record.pointsFor - a.record.pointsFor);
+  const playoffTeams = Math.min(m.teamCount, Number(m.league.settings?.playoff_teams) || 6);
+  const cases: TeamCase[] = v.ledgers.map(l => {
+    const row = m.leagueRows.find(r => r.id === l.id);
+    const games = row ? row.record.wins + row.record.losses + row.record.ties : 0;
+    return {
+      id: l.id, name: l.name, isMe: l.isMe,
+      situation: situationOf(order.findIndex(r => r.id === l.id) + 1, games, m.teamCount, playoffTeams),
+      net: l.net, band: v.band,
+      perWeek: l.fitDelta, playoffs: seasons[l.id]?.playoffs ?? null,
+    };
+  });
   const fit = fitLine(v);
 
   return (
     <div className="fb">
-      <Balance v={v} fit={fit} pivot={teams.find(t => t.isMe)?.id ?? teams[0]?.id ?? null} dynasty={m.isDynasty} />
+      <Balance v={v} fit={fit} pivot={teams.find(t => t.isMe)?.id ?? teams[0]?.id ?? null}
+        head={fitHeadline(cases, m.isDynasty, v.moved)} />
 
       {teams.length < 2 ? (
         <div className="fb-empty">
@@ -87,6 +112,22 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
                 <Card key={a.id} app={app} m={m} asset={a} />
               ))}
 
+              {(() => {
+                const c = cases.find(x => x.id === t.id);
+                const sw = seasons[t.id];
+                if (!c || !v.moved) return null;
+                return (
+                  <div className="fb-case">
+                    <div>{caseLine(c, m.isDynasty)}</div>
+                    {sw?.byes.length ? (
+                      <div>Byes: {sw.byes.map(b => 'wk ' + b.week + ' (' + b.names.join(', ') + ')').join(' · ')}</div>
+                    ) : null}
+                    {sw?.injured.length ? (
+                      <div className="fb-case-bad">Injured: {sw.injured.map(i => i.name + ' — ' + i.status).join(', ')}</div>
+                    ) : null}
+                  </div>
+                );
+              })()}
               {(() => {
                 const cuts = v.ledgers.find(l => l.id === t.id)?.cuts || [];
                 return cuts.length ? (
@@ -133,8 +174,8 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 }
 
 /** The headline and the one bar that answers the whole screen. */
-function Balance({ v, fit, pivot, dynasty }: {
-  v: ReturnType<typeof evaluateTrade>; fit: string | null; pivot: number | null; dynasty: boolean;
+function Balance({ v, fit, pivot, head: h }: {
+  v: ReturnType<typeof evaluateTrade>; fit: string | null; pivot: number | null; head: FitHeadline;
 }) {
   const [open, setOpen] = useState(false);
   // The bar is read from one team's side: yours when you are in it, else the
@@ -144,9 +185,9 @@ function Balance({ v, fit, pivot, dynasty }: {
   // Green and red are you winning and you losing; a trade you are not in is
   // neither, and is told in the plain accent.
   const inIt = v.ledgers.some(l => l.isMe);
-  const h = tradeHeadline(v, dynasty);
-  const tone = !v.moved ? dim(0.62) : !h.winner ? dim(0.9)
-    : !inIt ? 'var(--color-accent)' : h.winner.isMe ? GOOD : BAD;
+  const meWins = v.ledgers.some(l => l.isMe && h.winners.includes(l.id));
+  const tone = !v.moved ? dim(0.62) : !h.winners.length ? dim(0.9)
+    : !inIt ? 'var(--color-accent)' : meWins ? GOOD : BAD;
   const head = h.title;
 
   /* The bar reads as a tug of war: dead centre is even, and it travels toward
@@ -172,7 +213,7 @@ function Balance({ v, fit, pivot, dynasty }: {
         <span>{others.length === 1 ? others[0].name : others.length ? 'The others' : ''}</span>
         <span>{me?.name || ''}</span>
       </div>
-      {fit ? <div className="fb-fit">{fit}</div> : null}
+      {fit && inIt ? <div className="fb-fit">{fit}</div> : null}
       {v.problems.map(p => <div key={p} className="fb-problem">{p}</div>)}
 
       {/* The headline can only name one team. In a three-way the other two

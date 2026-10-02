@@ -5,7 +5,9 @@ import {
 } from './constants';
 import { ageCurve, clamp, modelVal, pickLabel, playerName, poolFloor, prodShare, rankScore, talentScale } from './math';
 import type { Market } from './market';
-import { sosFor, sosScore } from './sos';
+import { playoffWeeks, sosFor, sosScore } from './sos';
+import { ALLOWED, ALLOWED_POS, OPPONENTS, SCHEDULE_SEASON, SEASON_WEEKS } from './schedule';
+import { byesOf, seasonFit, type FitCalendar, type FitPlayer } from './season-fit';
 import { EMPTY_METRICS, leagueWeights, ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
@@ -1269,6 +1271,62 @@ export function buildModel(input: ModelInput): Model {
   const ptsDelta = (before: number | null, after: number | null) =>
     (before == null || after == null ? null : Math.round((after - before) * 10) / 10);
 
+  /* ── The rest of the season, week by week — see `season-fit`. */
+  const posAvg = ALLOWED_POS.map((_, i) => {
+    const vals = Object.values(ALLOWED).map(r => r[i]).filter(Number.isFinite);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+  });
+  const fitPlayer = (id: string): FitPlayer | null => {
+    const pl = players[id];
+    if (!pl || POS.indexOf(pl.position as Pos) < 0) return null;
+    const ppg = uFor(id)?.ppgAdj;
+    return {
+      id, name: playerName(pl), pos: pl.position as string, team: pl.team || null,
+      ppg: Number.isFinite(ppg) ? (ppg as number) * ptScale : null,
+      injury: pl.injury_status || '',
+    };
+  };
+  const calendarFrom = (fromWeek: number): FitCalendar | null => {
+    if (Number(league.season) !== SCHEDULE_SEASON) return null;
+    const po = playoffWeeks(league);
+    const last = Math.min(SEASON_WEEKS, Math.max(...po));
+    const weeks: number[] = [];
+    for (let w = Math.max(1, fromWeek); w <= last; w++) weeks.push(w);
+    if (!weeks.length) return null;
+    return {
+      slots: lineupSlots, weeks, playoffWeeks: po,
+      opponent: (team, week) => OPPONENTS[team]?.[week - 1] ?? null,
+      // Half the measured gap, because last year's defence is a lagged guess at
+      // this year's: a real lean, not a verdict.
+      matchup: (def, pos) => {
+        const i = ALLOWED_POS.indexOf(pos as Pos);
+        const v = ALLOWED[def]?.[i];
+        return i < 0 || !v || !posAvg[i] ? 1 : 1 + 0.5 * (v / posAvg[i] - 1);
+      },
+    };
+  };
+  const seasonWith = (rid: number, incoming: string[], outgoing: string[], fromWeek: number) => {
+    const r = (d.rosters || []).find(x => x.roster_id === rid);
+    const cal = calendarFrom(fromWeek);
+    if (!r || !cal) return null;
+    const out = new Set(outgoing);
+    const taxi = new Set(r.taxi || []);
+    const toFit = (ids: string[]) => ids.map(fitPlayer).filter((p): p is FitPlayer => !!p);
+    // Taxi players cannot start; reserve players can once they are back, and
+    // their injury status already says when.
+    const cur = toFit((r.players || []).filter(id => !taxi.has(id)));
+    const inc = toFit(incoming);
+    const before = seasonFit(cur, cal);
+    const after = seasonFit(cur.filter(p => !out.has(p.id)).concat(inc), cal);
+    return {
+      perWeek: Math.round((after.perWeek - before.perWeek) * 10) / 10,
+      playoffs: after.playoffs != null && before.playoffs != null
+        ? Math.round((after.playoffs - before.playoffs) * 10) / 10 : null,
+      byes: byesOf(inc, cal),
+      injured: inc.filter(p => p.injury).map(p => ({ name: p.name, status: p.injury })),
+    };
+  };
+
   const lineupWith = (rid: number, incoming: string[], outgoing: string[]) => {
     const r = (d.rosters || []).find(x => x.roster_id === rid);
     if (!r) return { before: 0, after: 0, delta: 0, measured: false };
@@ -2194,7 +2252,7 @@ export function buildModel(input: ModelInput): Model {
     marketCount: mk ? Object.keys(mk.players).length : 0,
     snake: !!(d.draft && d.draft.type === 'snake'),
     fills: fillPos,
-    teamInfo, rosterRoom, posRankOf, scoreAny, marketValue, pickWorth, offersFor, runMock, metricKeys,
+    teamInfo, rosterRoom, seasonWith, posRankOf, scoreAny, marketValue, pickWorth, offersFor, runMock, metricKeys,
     lineupWith,
   };
 }

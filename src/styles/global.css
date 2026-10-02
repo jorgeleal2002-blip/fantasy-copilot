@@ -2055,6 +2055,17 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.52);
   background: transparent;
 }
+.fb-case {
+  margin: 2px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: rgba(242, 253, 254, 0.75);
+  text-wrap: pretty;
+}
+.fb-case-bad { color: var(--c-bad); }
 .fb-cut {
   margin: 2px 0 8px;
   font-size: 12px;
