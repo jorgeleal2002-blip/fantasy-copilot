@@ -131,8 +131,12 @@ function TradeCard({ app, m, t }: { app: App; m: Model; t: LeagueTrade }) {
         <span>{WHEN(t.at)}</span>
       </div>
 
-      <div style={{ fontSize: 12, fontWeight: 500, color: tone, marginTop: 4, textWrap: 'pretty' }}>
-        {head.title}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+        {/* The winner's own team picture, crowned. */}
+        {winner ? <Crowned src={m.leagueRows.find(r => r.id === winner.id)?.avatar || null} /> : null}
+        <div style={{ fontSize: 12, fontWeight: 500, color: tone, textWrap: 'pretty', minWidth: 0 }}>
+          {head.title}
+        </div>
       </div>
       {head.detail ? (
         <div style={{ fontSize: 12, lineHeight: '16px', color: dim(0.62), marginTop: 3, textWrap: 'pretty' }}>
@@ -159,6 +163,7 @@ function TradeCard({ app, m, t }: { app: App; m: Model; t: LeagueTrade }) {
               fontSize: 10, fontWeight: 500, marginBottom: 5,
               color: s.isMe ? 'var(--color-accent)' : 'var(--color-text)', ...ellipsis,
             }}>
+              {winner?.id === s.id ? <span aria-label="winner">👑 </span> : null}
               {s.name} {s.isMe ? 'get' : 'gets'}
             </div>
             {s.got.length
@@ -228,6 +233,15 @@ function SideDetail({ m, t, s, lineup }: { m: Model; t: LeagueTrade; s: TradeSid
         {read}
       </div>
 
+    </div>
+  );
+}
+
+function Crowned({ src }: { src: string | null }) {
+  return (
+    <div className="tr-crowned">
+      <span className="tr-crown" aria-hidden="true">👑</span>
+      {src ? <img src={src} alt="" /> : <div className="tr-crowned-blank" />}
     </div>
   );
 }
