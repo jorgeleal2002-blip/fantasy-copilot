@@ -2086,7 +2086,23 @@ export function buildModel(input: ModelInput): Model {
   // Any player in the league can open a full profile, including other rosters'.
   const scoreAny = (id: string): BoardPlayer | null => {
     const pl = players[id];
-    if (!pl || POS.indexOf(pl.position as Pos) < 0) return null;
+    if (!pl) return null;
+    /* A kicker or a team defence on somebody's roster opened to nothing — the
+     * board is the only place that knew them, and once drafted they are off
+     * it. Same deal as the board: a consensus place, not a Rating. */
+    if (POS.indexOf(pl.position as Pos) < 0) {
+      if ((FILL as string[]).indexOf(pl.position || '') < 0) return null;
+      const onBoard = scored.find(x => x.id === id);
+      if (onBoard) return onBoard;
+      const holder = (d.rosters || []).find(r => (r.players || []).indexOf(id) >= 0);
+      return {
+        id, name: playerName(pl), pos: pl.position as DraftPos, team: pl.team || 'FA',
+        age: pl.age, exp: pl.years_exp, goes: null, rank: marketOrder[id] || null,
+        m: EMPTY_METRICS, fit: Math.round(rankScore(pl.search_rank) * 100), raw: pl,
+        owner: holder ? teamName(holder.owner_id) : null,
+        owned: !!holder && holder.owner_id === d.me.user_id,
+      };
+    }
     // One player, one number. The board scores with the draft-slot discount
     // and this did not, so the same man came out three points apart depending
     // on whether you were reading a list or the card you opened from it —

@@ -5161,3 +5161,17 @@ describe('lifting a person off a plain background', () => {
     expect(cutOut({ width: W, height: H, data })).toBeNull();
   });
 });
+
+describe('a kicker or a defence opened from a roster', () => {
+  it('opens to a consensus place rather than to nothing', () => {
+    const offBoard = (pos: string) => Object.values(bundle.players)
+      .find(p => p.position === pos && !model.scored.some(s => s.id === p.player_id));
+    for (const pos of ['K', 'DEF']) {
+      const pl = offBoard(pos);
+      expect(pl, 'a ' + pos + ' off the board').toBeTruthy();
+      const got = model.scoreAny(pl!.player_id as string);
+      expect(got?.pos).toBe(pos);
+      expect(got?.fit).toBeGreaterThanOrEqual(0);
+    }
+  });
+});
