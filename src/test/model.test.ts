@@ -34,6 +34,7 @@ import { projectSide, projectionsAreStale, readProjections, scoreProjection, sco
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
 import { headlineBits, statLine, touchdowns } from '../model/stat-line';
+import { cutOut } from '../model/cutout';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -5128,5 +5129,35 @@ describe('when and who he plays', () => {
     expect(gameLine('ARI', 14, 2026, 0)).toBe('BYE');
     expect(gameLine('PIT', 4, 2026, Date.UTC(2026, 9, 9))).toBe('Final vs CLE');
     expect(gameLine(null, 4, 2026, 0)).toBeNull();
+  });
+});
+
+describe('lifting a person off a plain background', () => {
+  const img = (W: number, H: number, bg: number[], fg: number[], inside: (x: number, y: number) => boolean) => {
+    const data = new Uint8ClampedArray(W * H * 4);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const c = inside(x, y) ? fg : bg;
+      data.set([c[0], c[1], c[2], 255], (y * W + x) * 4);
+    }
+    return { width: W, height: H, data };
+  };
+  const head = (x: number, y: number) => (x - 20) ** 2 + (y - 16) ** 2 < 100 || (y > 26 && x > 8 && x < 32);
+
+  it('clears a black ground and boxes the person', () => {
+    const px = img(40, 40, [3, 3, 3], [140, 90, 60], head);
+    const box = cutOut(px);
+    expect(box).toEqual({ x: 8, y: 6, w: 25, h: 34 }); // a pixel of softened edge either side
+    expect(px.data[3]).toBe(0);
+    expect(px.data[(20 * 40 + 20) * 4 + 3]).toBe(255);
+  });
+
+  it('clears a white one the same way', () => {
+    expect(cutOut(img(40, 40, [250, 250, 250], [40, 60, 90], head))).not.toBeNull();
+  });
+
+  it('leaves a busy background alone rather than mangling it', () => {
+    const W = 40, H = 40, data = new Uint8ClampedArray(W * H * 4);
+    for (let p = 0; p < W * H; p++) data.set([(p * 37) % 256, (p * 91) % 256, (p * 53) % 256, 255], p * 4);
+    expect(cutOut({ width: W, height: H, data })).toBeNull();
   });
 });

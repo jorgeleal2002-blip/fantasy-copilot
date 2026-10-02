@@ -28,6 +28,7 @@ import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
 import { WeekBars } from '../ui/charts';
 import { Card, Face, Overlay, TdBalls } from '../ui/primitives';
+import { useCutout } from '../ui/useCutout';
 import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { gameLeft, phaseFor } from '../model/game-clock';
@@ -175,6 +176,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   // second player costs nothing.
   const wk = app.week;
   useEffect(() => { if (wk) void app.fetchWeekStats(wk); }, [app.fetchWeekStats, wk]);
+  // His photo with a plain background lifted off, for the banner.
+  const cut = useCutout(app.photoFor(playerId, 'full'));
 
   if (!p) {
     return (
@@ -463,10 +466,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
             if (small && e.currentTarget.src !== small) e.currentTarget.src = small;
             else e.currentTarget.style.display = 'none';
           }} /> : null}
-        <div className="ps-hero-face">
-          {photo
-            ? <img src={photo} alt="" />
-            : <span>{p.pos}</span>}
+        {/* Cut out, he stands on the banner's floor, whole, the way Sleeper's
+            portraits do. A photo that cannot be cut keeps the faded crop. */}
+        <div className={'ps-hero-face' + (cut ? ' is-cut' : '')}>
+          {cut ? <img src={cut} alt="" />
+            : photo ? <img src={photo} alt="" />
+              : <span>{p.pos}</span>}
         </div>
         <label className="ps-hero-edit">
           <span aria-hidden="true">✎</span>

@@ -2266,6 +2266,23 @@ button { font-family: inherit; }
   -webkit-mask-image: linear-gradient(to right, transparent 0, black 12%, black 40%, transparent 76%);
   mask-image: linear-gradient(to right, transparent 0, black 12%, black 40%, transparent 76%);
 }
+/* A cut-out stands on the banner's floor, whole and at full height, the way
+   Sleeper's portraits do — nothing to fade, because there is no ground left
+   to hide. Only a little dimming, so a white shirt does not outshine the name. */
+.ps-hero-face.is-cut img {
+  left: 6px;
+  top: auto;
+  bottom: 0;
+  width: auto;
+  /* Up to where the name begins — see `.ps-hero-body` — and no further. */
+  max-width: 120px;
+  height: 94%;
+  object-fit: contain;
+  object-position: left bottom;
+  filter: brightness(0.92);
+  -webkit-mask-image: none;
+  mask-image: none;
+}
 .ps-hero-edit {
   position: absolute;
   z-index: 1;
@@ -2341,6 +2358,7 @@ button { font-family: inherit; }
      "237 lbs" under WEIGHT alone wants a third of it. */
   .ps-hero { gap: 10px; padding-left: 12px; padding-right: 12px; }
   .ps-hero-body { margin-left: 90px; }
+  .ps-hero-face.is-cut img { max-width: 90px; }
   .ps-hero-facts { gap: 6px; }
   .ps-hero-last { font-size: 21px; line-height: 24px; }
   .ps-hero-v { font-size: 13px; line-height: 16px; }
