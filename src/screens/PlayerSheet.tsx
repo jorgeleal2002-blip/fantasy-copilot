@@ -27,7 +27,7 @@ import type { Usage } from '../model/usage';
 import type { App } from '../state/useApp';
 import { ord } from '../ui/format';
 import { WeekBars } from '../ui/charts';
-import { Card, Face, Overlay, TdBalls } from '../ui/primitives';
+import { Card, Face, Overlay, TdBalls, TeamBadge } from '../ui/primitives';
 import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { gameLeft, phaseFor } from '../model/game-clock';
@@ -461,6 +461,10 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           >
             {photo ? '' : p.pos}
           </div>
+          {/* His team's logo on the corner the pencil leaves free. */}
+          {p.team && p.pos !== 'DEF' ? (
+            <TeamBadge team={p.team} size={24} style={{ left: -4, right: 'auto', bottom: -4 }} />
+          ) : null}
           <div style={{
             position: 'absolute', right: -4, bottom: -4, width: 22, height: 22, borderRadius: '50%',
             background: 'var(--color-bg)', border: '1px solid var(--color-accent)', color: 'var(--color-accent)',

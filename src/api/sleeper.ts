@@ -79,7 +79,12 @@ export const FULL_SQ = 384;
  * kilobytes, loaded only when the face scrolls into view and cached after,
  * is not.
  */
-export type PhotoSet = { photo: string | null; srcSet?: string };
+export type PhotoSet = { photo: string | null; srcSet?: string; team?: string | null };
+
+/** An NFL team's logo off Sleeper's own CDN — the badge it puts on every
+ *  player's face, and the face itself for a team defence. */
+export const teamLogo = (team: string | null | undefined): string | null =>
+  team ? 'https://sleepercdn.com/images/team_logos/nfl/' + team.toLowerCase() + '.png' : null;
 
 export function playerPhotoSet(id: string): { photo: string; srcSet: string } | null {
   const thumb = playerPhoto(id, 'thumb');

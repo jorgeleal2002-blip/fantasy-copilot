@@ -3,6 +3,7 @@ import { type Pull, pullArmed, pullProgress } from '../model/pull';
 import { cardNote, cardTitle, seg, SegSize, surface } from './styles';
 import { usePullToRefresh } from './usePull';
 import { FS, boxRadius, boxType } from './scale';
+import { teamLogo } from '../api/sleeper';
 
 export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return <div className="card" style={style}>{children}</div>;
@@ -197,7 +198,7 @@ export function Screen({ children, animation = 'fadeUp .3s ease backwards' }: { 
  * which is every kicker, every defence and a long tail of the rest. The letters
  * only give way once the image has actually loaded, and come back if it fails.
  */
-export function Face({ photo, srcSet, pos, size = 34, round }: {
+export function Face({ photo, srcSet, pos, size = 34, round, team }: {
   photo?: string | null;
   /** Both of Sleeper's portraits with their widths, where there are two. */
   srcSet?: string;
@@ -205,11 +206,13 @@ export function Face({ photo, srcSet, pos, size = 34, round }: {
   size?: number;
   /** A circle rather than a rounded square, for a feed row. */
   round?: boolean;
+  /** His NFL team, whose logo sits on the corner of the face. */
+  team?: string | null;
 }) {
   const [ok, setOk] = useState(false);
   // A new url is a new question: forget whether the last one worked.
   useEffect(() => { setOk(false); }, [photo]);
-  return (
+  const face = (
     <div
       style={{
         width: size, height: size, flex: 'none', borderRadius: round ? '50%' : boxRadius(size),
@@ -240,6 +243,36 @@ export function Face({ photo, srcSet, pos, size = 34, round }: {
         />
       ) : null}
     </div>
+  );
+  if (!team) return face;
+  /* Outside the face, which clips: the badge hangs off its corner the way
+   * Sleeper's does, on a disc of the page ground so it reads over any photo. */
+  return (
+    <div style={{ position: 'relative', flex: 'none', width: size, height: size }}>
+      {face}
+      <TeamBadge team={team} size={Math.max(12, Math.round(size * 0.42))} />
+    </div>
+  );
+}
+
+export function TeamBadge({ team, size, style }: { team: string; size: number; style?: CSSProperties }) {
+  const [bad, setBad] = useState(false);
+  useEffect(() => { setBad(false); }, [team]);
+  const src = teamLogo(team);
+  if (!src || bad) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      onError={() => setBad(true)}
+      style={{
+        position: 'absolute', right: -3, bottom: -3, width: size, height: size,
+        borderRadius: '50%', objectFit: 'contain', padding: 1,
+        background: 'var(--color-bg)', ...style,
+      }}
+    />
   );
 }
 

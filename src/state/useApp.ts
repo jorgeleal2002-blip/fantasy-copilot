@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   findUser, getDraftPicks, getRosters, getSeasonStats, getTradedPicks, getUsers,
-  loadLeague, matchMe, userLeagues, playerPhoto, playerPhotoSet, type PhotoSet, getMatchups, getNflState, getTransactions,
+  loadLeague, matchMe, userLeagues, playerPhoto, playerPhotoSet, teamLogo, type PhotoSet, getMatchups, getNflState, getTransactions,
   getWeekProjections, getWeekStats,
 } from '../api/sleeper';
 import type {
@@ -1420,9 +1420,14 @@ export function useApp() {
    * plain; Sleeper's are published twice and the screen gets to choose.
    */
   const photoSet = useCallback(
-    (id: string): PhotoSet =>
-      (photos[id] ? { photo: photos[id] } : playerPhotoSet(id) || { photo: null }),
-    [photos],
+    (id: string): PhotoSet => {
+      const team = data?.players[id]?.team || null;
+      if (photos[id]) return { photo: photos[id], team };
+      // A defence's id is its team, and its face is the team's logo.
+      if (!/^\d+$/.test(id)) return { photo: teamLogo(id), team: null };
+      return { ...(playerPhotoSet(id) || { photo: null }), team };
+    },
+    [photos, data],
   );
 
   /**
