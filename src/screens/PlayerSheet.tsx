@@ -456,11 +456,13 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       <div className="ps-hero" style={{ '--team': (p.team && NFL_COLOR[p.team]) || 'var(--color-surface)' } as CSSProperties}>
         {p.team ? <img className="ps-hero-logo" src={teamLogo(p.team) || ''} alt="" aria-hidden="true"
           onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}
-        <label className="ps-hero-face">
+        <div className="ps-hero-face">
           {photo
             ? <img src={photo} alt="" />
             : <span>{p.pos}</span>}
-          <span className="ps-hero-edit" aria-hidden="true">✎</span>
+        </div>
+        <label className="ps-hero-edit">
+          <span aria-hidden="true">✎</span>
           <input
             type="file"
             accept="image/*"

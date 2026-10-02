@@ -2213,46 +2213,46 @@ button { font-family: inherit; }
 }
 .ps-hero-logo {
   position: absolute;
-  left: -10px;
+  right: -24px;
   top: 50%;
   width: 170px;
   height: 170px;
   margin-top: -85px;
   object-fit: contain;
-  opacity: 0.28;
+  opacity: 0.16;
   pointer-events: none;
 }
+/* The photo is the banner's background: across all of it, his face on the
+   left and fading into the team colour under the text on the right, so any
+   photo — black ground, white ground, any size — becomes part of the card. */
 .ps-hero-face {
-  position: relative;
-  flex: none;
-  align-self: stretch;
-  width: 132px;
-  /* Out to the banner's own edges — left, top and bottom — so the photo is
-     part of the banner rather than a square sat on it. */
-  margin: -14px 0 -12px -14px;
+  position: absolute;
+  inset: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
+  padding-left: 40px;
   color: var(--color-accent);
   font-size: 17px;
   font-weight: 600;
 }
-/* Sharp at the face and fading to nothing at every edge, so a photo with a
-   black or white ground of its own melts into the team colour instead of
-   showing a square — whatever its size and whatever its colours. */
 .ps-hero-face img {
   position: absolute;
-  inset: 0;
-  width: 100%;
+  left: 0;
+  top: 0;
+  /* The left of the banner, wider than the text leaves it, so his face sits
+     clear on the left and the photo runs on under the name as it fades. */
+  width: 52%;
   height: 100%;
   object-fit: cover;
-  object-position: center top;
-  -webkit-mask-image: radial-gradient(ellipse 58% 62% at 50% 52%, black 50%, transparent 100%);
-  mask-image: radial-gradient(ellipse 58% 62% at 50% 52%, black 50%, transparent 100%);
+  object-position: center 22%;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 14%, black 55%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 14%, black 55%, transparent 100%);
 }
 .ps-hero-edit {
   position: absolute;
+  z-index: 1;
+  cursor: pointer;
   left: 10px;
   bottom: 10px;
   width: 22px;
@@ -2266,7 +2266,7 @@ button { font-family: inherit; }
   border: 1px solid var(--color-accent);
   color: var(--color-accent);
 }
-.ps-hero-body { position: relative; flex: 1; min-width: 0; }
+.ps-hero-body { position: relative; flex: 1; min-width: 0; margin-left: 118px; }
 .ps-hero-owner {
   font-size: 12px;
   line-height: 16px;
@@ -2283,6 +2283,7 @@ button { font-family: inherit; }
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
+.ps-hero-body > * { text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6); }
 .ps-hero-last {
   font-size: 26px;
   line-height: 30px;
@@ -2322,7 +2323,7 @@ button { font-family: inherit; }
   /* A 320px phone leaves the four facts about 160px beside the face, and
      "237 lbs" under WEIGHT alone wants a third of it. */
   .ps-hero { gap: 10px; padding-left: 12px; padding-right: 12px; }
-  .ps-hero-face { width: 96px; margin-left: -12px; }
+  .ps-hero-body { margin-left: 90px; }
   .ps-hero-facts { gap: 6px; }
   .ps-hero-last { font-size: 21px; line-height: 24px; }
   .ps-hero-v { font-size: 13px; line-height: 16px; }
