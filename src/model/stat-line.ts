@@ -104,6 +104,29 @@ export function headlineBits(st: SleeperStatLine | undefined | null, pos: string
   return out;
 }
 
+/**
+ * The split under the headline — and nothing where there is no split.
+ *
+ * The headline sums: "194 yards, 0 tds, 9/10 rec". The line under it exists to
+ * say WHICH WAY he got them, and for a receiver who only caught the ball there
+ * is no which way: it came back "9/10 REC, 194 YD", the same two figures in the
+ * same order, one size smaller. Two lines, one fact.
+ *
+ * So the detail is shown only when it carries something the headline did not —
+ * a back's carries, a passer's completions, a fumble, a second way of gaining
+ * the yards. All of it or none of it, never a subset: a line that says "yd"
+ * twice and "td" twice is read by its sequence, and dropping the matched bits
+ * out of the middle leaves figures nobody can attach to anything.
+ */
+const SAID: Record<string, string> = { YD: 'yards', TD: 'tds', REC: 'rec', INT: 'int' };
+
+export function detailBits(st: SleeperStatLine | undefined | null, pos: string): StatBit[] {
+  const full = statBits(st, pos);
+  const said = new Set(headlineBits(st, pos).map(b => b.n + ' ' + b.unit));
+  const fresh = full.some(b => !said.has(b.n + ' ' + (SAID[b.unit] ?? b.unit)));
+  return fresh ? full : [];
+}
+
 /** Every touchdown he had a hand in — thrown, run, caught, or a defence's and a
  *  returner's — which is what a football per score on the card counts. */
 const TD_KEYS = ['pass_td', 'rush_td', 'rec_td', 'def_st_td', 'def_td', 'st_td', 'fum_rec_td'];

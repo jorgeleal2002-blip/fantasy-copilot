@@ -34,7 +34,7 @@ import { PHOTO_PX, PHOTO_Q, PHOTO_Q_FLOOR, pickEncoding } from '../model/photo';
 import { projectSide, projectionsAreStale, readProjections, scoreProjection, scoringKind, statsForWeek } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
-import { headlineBits, statLine, touchdowns } from '../model/stat-line';
+import { detailBits, headlineBits, statLine, touchdowns } from '../model/stat-line';
 import { cutOut, defringe } from '../model/cutout';
 import { availability, byesOf, exposure, seasonFit, type FitCalendar, type FitPlayer } from '../model/season-fit';
 import { WIN_WIN_FELT, fitHeadline, isWinWin, outcomeFor, situationOf, type TeamCase } from '../model/team-verdict';
@@ -5085,6 +5085,40 @@ describe('the week headline', () => {
   });
   it('gives a quarterback his interceptions only when he threw one', () => {
     expect(headlineBits({ pass_yd: 200, pass_td: 1 }, 'QB').map(x => x.unit)).toEqual(['yards', 'tds']);
+  });
+});
+
+describe('the line under the week headline', () => {
+  /* Drake London's week 3, off the card that reported this: the headline read
+     "194 yards · 0 tds · 9/10 rec" and the line under it read "9/10 REC, 194
+     YD". The same two figures, twice. */
+  it('says nothing when the headline already said all of it', () => {
+    expect(detailBits({ rec: 9, rec_tgt: 10, rec_yd: 194 }, 'WR')).toEqual([]);
+  });
+  it('says nothing for a kicker, whose headline IS his line', () => {
+    expect(detailBits({ fgm: 1, fga: 3, xpm: 2, xpa: 2 }, 'K')).toEqual([]);
+  });
+  it('splits the yards when he got them two ways', () => {
+    const b = detailBits({ rec: 9, rec_tgt: 10, rec_yd: 150, rush_att: 2, rush_yd: 44 }, 'WR');
+    expect(b.map(x => x.n + ' ' + x.unit)).toEqual(['9/10 REC', '150 YD', '2 CAR', '44 YD']);
+  });
+  it('keeps a back his carries, which the headline never carried', () => {
+    expect(detailBits({ rush_att: 18, rush_yd: 80, rush_td: 1 }, 'RB').map(x => x.unit))
+      .toEqual(['CAR', 'YD', 'TD']);
+  });
+  it('keeps a passer his completions', () => {
+    expect(detailBits({ pass_cmp: 24, pass_att: 35, pass_yd: 280, pass_td: 2 }, 'QB')[0])
+      .toEqual({ n: '24/35', unit: 'CMP' });
+  });
+  /* A fumble is in neither headline, so it alone has to bring the line back —
+     otherwise a receiver's lost ball goes unreported on the card entirely. */
+  it('comes back for a fumble the headline cannot show', () => {
+    expect(detailBits({ rec: 9, rec_tgt: 10, rec_yd: 194, fum_lost: 1 }, 'WR').map(x => x.unit))
+      .toEqual(['REC', 'YD', 'FUM LOST']);
+  });
+  it('is empty when there is no line at all', () => {
+    expect(detailBits(undefined, 'WR')).toEqual([]);
+    expect(detailBits({}, 'WR')).toEqual([]);
   });
 });
 

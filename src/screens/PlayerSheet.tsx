@@ -33,7 +33,7 @@ import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { gameLeft, phaseFor } from '../model/game-clock';
 import { clockLabel, gameLeftOf } from '../model/nfl-games';
-import { headlineBits, statBits, touchdowns } from '../model/stat-line';
+import { detailBits, headlineBits, statBits, touchdowns } from '../model/stat-line';
 import { NFL_COLOR, ageFrom, heightLabel } from '../model/nfl-colors';
 import { teamLogo, teamLogoLarge } from '../api/sleeper';
 import { projectPPG } from '../model/project';
@@ -218,7 +218,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
    * its own card. */
   const wkLine = phase && phase !== 'pre' ? app.weekStats[p.id] : undefined;
   const wkHead = headlineBits(wkLine, p.pos);
-  const wkRest = statBits(wkLine, p.pos);
+  const wkRest = detailBits(wkLine, p.pos);
   /* The game he is in — score and clock — at the top of the week's card, the
    * way Sleeper's own card has it. His side is the bright one. */
   const game = p.team ? app.nflGames[p.team] : undefined;
