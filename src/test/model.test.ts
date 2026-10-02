@@ -32,7 +32,7 @@ import { PHOTO_PX, PHOTO_Q, PHOTO_Q_FLOOR, pickEncoding } from '../model/photo';
 import { projectSide, projectionsAreStale, readProjections, scoreProjection, scoringKind, statsForWeek } from '../model/projections';
 import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades';
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
-import { statLine } from '../model/stat-line';
+import { headlineBits, statLine } from '../model/stat-line';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -5050,5 +5050,15 @@ describe('live stats over a lagging scoreboard', () => {
     const [r] = withLiveStats([row], { x: { rec: 1, rec_yd: 10 } }, scoring, () => true);
     expect(r.players_points?.x).toBe(2);
     expect(r.points).toBe(10);
+  });
+});
+
+describe('the week headline', () => {
+  it('sums yards and touchdowns across rushing and receiving, as Sleeper does', () => {
+    const b = headlineBits({ rush_att: 5, rush_yd: 11, rush_td: 1, rec: 2, rec_tgt: 2, rec_yd: 19 }, 'RB');
+    expect(b).toEqual([{ n: '30', unit: 'yards' }, { n: '1', unit: 'tds' }, { n: '2/2', unit: 'rec' }]);
+  });
+  it('gives a quarterback his interceptions only when he threw one', () => {
+    expect(headlineBits({ pass_yd: 200, pass_td: 1 }, 'QB').map(x => x.unit)).toEqual(['yards', 'tds']);
   });
 });

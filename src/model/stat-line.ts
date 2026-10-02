@@ -77,6 +77,33 @@ export function statBits(st: SleeperStatLine | undefined | null, pos: string): S
   return out.filter((b): b is StatBit => !!b);
 }
 
+/**
+ * The week as Sleeper's own card headlines it: a few totals, large. Yards and
+ * touchdowns are summed across rushing and receiving, because "30 yards, 1 td"
+ * is the week and which way he got them is the line under it.
+ */
+export function headlineBits(st: SleeperStatLine | undefined | null, pos: string): StatBit[] {
+  if (!st) return [];
+  const sum = (...v: (number | undefined)[]) => v.reduce<number>((a, x) => a + (Number.isFinite(x) ? (x as number) : 0), 0);
+  const n = (v: number) => String(Math.round(v));
+  if (pos === 'K' || pos === 'DEF') return statBits(st, pos).slice(0, 3);
+  if (pos === 'QB') {
+    const out: StatBit[] = [
+      { n: n(sum(st.pass_yd, st.rush_yd)), unit: 'yards' },
+      { n: n(sum(st.pass_td, st.rush_td)), unit: 'tds' },
+    ];
+    if (sum(st.pass_int)) out.push({ n: n(sum(st.pass_int)), unit: 'int' });
+    return out;
+  }
+  const out: StatBit[] = [
+    { n: n(sum(st.rush_yd, st.rec_yd)), unit: 'yards' },
+    { n: n(sum(st.rush_td, st.rec_td)), unit: 'tds' },
+  ];
+  const rec = pair(st.rec, st.rec_tgt, 'rec');
+  if (rec) out.push(rec);
+  return out;
+}
+
 export function statLine(st: SleeperStatLine | undefined | null, pos: string): string {
   return statBits(st, pos).map(b => b.n + ' ' + b.unit).join(', ');
 }

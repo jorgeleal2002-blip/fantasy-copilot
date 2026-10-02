@@ -2152,6 +2152,8 @@ button { font-family: inherit; }
   margin-top: 4px;
 }
 .ps-feed-stat { display: inline-flex; align-items: baseline; gap: 3px; }
+/* This week's line, under the tiles at the top of a player's card. */
+.ps-week { margin-top: 10px; padding: 0 2px; }
 .ps-feed-n {
   font-size: 21px;
   font-weight: 600;

@@ -31,7 +31,7 @@ import { Card, Face, Overlay } from '../ui/primitives';
 import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { gamePhase } from '../model/game-clock';
-import { statBits } from '../model/stat-line';
+import { headlineBits, statBits } from '../model/stat-line';
 import { projectPPG } from '../model/project';
 import { gapsIn, ordinal, type Ranked } from '../model/season';
 import { type Tone, placing, toneOf, toneOfRank } from '../model/standing';
@@ -168,6 +168,10 @@ function Tiles({ rows }: { rows: Tile[] }) {
 
 export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId: string }) {
   const p = resolve(m, playerId, m.wUsed);
+  // The week's stat lines, for the line under the tiles. Cached, so opening a
+  // second player costs nothing.
+  const wk = app.week;
+  useEffect(() => { if (wk) void app.fetchWeekStats(wk); }, [app.fetchWeekStats, wk]);
 
   if (!p) {
     return (
@@ -199,11 +203,16 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
    * scoring, and moving with it while his game is on. Only a rostered player
    * is in that feed, and only a rostered player is worth a live number. */
   const wkPts = app.week
-    ? app.matchups.find(r => r.players?.includes(p.id))?.players_points?.[p.id]
+    ? app.matchups.find(r => r.players_points?.[p.id] != null)?.players_points?.[p.id]
     : undefined;
   const phase = app.week && Number.isFinite(wkPts)
     ? gamePhase(p.team, app.week, Number(app.data?.league.season), Date.now())
     : null;
+  /* What he has done this week, under the tiles — the same line Sleeper puts on
+   * its own card. */
+  const wkLine = phase && phase !== 'pre' ? app.weekStats[p.id] : undefined;
+  const wkHead = headlineBits(wkLine, p.pos);
+  const wkRest = statBits(wkLine, p.pos);
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
   const setter = app.photoBy(p.id);
@@ -533,6 +542,22 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           </div>
         </div>
       </div>
+
+      {wkHead.length ? (
+        <div className="ps-week">
+          <div className="ps-feed-stats">
+            {wkHead.map(b => (
+              <span className="ps-feed-stat" key={b.unit + b.n}>
+                <span className="ps-feed-n">{b.n}</span>
+                <span className="ps-feed-u">{b.unit}</span>
+              </span>
+            ))}
+          </div>
+          {wkRest.length ? (
+            <div className="ps-feed-rest">{wkRest.map(b => b.n + ' ' + b.unit).join(', ')}</div>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* A kicker or a team defence has no Rating, and a card that simply
           omits one reads as a broken screen rather than as an absence. */}
