@@ -1216,6 +1216,23 @@ export function buildModel(input: ModelInput): Model {
   };
   const leagueHasRosters = leagueRows.some(x => x.now > 0);
 
+  /* Spots that count against a roster: every slot but injured reserve and the
+   * taxi squad, whose players are held outside it. */
+  const rosterSpots = (league.roster_positions || []).filter(p => p !== 'IR' && p !== 'TAXI').length;
+  const rosterRoom = (rid: number) => {
+    const r = (d.rosters || []).find(x => x.roster_id === rid);
+    if (!r || !rosterSpots) return null;
+    const held = new Set([...(r.reserve || []), ...(r.taxi || [])]);
+    const active = (r.players || []).filter(id => !held.has(id));
+    const valued = new Map(mapRoster(active).map(p => [p.id, p.q]));
+    const cuttable = active.map(id => ({
+      id, name: playerName(players[id] || {}) || id,
+      // A kicker or a defence is not on the market and is the cheapest cut there is.
+      value: valued.get(id) ?? 0,
+    })).sort((x, y) => x.value - y.value);
+    return { open: rosterSpots - active.length, cuttable };
+  };
+
   const teamInfo = (rid: number): TeamSheet | null => {
     const row = leagueRows.find(x => x.id === rid);
     const r = (d.rosters || []).find(x => x.roster_id === rid);
@@ -2177,7 +2194,7 @@ export function buildModel(input: ModelInput): Model {
     marketCount: mk ? Object.keys(mk.players).length : 0,
     snake: !!(d.draft && d.draft.type === 'snake'),
     fills: fillPos,
-    teamInfo, posRankOf, scoreAny, marketValue, pickWorth, offersFor, runMock, metricKeys,
+    teamInfo, rosterRoom, posRankOf, scoreAny, marketValue, pickWorth, offersFor, runMock, metricKeys,
     lineupWith,
   };
 }

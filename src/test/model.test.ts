@@ -5326,3 +5326,27 @@ describe('a star against the pieces that add up to him', () => {
     expect(builderHeadline(v, false).title).toMatch(/^I Am Inevitable wins this trade/);
   });
 });
+
+describe('a full roster has to make room', () => {
+  const teams = [{ id: 1, name: 'Two', isMe: false }, { id: 2, name: 'One', isMe: false }];
+  const a = (id: string, value: number, from: number, to: number, isPick = false) => ({ id, name: id, value, from, to, isPick });
+  const full = { open: 0, cuttable: [{ id: 'bench', name: 'Bench Guy', value: 30 }, { id: 'b2', name: 'B2', value: 40 }] };
+
+  it('charges the side taking two for one the player it has to cut', () => {
+    const deal = [a('x', 60, 2, 1), a('y', 50, 2, 1), a('star', 100, 1, 2)];
+    const free = evaluateTrade(teams, deal);
+    const tight = evaluateTrade(teams, deal, undefined, { 1: full, 2: full });
+    const two = (v: typeof free) => v.ledgers.find(l => l.id === 1)!;
+    expect(two(tight).cuts.map(c => c.name)).toEqual(['Bench Guy']);
+    expect(two(tight).net).toBeCloseTo(two(free).net - effectiveValue(30, 100));
+    // The side sending two for one frees a spot and cuts nobody.
+    expect(tight.ledgers.find(l => l.id === 2)!.cuts).toEqual([]);
+  });
+
+  it('cuts nobody with a spot free, or for a pick', () => {
+    const deal = [a('x', 60, 2, 1), a('y', 50, 2, 1), a('star', 100, 1, 2)];
+    expect(evaluateTrade(teams, deal, undefined, { 1: { ...full, open: 1 } }).ledgers.find(l => l.id === 1)!.cuts).toEqual([]);
+    const forPick = [a('x', 60, 2, 1), a('pk', 50, 2, 1, true), a('star', 100, 1, 2)];
+    expect(evaluateTrade(teams, forPick, undefined, { 1: full }).ledgers.find(l => l.id === 1)!.cuts).toEqual([]);
+  });
+});

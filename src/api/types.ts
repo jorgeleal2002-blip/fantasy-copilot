@@ -63,6 +63,9 @@ export interface SleeperRoster {
   co_owners?: string[] | null;
   players?: string[] | null;
   starters?: string[] | null;
+  /** On injured reserve or the taxi squad: held outside the roster's count. */
+  reserve?: string[] | null;
+  taxi?: string[] | null;
   /** The standings, as Sleeper keeps them. `fpts` is whole points and
    *  `fpts_decimal` the hundredths, stored apart. */
   settings?: {

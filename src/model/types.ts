@@ -491,6 +491,8 @@ export interface Model {
   marketCount: number;
 
   teamInfo: (rosterId: number) => TeamSheet | null;
+  /** free roster spots, and who would be cut first to make one */
+  rosterRoom: (rosterId: number) => import('./trade-eval').RosterRoom | null;
   /** What a trade would do to a team's best available lineup. Picks are
    *  excluded — one cannot start a game. */
   lineupWith: (rosterId: number, incoming: string[], outgoing: string[]) =>

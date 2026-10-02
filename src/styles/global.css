@@ -2055,6 +2055,13 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.52);
   background: transparent;
 }
+.fb-cut {
+  margin: 2px 0 8px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--c-bad);
+  text-wrap: pretty;
+}
 .fb-add {
   font: inherit;
   font-size: 12px;

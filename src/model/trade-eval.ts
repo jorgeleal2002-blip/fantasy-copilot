@@ -17,6 +17,20 @@ export interface TradeAsset {
   from: number;
   /** roster id it lands on */
   to: number;
+  /** a draft pick takes no roster spot */
+  isPick?: boolean;
+}
+
+/**
+ * How full a roster is. A team taking two players for one needs a second
+ * spot, and on a full roster that spot is somebody it has to cut — the
+ * cheapest player it has that is not already in the deal.
+ */
+export interface RosterRoom {
+  /** spots free before the trade */
+  open: number;
+  /** who goes first if a spot is needed, cheapest first */
+  cuttable: { id: string; name: string; value: number }[];
 }
 
 export interface TradeTeam {
@@ -41,6 +55,9 @@ export interface TeamLedger {
   /** Starting-lineup points gained or lost, where the caller measured it.
    *  Null means nobody asked — not that the trade changes nothing. */
   fitDelta: number | null;
+  /** players this team has to drop to fit what it receives; their value is
+   *  already taken out of `net` */
+  cuts: { name: string; value: number }[];
 }
 
 export interface TradeVerdict {
@@ -90,6 +107,8 @@ export function evaluateTrade(
   assets: TradeAsset[],
   /** roster id → change in best-lineup points, from the caller's simulation */
   fits?: Record<number, number>,
+  /** roster id → how much room it has; without it nobody is made to cut */
+  room?: Record<number, RosterRoom>,
 ): TradeVerdict {
   const known = new Set(teams.map(t => t.id));
   // An asset routed to a team that is not in the deal has nowhere to land, and
@@ -105,11 +124,21 @@ export function evaluateTrade(
     const got = live.filter(a => a.to === t.id);
     const out = gave.reduce((s, a) => s + a.value, 0);
     const inn = got.reduce((s, a) => s + a.value, 0);
+    // More bodies in than out, past the spots it has free: the cheapest
+    // players not in the deal are cut, and what they were worth is lost.
+    const r = room?.[t.id];
+    const extra = got.filter(a => !a.isPick).length - gave.filter(a => !a.isPick).length;
+    const need = r ? Math.max(0, extra - Math.max(0, r.open)) : 0;
+    const inDeal = new Set(live.map(a => a.id));
+    const cuts = r ? r.cuttable.filter(c => !inDeal.has(c.id)).slice(0, need)
+      .map(c => ({ name: c.name, value: effectiveValue(c.value, best) })) : [];
+    const lost = cuts.reduce((s, c) => s + c.value, 0);
     return {
       id: t.id, name: t.name, isMe: t.isMe,
-      gave, got, out, in: inn, net: inn - out,
+      gave, got, out, in: inn, net: inn - out - lost,
       standing: 'even' as Standing,
       fitDelta: fits && t.id in fits ? fits[t.id] : null,
+      cuts,
     };
   });
 

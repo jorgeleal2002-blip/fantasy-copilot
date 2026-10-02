@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { colorOf } from '../model/constants';
-import { evaluateTrade, fitLine, tradeHeadline, type TeamLedger, type TradeAsset } from '../model/trade-eval';
+import { evaluateTrade, fitLine, tradeHeadline, type RosterRoom, type TeamLedger, type TradeAsset } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -33,7 +33,8 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
   const assets: TradeAsset[] = Object.entries(app.tradeAssets).map(([id, a]) => {
     const info = m.teamInfo(a.from);
     const found = info?.list.find(p => p.id === id) || info?.picks.find(p => p.id === id);
-    return { id, name: found?.name || id, value: found?.q || 0, from: a.from, to: a.to };
+    const isPick = !!info?.picks.find(p => p.id === id);
+    return { id, name: found?.name || id, value: found?.q || 0, from: a.from, to: a.to, isPick };
   });
 
   const fits: Record<number, number> = {};
@@ -45,7 +46,12 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
     if (w.measured) fits[t.id] = w.delta;
   }
 
-  const v = evaluateTrade(teams, assets, fits);
+  const room: Record<number, RosterRoom> = {};
+  for (const t of teams) {
+    const r = m.rosterRoom(t.id);
+    if (r) room[t.id] = r;
+  }
+  const v = evaluateTrade(teams, assets, fits, room);
   const fit = fitLine(v);
 
   return (
@@ -80,6 +86,13 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
               {assets.filter(a => a.to === t.id).map(a => (
                 <Card key={a.id} app={app} m={m} asset={a} />
               ))}
+
+              {(() => {
+                const cuts = v.ledgers.find(l => l.id === t.id)?.cuts || [];
+                return cuts.length ? (
+                  <div className="fb-cut">Full roster — must cut {cuts.map(c => c.name).join(', ')}</div>
+                ) : null;
+              })()}
 
               <button type="button" className="fb-add" onClick={() => setAddTo(t.id)}>
                 + Add player
@@ -181,7 +194,8 @@ function Balance({ v, fit, pivot, dynasty }: {
               <div className="fb-note">
                 Value counts a star above the pieces that add up to him: each player is
                 weighed against the best one in the deal, so two lesser players are worth
-                less than their sum. Even is anything inside ±{Math.round(v.band).toLocaleString()}.
+                less than their sum. A team taking more players than it sends on a full
+                roster loses whoever it has to cut. Even is anything inside ±{Math.round(v.band).toLocaleString()}.
               </div>
             </div>
           ) : null}
@@ -212,6 +226,14 @@ function LedgerRow({ l, moved }: { l: TeamLedger; moved: number }) {
         <span className="fb-row-tag">gives</span>
         {l.gave.length ? l.gave.map(a => a.name).join(', ') : 'nothing'}
       </div>
+      {/* A full roster taking more bodies than it sends has to make room,
+          and what it cuts is a real cost — already out of the number above. */}
+      {l.cuts.length ? (
+        <div className="fb-row-line">
+          <span className="fb-row-tag">cuts</span>
+          <span style={{ color: BAD }}>{l.cuts.map(c => c.name).join(', ')}</span>
+        </div>
+      ) : null}
       {l.fitDelta != null && Math.abs(l.fitDelta) >= 0.1 ? (
         <div className="fb-row-line">
           <span className="fb-row-tag">lineup</span>
