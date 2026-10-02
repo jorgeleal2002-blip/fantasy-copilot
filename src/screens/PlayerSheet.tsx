@@ -228,6 +228,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const reached = got != null && weekProj ? Math.max(0, Math.min(1, got / weekProj)) : null;
   const pace = phase === 'live' && got != null && weekProj != null && left != null ? got + weekProj * left : null;
   const beat = phase === 'final' && got != null && weekProj != null ? got - weekProj : null;
+  const pctOfProj = got != null && weekProj ? Math.round((got / weekProj) * 100) : null;
+  const weekPlace = got != null && app.week ? app.weekRank(p.id, p.pos, app.week)?.rank ?? null : null;
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
   const setter = app.photoBy(p.id);
@@ -573,22 +575,37 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           made the model look wrong. */}
       <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
         {phase ? (
-          <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
+          <div style={{ flex: 1, minWidth: 0, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
             <div className={'ps-now is-' + phase}>
               {phase === 'pre' ? '—' : (wkPts as number).toFixed(2)}
             </div>
+            {/* Where his game is, in the game's own terms: the quarter and
+                clock while it is on, rather than a word that says only that it
+                is. */}
             <div className={'ps-now-state is-' + phase}>
-              {phase === 'live' ? 'Live' : phase === 'final' ? 'Final' : 'Not started'}
+              {phase === 'live' ? (game ? clockLabel(game) : 'Live')
+                : phase === 'final' ? 'Final'
+                  : game ? clockLabel(game) : 'Not started'}
             </div>
             {reached != null ? (
               <div className="ps-reach" role="img" aria-label={Math.round(reached * 100) + '% of his projection'}>
                 <div className={'ps-reach-fill is-' + phase} style={{ width: (reached * 100).toFixed(1) + '%' }} />
               </div>
             ) : null}
+            {/* How much of his projection that is, and where it puts him among
+                the men at his position on a roster in this league. */}
+            {got != null && (pctOfProj != null || weekPlace) ? (
+              <div className="ps-now-foot">
+                <span aria-label={pctOfProj != null ? pctOfProj + '% of his projection' : undefined}>
+                  {pctOfProj != null ? pctOfProj + '%' : ''}
+                </span>
+                {weekPlace ? <span className="ps-now-rank">{p.pos + weekPlace}</span> : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
         {proj != null ? (
-          <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
+          <div style={{ flex: 1, minWidth: 0, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
             <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.03em' }}>
               {proj.toFixed(weekProj != null ? 2 : 1)}
             </div>
@@ -605,7 +622,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
             ) : null}
           </div>
         ) : null}
-        <div style={{ flex: 1, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
+        <div style={{ flex: 1, minWidth: 0, background: 'var(--color-surface)', borderRadius: 12, padding: '10px 12px' }}>
           <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.03em', color: fitColor(p.fit) }}>{p.fit}</div>
           <div style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.62), marginTop: 3 }}>
             {/* Never call it a Rating when it is not one. */}

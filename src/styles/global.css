@@ -1171,6 +1171,20 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.62);
 }
 .ps-now-state.is-live { color: var(--c-good); }
+/* Under the bar: how much of his projection he has, and his place this week. */
+.ps-now-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 14px;
+  white-space: nowrap;
+  color: rgba(242, 253, 254, 0.62);
+  font-variant-numeric: tabular-nums;
+}
+.ps-now-rank { color: var(--color-accent); font-weight: 600; }
 /* How much of his projection he has, under the points: a fact while his game
    is on, a verdict once it is over. */
 .ps-reach {
