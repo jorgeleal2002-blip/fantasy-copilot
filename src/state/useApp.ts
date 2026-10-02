@@ -7,8 +7,9 @@ import {
 import type {
   LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup, SleeperStatLine, SleeperTransaction,
 } from '../api/types';
-import { weekLive } from '../model/game-clock';
-import { DRAFT_POLL_MS, MATCHUP_LIVE_POLL_MS, MATCHUP_POLL_MS,PROJ_TTL_MS, RESUME_REFRESH_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_GOOGLE, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
+import { gamePhase, weekLive } from '../model/game-clock';
+import { withLiveStats } from '../model/matchups';
+import { DRAFT_POLL_MS, MATCHUP_LIVE_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, STATS_LIVE_POLL_MS, RESUME_REFRESH_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_GOOGLE, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
   EMPTY_ROOM, PHOTO_MAX_BYTES, claimSeat, createRoom as createRoomAt, dropPhoto, liveEnabled,
   liveReason, newRoomId, pushPick, putPhoto, readPhotos, readRoom, restartRoom, startRoom,
@@ -298,6 +299,7 @@ export function useApp() {
   const syncedAtRef = useRef<number | null>(null);
   syncedAtRef.current = syncedAt;
   const scoresAtRef = useRef(0);
+  const statsAtRef = useRef(0);
 
   /**
    * Sleeper's projections for the week, scored in this league's own settings.
@@ -793,12 +795,33 @@ export function useApp() {
       if (document.visibilityState === 'hidden') return;
       const now = Date.now();
       const season = Number(dataRef.current?.league.season);
-      const every = weekLive(week, season, now) ? MATCHUP_LIVE_POLL_MS : MATCHUP_POLL_MS;
+      const live = weekLive(week, season, now);
+      // The stat feed runs ahead of the scoreboard during a game, so while one
+      // is on it is polled too — see `withLiveStats`.
+      if (live && now - statsAtRef.current >= STATS_LIVE_POLL_MS - 1000) {
+        statsAtRef.current = now;
+        void fetchWeekStats(week, true);
+      }
+      const every = live ? MATCHUP_LIVE_POLL_MS : MATCHUP_POLL_MS;
       if (now - scoresAtRef.current < every - 1000) return;
       void fetchMatchups(leagueId, week, true);
     }, MATCHUP_LIVE_POLL_MS);
     return () => window.clearInterval(id);
-  }, [leagueId, week, fetchMatchups]);
+  }, [leagueId, week, fetchMatchups, fetchWeekStats]);
+
+  /* The scoreboard as every screen reads it: Sleeper's, with the stat feed
+   * folded in for players whose game is on. */
+  const liveMatchups = useMemo(() => {
+    if (!week || !data) return matchups;
+    const season = Number(data.league.season);
+    const now = Date.now();
+    return withLiveStats(
+      matchups,
+      statsForWeek(weekStats, week) as unknown as Record<string, Record<string, number>>,
+      data.league.scoring_settings,
+      id => gamePhase(data.players[id]?.team, week, season, now) === 'live',
+    );
+  }, [matchups, weekStats, week, data]);
 
   /**
    * Projections need the LEAGUE, not just the week: they are re-totalled
@@ -1620,7 +1643,7 @@ export function useApp() {
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, photoBy, photoShared,
     query, topPos, topLens,
-    week, nflWeek, matchups, matchupState, projections, projState, fetchWeekStats,
+    week, nflWeek, matchups: liveMatchups, matchupState, projections, projState, fetchWeekStats,
     weekStats: statsForWeek(weekStats, week),
     gameStats, fetchGameStats,
     tradeTeams, tradeAssets,

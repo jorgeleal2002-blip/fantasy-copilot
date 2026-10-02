@@ -412,6 +412,9 @@ export const DRAFT_POLL_MS = 20000;
 /** Scores while a game of the week is on. Sleeper's own app moves about this
  *  often, and forty-five seconds read as a scoreboard that had stalled. */
 export const MATCHUP_LIVE_POLL_MS = 15000;
+/** The week's stat feed while a game is on. The whole league in one payload,
+ *  so a little slower than the scores it corrects. */
+export const STATS_LIVE_POLL_MS = 20000;
 /** Scores while nothing is being played — stat corrections, a flexed kickoff
  *  the bundled schedule does not know about. */
 export const MATCHUP_POLL_MS = 60000;

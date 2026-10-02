@@ -18,7 +18,7 @@ import { ALLOWED, KICKOFF_MIN, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '..
 import { GAME_MIN, OVER_MIN, gameLeft, weekLive } from '../model/game-clock';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
-import { leaderOf, lineupRows, pairMatchups, startingSlots } from '../model/matchups';
+import { leaderOf, lineupRows, pairMatchups, startingSlots, withLiveStats } from '../model/matchups';
 import { PRIOR_MIN, USAGE_DECAY, USAGE_WEIGHTS } from '../model/constants';
 import { PROD_SHARE_BASE, PROD_SHARE_MAX, PROD_SHARE_MAX_REDRAFT, poolFloor, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
@@ -5031,5 +5031,24 @@ describe('game clock and the live projection', () => {
     expect(projectSide(['a', 'b'], proj, { a: 6 })?.total).toBe(16);
     // on zero, still read as yet to play whatever the clock says
     expect(projectSide(['a', 'b'], proj, { a: 0 }, () => 0)?.total).toBe(25);
+  });
+});
+
+describe('live stats over a lagging scoreboard', () => {
+  const scoring = { rec: 1, rec_yd: 0.1, rec_td: 6 };
+  const row = { roster_id: 1, matchup_id: 1, points: 10, starters: ['b', 'c'], players: ['b', 'c', 'x'],
+    players_points: { b: 1.5, c: 8.5, x: 0 } };
+
+  it('scores a live player from his stat line and moves the team by the gap', () => {
+    const [r] = withLiveStats([row], { b: { rec: 2, rec_yd: 65 } }, scoring, () => true);
+    expect(r.players_points?.b).toBe(8.5);
+    expect(r.points).toBe(17);
+  });
+
+  it('leaves a finished game to the scoreboard, and a bench player out of the total', () => {
+    expect(withLiveStats([row], { b: { rec: 2, rec_yd: 65 } }, scoring, () => false)[0]).toBe(row);
+    const [r] = withLiveStats([row], { x: { rec: 1, rec_yd: 10 } }, scoring, () => true);
+    expect(r.players_points?.x).toBe(2);
+    expect(r.points).toBe(10);
   });
 });

@@ -1,5 +1,5 @@
 import type { PlayerCatalog, SleeperMatchup } from '../api/types';
-import { projectSide, sideProjectionIsSound } from './projections';
+import { projectSide, scoreProjection, scoringKind, sideProjectionIsSound } from './projections';
 
 export interface MatchupSide {
   rosterId: number;
@@ -116,6 +116,43 @@ export function pairMatchups(
   }
 
   return out.sort((x, y) => Number(y.hasMe) - Number(x.hasMe));
+}
+
+/**
+ * Scores with the stat feed folded in for players whose game is on.
+ *
+ * Sleeper's league scoreboard trails its own stat feed during a game — a
+ * receiver showed "2/4 REC, 65 YD" over 1.50 points. The stat line is scored
+ * here against the league's settings, the same dot product the projections
+ * use, and the team total moves by the difference. Only while the game is on:
+ * once it is over the scoreboard's own number is the official one.
+ */
+export function withLiveStats(
+  rows: SleeperMatchup[],
+  stats: Record<string, Record<string, number>>,
+  scoring: Record<string, number> | null | undefined,
+  live: (id: string) => boolean,
+): SleeperMatchup[] {
+  if (!Object.keys(stats).length) return rows;
+  const kind = scoringKind(scoring);
+  return rows.map(r => {
+    const pp = r.players_points || {};
+    const starters = new Set(r.starters || []);
+    let next: Record<string, number> | null = null;
+    let delta = 0;
+    for (const id of r.players || Object.keys(pp)) {
+      const line = stats[id];
+      if (!line || !live(id)) continue;
+      const pts = scoreProjection(line, scoring, kind);
+      const was = pp[id] ?? 0;
+      if (pts == null || pts === was) continue;
+      next = next || { ...pp };
+      next[id] = pts;
+      if (starters.has(id)) delta += pts - was;
+    }
+    if (!next) return r;
+    return { ...r, players_points: next, points: Math.round(((r.points ?? 0) + delta) * 100) / 100 };
+  });
 }
 
 /** Who is ahead, once there is anything to be ahead by. */
