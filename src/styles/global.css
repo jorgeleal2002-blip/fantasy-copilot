@@ -1962,7 +1962,6 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.52);
 }
 .fb-bal-legs span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fb-fit { font-size: 12px; color: rgba(242, 253, 254, 0.75); margin-top: 10px; text-wrap: pretty; }
 .fb-problem { font-size: 12px; color: var(--c-bad); margin-top: 7px; text-wrap: pretty; }
 
 /* Two columns fit a phone; a third and fourth scroll rather than squeeze, so
@@ -2055,24 +2054,6 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.52);
   background: transparent;
 }
-.fb-case {
-  margin: 2px 0 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-  line-height: 16px;
-  color: rgba(242, 253, 254, 0.75);
-  text-wrap: pretty;
-}
-.fb-case-bad { color: var(--c-bad); }
-.fb-cut {
-  margin: 2px 0 8px;
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--c-bad);
-  text-wrap: pretty;
-}
 .fb-add {
   font: inherit;
   font-size: 12px;
@@ -2130,44 +2111,7 @@ button { font-family: inherit; }
   border: 0;
   color: var(--color-accent);
 }
-.fb-rows { display: flex; flex-direction: column; gap: 12px; margin-top: 11px; }
-.fb-row { border-top: var(--hairline) solid var(--color-divider); padding-top: 9px; }
-.fb-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.fb-row-name {
-  font-size: 12px;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.fb-row-name.is-me { color: var(--color-accent); }
-.fb-row-net { font-size: 12px; font-weight: 500; flex: none; }
-.fb-row-pct { font-weight: 400; opacity: 0.7; }
-.fb-row-line {
-  display: flex;
-  gap: 6px;
-  font-size: 12px;
-  line-height: 14px;
-  color: rgba(242, 253, 254, 0.62);
-  margin-top: 3px;
-  text-wrap: pretty;
-}
 /* A fixed gutter so gets, gives and lineup line up down the card. */
-.fb-row-tag {
-  flex: none;
-  width: 40px;
-  color: rgba(242, 253, 254, 0.52);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 10px;
-  padding-top: 1px;
-}
-.fb-note {
-  font-size: 12px;
-  line-height: 14px;
-  color: rgba(242, 253, 254, 0.52);
-  text-wrap: pretty;
-}
 
 /* ── Pull to refresh ─────────────────────────────────────────────────────
    The note covers the panel and parks itself against whichever edge is being
@@ -2924,4 +2868,92 @@ button { font-family: inherit; }
   font-size: 15px;
   line-height: 16px;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+/* The trade builder's per-team cards: verdict, then the numbers as bars. */
+.fb-cards { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.fb-sc {
+  background: var(--color-surface);
+  border-radius: 12px;
+  padding: 12px;
+  border-left: 4px solid rgba(242, 253, 254, 0.12);
+}
+.fb-sc.is-good { border-left-color: var(--c-good); }
+.fb-sc.is-bad { border-left-color: var(--c-bad); }
+.fb-sc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.fb-sc-face { width: 32px; height: 32px; border-radius: 999px; object-fit: cover; flex: none; }
+.fb-sc-who { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.fb-sc-name {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fb-sc-name.is-me { color: var(--color-accent); }
+.fb-sc-sit { font-size: 12px; color: rgba(242, 253, 254, 0.62); }
+.fb-sc-verdict {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(242, 253, 254, 0.07);
+  color: rgba(242, 253, 254, 0.75);
+}
+.fb-sc-verdict.is-good { color: var(--c-good); background: color-mix(in srgb, var(--c-good) 12%, transparent); }
+.fb-sc-verdict.is-bad { color: var(--c-bad); background: color-mix(in srgb, var(--c-bad) 12%, transparent); }
+.fb-meter {
+  display: grid;
+  grid-template-columns: 20px 64px 1fr 92px;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+}
+.fb-meter-icon { font-size: 13px; text-align: center; }
+.fb-meter-label { font-size: 12px; color: rgba(242, 253, 254, 0.52); }
+.fb-meter-track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(242, 253, 254, 0.07);
+}
+.fb-meter-mid {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(242, 253, 254, 0.28);
+}
+.fb-meter-fill { position: absolute; top: 0; bottom: 0; border-radius: 999px; }
+.fb-meter-num {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.fb-sc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.fb-tag {
+  font-size: 12px;
+  line-height: 16px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(242, 253, 254, 0.07);
+  color: rgba(242, 253, 254, 0.75);
+}
+.fb-tag b { font-weight: 600; color: rgba(242, 253, 254, 0.9); }
+.fb-tag.is-bad { color: var(--c-bad); background: color-mix(in srgb, var(--c-bad) 12%, transparent); }
+.fb-tag.is-bad b { color: var(--c-bad); }
+.fb-how { display: flex; flex-direction: column; }
+.fb-how-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 16px;
+  color: rgba(242, 253, 254, 0.62);
 }

@@ -92,9 +92,12 @@ export function fitHeadline(cases: TeamCase[], dynasty: boolean, moved: number):
       why: caseLine(w, dynasty),
     };
   }
+  // "You get" and "they get", but "Alex gets".
+  const verb = (ts: TeamCase[], one: string, many: string) =>
+    ts.map(name).join(' and ') + ' ' + (ts.length === 1 && !ts[0].isMe ? one : many);
   if (good.length > 1) {
-    return { title: 'It suits ' + good.map(name).join(' and '), winners: good.map(t => t.id), why: bad.map(name).join(' and ') + ' come out worse' };
+    return { title: 'It suits ' + good.map(name).join(' and '), winners: good.map(t => t.id), why: verb(bad, 'comes out worse', 'come out worse') };
   }
   if (!bad.length) return { title: 'Even trade', winners: [], why: 'Nobody is clearly better or worse off' };
-  return { title: 'Nobody comes out ahead', winners: [], why: bad.map(name).join(' and ') + ' get worse' };
+  return { title: 'Nobody comes out ahead', winners: [], why: verb(bad, 'gets worse', 'get worse') };
 }

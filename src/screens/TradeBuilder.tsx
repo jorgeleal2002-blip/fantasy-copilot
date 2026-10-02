@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { colorOf } from '../model/constants';
-import { evaluateTrade, fitLine, type RosterRoom, type TeamLedger, type TradeAsset } from '../model/trade-eval';
-import { caseLine, fitHeadline, situationOf, type FitHeadline, type TeamCase } from '../model/team-verdict';
+import { evaluateTrade, type RosterRoom, type TeamLedger, type TradeAsset } from '../model/trade-eval';
+import { fitHeadline, outcomeFor, situationLabel, situationOf, type FitHeadline, type Outcome, type TeamCase } from '../model/team-verdict';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -76,11 +76,25 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
       perWeek: l.fitDelta, playoffs: seasons[l.id]?.playoffs ?? null,
     };
   });
-  const fit = fitLine(v);
+  /* One card per team, under the players: the verdict for that team and the
+     numbers behind it, drawn rather than written out. */
+  const cards = v.moved && teams.length > 1 ? (
+    <div className="fb-cards">
+      {teams.map(t => {
+        const l = v.ledgers.find(x => x.id === t.id);
+        const c = cases.find(x => x.id === t.id);
+        return l && c ? (
+          <Scorecard key={t.id} l={l} c={c} moved={v.moved} dynasty={m.isDynasty}
+            season={seasons[t.id] || null} avatar={m.leagueRows.find(r => r.id === t.id)?.avatar || null} />
+        ) : null;
+      })}
+      <HowJudged band={v.band} />
+    </div>
+  ) : null;
 
   return (
     <div className="fb">
-      <Balance v={v} fit={fit} pivot={teams.find(t => t.isMe)?.id ?? teams[0]?.id ?? null}
+      <Balance v={v} pivot={teams.find(t => t.isMe)?.id ?? teams[0]?.id ?? null}
         head={fitHeadline(cases, m.isDynasty, v.moved)} />
 
       {teams.length < 2 ? (
@@ -112,29 +126,6 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
                 <Card key={a.id} app={app} m={m} asset={a} />
               ))}
 
-              {(() => {
-                const c = cases.find(x => x.id === t.id);
-                const sw = seasons[t.id];
-                if (!c || !v.moved) return null;
-                return (
-                  <div className="fb-case">
-                    <div>{caseLine(c, m.isDynasty)}</div>
-                    {sw?.byes.length ? (
-                      <div>Byes: {sw.byes.map(b => 'wk ' + b.week + ' (' + b.names.join(', ') + ')').join(' · ')}</div>
-                    ) : null}
-                    {sw?.injured.length ? (
-                      <div className="fb-case-bad">Injured: {sw.injured.map(i => i.name + ' — ' + i.status).join(', ')}</div>
-                    ) : null}
-                  </div>
-                );
-              })()}
-              {(() => {
-                const cuts = v.ledgers.find(l => l.id === t.id)?.cuts || [];
-                return cuts.length ? (
-                  <div className="fb-cut">Full roster — must cut {cuts.map(c => c.name).join(', ')}</div>
-                ) : null;
-              })()}
-
               <button type="button" className="fb-add" onClick={() => setAddTo(t.id)}>
                 + Add player
               </button>
@@ -142,6 +133,8 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
           ))}
         </div>
       )}
+
+      {cards}
 
       <div className="fb-actions">
         {ids.length < m.leagueRows.length ? (
@@ -174,10 +167,9 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 }
 
 /** The headline and the one bar that answers the whole screen. */
-function Balance({ v, fit, pivot, head: h }: {
-  v: ReturnType<typeof evaluateTrade>; fit: string | null; pivot: number | null; head: FitHeadline;
+function Balance({ v, pivot, head: h }: {
+  v: ReturnType<typeof evaluateTrade>; pivot: number | null; head: FitHeadline;
 }) {
-  const [open, setOpen] = useState(false);
   // The bar is read from one team's side: yours when you are in it, else the
   // first team added.
   const me = v.ledgers.find(l => l.id === pivot);
@@ -188,7 +180,6 @@ function Balance({ v, fit, pivot, head: h }: {
   const meWins = v.ledgers.some(l => l.isMe && h.winners.includes(l.id));
   const tone = !v.moved ? dim(0.62) : !h.winners.length ? dim(0.9)
     : !inIt ? 'var(--color-accent)' : meWins ? GOOD : BAD;
-  const head = h.title;
 
   /* The bar reads as a tug of war: dead centre is even, and it travels toward
    * whoever is gaining. Measured against the whole deal rather than against
@@ -197,8 +188,7 @@ function Balance({ v, fit, pivot, head: h }: {
 
   return (
     <div className="fb-bal">
-      <div className="fb-bal-head" style={{ color: tone }}>{head}</div>
-      {h.why ? <div className="fb-fit" style={{ marginTop: 2 }}>{h.why}</div> : null}
+      <div className="fb-bal-head" style={{ color: tone }}>{h.title}</div>
       <div className="fb-bar">
         <span
           className="fb-bar-fill"
@@ -213,74 +203,124 @@ function Balance({ v, fit, pivot, head: h }: {
         <span>{others.length === 1 ? others[0].name : others.length ? 'The others' : ''}</span>
         <span>{me?.name || ''}</span>
       </div>
-      {fit && inIt ? <div className="fb-fit">{fit}</div> : null}
       {v.problems.map(p => <div key={p} className="fb-problem">{p}</div>)}
+    </div>
+  );
+}
 
-      {/* The headline can only name one team. In a three-way the other two
-          are the whole question, and even in a swap "by how much, and what
-          does it do to their lineup" is the part you argue with. */}
-      {v.moved ? (
-        <>
-          <button
-            type="button"
-            className="fb-more"
-            aria-expanded={open}
-            onClick={() => setOpen(o => !o)}
-          >
-            {open ? 'Hide the breakdown' : 'See more'}
-          </button>
-          {open ? (
-            <div className="fb-rows">
-              {v.ledgers.map(l => <LedgerRow key={l.id} l={l} moved={v.moved} />)}
-              <div className="fb-note">
-                Value counts a star above the pieces that add up to him: each player is
-                weighed against the best one in the deal, so two lesser players are worth
-                less than their sum. A team taking more players than it sends on a full
-                roster loses whoever it has to cut. Even is anything inside ±{Math.round(v.band).toLocaleString()}.
-              </div>
-            </div>
-          ) : null}
-        </>
+const SITUATION_ICON: Record<TeamCase['situation'], string> = { contender: '🔥', middle: '⚖️', out: '🌱' };
+const VERDICT: Record<Outcome, { mark: string; them: string; you: string }> = {
+  good: { mark: '✓', them: 'Suits them', you: 'Suits you' },
+  bad: { mark: '✗', them: 'Hurts them', you: 'Hurts you' },
+  even: { mark: '=', them: 'Even for them', you: 'Even for you' },
+};
+const sign = (x: number, d = 1) => (x > 0 ? '+' : x < 0 ? '−' : '±')
+  + (d ? Math.abs(x).toFixed(d) : Math.abs(x).toLocaleString());
+
+/**
+ * One team's side of the deal, drawn: what it is playing for, whether this
+ * suits that, and each number behind the call as a bar rather than a sentence.
+ */
+function Scorecard({ l, c, moved, dynasty, season, avatar }: {
+  l: TeamLedger; c: TeamCase; moved: number; dynasty: boolean;
+  season: ReturnType<Model['seasonWith']>; avatar: string | null;
+}) {
+  const o = outcomeFor(c, dynasty);
+  const vd = VERDICT[o];
+  const pct = moved ? Math.round((l.net / moved) * 100) : 0;
+  const valueTone = l.net > c.band ? GOOD : l.net < -c.band ? BAD : dim(0.62);
+  const ptsTone = (x: number) => (x >= 0.5 ? GOOD : x <= -0.5 ? BAD : dim(0.62));
+  return (
+    <div className={'fb-sc is-' + o}>
+      <div className="fb-sc-head">
+        {avatar ? <img className="fb-sc-face" src={avatar} alt="" /> : <span className="fb-sc-face fb-face-blank" />}
+        <span className="fb-sc-who">
+          <span className={'fb-sc-name' + (l.isMe ? ' is-me' : '')}>{l.name}</span>
+          <span className="fb-sc-sit">{SITUATION_ICON[c.situation]} {situationLabel(c.situation, dynasty)}</span>
+        </span>
+        <span className={'fb-sc-verdict is-' + o}>{vd.mark} {l.isMe ? vd.you : vd.them}</span>
+      </div>
+
+      <Meter icon="💰" label="Value" share={moved ? l.net / moved : 0} tone={valueTone}
+        text={sign(Math.round(l.net), 0) + (pct ? ' · ' + sign(pct, 0) + '%' : '')} />
+      {c.perWeek != null ? (
+        <Meter icon="📈" label="Season" share={c.perWeek / PTS_FULL} tone={ptsTone(c.perWeek)}
+          text={sign(c.perWeek) + ' /wk'} />
+      ) : null}
+      {c.playoffs != null ? (
+        <Meter icon="🏆" label="Playoffs" share={c.playoffs / PTS_FULL} tone={ptsTone(c.playoffs)}
+          text={sign(c.playoffs) + ' /wk'} />
+      ) : null}
+
+      {season?.byes.length || season?.injured.length || l.cuts.length ? (
+        <div className="fb-sc-tags">
+          {season?.byes.map(b => (
+            <span key={'b' + b.week} className="fb-tag" title={'Bye week ' + b.week}>
+              💤 <b>W{b.week}</b> {b.names.join(', ')}
+            </span>
+          ))}
+          {season?.injured.map(i => (
+            <span key={'i' + i.name} className="fb-tag is-bad" title={i.status}>
+              🩹 {i.name} <b>{injuryCode(i.status)}</b>
+            </span>
+          ))}
+          {l.cuts.map(x => (
+            <span key={'c' + x.name} className="fb-tag is-bad" title="Full roster: has to be cut">
+              ✂️ {x.name}
+            </span>
+          ))}
+        </div>
       ) : null}
     </div>
   );
 }
 
-/** One team's whole side of the deal, in the terms it would judge it by. */
-function LedgerRow({ l, moved }: { l: TeamLedger; moved: number }) {
-  const tone = l.standing === 'wins' ? GOOD : l.standing === 'loses' ? BAD : dim(0.62);
-  const pct = moved ? Math.round((l.net / moved) * 100) : 0;
+/** Points a week that fill the bar: a starter's worth of difference. */
+const PTS_FULL = 6;
+
+/** A bar that grows from the centre toward gain or loss. */
+function Meter({ icon, label, share, tone, text }: {
+  icon: string; label: string; share: number; tone: string; text: string;
+}) {
+  const s = Math.max(-1, Math.min(1, share));
   return (
-    <div className="fb-row">
-      <div className="fb-row-top">
-        <span className={'fb-row-name' + (l.isMe ? ' is-me' : '')}>{l.name}</span>
-        <span className="fb-row-net" style={{ color: tone }}>
-          {(l.net > 0 ? '+' : '') + Math.round(l.net).toLocaleString()}
-          <span className="fb-row-pct">{pct ? ` (${pct > 0 ? '+' : ''}${pct}%)` : ''}</span>
-        </span>
-      </div>
-      <div className="fb-row-line">
-        <span className="fb-row-tag">gets</span>
-        {l.got.length ? l.got.map(a => a.name).join(', ') : 'nothing'}
-      </div>
-      <div className="fb-row-line">
-        <span className="fb-row-tag">gives</span>
-        {l.gave.length ? l.gave.map(a => a.name).join(', ') : 'nothing'}
-      </div>
-      {/* A full roster taking more bodies than it sends has to make room,
-          and what it cuts is a real cost — already out of the number above. */}
-      {l.cuts.length ? (
-        <div className="fb-row-line">
-          <span className="fb-row-tag">cuts</span>
-          <span style={{ color: BAD }}>{l.cuts.map(c => c.name).join(', ')}</span>
-        </div>
-      ) : null}
-      {l.fitDelta != null && Math.abs(l.fitDelta) >= 0.1 ? (
-        <div className="fb-row-line">
-          <span className="fb-row-tag">lineup</span>
-          <span style={{ color: l.fitDelta > 0 ? GOOD : BAD }}>
-            {(l.fitDelta > 0 ? '+' : '−') + Math.abs(l.fitDelta).toFixed(1)} pts a week
-          </span>
+    <div className="fb-meter">
+      <span className="fb-meter-icon" aria-hidden="true">{icon}</span>
+      <span className="fb-meter-label">{label}</span>
+      <span className="fb-meter-track">
+        <span className="fb-meter-mid" />
+        <span
+          className="fb-meter-fill"
+          style={{ background: tone, left: s >= 0 ? '50%' : (50 + s * 50) + '%', width: Math.abs(s) * 50 + '%' }}
+        />
+      </span>
+      <span className="fb-meter-num" style={{ color: tone }}>{text}</span>
+    </div>
+  );
+}
+
+const injuryCode = (s: string) => {
+  const k = s.toLowerCase();
+  return k === 'questionable' ? 'Q' : k === 'doubtful' ? 'D' : k === 'out' ? 'OUT' : s.toUpperCase();
+};
+
+/** The rules behind the cards, folded away: one glance each. */
+function HowJudged({ band }: { band: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="fb-how">
+      <button type="button" className="fb-more" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        ⓘ How it’s judged
+      </button>
+      {open ? (
+        <div className="fb-how-list">
+          <span>🔥 Contending → this season’s points decide</span>
+          <span>🌱 Building → value decides</span>
+          <span>⚖️ In the hunt → needs both</span>
+          <span>⭐ One star &gt; two pieces that add up to him</span>
+          <span>✂️ Full roster → whoever is cut counts against</span>
+          <span>💤 🩹 Byes and injuries score 0 · 🏆 playoff weeks ×1.5</span>
+          <span>= Even within ±{Math.round(band).toLocaleString()} value or ±0.5 pts</span>
         </div>
       ) : null}
     </div>
