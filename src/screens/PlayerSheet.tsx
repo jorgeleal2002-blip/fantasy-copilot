@@ -239,22 +239,6 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   // First name over surname, the surname set large — a DEF is one line.
   const first = p.pos === 'DEF' ? '' : (raw?.first_name || '');
   const last = p.pos === 'DEF' ? p.name : (raw?.last_name || p.name);
-  /* Who has him, said the way a league says it: their face, their name, where
-   * they stand, and what they are doing with him this week. */
-  const ownRoster = app.data?.rosters.find(r => r.players?.includes(p.id));
-  const ownRow = ownRoster ? m.leagueRows.find(r => r.id === ownRoster.roster_id) : undefined;
-  const ownPlace = ownRow && (ownRow.record.wins + ownRow.record.losses + ownRow.record.ties) > 0
-    ? m.leagueRows.slice()
-      .sort((a, b) => b.record.wins - a.record.wins || b.record.pointsFor - a.record.pointsFor)
-      .findIndex(r => r.id === ownRow.id) + 1
-    : 0;
-  const ownWeek = ownRoster ? app.matchups.find(r => r.roster_id === ownRoster.roster_id) : undefined;
-  const role = !ownRoster ? null
-    : ownRoster.reserve?.includes(p.id) ? 'IR'
-      : ownRoster.taxi?.includes(p.id) ? 'Taxi'
-        : ownWeek?.starters
-          ? (ownWeek.starters.includes(p.id) ? 'Starting' : 'Bench')
-          : null;
   const season = app.seasonPpg(p.id);
   const u = p.use;
 
@@ -499,26 +483,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           />
         </label>
         <div className="ps-hero-body">
-          {ownRow ? (
-            <div className="ps-hero-owner">
-              <span className="ps-hero-arrow" aria-hidden="true">→</span>
-              {ownRow.avatar ? <img className="ps-hero-owner-av" src={ownRow.avatar} alt="" /> : null}
-              <span className={'ps-hero-owner-name' + (ownRow.isMe ? ' is-me' : '')}>
-                {ownRow.isMe ? 'Yours' : ownRow.name}
-              </span>
-            </div>
-          ) : (
-            <div className="ps-hero-owner">→ {p.ownerLabel === 'free agent' ? 'Free agent' : p.ownerLabel}</div>
-          )}
-          {ownRow ? (
-            <div className="ps-hero-owner-sub">
-              {[ownRow.record.wins + ownRow.record.losses + ownRow.record.ties > 0
-                ? ownRow.record.label + (ownPlace ? ' (#' + ownPlace + ')' : '') : '',
-              ownRow.user && !ownRow.isMe ? '@' + ownRow.user : '']
-                .filter(Boolean).join(' · ')}
-              {role ? <span className={'ps-hero-role is-' + role.toLowerCase()}>{role}</span> : null}
-            </div>
-          ) : null}
+          <div className="ps-hero-owner">→ {p.ownerLabel}</div>
           {first ? <div className="ps-hero-first">{first}</div> : null}
           <div className="ps-hero-last">{last}</div>
           <div className="ps-hero-tag">
