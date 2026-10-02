@@ -1153,12 +1153,13 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.62);
 }
 .mt-head {
+  margin-bottom: 6px;
   background:
     radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--color-accent) 22%, transparent), transparent 60%),
     var(--color-surface);
   border: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
   border-radius: 16px;
-  padding: 12px;
+  padding: 16px 14px;
   cursor: pointer;
 }
 .mt-score { display: flex; align-items: center; gap: 8px; }
@@ -1210,7 +1211,7 @@ button { font-family: inherit; }
 }
 .mt-bar {
   height: 4px;
-  margin-top: 10px;
+  margin-top: 14px;
   border-radius: var(--radius-pill);
   background: var(--c-mark-mid);
   overflow: hidden;
@@ -1220,7 +1221,7 @@ button { font-family: inherit; }
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 12px;
   line-height: 16px;
   color: rgba(242, 253, 254, 0.62);
@@ -1229,7 +1230,7 @@ button { font-family: inherit; }
 .mt-live { color: var(--c-good); font-weight: 600; }
 .mt-list { background: var(--color-surface); border-radius: 12px; overflow: hidden; }
 .mt-list-h {
-  padding: 10px 12px 6px;
+  padding: 14px 14px 8px;
   font-size: 10px;
   line-height: 14px;
   letter-spacing: 0.08em;
@@ -1239,8 +1240,8 @@ button { font-family: inherit; }
 .mt-row {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 16px 14px;
   border-top: var(--hairline) solid var(--color-divider);
 }
 .mt-row.is-tap { cursor: pointer; }
@@ -1273,7 +1274,7 @@ button { font-family: inherit; }
   white-space: nowrap;
 }
 .mt-when {
-  margin-top: 2px;
+  margin-top: 4px;
   font-size: 12px;
   line-height: 16px;
   color: rgba(242, 253, 254, 0.62);
@@ -1283,7 +1284,7 @@ button { font-family: inherit; }
 }
 .mt-when.is-live { color: var(--c-good); }
 .mt-did {
-  margin-top: 2px;
+  margin-top: 6px;
   font-size: 10px;
   line-height: 14px;
   text-transform: uppercase;
@@ -1291,6 +1292,7 @@ button { font-family: inherit; }
 }
 .mt-num { flex: none; text-align: right; }
 .mt-pl-pts {
+  margin-bottom: 4px;
   font-size: 17px;
   color: var(--color-text);
   line-height: 18px;

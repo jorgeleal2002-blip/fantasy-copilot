@@ -51,7 +51,7 @@ export function MyTeam({ app, m }: { app: App; m: Model }) {
   const split = pa != null && pb != null && pa + pb > 0 ? pa / (pa + pb) : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div
         className="mt-head"
         role="button"
