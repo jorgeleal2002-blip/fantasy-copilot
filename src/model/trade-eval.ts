@@ -105,12 +105,15 @@ export function evaluateTrade(
   const winner = top && top.standing === 'wins' ? top : null;
 
   const problems: string[] = [];
-  for (const l of ledgers) {
+  // Only once something is on the table: an empty trade has no problems, it
+  // has not started.
+  for (const l of moved ? ledgers : []) {
     if (!l.gave.length && !l.got.length) {
-      problems.push(l.name + ' is in the trade but nothing moves for them');
+      problems.push(l.isMe ? 'You are in the trade but nothing moves for you'
+        : l.name + ' is in the trade but nothing moves for them');
     } else if (!l.got.length) {
       // Legal in Sleeper, and nobody accepts it. Worth saying before you send.
-      problems.push(l.name + ' gives and gets nothing back');
+      problems.push(l.isMe ? 'You give and get nothing back' : l.name + ' gives and gets nothing back');
     }
   }
 

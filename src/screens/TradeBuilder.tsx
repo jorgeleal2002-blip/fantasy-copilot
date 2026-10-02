@@ -7,8 +7,6 @@ import type { App } from '../state/useApp';
 import { Overlay } from '../ui/primitives';
 import { BAD, GOOD, dim } from '../ui/styles';
 
-/** Four is where a phone runs out of room, and the league runs out of patience. */
-const MAX_TEAMS = 4;
 
 /**
  * Build a trade, laid out the way a trade is argued about: a column per team
@@ -23,8 +21,10 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
   const [addTo, setAddTo] = useState<number | null>(null);
   const [pickingTeam, setPickingTeam] = useState(false);
 
-  const mine = m.leagueRows.find(r => r.isMe);
-  const ids = mine ? [mine.id, ...app.tradeTeams.filter(t => t !== mine.id)] : app.tradeTeams;
+  /* Whoever was chosen, in the order they were added — you are not put in
+   * automatically, because a trade you are sizing up between two other teams
+   * is a trade too. */
+  const ids = app.tradeTeams;
   const teams = ids
     .map(id => m.leagueRows.find(r => r.id === id))
     .filter((r): r is NonNullable<typeof r> => !!r)
@@ -50,10 +50,12 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 
   return (
     <div className="fb">
-      <Balance v={v} fit={fit} />
+      <Balance v={v} fit={fit} pivot={teams.find(t => t.isMe)?.id ?? teams[0]?.id ?? null} />
 
       {teams.length < 2 ? (
-        <div className="fb-empty">Add a team to trade with.</div>
+        <div className="fb-empty">
+          {teams.length ? 'Add one more team to trade with.' : 'Add the teams in the trade — yours too, if you are in it.'}
+        </div>
       ) : (
         <div className="fb-cols">
           {teams.map(t => (
@@ -65,16 +67,14 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
                   <span className="fb-col-name">{t.name}</span>
                   <span className="fb-col-sub">receives</span>
                 </span>
-                {!t.isMe ? (
-                  <button
-                    type="button"
-                    className="fb-x"
-                    aria-label={'Remove ' + t.name}
-                    onClick={() => app.toggleTradeTeam(t.id)}
-                  >
-                    ×
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  className="fb-x"
+                  aria-label={'Remove ' + t.name}
+                  onClick={() => app.toggleTradeTeam(t.id)}
+                >
+                  ×
+                </button>
               </div>
 
               {assets.filter(a => a.to === t.id).map(a => (
@@ -90,7 +90,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
       )}
 
       <div className="fb-actions">
-        {ids.length < MAX_TEAMS ? (
+        {ids.length < m.leagueRows.length ? (
           <button type="button" className="btn btn-secondary fb-btn" onClick={() => setPickingTeam(true)}>
             + Add team
           </button>
@@ -120,10 +120,17 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 }
 
 /** The headline and the one bar that answers the whole screen. */
-function Balance({ v, fit }: { v: ReturnType<typeof evaluateTrade>; fit: string | null }) {
+function Balance({ v, fit, pivot }: { v: ReturnType<typeof evaluateTrade>; fit: string | null; pivot: number | null }) {
   const [open, setOpen] = useState(false);
-  const me = v.ledgers.find(l => l.isMe);
-  const tone = !v.moved ? dim(0.62) : v.winner ? (v.winner.isMe ? GOOD : BAD) : dim(0.9);
+  // The bar is read from one team's side: yours when you are in it, else the
+  // first team added.
+  const me = v.ledgers.find(l => l.id === pivot);
+  const others = v.ledgers.filter(l => l.id !== pivot);
+  // Green and red are you winning and you losing; a trade you are not in is
+  // neither, and is told in the plain accent.
+  const inIt = v.ledgers.some(l => l.isMe);
+  const tone = !v.moved ? dim(0.62) : !v.winner ? dim(0.9)
+    : !inIt ? 'var(--color-accent)' : v.winner.isMe ? GOOD : BAD;
 
   const head = !v.moved ? 'Nothing in the trade yet'
     : !v.winner ? 'Even trade'
@@ -148,8 +155,8 @@ function Balance({ v, fit }: { v: ReturnType<typeof evaluateTrade>; fit: string 
         />
       </div>
       <div className="fb-bal-legs">
-        <span>{v.ledgers.find(l => !l.isMe)?.name || 'Them'}</span>
-        <span>You</span>
+        <span>{others.length === 1 ? others[0].name : others.length ? 'The others' : ''}</span>
+        <span>{me?.name || ''}</span>
       </div>
       {fit ? <div className="fb-fit">{fit}</div> : null}
       {v.problems.map(p => <div key={p} className="fb-problem">{p}</div>)}
@@ -252,7 +259,9 @@ function Card({ app, m, asset }: { app: App; m: Model; asset: TradeAsset }) {
 function TeamList({ app, m, inDeal, onClose }: {
   app: App; m: Model; inDeal: number[]; onClose: () => void;
 }) {
-  const rest = m.leagueRows.filter(r => !r.isMe && !inDeal.includes(r.id));
+  // Yours first: it is the team most often in a trade you are building.
+  const rest = m.leagueRows.filter(r => !inDeal.includes(r.id))
+    .sort((a, b) => Number(b.isMe) - Number(a.isMe));
   return (
     <Overlay onClose={onClose} label="Trade" z={7}>
       <div className="fb-pick-title">Add a team</div>
@@ -267,7 +276,7 @@ function TeamList({ app, m, inDeal, onClose }: {
             ? <img className="fb-face" src={r.avatar} alt="" />
             : <span className="fb-face fb-face-blank" />}
           <span className="fb-card-body">
-            <span className="fb-card-name">{r.name}</span>
+            <span className="fb-card-name">{r.isMe ? 'You' : r.name}</span>
             <span className="fb-card-meta">
               <span className="fb-val">
                 {r.record.wins + r.record.losses + r.record.ties ? r.record.label + ' · ' : ''}
