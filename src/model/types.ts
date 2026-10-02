@@ -504,6 +504,9 @@ export interface Model {
     byes: { week: number; names: string[] }[];
     injured: { name: string; status: string }[];
   } | null;
+  /** The best free agent at a position, and whether he is good enough that a
+   *  hole there is a pickup rather than a problem; null when the wire is empty. */
+  waiverAt: (pos: Pos) => { name: string; ppg: number; easy: boolean } | null;
   /** What a trade would do to a team's best available lineup. Picks are
    *  excluded — one cannot start a game. */
   lineupWith: (rosterId: number, incoming: string[], outgoing: string[]) =>

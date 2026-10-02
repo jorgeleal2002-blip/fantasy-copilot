@@ -102,7 +102,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
         const c = cases.find(x => x.id === t.id);
         return l && c ? (
           <Scorecard key={t.id} l={l} c={c} moved={v.moved} dynasty={m.isDynasty}
-            season={seasons[t.id] || null} depth={depth[t.id] || []}
+            season={seasons[t.id] || null} depth={depth[t.id] || []} waiver={m.waiverAt}
             avatar={m.leagueRows.find(r => r.id === t.id)?.avatar || null} />
         ) : null;
       })}
@@ -239,10 +239,10 @@ const sign = (x: number, d = 1) => (x > 0 ? '+' : x < 0 ? '−' : '±')
  * One team's side of the deal, drawn: what it is playing for, whether this
  * suits that, and each number behind the call as a bar rather than a sentence.
  */
-function Scorecard({ l, c, moved, dynasty, season, avatar, depth }: {
+function Scorecard({ l, c, moved, dynasty, season, avatar, depth, waiver }: {
   l: TeamLedger; c: TeamCase; moved: number; dynasty: boolean;
   season: ReturnType<Model['seasonWith']>; avatar: string | null;
-  depth: PosDepth[];
+  depth: PosDepth[]; waiver: Model['waiverAt'];
 }) {
   const o = outcomeFor(c, dynasty);
   const vd = VERDICT[o];
@@ -287,9 +287,17 @@ function Scorecard({ l, c, moved, dynasty, season, avatar, depth }: {
           <div className="fb-sc-tags">
             {depth.map(x => {
               const chip = depthChip(x);
+              /* A hole is only as bad as the waiver wire: with a free agent
+                 near starter level it is a pickup, said in grey, with his name. */
+              const fa = x.state === 'stacked' ? null : waiver(x.pos);
+              const easy = !!fa?.easy;
               return (
-                <span key={'d' + x.pos} className={'fb-tag' + (x.state === 'stacked' ? '' : ' is-bad')}>
-                  {chip.icon} <b>{chip.pos}</b> {chip.text}
+                <span key={'d' + x.pos} className={'fb-tag' + (x.state === 'stacked' || easy ? '' : ' is-bad')}
+                  title={fa ? 'Best on waivers: ' + fa.name + ', ' + fa.ppg.toFixed(1) + ' pts/wk' : undefined}>
+                  {easy ? '🔄' : chip.icon} <b>{chip.pos}</b> {chip.text}
+                  {fa ? (easy
+                    ? <> · waivers: {fa.name} <b>{fa.ppg.toFixed(1)}</b></>
+                    : <> · waivers best <b>{fa.ppg.toFixed(1)}</b></>) : null}
                 </span>
               );
             })}
@@ -369,6 +377,7 @@ function HowJudged() {
           <span>The line under each card is the roster the deal leaves, and what the weeks nobody plays take out of the rows above it</span>
           <span>✂️ Full roster → a dropped player’s worth counts against, priced at the cheapest spare</span>
           <span>💤 🩹 Byes and injuries score 0 · 🏆 playoff weeks ×1.5</span>
+          <span>🔄 Holes are filled from waivers: an easy pickup costs little</span>
           <span>💰 Value → the share of everything the deal moves</span>
           <span>= Even inside ±4% of that, or ±0.5 pts a week</span>
         </div>

@@ -1312,6 +1312,49 @@ export function buildModel(input: ModelInput): Model {
       },
     };
   };
+  /* ── What the waiver wire holds, position by position.
+   *
+   * A hole a trade leaves is only as deep as what can be picked up to fill
+   * it. Losing the backup tight end costs nothing when a tight end as good is
+   * sitting on waivers, and a great deal when the best one left scores three.
+   * So the season is played with the two best free agents at each position on
+   * every bench, before the trade and after: an emptied spot is filled the way
+   * a manager would fill it, and only what the wire cannot replace is lost. */
+  let wire: Record<string, FitPlayer[]> | null = null;
+  const wireFor = (): Record<string, FitPlayer[]> => {
+    if (wire) return wire;
+    const held = new Set<string>();
+    for (const r of d.rosters || []) {
+      for (const id of [...(r.players || []), ...(r.reserve || []), ...(r.taxi || [])]) held.add(id);
+    }
+    const by: Record<string, FitPlayer[]> = {};
+    for (const id in players) {
+      const pl = players[id];
+      if (!pl || held.has(id) || !pl.team || pl.active === false) continue;
+      if (POS.indexOf(pl.position as Pos) < 0) continue;
+      const f = fitPlayer(id);
+      if (!f || f.ppg == null || f.ppg <= 0) continue;
+      // Someone out this week is not the answer to a hole this week.
+      if (/^(ir|pup|sus|nfi|out)$/i.test(f.injury)) continue;
+      (by[f.pos] = by[f.pos] || []).push(f);
+    }
+    for (const k in by) by[k] = by[k].sort((a, b) => (b.ppg as number) - (a.ppg as number)).slice(0, 2);
+    return (wire = by);
+  };
+  /* How the best free agent at a position compares with the last starter in
+   * the league there — the line between a lineup player and a bench one. At
+   * seventy per cent of it or better, a hole there is a pickup, not a problem. */
+  const EASY_FILL = 0.7;
+  const waiverAt = (pos: Pos): { name: string; ppg: number; easy: boolean } | null => {
+    const best = wireFor()[pos]?.[0];
+    if (!best || best.ppg == null) return null;
+    const rostered = (d.rosters || []).flatMap(r => r.players || [])
+      .map(fitPlayer).filter((f): f is FitPlayer => !!f && f.pos === pos && f.ppg != null)
+      .map(f => f.ppg as number).sort((a, b) => b - a);
+    const line = rostered[Math.max(0, teamCount * Math.max(1, slots[pos] || 1) - 1)] ?? rostered[rostered.length - 1];
+    const ppg = Math.round(best.ppg * 10) / 10;
+    return { name: best.name, ppg, easy: !line || best.ppg >= EASY_FILL * line };
+  };
   const seasonWith = (rid: number, incoming: string[], outgoing: string[], fromWeek: number) => {
     const r = (d.rosters || []).find(x => x.roster_id === rid);
     const cal = calendarFrom(fromWeek);
@@ -1321,7 +1364,8 @@ export function buildModel(input: ModelInput): Model {
     const toFit = (ids: string[]) => ids.map(fitPlayer).filter((p): p is FitPlayer => !!p);
     // Taxi players cannot start; reserve players can once they are back, and
     // their injury status already says when.
-    const cur = toFit((r.players || []).filter(id => !taxi.has(id)));
+    const fa = Object.values(wireFor()).flat();
+    const cur = toFit((r.players || []).filter(id => !taxi.has(id))).concat(fa);
     const inc = toFit(incoming);
     const afterList = cur.filter(p => !out.has(p.id)).concat(inc);
     const before = seasonFit(cur, cal);
@@ -2271,7 +2315,7 @@ export function buildModel(input: ModelInput): Model {
     marketCount: mk ? Object.keys(mk.players).length : 0,
     snake: !!(d.draft && d.draft.type === 'snake'),
     fills: fillPos,
-    teamInfo, rosterRoom, seasonWith, posRankOf, scoreAny, marketValue, pickWorth, offersFor, runMock, metricKeys,
+    teamInfo, rosterRoom, seasonWith, waiverAt, posRankOf, scoreAny, marketValue, pickWorth, offersFor, runMock, metricKeys,
     lineupWith,
   };
 }
