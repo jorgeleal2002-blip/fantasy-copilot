@@ -294,8 +294,17 @@ function Scorecard({ l, c, moved, dynasty, season, avatar, depth }: {
               is the app deciding who somebody else drops, and nobody drops the
               player a model picked for them. The cost is real and stays; the
               casting does not. */}
-          {/* Whether he could afford what the deal takes, and whether what it
-              gives him is any use where he already is. */}
+          {/* What the thinness above actually costs, in the unit the rows are
+              already in. The season figure has always had it inside — a man on
+              his bye scores nothing and an empty slot scores nothing — and
+              there was no way to tell from one number that it did. */}
+          {season && Math.abs(season.thinner) >= 0.3 ? (
+            <span className={'fb-tag' + (season.thinner > 0 ? ' is-bad' : '')}
+              title="Already counted in the season and playoff rows">
+              {season.thinner > 0 ? '🕳️' : '🛟'} Byes and injuries{' '}
+              {season.thinner > 0 ? 'cost' : 'save'} <b>{Math.abs(season.thinner).toFixed(1)}</b> pts/wk more
+            </span>
+          ) : null}
           {depth.map(d => (
             <span key={'d' + d.pos + d.state}
               className={'fb-tag' + (d.state === 'stacked' ? '' : ' is-bad')}
@@ -361,6 +370,7 @@ function HowJudged() {
           <span>⚖️ In the hunt → needs both</span>
           <span>⭐ One star &gt; two pieces that add up to him</span>
           <span>⚠️ 📚 Depth after the deal → can he spare them, is the return any use</span>
+          <span>🕳️ What byes and injuries take, already inside the two point rows</span>
           <span>✂️ Full roster → a dropped player’s worth counts against, priced at the cheapest spare</span>
           <span>💤 🩹 Byes and injuries score 0 · 🏆 playoff weeks ×1.5</span>
           <span>💰 Value → the share of everything the deal moves</span>

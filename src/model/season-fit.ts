@@ -116,3 +116,31 @@ export function byesOf(list: FitPlayer[], cal: FitCalendar): { week: number; nam
   }
   return [...by.entries()].sort((a, b) => a[0] - b[0]).map(([week, names]) => ({ week, names }));
 }
+
+/**
+ * What byes and injuries take off a roster, a week.
+ *
+ * `seasonFit` already charges them: a man on his bye scores nothing, an
+ * injured one scores a fraction, and a slot with nobody left to fill it
+ * contributes zero. That is why a thin side's season points are lower than a
+ * covered one's. What it does not do is say so — the cost is folded into one
+ * figure, and a reader looking at "+0.1 pts a week" cannot tell whether depth
+ * was considered.
+ *
+ * So the same roster is run twice: once as it is, and once in a season where
+ * nobody is ever away. The gap between them is what being this thin costs, in
+ * the same unit the card already prints.
+ */
+export function exposure(list: FitPlayer[], cal: FitCalendar): number {
+  const healthy = list.map(p => (p.injury ? { ...p, injury: '' } : p));
+  const noByes: FitCalendar = {
+    ...cal,
+    // A bye is '' and an unknown opponent is null; null takes the neutral
+    // matchup, which is what a week nobody is away should be worth.
+    opponent: (team, week) => {
+      const o = cal.opponent(team, week);
+      return o === '' ? null : o;
+    },
+  };
+  return seasonFit(healthy, noByes).perWeek - seasonFit(list, cal).perWeek;
+}

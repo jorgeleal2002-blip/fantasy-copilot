@@ -36,7 +36,7 @@ import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
 import { headlineBits, statLine, touchdowns } from '../model/stat-line';
 import { cutOut, defringe } from '../model/cutout';
-import { availability, byesOf, seasonFit } from '../model/season-fit';
+import { availability, byesOf, exposure, seasonFit, type FitCalendar, type FitPlayer } from '../model/season-fit';
 import { fitHeadline, outcomeFor, situationOf, type TeamCase } from '../model/team-verdict';
 import { seasonOutlook, teamStrength } from '../model/outlook';
 import { returnLine, whyMe, whyThem } from '../model/offer-copy';
@@ -5485,5 +5485,113 @@ describe('what a trade leaves a roster looking like', () => {
       .toBe('Thin at WR · 3 for 3');
     expect(depthLabel({ pos: 'TE' as Pos, have: 3, starts: 1, state: 'stacked' }))
       .toBe('Stacked at TE · 3 for 1');
+  });
+});
+
+/* The scorecard shows depth as its own tags, and the claim made alongside them
+   was that it is ALREADY inside the season and playoff points — a bye with
+   nobody behind costs a real week, a man who cannot start earns nothing. That
+   was a claim read off the code rather than measured. These measure it. */
+describe('whether depth is already in the season points', () => {
+  const cal = (byeWeekFor: Record<string, number>): FitCalendar => ({
+    slots: ['QB', 'WR', 'WR'],
+    weeks: [1, 2, 3, 4],
+    playoffWeeks: [4],
+    opponent: (team, week) => (byeWeekFor[team] === week ? '' : 'OPP'),
+    matchup: () => 1,
+  });
+  const wr = (id: string, team: string, ppg: number): FitPlayer =>
+    ({ id, name: id, pos: 'WR', team, ppg, injury: '' });
+  const qb: FitPlayer = { id: 'qb', name: 'qb', pos: 'QB', team: 'QBT', ppg: 20, injury: '' };
+
+  it('charges a bye to the side with nobody behind it', () => {
+    // Two receivers for two slots, and one of them is off in week 2.
+    const thin = [qb, wr('a', 'AAA', 12), wr('b', 'BBB', 12)];
+    // The same two, plus cover worth less than either of them.
+    const covered = [...thin, wr('c', 'CCC', 8)];
+    const c = cal({ BBB: 2 });
+    const t = seasonFit(thin, c).perWeek;
+    const v = seasonFit(covered, c).perWeek;
+    expect(v).toBeGreaterThan(t);
+    // And by what the cover is worth in that one week, spread over the season.
+    expect(v - t).toBeCloseTo(8 * 1 / (3 + 1.5), 5);
+  });
+
+  it('pays nothing for a man the lineup cannot start', () => {
+    const full = [qb, wr('a', 'AAA', 12), wr('b', 'BBB', 12)];
+    const stacked = [...full, wr('c', 'CCC', 11)];
+    const c = cal({});
+    // Eleven points a game, and the lineup has no third receiver slot: the
+    // season total does not move, which is exactly why the card said "even"
+    // and needed a tag to explain it.
+    expect(seasonFit(stacked, c).perWeek).toBeCloseTo(seasonFit(full, c).perWeek, 5);
+  });
+
+  it('leaves a slot empty rather than inventing points for it', () => {
+    const one = [qb, wr('a', 'AAA', 12)];
+    const two = [qb, wr('a', 'AAA', 12), wr('b', 'BBB', 12)];
+    const c = cal({});
+    expect(seasonFit(two, c).perWeek - seasonFit(one, c).perWeek).toBeCloseTo(12, 5);
+  });
+
+  it('charges the playoff weeks at their own weight', () => {
+    // The cover's bye falls in the playoff week, which counts for more.
+    const thin = [qb, wr('a', 'AAA', 12), wr('b', 'BBB', 12)];
+    const inPlayoffs = seasonFit(thin, cal({ BBB: 4 }));
+    const inOctober = seasonFit(thin, cal({ BBB: 2 }));
+    expect(inPlayoffs.perWeek).toBeLessThan(inOctober.perWeek);
+    // And the playoff line itself feels it where the October one does not.
+    expect(inPlayoffs.playoffs as number).toBeLessThan(inOctober.playoffs as number);
+  });
+});
+
+/* "Que se contemple en los puntos" — it was, and this is the part that says so:
+   the same roster run against a season where nobody is ever away, so the cost
+   of being thin comes out as a number in the unit the card already prints. */
+describe('what being thin costs, in the points themselves', () => {
+  const cal = (byeWeekFor: Record<string, number>): FitCalendar => ({
+    slots: ['QB', 'WR', 'WR'],
+    weeks: [1, 2, 3, 4],
+    playoffWeeks: [4],
+    opponent: (team, week) => (byeWeekFor[team] === week ? '' : null),
+    matchup: () => 1,
+  });
+  const wr = (id: string, team: string, ppg: number, injury = ''): FitPlayer =>
+    ({ id, name: id, pos: 'WR', team, ppg, injury });
+  const qb: FitPlayer = { id: 'qb', name: 'qb', pos: 'QB', team: 'QBT', ppg: 20, injury: '' };
+
+  it('costs nothing where nobody is away', () => {
+    expect(exposure([qb, wr('a', 'AAA', 12), wr('b', 'BBB', 12)], cal({}))).toBeCloseTo(0, 6);
+  });
+
+  it('charges a bye the side cannot cover, and not one it can', () => {
+    const thin = [qb, wr('a', 'AAA', 12), wr('b', 'BBB', 12)];
+    const covered = [...thin, wr('c', 'CCC', 12)];
+    const c = cal({ BBB: 2 });
+    // Twelve points gone in one of four weeks, the last weighed 1.5.
+    expect(exposure(thin, c)).toBeCloseTo(12 / 4.5, 5);
+    // The same bye, with a man of equal worth behind him: nothing lost.
+    expect(exposure(covered, c)).toBeCloseTo(0, 6);
+  });
+
+  it('charges an injury the same way', () => {
+    const hurt = [qb, wr('a', 'AAA', 12), wr('b', 'BBB', 12, 'Out')];
+    expect(exposure(hurt, cal({}))).toBeGreaterThan(0);
+    const covered = [...hurt, wr('c', 'CCC', 12)];
+    expect(exposure(covered, cal({}))).toBeCloseTo(0, 6);
+  });
+
+  it('charges more for a bye in a playoff week', () => {
+    const thin = [qb, wr('a', 'AAA', 12), wr('b', 'BBB', 12)];
+    expect(exposure(thin, cal({ BBB: 4 }))).toBeGreaterThan(exposure(thin, cal({ BBB: 2 })));
+  });
+
+  it('only counts cover the lineup could actually have started', () => {
+    // A fourth receiver does not help a team that already has cover, because
+    // the lineup only ever starts two.
+    const covered = [qb, wr('a', 'AAA', 12), wr('b', 'BBB', 12), wr('c', 'CCC', 12)];
+    const deeper = [...covered, wr('d', 'DDD', 12)];
+    const c = cal({ BBB: 2 });
+    expect(exposure(deeper, c)).toBeCloseTo(exposure(covered, c), 6);
   });
 });

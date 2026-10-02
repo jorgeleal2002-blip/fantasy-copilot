@@ -7,7 +7,7 @@ import { ageCurve, clamp, modelVal, pickLabel, playerName, poolFloor, prodShare,
 import type { Market } from './market';
 import { playoffWeeks, sosFor, sosScore } from './sos';
 import { ALLOWED, ALLOWED_POS, OPPONENTS, SCHEDULE_SEASON, SEASON_WEEKS } from './schedule';
-import { byesOf, seasonFit, type FitCalendar, type FitPlayer } from './season-fit';
+import { byesOf, exposure, seasonFit, type FitCalendar, type FitPlayer } from './season-fit';
 import { EMPTY_METRICS, leagueWeights, ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
@@ -1322,9 +1322,15 @@ export function buildModel(input: ModelInput): Model {
     // their injury status already says when.
     const cur = toFit((r.players || []).filter(id => !taxi.has(id)));
     const inc = toFit(incoming);
+    const afterList = cur.filter(p => !out.has(p.id)).concat(inc);
     const before = seasonFit(cur, cal);
-    const after = seasonFit(cur.filter(p => !out.has(p.id)).concat(inc), cal);
+    const after = seasonFit(afterList, cal);
+    /* How much MORE the weeks nobody is available cost him once the deal is
+       done — see `exposure`. It is already inside `perWeek`; this says how
+       much of it is, so a thin side can see where its points went. */
+    const thinner = Math.round((exposure(afterList, cal) - exposure(cur, cal)) * 10) / 10;
     return {
+      thinner,
       perWeek: Math.round((after.perWeek - before.perWeek) * 10) / 10,
       playoffs: after.playoffs != null && before.playoffs != null
         ? Math.round((after.playoffs - before.playoffs) * 10) / 10 : null,

@@ -498,6 +498,9 @@ export interface Model {
   seasonWith: (rosterId: number, incoming: string[], outgoing: string[], fromWeek: number) => {
     perWeek: number;
     playoffs: number | null;
+    /** how much MORE the weeks nobody is available cost him once the deal is
+     *  done — already inside `perWeek`, reported so a thin side can see it */
+    thinner: number;
     byes: { week: number; names: string[] }[];
     injured: { name: string; status: string }[];
   } | null;
