@@ -101,3 +101,31 @@ export function fitHeadline(cases: TeamCase[], dynasty: boolean, moved: number):
   if (!bad.length) return { title: 'Even trade', winners: [], why: 'Nobody is clearly better or worse off' };
   return { title: 'Nobody comes out ahead', winners: [], why: verb(bad, 'gets worse', 'get worse') };
 }
+
+/**
+ * Whether both sides come out of a deal with a better lineup.
+ *
+ * The engine already requires that YOU gain and that they would plausibly say
+ * yes — but those are not the same thing. A side is allowed to lose lineup
+ * points as long as the value it takes covers the loss, so a suggestion can be
+ * good for you and merely tolerable for them, and the card had no word for the
+ * difference. A deal both managers get better from is the one that actually
+ * gets accepted, and it deserves to be named and to be shown first.
+ *
+ * Measured on points a week where they are known, because that is what the
+ * card prints; on the lineup-quality sums where they are not.
+ */
+export const WIN_WIN_FELT = 0.3;
+
+export function isWinWin(
+  mine: number | null | undefined,
+  theirs: number | null | undefined,
+  felt = WIN_WIN_FELT,
+): boolean {
+  // `Number.isFinite` does not coerce, so null, undefined and NaN all fail it
+  // — not knowing what a deal does for a side is not the same as it doing
+  // nothing, and a card must not call a trade win-win on a number nobody
+  // computed.
+  if (!Number.isFinite(mine as number) || !Number.isFinite(theirs as number)) return false;
+  return (mine as number) >= felt && (theirs as number) >= felt;
+}

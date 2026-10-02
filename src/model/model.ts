@@ -8,6 +8,7 @@ import type { Market } from './market';
 import { playoffWeeks, sosFor, sosScore } from './sos';
 import { ALLOWED, ALLOWED_POS, OPPONENTS, SCHEDULE_SEASON, SEASON_WEEKS } from './schedule';
 import { byesOf, exposure, seasonFit, type FitCalendar, type FitPlayer } from './season-fit';
+import { isWinWin } from './team-verdict';
 import { EMPTY_METRICS, leagueWeights, ownedWeights, redraftWeights, scorePlayer } from './score';
 import type {
   BoardPlayer, DraftDeal, LeagueRow, LineupItem, LineupSlot, Model, MyDraftPick, Offer,
@@ -1438,7 +1439,13 @@ export function buildModel(input: ModelInput): Model {
       }));
     if (bestPick) offers.push(bestPick);
   });
-  offers.sort((a, b) => b.fit - a.fit);
+  /* A deal the other manager also gets better from goes first. The rating
+     already leans that way — their gain is worth up to seven of it — but it
+     can still be outscored by a one-sided deal that rates well and would be
+     turned down, and a list of trades you cannot make is not a list of trades.
+     See `isWinWin`. */
+  const bothWin = (o: Offer) => isWinWin(o.ptsGain ?? o.gain, o.theirPtsGain ?? o.theirGain);
+  offers.sort((a, b) => Number(bothWin(b)) - Number(bothWin(a)) || b.fit - a.fit);
 
   /**
    * The other direction: you have decided you want THIS player, now what does

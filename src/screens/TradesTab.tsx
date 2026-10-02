@@ -3,6 +3,7 @@ import { returnLine, whyMe, whyThem } from '../model/offer-copy';
 import { BAD, GOOD, MID } from '../model/constants';
 import { num } from '../model/math';
 import type { BlockReturn, Model, Offer, TradeAsset } from '../model/types';
+import { isWinWin } from '../model/team-verdict';
 import type { App } from '../state/useApp';
 import { clockTime } from '../ui/format';
 import { PlayerSearch } from '../ui/PlayerSearch';
@@ -239,6 +240,10 @@ function ReturnCard({ r }: { r: BlockReturn }) {
 
 function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty: boolean }) {
   const fitTint = o.fit >= 75 ? GOOD : o.fit >= 62 ? MID : dim(0.75);
+  /* Both lineups better off — see `isWinWin`. It leads, because it is the
+     strongest thing that can be said about a proposal: a deal the other
+     manager also gets better from is the one that gets accepted. */
+  const winWin = isWinWin(o.ptsGain ?? o.gain, o.theirPtsGain ?? o.theirGain);
   const kind = o.edge > 0.04 ? 'Buying under market'
     : o.edge < -0.04 ? (o.kind === 'lineup' && (o.ptsGain ?? 0) > 0.3 ? 'Overpay that helps you' : 'Overpay') : 'Fair price';
   const gain = o.kind === 'capital' || o.ptsGain == null
@@ -255,6 +260,7 @@ function OfferCard({ app, offer: o, dynasty }: { app: App; offer: Offer; dynasty
         <div className="of-fit" style={{ color: fitTint }}>{o.fit}</div>
       </div>
       <div className="of-verdict" style={{ color: dim(0.62) }}>
+        {winWin ? <><span className="of-ww">Win-win</span> · </> : null}
         {kind} · <span className="of-gain">{gain}</span>
       </div>
 

@@ -37,7 +37,7 @@ import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/
 import { headlineBits, statLine, touchdowns } from '../model/stat-line';
 import { cutOut, defringe } from '../model/cutout';
 import { availability, byesOf, exposure, seasonFit, type FitCalendar, type FitPlayer } from '../model/season-fit';
-import { fitHeadline, outcomeFor, situationOf, type TeamCase } from '../model/team-verdict';
+import { WIN_WIN_FELT, fitHeadline, isWinWin, outcomeFor, situationOf, type TeamCase } from '../model/team-verdict';
 import { seasonOutlook, teamStrength } from '../model/outlook';
 import { returnLine, whyMe, whyThem } from '../model/offer-copy';
 import { tradeHeadline, type LeagueTrade } from '../model/league-trades';
@@ -5614,5 +5614,37 @@ describe('the depth readings as a sentence', () => {
   it('keeps the states apart and in the order they matter', () => {
     expect(depthSentence([d('RB', 'short'), d('QB', 'thin'), d('WR', 'stacked')]))
       .toBe('After this: short at RB · thin at QB · stacked at WR');
+  });
+});
+
+/* The engine asks that you gain and that they would plausibly say yes, which
+   are not the same thing: a side may lose lineup points so long as the value
+   covers it. The deal both managers get better from had no name. */
+describe('a trade both sides win', () => {
+  it('needs both lineups better off, not one and a shrug', () => {
+    expect(isWinWin(2.1, 1.4)).toBe(true);
+    expect(isWinWin(2.1, -0.8)).toBe(false);
+    expect(isWinWin(-0.8, 2.1)).toBe(false);
+  });
+
+  it('does not count a gain too small to feel on either side', () => {
+    expect(isWinWin(3, 0.1)).toBe(false);
+    expect(isWinWin(0.1, 3)).toBe(false);
+    // Exactly at the floor counts: it is the line, not past it.
+    expect(isWinWin(WIN_WIN_FELT, WIN_WIN_FELT)).toBe(true);
+  });
+
+  it('says no when either side was never measured', () => {
+    // Not knowing what it does for them is not the same as it doing nothing,
+    // and a card must not call a deal win-win on a number nobody computed.
+    expect(isWinWin(2.1, null)).toBe(false);
+    expect(isWinWin(null, 2.1)).toBe(false);
+    expect(isWinWin(2.1, undefined)).toBe(false);
+    expect(isWinWin(NaN, 2.1)).toBe(false);
+    /* And at a floor of zero, where the comparison alone would let it through:
+       `null >= 0` is true, because null becomes 0. The whole point is that a
+       side nobody measured is not a side that broke even. */
+    expect(isWinWin(null, null, 0)).toBe(false);
+    expect(isWinWin(2.1, null, 0)).toBe(false);
   });
 });
