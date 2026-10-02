@@ -1228,9 +1228,9 @@ button { font-family: inherit; }
   white-space: nowrap;
 }
 .mt-live { color: var(--c-good); font-weight: 600; }
-.mt-list { background: var(--color-surface); border-radius: 12px; overflow: hidden; }
+.mt-list { display: flex; flex-direction: column; }
 .mt-list-h {
-  padding: 14px 14px 8px;
+  padding: 6px 4px 8px;
   font-size: 10px;
   line-height: 14px;
   letter-spacing: 0.08em;
@@ -1241,7 +1241,7 @@ button { font-family: inherit; }
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 16px 14px;
+  padding: 16px 4px;
   border-top: var(--hairline) solid var(--color-divider);
 }
 .mt-row.is-tap { cursor: pointer; }
