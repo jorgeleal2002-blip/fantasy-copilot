@@ -92,14 +92,28 @@ function Game({ app, g }: { app: App; g: Matchup }) {
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } }}
       >
         <Side s={g.a} winning={lead === 'a'} />
-        {/* One mark in a 22px column, and it is the one that says the card
-            goes somewhere. */}
-        <div className="mu-vs">{g.b ? '›' : 'bye'}</div>
+        {/* A badge rather than a chevron: the two teams are squaring up, and
+            the card is still the button. Green and breathing while anybody
+            in the game is on the field. */}
+        {g.b
+          ? <div className={'mu-vs-badge' + (isLive(app, g) ? ' is-live' : '')} aria-hidden="true"><span>VS</span></div>
+          : <div className="mu-vs">bye</div>}
         {g.b ? <Side s={g.b} winning={lead === 'b'} align="right" /> : <div style={{ flex: 1 }} />}
       </div>
       <Detail app={app} g={g} />
     </div>
   );
+}
+
+/** Whether anybody starting in this game is on the field right now. */
+function isLive(app: App, g: Matchup): boolean {
+  const week = app.week;
+  if (!week) return false;
+  const players = app.data?.players || {};
+  const season = Number(app.data?.league.season);
+  const now = Date.now();
+  return [g.a, g.b].some(s => (s?.starters || []).some(id =>
+    id && id !== '0' && phaseFor(players[id]?.team, week, season, now, app.nflGames) === 'live'));
 }
 
 /**

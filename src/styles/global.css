@@ -1085,6 +1085,58 @@ button { font-family: inherit; }
 }
 .mu-pts.is-up { color: var(--color-text); }
 
+/* The mark between the two teams: a heavy italic VS in a ring that glows in
+   the accent, the way a fight card squares two names up. While anybody in
+   the game is playing the ring turns green and breathes. */
+.mu-vs-badge {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--color-accent) 30%, transparent), transparent 70%),
+    var(--color-bg);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--color-accent) 70%, transparent),
+    0 0 14px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+.mu-vs-badge span {
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.04em;
+  color: var(--color-text);
+  transform: skewX(-6deg);
+}
+.mu-vs-badge.is-live {
+  background:
+    radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c-good) 30%, transparent), transparent 70%),
+    var(--color-bg);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--c-good) 80%, transparent),
+    0 0 14px color-mix(in srgb, var(--c-good) 35%, transparent);
+}
+.mu-vs-badge.is-live::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid var(--c-good);
+  animation: vs-pulse 1.8s ease-out infinite;
+}
+@keyframes vs-pulse {
+  from { transform: scale(1); opacity: 0.8; }
+  to { transform: scale(1.5); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mu-vs-badge.is-live::after { animation: none; opacity: 0; }
+}
+
 /* Under the score line: the projected split, then what is left to play. */
 .mu-detail { margin-top: 9px; }
 .mu-bar {
