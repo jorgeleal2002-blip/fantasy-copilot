@@ -33,7 +33,7 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
   useEffect(() => { if (wk) void app.fetchWeekStats(wk); }, [app.fetchWeekStats, wk]);
 
   const games = pairMatchups(m.leagueRows, app.matchups, app.projections,
-    clockFor(app.data?.players || {}, wk, season, Date.now()));
+    clockFor(app.data?.players || {}, wk, season, Date.now(), app.nflGames));
   const game = games.find(g => ids.includes(g.a.rosterId) && (g.b ? ids.includes(g.b.rosterId) : ids.length === 1));
 
   if (!game) {

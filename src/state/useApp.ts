@@ -7,7 +7,9 @@ import {
 import type {
   LeagueBundle, PosFilter, SleeperLeague, SleeperMatchup, SleeperStatLine, SleeperTransaction,
 } from '../api/types';
-import { gamePhase, weekLive } from '../model/game-clock';
+import { phaseFor, weekLive } from '../model/game-clock';
+import { readNflGames, type NflGame } from '../model/nfl-games';
+import { getNflScoreboard } from '../api/espn';
 import { withLiveStats } from '../model/matchups';
 import { DRAFT_POLL_MS, MATCHUP_LIVE_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, STATS_LIVE_POLL_MS, RESUME_REFRESH_MS, STORAGE_ACCOUNTS, STORAGE_BLOCK, STORAGE_GOOGLE, STORAGE_PHOTOS, STORAGE_PHOTOS_SENT, STORAGE_SESSION, STORAGE_TEAM, StratKey, USAGE_V } from '../model/constants';
 import {
@@ -130,6 +132,8 @@ function writeJson(key: string, value: unknown) {
     /* private mode or quota — the app works without persistence */
   }
 }
+
+const NO_GAMES: Record<string, NflGame> = {};
 
 export function useApp() {
   // ── session
@@ -276,6 +280,10 @@ export function useApp() {
   const [seasonPoints, setSeasonPoints] = useState<Record<string, Game[]>>({});
   const [powerState, setPowerState] = useState<FeedState>('idle');
   const [matchups, setMatchups] = useState<SleeperMatchup[]>([]);
+  /** The NFL's games for the week on screen — score, quarter, clock. */
+  const [nflGames, setNflGames] = useState<{ wk: number; map: Record<string, NflGame> }>({ wk: 0, map: {} });
+  const nflGamesRef = useRef(nflGames);
+  nflGamesRef.current = nflGames;
   const [matchupState, setMatchupState] = useState<FeedState>('idle');
 
   // ── ephemera
@@ -509,6 +517,22 @@ export function useApp() {
     }));
   }, []);
 
+  /* Asked for with the scores, but only while it can have changed: once for
+   * a week, then again only while one of its games is on. */
+  const fetchNflGames = useCallback(async (wk: number) => {
+    const d = dataRef.current;
+    if (!d || !wk) return;
+    const held = nflGamesRef.current;
+    const season = Number(d.league.season);
+    if (held.wk === wk && !weekLive(wk, season, Date.now(), held.map)) return;
+    try {
+      const map = readNflGames(await getNflScoreboard(season, wk));
+      if (Object.keys(map).length) setNflGames({ wk, map });
+    } catch {
+      /* the kickoff table stands in for it */
+    }
+  }, []);
+
   const fetchMatchups = useCallback(async (lid: string, wk: number, quiet = false, force = false) => {
     // A poll must not blank the scores it is refreshing, so it stays quiet and
     // only a first load or a week change shows the loading state.
@@ -522,7 +546,8 @@ export function useApp() {
       setMatchupState('fail');
     }
     void fetchProjections(wk, force);
-  }, [fetchProjections]);
+    void fetchNflGames(wk);
+  }, [fetchProjections, fetchNflGames]);
 
   const setWeek = useCallback((w: number) => {
     setWeekState(w);
@@ -795,7 +820,8 @@ export function useApp() {
       if (document.visibilityState === 'hidden') return;
       const now = Date.now();
       const season = Number(dataRef.current?.league.season);
-      const live = weekLive(week, season, now);
+      const held = nflGamesRef.current;
+      const live = weekLive(week, season, now, held.wk === week ? held.map : null);
       // The stat feed runs ahead of the scoreboard during a game, so while one
       // is on it is polled too — see `withLiveStats`.
       if (live && now - statsAtRef.current >= STATS_LIVE_POLL_MS - 1000) {
@@ -811,6 +837,7 @@ export function useApp() {
 
   /* The scoreboard as every screen reads it: Sleeper's, with the stat feed
    * folded in for players whose game is on. */
+  const games = nflGames.wk === week ? nflGames.map : null;
   const liveMatchups = useMemo(() => {
     if (!week || !data) return matchups;
     const season = Number(data.league.season);
@@ -819,9 +846,9 @@ export function useApp() {
       matchups,
       statsForWeek(weekStats, week) as unknown as Record<string, Record<string, number>>,
       data.league.scoring_settings,
-      id => gamePhase(data.players[id]?.team, week, season, now) === 'live',
+      id => phaseFor(data.players[id]?.team, week, season, now, games) === 'live',
     );
-  }, [matchups, weekStats, week, data]);
+  }, [matchups, weekStats, week, data, games]);
 
   /**
    * Projections need the LEAGUE, not just the week: they are re-totalled
@@ -841,7 +868,9 @@ export function useApp() {
   useEffect(() => {
     if (!data || week == null) return;
     void fetchProjections(week);
-  }, [data, week, fetchProjections]);
+    // The same race, the same fix: the scoreboard needs the league's season.
+    void fetchNflGames(week);
+  }, [data, week, fetchProjections, fetchNflGames]);
 
   const connectUser = useCallback(async () => {
     const name = (username || '').trim().replace(/^@/, '');
@@ -1643,7 +1672,7 @@ export function useApp() {
     filter, rosterFilter, rosterSort, boardMode, rankMode,
     pickSel, strat, detail, passed, toast, photos, photoBy, photoShared,
     query, topPos, topLens,
-    week, nflWeek, matchups: liveMatchups, matchupState, projections, projState, fetchWeekStats,
+    week, nflWeek, matchups: liveMatchups, matchupState, nflGames: games || NO_GAMES, projections, projState, fetchWeekStats,
     weekStats: statsForWeek(weekStats, week),
     gameStats, fetchGameStats,
     tradeTeams, tradeAssets,

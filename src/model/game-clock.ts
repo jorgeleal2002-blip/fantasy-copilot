@@ -1,4 +1,5 @@
 import type { PlayerCatalog } from '../api/types';
+import { gameLeftOf, type NflGame } from './nfl-games';
 import { KICKOFF_MIN, SCHEDULE_SEASON } from './schedule';
 
 /** Wall-clock length of an NFL game, halftime and stoppages included. */
@@ -38,20 +39,39 @@ export function gamePhase(team: string | null | undefined, week: number, season:
   return now < at + OVER_MIN * 60000 ? 'live' : 'final';
 }
 
-/** `gameLeft` by player id, for the week on screen. */
+/** Where a team's game is, off the real game state when there is one and the
+ *  bundled kickoff times when there is not — which also covers a game the
+ *  league flexed to another slot. */
+export function phaseFor(
+  team: string | null | undefined, week: number, season: number, now: number,
+  games?: Record<string, NflGame> | null,
+): GamePhase | null {
+  const g = team ? games?.[team] : undefined;
+  if (g) return g.state === 'in' ? 'live' : g.state === 'post' ? 'final' : 'pre';
+  return gamePhase(team, week, season, now);
+}
+
+/** `gameLeft` by player id, for the week on screen — off the real clock when
+ *  the scoreboard has his game. */
 export function clockFor(
   players: PlayerCatalog,
   week: number | null,
   season: string | number | null | undefined,
   now: number,
+  games?: Record<string, NflGame> | null,
 ): ((id: string) => number | null) | undefined {
   if (!week) return undefined;
   const yr = Number(season);
-  return id => gameLeft(players[id]?.team, week, yr, now);
+  return id => {
+    const t = players[id]?.team;
+    const g = t ? games?.[t] : undefined;
+    return g ? gameLeftOf(g) : gameLeft(t, week, yr, now);
+  };
 }
 
 /** Whether any game of the week is on right now. */
-export function weekLive(week: number, season: number, now: number): boolean {
+export function weekLive(week: number, season: number, now: number, games?: Record<string, NflGame> | null): boolean {
+  if (games && Object.values(games).some(g => g.state === 'in')) return true;
   if (season !== SCHEDULE_SEASON) return false;
   for (const t of Object.keys(KICKOFF_MIN)) {
     const at = kickoff(t, week, season);

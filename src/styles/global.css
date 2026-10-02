@@ -2160,8 +2160,28 @@ button { font-family: inherit; }
   margin-top: 4px;
 }
 .ps-feed-stat { display: inline-flex; align-items: baseline; gap: 3px; }
-/* This week's line, under the tiles at the top of a player's card. */
-.ps-week { margin-top: 10px; padding: 0 2px; }
+/* This week, under the tiles: the game he is in, then what he did in it — a
+   bordered card, the way Sleeper's own is, so it reads as one thing. */
+.ps-week {
+  margin-top: 12px;
+  padding: 10px 12px 12px;
+  border: var(--hairline) solid var(--color-divider);
+  border-radius: var(--radius-xl);
+}
+.ps-week-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 16px;
+  color: rgba(242, 253, 254, 0.52);
+  font-variant-numeric: tabular-nums;
+}
+.ps-week-game b { font-weight: 600; color: rgba(242, 253, 254, 0.9); }
+.ps-week-game .is-his { color: rgba(242, 253, 254, 0.9); font-weight: 600; }
+.ps-week-clock { white-space: nowrap; }
+.ps-week-clock.is-in { color: var(--c-good); }
 .ps-feed-n {
   font-size: 21px;
   font-weight: 600;

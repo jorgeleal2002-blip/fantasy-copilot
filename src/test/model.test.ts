@@ -15,7 +15,8 @@ import { makeBundle, makeFantasyCalc, makeLeague, makePlayers, makeStats, TEAMS 
 import { nextDetailStack, topDetail } from '../state/detail-stack';
 import { isInLeague, isMockEligible } from '../model/mock-pool';
 import { ALLOWED, KICKOFF_MIN, OPPONENTS, PLAYOFF_WEEKS, SEASON_WEEKS } from '../model/schedule';
-import { GAME_MIN, OVER_MIN, gameLeft, weekLive } from '../model/game-clock';
+import { GAME_MIN, OVER_MIN, gameLeft, phaseFor, weekLive } from '../model/game-clock';
+import { clockLabel, gameLeftOf, readNflGames } from '../model/nfl-games';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots, withLiveStats } from '../model/matchups';
@@ -5069,5 +5070,45 @@ describe('touchdowns on the card', () => {
     expect(touchdowns({ rec_td: 1 })).toBe(1);
     expect(touchdowns({ def_st_td: 1 })).toBe(1);
     expect(touchdowns(undefined)).toBe(0);
+  });
+});
+
+describe('the NFL scoreboard', () => {
+  const espn = (state: string, period: number, clock: string, detail: string) => ({
+    events: [{ competitions: [{
+      competitors: [
+        { homeAway: 'home', score: '14', team: { abbreviation: 'CLE' } },
+        { homeAway: 'away', score: '7', team: { abbreviation: 'PIT' } },
+      ],
+      status: { period, displayClock: clock, type: { state, shortDetail: detail } },
+    }] }, { competitions: [{ competitors: [
+      { homeAway: 'home', score: '0', team: { abbreviation: 'WSH' } },
+      { homeAway: 'away', score: '0', team: { abbreviation: 'LA' } },
+    ], status: { period: 0, displayClock: '0:00', type: { state: 'pre', shortDetail: 'Sun 1:00 PM EDT' } } }] }],
+  });
+
+  it('keys each game by both teams, in Sleeper abbreviations', () => {
+    const g = readNflGames(espn('in', 2, '2:00', '2:00 - 2nd'));
+    expect(g.CLE).toBe(g.PIT);
+    expect(g.CLE).toMatchObject({ home: 'CLE', away: 'PIT', homeScore: 14, awayScore: 7, state: 'in' });
+    expect(g.WAS.away).toBe('LAR');
+    expect(g.WAS.homeScore).toBeNull();
+    expect(readNflGames(null)).toEqual({});
+  });
+
+  it('reads the clock the way the broadcast does', () => {
+    const g = readNflGames(espn('in', 2, '2:00', '2:00 - 2nd')).CLE;
+    expect(clockLabel(g)).toBe('Q2 2:00');
+    expect(gameLeftOf(g)).toBeCloseTo((30 + 2) / 60);
+    expect(clockLabel({ ...g, detail: 'Halftime' })).toBe('Half');
+    expect(clockLabel({ ...g, state: 'post' })).toBe('Final');
+    expect(gameLeftOf({ ...g, period: 5 })).toBe(0);
+    expect(clockLabel(readNflGames(espn('in', 1, '1:00', '')).WAS)).toBe('Sun 1:00 PM');
+  });
+
+  it('lets the real state overrule the kickoff table', () => {
+    const g = readNflGames(espn('post', 4, '0:00', 'Final'));
+    expect(phaseFor('CLE', 4, 2026, Date.UTC(2026, 9, 2, 1, 0), g)).toBe('final');
+    expect(phaseFor('CLE', 4, 2026, Date.UTC(2026, 9, 2, 1, 0))).toBe('live');
   });
 });

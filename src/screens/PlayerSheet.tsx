@@ -30,7 +30,8 @@ import { WeekBars } from '../ui/charts';
 import { Card, Face, Overlay, TdBalls } from '../ui/primitives';
 import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
-import { gamePhase } from '../model/game-clock';
+import { phaseFor } from '../model/game-clock';
+import { clockLabel } from '../model/nfl-games';
 import { headlineBits, statBits, touchdowns } from '../model/stat-line';
 import { projectPPG } from '../model/project';
 import { gapsIn, ordinal, type Ranked } from '../model/season';
@@ -206,13 +207,16 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
     ? app.matchups.find(r => r.players_points?.[p.id] != null)?.players_points?.[p.id]
     : undefined;
   const phase = app.week && Number.isFinite(wkPts)
-    ? gamePhase(p.team, app.week, Number(app.data?.league.season), Date.now())
+    ? phaseFor(p.team, app.week, Number(app.data?.league.season), Date.now(), app.nflGames)
     : null;
   /* What he has done this week, under the tiles — the same line Sleeper puts on
    * its own card. */
   const wkLine = phase && phase !== 'pre' ? app.weekStats[p.id] : undefined;
   const wkHead = headlineBits(wkLine, p.pos);
   const wkRest = statBits(wkLine, p.pos);
+  /* The game he is in — score and clock — at the top of the week's card, the
+   * way Sleeper's own card has it. His side is the bright one. */
+  const game = p.team ? app.nflGames[p.team] : undefined;
   const photo = app.photoFor(p.id, 'full');
   const custom = !!app.photos[p.id];
   const setter = app.photoBy(p.id);
@@ -543,8 +547,21 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </div>
       </div>
 
-      {wkHead.length ? (
+      {wkHead.length || game ? (
         <div className="ps-week">
+          {game ? (
+            <div className="ps-week-top">
+              <span className="ps-week-game">
+                <span className={game.away === p.team ? 'is-his' : ''}>{game.away}</span>
+                {game.state === 'pre' ? ' @ ' : (
+                  <> <b>{game.awayScore ?? 0}</b> – <b>{game.homeScore ?? 0}</b> </>
+                )}
+                <span className={game.home === p.team ? 'is-his' : ''}>{game.home}</span>
+              </span>
+              <span className={'ps-week-clock is-' + game.state}>{clockLabel(game)}</span>
+            </div>
+          ) : null}
+          {wkHead.length ? (
           <div className="ps-feed-stats">
             {wkHead.map(b => (
               <span className="ps-feed-stat" key={b.unit + b.n}>
@@ -554,6 +571,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
             ))}
             <TdBalls n={touchdowns(wkLine)} />
           </div>
+          ) : null}
           {wkRest.length ? (
             <div className="ps-feed-rest">{wkRest.map(b => b.n + ' ' + b.unit).join(', ')}</div>
           ) : null}

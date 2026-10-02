@@ -19,7 +19,7 @@ const score = (p: number | null) => (p == null ? '—' : p.toFixed(2));
 export function Matchups({ app, m }: { app: App; m: Model }) {
   const week = app.week;
   const games = pairMatchups(m.leagueRows, app.matchups, app.projections,
-    clockFor(app.data?.players || {}, week, m.league.season, Date.now()));
+    clockFor(app.data?.players || {}, week, m.league.season, Date.now(), app.nflGames));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
