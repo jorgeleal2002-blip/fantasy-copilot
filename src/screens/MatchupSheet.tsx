@@ -93,11 +93,6 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
           says so is an edge around it. Everything below is a list, and a list
           under a bordered block reads as the detail of it. */}
       <div className="ms-board">
-        <div className="ms-board-top">
-          <span>{app.week ? 'Week ' + app.week : 'This week'}</span>
-          {state ? <span className={'ms-state is-' + state.split(' ')[0].toLowerCase()}>{state}</span> : null}
-        </div>
-
         {/* Who, then what they scored. It used to run the other way: two large
             numbers with a face each, then the bar, then the projected margin,
             and only under all of it the names — so you read 148.62 and had a
@@ -155,13 +150,9 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
               <div className={'ms-bar-a' + (game.a.isMe ? ' is-me' : '')} style={{ width: (split * 100).toFixed(1) + '%' }} />
               <div className="ms-bar-tick" />
             </div>
-            {edge != null ? (
-              <div className={'ms-edge' + (edge < 0 ? ' is-right' : '')}>
-                {(edge >= 0 ? '+' : '') + edge.toFixed(1) + ' projected margin'}
-              </div>
-            ) : null}
+            <Foot state={state} edge={edge} />
           </div>
-        ) : null}
+        ) : state ? <Foot state={state} edge={null} /> : null}
       </div>
 
       {starters.length ? (
@@ -184,6 +175,19 @@ export function MatchupSheet({ app, m, ids }: { app: App; m: Model; ids: number[
 }
 
 const score = (p: number | null) => (p == null ? '—' : p.toFixed(2));
+
+/* The week's state and the projected margin on one line, under the bar — the
+ * header above the sheet already names the week, so a row of its own for the
+ * state was height spent on a word. The margin sits on the side it favours and
+ * the state takes the other. */
+function Foot({ state, edge }: { state: string | null; edge: number | null }) {
+  const right = edge != null && edge < 0;
+  const pill = state ? <span className={'ms-state is-' + state.split(' ')[0].toLowerCase()}>{state}</span> : <span />;
+  const margin = edge != null
+    ? <span className="ms-edge">{(edge >= 0 ? '+' : '') + edge.toFixed(1) + ' projected margin'}</span>
+    : <span />;
+  return <div className="ms-foot">{right ? <>{pill}{margin}</> : <>{margin}{pill}</>}</div>;
+}
 
 /** A team's own picture as a background, or nothing where it has none. */
 const bg = (url: string | null) =>

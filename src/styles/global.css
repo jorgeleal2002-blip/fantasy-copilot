@@ -1109,33 +1109,19 @@ button { font-family: inherit; }
 .ms-board {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   background: var(--color-surface);
   border: var(--hairline) solid var(--color-divider);
   border-radius: var(--radius-xl);
-  padding: 11px 13px 13px;
+  padding: 10px 12px;
   margin-bottom: 4px;
 }
 
-/* The week, and what state it is in. 0.00 against 0.00 is a week that has not
-   kicked off, a week nobody has played, and a feed that failed — three facts
-   drawn identically until something named which. */
-.ms-board-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.ms-state {
   font-size: 10px;
-  /* Every line in this card inherited the body's 24px leading — set for 15px
-     text — so a 10px label stood in 24 pixels and a 10px figure under a score
-     stood in another 24. That is where the card's height was going, and it is
-     why it read as thick rather than as full. Each line gets the leading its
-     own size wants, on the even-pixel grid the scale test enforces. */
   line-height: 14px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(242, 253, 254, 0.52);
-}
-.ms-state {
   padding: 2px 7px;
   border-radius: var(--radius-pill);
   background: rgba(242, 253, 254, 0.07);
@@ -1190,10 +1176,10 @@ button { font-family: inherit; }
 .ms-who-team { flex: 1; min-width: 0; }
 .ms-who-team.is-right { text-align: right; }
 /* Where an avatar would be, when there is no opponent to draw one for. */
-.ms-av-sp { width: 34px; flex: none; }
+.ms-av-sp { width: 26px; flex: none; }
 .ms-av {
-  width: 34px;
-  height: 34px;
+  width: 26px;
+  height: 26px;
   flex: none;
   border-radius: 50%;
   object-fit: cover;
@@ -1293,10 +1279,10 @@ button { font-family: inherit; }
 .ms-score { flex: 1; min-width: 0; }
 .ms-score.is-right { text-align: right; }
 .ms-pts {
-  font-size: 26px;
+  font-size: 21px;
   font-weight: 600;
   letter-spacing: -0.04em;
-  line-height: 28px;
+  line-height: 24px;
   color: rgba(242, 253, 254, 0.62);
   font-variant-numeric: tabular-nums;
 }
@@ -1306,7 +1292,6 @@ button { font-family: inherit; }
 .ms-proj {
   font-size: 12px;
   line-height: 16px;
-  margin-top: 2px;
   color: rgba(242, 253, 254, 0.52);
   font-variant-numeric: tabular-nums;
 }
@@ -1315,7 +1300,8 @@ button { font-family: inherit; }
    — that needs the spread of what is left to play, which nothing here
    measures, and a confident "100%" that is wrong is the worst number a
    scoreboard can carry. */
-.ms-split { display: flex; flex-direction: column; gap: 5px; }
+.ms-split { display: flex; flex-direction: column; gap: 6px; }
+.ms-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ms-bar {
   position: relative;
   height: 6px;
@@ -1352,32 +1338,10 @@ button { font-family: inherit; }
   color: rgba(242, 253, 254, 0.52);
   font-variant-numeric: tabular-nums;
 }
-.ms-edge.is-right { text-align: right; }
 
-/**
- * A narrow phone cannot hold a 26px scoreline.
- *
- * Measured on a 375px screen: the card is 284 wide, two 34px portraits and the
- * mark between them take 134 of it, and "118.70" at 26px wants 94 of the 62
- * each score is left. It overran the mark on one side and went under the
- * opponent's portrait on the other — the one number the card exists for,
- * clipped, on every phone that size.
- *
- * The breakpoint is 380 rather than 400 because a 14 Pro is 393 and has the
- * room: set at 400 this caught every phone in service and shrank the number on
- * all of them to fix the narrowest.
- *
- * Both of its neighbours give way rather than only the type: a portrait that
- * is a 34px circle on a big screen is recognisable at 26, and a scoreline is
- * not recognisable cut in half. Both sizes are steps of the scales.
- */
+/* A narrow phone gets the air between the columns back: three of the five in
+   the score row are fixed, so every pixel out of a gap goes to the scores. */
 @media (max-width: 380px) {
-  .ms-pts { font-size: 21px; line-height: 24px; }
-  .ms-av, .ms-av-sp { width: 26px; }
-  .ms-av { height: 26px; }
-  /* The air between them goes too. Three of the five columns in this row are
-     fixed, so every pixel taken out of a gap is a pixel the two that are not
-     get to share. */
   .ms-scores { gap: 6px; }
 }
 
