@@ -317,3 +317,64 @@ export function tradeOutcome(t: LeagueTrade): string {
   const pct = gave > 0 ? Math.round((v.winner.net / gave) * 100) : null;
   return pct != null ? ahead + ' — ' + pct + '% more value than ' + (v.winner.isMe ? 'you' : 'they') + ' gave' : ahead;
 }
+
+/**
+ * Who won, weighing both things a trade does: what the pieces are worth on
+ * the market, and what it does to each team's lineup this season.
+ *
+ * The value-only verdict named a winner whose own lineup got 7 points a week
+ * worse, under a line saying exactly that — the card argued with itself.
+ * When the two agree there is one winner. When they do not, a redraft league
+ * is decided by this season, so the lineup decides; a dynasty is playing for
+ * years as well, so it is called a split and both halves are said.
+ */
+export interface TradeHeadline { title: string; detail: string; winner: number | null }
+
+const nm = (s: TradeSide) => (s.isMe ? 'You' : s.name);
+const lu = (x: number) => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(1) + ' pts a week';
+
+export function tradeHeadline(
+  t: LeagueTrade,
+  lineup: Record<number, number | null>,
+  dynasty: boolean,
+): TradeHeadline {
+  if (t.unpriced || t.budgetOnly || !t.verdict || !t.verdict.moved) {
+    return { title: tradeOutcome(t), detail: '', winner: null };
+  }
+  const v = t.verdict;
+  const valueWin = v.winner ? t.sides.find(s => s.id === v.winner?.id) || null : null;
+
+  // The lineup winner: the side whose lineup changed most for the better, if
+  // that is by enough to feel.
+  const measured = t.sides.filter(s => lineup[s.id] != null);
+  const best = measured.slice().sort((a, b) => (lineup[b.id] as number) - (lineup[a.id] as number))[0];
+  const lineupWin = best && (lineup[best.id] as number) >= 0.5 ? best : null;
+
+  const valueBit = valueWin && valueWin.net != null ? nm(valueWin) + ' +' + Math.round(valueWin.net) + ' in value' : 'even on value';
+  const lineupBit = lineupWin ? nm(lineupWin) + ' ' + lu(lineup[lineupWin.id] as number) : 'no real lineup change';
+  const won = (s: TradeSide) => (s.isMe ? 'You won this trade' : s.name + ' won this trade');
+
+  if (valueWin && (!lineupWin || lineupWin.id === valueWin.id)) {
+    return { title: won(valueWin), detail: valueBit + ' · ' + lineupBit, winner: valueWin.id };
+  }
+  if (!valueWin && lineupWin) {
+    return { title: won(lineupWin), detail: 'Even on value · ' + lineupBit, winner: lineupWin.id };
+  }
+  if (!valueWin && !lineupWin) {
+    return { title: 'Even trade', detail: 'Even on value and on lineup', winner: null };
+  }
+  // They disagree.
+  const vw = valueWin as TradeSide, lw = lineupWin as TradeSide;
+  if (!dynasty) {
+    return {
+      title: won(lw) + ' for this season',
+      detail: lineupBit + ' · ' + nm(vw) + ' got more market value, which only matters if they trade again',
+      winner: lw.id,
+    };
+  }
+  return {
+    title: 'Split: ' + nm(vw) + ' on value, ' + nm(lw) + ' on lineup',
+    detail: valueBit + ' · ' + lineupBit,
+    winner: null,
+  };
+}

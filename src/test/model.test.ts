@@ -37,6 +37,7 @@ import { headlineBits, statLine, touchdowns } from '../model/stat-line';
 import { cutOut } from '../model/cutout';
 import { seasonOutlook, teamStrength } from '../model/outlook';
 import { returnLine, whyMe, whyThem } from '../model/offer-copy';
+import { tradeHeadline, type LeagueTrade } from '../model/league-trades';
 import type { Offer } from '../model/types';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
@@ -5249,5 +5250,35 @@ describe('the words under a suggested trade', () => {
   it('describes a block return without a zero or a sign', () => {
     expect(returnLine({ edge: 0, myGain: -2, fillsTheirNeed: true, worst: 'WR', sendName: 'J. Doe' }))
       .toBe('You get back about what he is worth. Your lineup scores 2.0 fewer pts a week without him. J. Doe goes straight into WR, their weakest spot.');
+  });
+});
+
+describe('who won a finished trade', () => {
+  const side = (id: number, name: string, net: number, isMe = false) => ({ id, name, isMe, net, got: [], gave: [] });
+  // The screenshot: Hampton for Williams + Judkins. The market likes the one;
+  // the lineups like the two.
+  const t = {
+    id: 't', week: 4, at: 0, teams: [1, 2], moves: [{}] as never, unpriced: 0, budgetOnly: false, faab: false,
+    sides: [side(1, 'I Am Inevitable', 596), side(2, 'cjstroud7', -596)],
+    verdict: { moved: 4000, band: 100, winner: { id: 1, name: 'I Am Inevitable', isMe: false, net: 596 }, ledgers: [] },
+  } as unknown as LeagueTrade;
+
+  it('lets this season decide a redraft league when value and lineup disagree', () => {
+    const h = tradeHeadline(t, { 1: -7.1, 2: 2.3 }, false);
+    expect(h.title).toBe('cjstroud7 won this trade for this season');
+    expect(h.detail).toContain('+2.3 pts a week');
+    expect(h.winner).toBe(2);
+  });
+
+  it('calls it a split in a dynasty and says both halves', () => {
+    const h = tradeHeadline(t, { 1: -7.1, 2: 2.3 }, true);
+    expect(h.title).toBe('Split: I Am Inevitable on value, cjstroud7 on lineup');
+    expect(h.winner).toBe(null);
+  });
+
+  it('names one winner when value and lineup agree', () => {
+    const h = tradeHeadline(t, { 1: 3, 2: -3 }, false);
+    expect(h.title).toBe('I Am Inevitable won this trade');
+    expect(h.detail).toBe('I Am Inevitable +596 in value · I Am Inevitable +3.0 pts a week');
   });
 });
