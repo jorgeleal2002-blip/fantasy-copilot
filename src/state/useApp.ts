@@ -391,6 +391,38 @@ export function useApp() {
    * Tuesday and a ranking that waits for it spends every Monday night a week
    * behind its own standings.
    */
+  /**
+   * Who plays whom in every regular-season week still to come — Sleeper
+   * publishes the pairings for the whole season up front. Read once a league,
+   * for the season outlook on the Team page.
+   */
+  const [schedule, setSchedule] = useState<{ lid: string; from: number; weeks: { week: number; pairs: [number, number][] }[] }>({ lid: '', from: 0, weeks: [] });
+  const fetchSchedule = useCallback(async () => {
+    const d = dataRef.current;
+    const lid = leagueId;
+    const from = nflWeekRef.current;
+    if (!d || !lid || !from) return;
+    if (schedule.lid === lid && schedule.from === from) return;
+    const start = Number(d.league.settings?.playoff_week_start) || 15;
+    const weeks: number[] = [];
+    for (let w = from; w < start && w <= 18; w++) weeks.push(w);
+    const got = await Promise.all(weeks.map(async week => {
+      try {
+        const rows = await getMatchups(lid, week);
+        const by = new Map<number, number[]>();
+        for (const r of rows || []) {
+          if (r.matchup_id == null) continue;
+          by.set(r.matchup_id, (by.get(r.matchup_id) || []).concat(r.roster_id));
+        }
+        const pairs = [...by.values()].filter(x => x.length === 2).map(x => [x[0], x[1]] as [number, number]);
+        return { week, pairs };
+      } catch {
+        return { week, pairs: [] as [number, number][] };
+      }
+    }));
+    setSchedule({ lid, from, weeks: got.filter(w => w.pairs.length) });
+  }, [leagueId, schedule.lid, schedule.from]);
+
   const fetchWeekScores = useCallback(async (upTo: number) => {
     const lid = leagueId;
     if (!lid) return;
@@ -1688,6 +1720,7 @@ export function useApp() {
     gameStats, fetchGameStats,
     tradeTeams, tradeAssets,
     transactions, tradeLogState, fetchTrades,
+    schedule: schedule.lid === leagueId ? schedule.weeks : [], fetchSchedule,
     weekScores, powerState, fetchWeekScores, seasonPpg, seasonLog, seasonOf, seasonRanks, seasonTds, weekRank,
 
     accounts, switchAccount, forgetAccount,

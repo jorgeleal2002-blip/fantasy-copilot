@@ -35,6 +35,7 @@ import { readLeagueTrades, sideRead, tradeOutcome } from '../model/league-trades
 import { allPlayRecords, finishedWeeks, powerRankings, WEIGHTS } from '../model/power';
 import { headlineBits, statLine, touchdowns } from '../model/stat-line';
 import { cutOut } from '../model/cutout';
+import { seasonOutlook, teamStrength } from '../model/outlook';
 import { evaluateTrade, fitLine, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
@@ -5173,5 +5174,35 @@ describe('a kicker or a defence opened from a roster', () => {
       expect(got?.pos).toBe(pos);
       expect(got?.fit).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+describe('the season played out', () => {
+  const team = (id: number, strength: number, wins = 0, losses = 0) =>
+    ({ id, wins, losses, ties: 0, pf: (wins + losses) * strength, strength });
+
+  it('gives the strong team more wins and a better playoff chance', () => {
+    const teams = [team(1, 140, 3, 0), team(2, 100, 0, 3), team(3, 120, 2, 1), team(4, 110, 1, 2)];
+    const schedule = [1, 2, 3, 4, 5].map(week => ({ week, pairs: [[1, 2], [3, 4]] as [number, number][] }));
+    const o = seasonOutlook(teams, schedule, 2);
+    expect(o[1].wins).toBeGreaterThan(o[2].wins);
+    expect(o[1].wins + o[1].losses).toBeCloseTo(8);
+    expect(o[1].playoffPct).toBeGreaterThan(0.9);
+    expect(o[2].playoffPct).toBeLessThan(0.1);
+    // Team 1 only ever plays the weakest team: the easiest road in the league.
+    expect(o[1].sosRank).toBe(1);
+    expect(o[2].sosRank).toBe(4);
+  });
+
+  it('prints the same numbers every time', () => {
+    const teams = [team(1, 120), team(2, 118)];
+    const schedule = [{ week: 1, pairs: [[1, 2]] as [number, number][] }];
+    expect(seasonOutlook(teams, schedule, 1)).toEqual(seasonOutlook(teams, schedule, 1));
+  });
+
+  it('leans on the projection while there are few games to average', () => {
+    expect(teamStrength(150, 100, 0, 0)).toBe(100);
+    expect(teamStrength(150, 100, 9, 0)).toBeCloseTo(137.5);
+    expect(teamStrength(null, null, 0, 111)).toBe(111);
   });
 });

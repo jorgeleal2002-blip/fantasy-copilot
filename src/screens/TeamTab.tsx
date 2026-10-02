@@ -1,4 +1,6 @@
+import { useEffect, useMemo } from 'react';
 import { ACCENT, BAD, GOOD, MID, PEAK, POS, POS_COLOR } from '../model/constants';
+import { seasonOutlook, teamStrength, type OutlookTeam } from '../model/outlook';
 import { gameLine } from '../model/game-clock';
 import { ageCurve, grade, num } from '../model/math';
 import type { Model, RosterPlayer } from '../model/types';
@@ -51,8 +53,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
   const usageColor = app.usageState === 'fail' ? BAD : MID;
 
   const drafted = m.draft?.status === 'complete' || m.picks.length >= m.rounds * m.teamCount;
-  const oldest = m.myPlayers.filter(p => (p.age || 25) >= 28).length;
-  const ages = m.myPlayers.filter(p => p.age);
+  useEffect(() => { void app.fetchSchedule(); }, [app.fetchSchedule, app.nflWeek, m.league.league_id]);
   const weakest = (() => {
     if (!m.leagueHasRosters || !m.myPlayers.length || !me) return { value: '—', sub: 'draft not started' };
     // A position you cannot field at all beats any ranking. Every team with an
@@ -107,15 +108,44 @@ function Summary({ app, m }: { app: App; m: Model }) {
   const proj = projectLineup(m.optimal);
   /* Half-PPR lineup points are not this league's points — the projection is
    * put on the same footing as the average beside it, or withheld. */
-  const projPts = projectedPoints(proj, leagueProjectionScale(m.leagueRows));
+  const scale = leagueProjectionScale(m.leagueRows);
+  const projPts = projectedPoints(proj, scale);
+
+  /* The rest of the season, simulated: every team's weekly strength is its
+     own average leaning on its best lineup's projection while the sample is
+     small, and the pairings still to come are Sleeper's own. */
+  const playoffTeams = Math.min(m.teamCount, Number(m.league.settings?.playoff_teams) || 6);
+  const out = useMemo(() => {
+    if (!app.schedule.length) return null;
+    const avgs = m.leagueRows.map(r => scoringAverage(r.record)).filter((x): x is number => x != null);
+    const fallback = avgs.length ? avgs.reduce((a, b) => a + b, 0) / avgs.length : 100;
+    const teams: OutlookTeam[] = m.leagueRows.map(r => {
+      const games = r.record.wins + r.record.losses + r.record.ties;
+      return {
+        id: r.id, wins: r.record.wins, losses: r.record.losses, ties: r.record.ties, pf: r.record.pointsFor,
+        strength: teamStrength(scoringAverage(r.record), projectedPoints(r.proj, scale), games, fallback),
+      };
+    });
+    return seasonOutlook(teams, app.schedule, playoffTeams);
+  }, [app.schedule, m.leagueRows, scale, playoffTeams]);
+  const mine = out && meRow ? out[meRow.id] : null;
 
   const stats = [
-    { label: 'Players', value: String(m.myPlayers.length), sub: POS.map(p => m.have[p] + ' ' + p).join(' · '), color: 'var(--color-text)' },
-    {
-      label: 'Average age',
-      value: ages.length ? (ages.reduce((x, y) => x + (y.age || 0), 0) / ages.length).toFixed(1) : '—',
-      sub: oldest + ' aged 28+', color: 'var(--color-text)',
-    },
+    ...(drafted ? [
+      {
+        label: 'Projected record',
+        value: mine ? Math.round(mine.wins) + '-' + Math.round(mine.losses) : '—',
+        sub: !mine ? (app.schedule.length ? 'no schedule left' : 'reading the schedule…')
+          : meRow ? 'now ' + meRow.record.label + ' · ' + (mine.wins - meRow.record.wins).toFixed(1) + ' more wins' : '',
+        color: 'var(--color-text)',
+      },
+      {
+        label: 'Playoff chance',
+        value: mine ? Math.round(mine.playoffPct * 100) + '%' : '—',
+        sub: 'top ' + playoffTeams + ' of ' + m.teamCount + ' make it',
+        color: !mine ? 'var(--color-text)' : mine.playoffPct >= 0.6 ? GOOD : mine.playoffPct >= 0.3 ? MID : BAD,
+      },
+    ] : []),
     ...(drafted ? [
       {
         label: 'Points per game',
@@ -160,6 +190,14 @@ function Summary({ app, m }: { app: App; m: Model }) {
       sub: m.myNextOverall ? 'overall ' + m.myNextOverall : 'draft order not set',
       color: ACCENT,
     }]),
+    ...(drafted ? [{
+      /* How hard the fantasy opponents still to come are, by what each of them
+         is expected to score — 1st is the easiest road in the league. */
+      label: 'Schedule left',
+      value: mine?.sosRank ? ord(mine.sosRank) + ' easiest' : '—',
+      sub: mine?.oppStrength != null ? 'opponents avg ' + mine.oppStrength.toFixed(1) + ' a week' : 'of ' + m.teamCount + ' teams',
+      color: mine?.sosRank ? placeColor(mine.sosRank, m.teamCount) || 'var(--color-text)' : 'var(--color-text)',
+    }] : []),
     { label: 'Weakest position', value: weakest.value, sub: weakest.sub, color: BAD },
   ];
 
