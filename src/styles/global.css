@@ -2935,6 +2935,15 @@ button { font-family: inherit; }
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+/* The shape the deal leaves, in one quiet line under the chips rather than a
+   filled box per reading. */
+.fb-sc-after {
+  font-size: 12px;
+  line-height: 18px;
+  color: rgba(242, 253, 254, 0.62);
+  margin-top: 8px;
+  text-wrap: pretty;
+}
 .fb-sc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
 .fb-tag {
   font-size: 12px;

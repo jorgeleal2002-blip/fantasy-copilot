@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { colorOf } from '../model/constants';
 import { evaluateTrade, type RosterRoom, type TeamLedger, type TradeAsset } from '../model/trade-eval';
 import { fitHeadline, outcomeFor, situationLabel, situationOf, type FitHeadline, type Outcome, type TeamCase } from '../model/team-verdict';
-import { depthAfter, depthLabel, type PosDepth } from '../model/depth';
+import { depthAfter, depthSentence, type PosDepth } from '../model/depth';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import type { Pos } from '../api/types';
 import type { Model } from '../model/types';
@@ -278,7 +278,7 @@ function Scorecard({ l, c, moved, dynasty, season, avatar, depth }: {
           text={sign(c.playoffs) + ' pts/wk'} />
       ) : null}
 
-      {season?.byes.length || season?.injured.length || l.cuts.length || depth.length ? (
+      {season?.byes.length || season?.injured.length || l.cuts.length ? (
         <div className="fb-sc-tags">
           {season?.byes.map(b => (
             <span key={'b' + b.week} className="fb-tag" title={'Bye week ' + b.week}>
@@ -294,32 +294,28 @@ function Scorecard({ l, c, moved, dynasty, season, avatar, depth }: {
               is the app deciding who somebody else drops, and nobody drops the
               player a model picked for them. The cost is real and stays; the
               casting does not. */}
-          {/* What the thinness above actually costs, in the unit the rows are
-              already in. The season figure has always had it inside — a man on
-              his bye scores nothing and an empty slot scores nothing — and
-              there was no way to tell from one number that it did. */}
-          {season && Math.abs(season.thinner) >= 0.3 ? (
-            <span className={'fb-tag' + (season.thinner > 0 ? ' is-bad' : '')}
-              title="Already counted in the season and playoff rows">
-              {season.thinner > 0 ? '🕳️' : '🛟'} Byes and injuries{' '}
-              {season.thinner > 0 ? 'cost' : 'save'} <b>{Math.abs(season.thinner).toFixed(1)}</b> pts/wk more
-            </span>
-          ) : null}
-          {depth.map(d => (
-            <span key={'d' + d.pos + d.state}
-              className={'fb-tag' + (d.state === 'stacked' ? '' : ' is-bad')}
-              title={d.state === 'stacked'
-                ? 'More than the lineup can start'
-                : 'Not enough to field the lineup with cover'}
-            >
-              {d.state === 'stacked' ? '📚' : '⚠️'} {depthLabel(d)}
-            </span>
-          ))}
           {l.cuts.length ? (
             <span className="fb-tag is-bad" title="Roster full: a spot has to come from somewhere">
               ✂️ Roster full · <b>{l.cuts.length}</b> to drop
             </span>
           ) : null}
+        </div>
+      ) : null}
+
+      {/* One line, not a chip each. Three boxes saying "Thin at QB · 1 for 1",
+          "Thin at TE · 1 for 1" and "Stacked at WR · 6 for 2" is three things
+          to read for one thought, on a card that already carries a verdict,
+          three meters and the byes — and none of them said WHEN, so a man
+          holding two tight ends and sending one read it as a statement about
+          the team he has. */}
+      {depth.length || (season && Math.abs(season.thinner) >= 0.3) ? (
+        <div className="fb-sc-after">
+          {depthSentence(depth)}
+          {depth.length && season && Math.abs(season.thinner) >= 0.3 ? ' · ' : ''}
+          {season && Math.abs(season.thinner) >= 0.3
+            ? (season.thinner > 0 ? 'byes cost ' : 'byes save ')
+              + Math.abs(season.thinner).toFixed(1) + ' pts/wk more'
+            : ''}
         </div>
       ) : null}
     </div>
@@ -370,7 +366,7 @@ function HowJudged() {
           <span>⚖️ In the hunt → needs both</span>
           <span>⭐ One star &gt; two pieces that add up to him</span>
           <span>⚠️ 📚 Depth after the deal → can he spare them, is the return any use</span>
-          <span>🕳️ What byes and injuries take, already inside the two point rows</span>
+          <span>The line under each card is the roster the deal leaves, and what the weeks nobody plays take out of the rows above it</span>
           <span>✂️ Full roster → a dropped player’s worth counts against, priced at the cheapest spare</span>
           <span>💤 🩹 Byes and injuries score 0 · 🏆 playoff weeks ×1.5</span>
           <span>💰 Value → the share of everything the deal moves</span>

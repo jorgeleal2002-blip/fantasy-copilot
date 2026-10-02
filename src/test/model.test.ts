@@ -20,7 +20,7 @@ import { clockLabel, gameLeftOf, readNflGames } from '../model/nfl-games';
 import { byeOf, playoffWeeks, sosFor, sosScore, sosTable } from '../model/sos';
 import type { Pos, SleeperPlayer } from '../api/types';
 import { leaderOf, lineupRows, pairMatchups, startingSlots, withLiveStats } from '../model/matchups';
-import { depthAfter, depthLabel } from '../model/depth';
+import { depthAfter, depthSentence } from '../model/depth';
 import { PRIOR_MIN, USAGE_DECAY, USAGE_WEIGHTS } from '../model/constants';
 import { PROD_SHARE_BASE, PROD_SHARE_MAX, PROD_SHARE_MAX_REDRAFT, poolFloor, prodShare } from '../model/math';
 import { LOW, TOP, placing, toneOf, toneOfRank } from '../model/standing';
@@ -5478,14 +5478,6 @@ describe('what a trade leaves a roster looking like', () => {
     expect(d[d.length - 1]?.state).toBe('stacked');
   });
 
-  it('writes a label that says the shortfall, not just the word', () => {
-    expect(depthLabel({ pos: 'RB' as Pos, have: 2, starts: 3, state: 'short' }))
-      .toBe('No RB to start · 2 for 3');
-    expect(depthLabel({ pos: 'WR' as Pos, have: 3, starts: 3, state: 'thin' }))
-      .toBe('Thin at WR · 3 for 3');
-    expect(depthLabel({ pos: 'TE' as Pos, have: 3, starts: 1, state: 'stacked' }))
-      .toBe('Stacked at TE · 3 for 1');
-  });
 });
 
 /* The scorecard shows depth as its own tags, and the claim made alongside them
@@ -5593,5 +5585,34 @@ describe('what being thin costs, in the points themselves', () => {
     const deeper = [...covered, wr('d', 'DDD', 12)];
     const c = cal({ BBB: 2 });
     expect(exposure(deeper, c)).toBeCloseTo(exposure(covered, c), 6);
+  });
+});
+
+/* Three chips to read one thought, and not one of them said WHEN. A man
+   holding two tight ends and sending one read "Thin at TE · 1 for 1" as a
+   statement about the team he has, and asked why it could not count the one on
+   his bench. It was counting it: the one left IS the one on his bench. */
+describe('the depth readings as a sentence', () => {
+  const d = (pos: string, state: 'short' | 'thin' | 'stacked') =>
+    ({ pos: pos as Pos, have: 1, starts: 1, state });
+
+  it('says nothing when there is nothing to say', () => {
+    expect(depthSentence([])).toBe('');
+  });
+
+  it('says when, because that was the whole confusion', () => {
+    expect(depthSentence([d('TE', 'thin')])).toBe('After this: thin at TE');
+  });
+
+  it('gathers the positions in a state rather than repeating the state', () => {
+    expect(depthSentence([d('QB', 'thin'), d('TE', 'thin')]))
+      .toBe('After this: thin at QB and TE');
+    expect(depthSentence([d('QB', 'thin'), d('TE', 'thin'), d('RB', 'thin')]))
+      .toBe('After this: thin at QB, TE and RB');
+  });
+
+  it('keeps the states apart and in the order they matter', () => {
+    expect(depthSentence([d('RB', 'short'), d('QB', 'thin'), d('WR', 'stacked')]))
+      .toBe('After this: short at RB · thin at QB · stacked at WR');
   });
 });
