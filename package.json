@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "access-code": "node -e \"const c=(process.argv[1]||'').toUpperCase().replace(/[\\s-]+/g,'');if(!c){console.error('usage: npm run access-code NEWCODE');process.exit(1)}console.log(require('crypto').createHash('sha256').update(c).digest('hex'))\""
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.1",

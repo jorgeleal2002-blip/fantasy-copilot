@@ -1,4 +1,6 @@
 import { useCallback, useState } from 'react';
+import { isUnlocked } from './model/access';
+import { AccessGate } from './screens/AccessGate';
 import { AppShell } from './screens/AppShell';
 import { BootScreen, ConnectScreen, LeaguesScreen, LinkScreen } from './screens/Onboarding';
 import { Splash } from './screens/Splash';
@@ -17,19 +19,26 @@ export default function App() {
    * loading app happened to do, so how long the launch screen lasted depended
    * on how busy the app was behind it. */
   const closeSplash = useCallback(() => setSplash(false), []);
+  // Nothing past the front door without the code; see `model/access`.
+  const [open, setOpen] = useState(isUnlocked);
+  const unlock = useCallback(() => setOpen(true), []);
   // Only the app itself earns the full window on a laptop. Connect and the
   // league picker are one short form each — stretched across 1400px they would
   // read as a broken page, not a spacious one.
-  const inApp = app.stage === 'app' && !!app.model;
+  const inApp = open && app.stage === 'app' && !!app.model;
 
   return (
     <div className="app-frame">
       <div className={inApp ? 'app-column app-column-wide' : 'app-column'}>
-        {app.stage === 'connect' && <ConnectScreen app={app} />}
-        {app.stage === 'link' && <LinkScreen app={app} />}
-        {app.stage === 'leagues' && <LeaguesScreen app={app} />}
-        {app.stage === 'app' && !app.model && <BootScreen app={app} />}
-        {app.stage === 'app' && app.model && <AppShell app={app} model={app.model} />}
+        {!open ? <AccessGate onOpen={unlock} /> : (
+          <>
+            {app.stage === 'connect' && <ConnectScreen app={app} />}
+            {app.stage === 'link' && <LinkScreen app={app} />}
+            {app.stage === 'leagues' && <LeaguesScreen app={app} />}
+            {app.stage === 'app' && !app.model && <BootScreen app={app} />}
+            {app.stage === 'app' && app.model && <AppShell app={app} model={app.model} />}
+          </>
+        )}
 
         {app.toast ? (
           <div
