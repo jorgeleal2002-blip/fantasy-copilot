@@ -21,6 +21,8 @@ export interface TradeAsset {
   to: number;
   /** a draft pick takes no roster spot */
   isPick?: boolean;
+  /** goes straight into the receiver's best lineup — see `evaluateTrade` */
+  starts?: boolean;
 }
 
 /**
@@ -121,7 +123,10 @@ export function evaluateTrade(
   const best = raw.reduce((m, a) => Math.max(m, a.value), 0);
   // Scored at their worth inside this deal; the asset keeps its own `value`
   // field for anyone printing it.
-  const live = raw.map(a => ({ ...a, value: effectiveValue(a.value, best) }));
+  /* Except a piece the receiving team would start. The premium is about the
+     second player who cannot play and takes a spot; for a team thin at the
+     position, the second player IS a starter, and he is worth what he costs. */
+  const live = raw.map(a => ({ ...a, value: a.starts ? a.value : effectiveValue(a.value, best) }));
 
   const ledgers: TeamLedger[] = teams.map(t => {
     const gave = live.filter(a => a.from === t.id);

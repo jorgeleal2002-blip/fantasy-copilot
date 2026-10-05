@@ -2964,3 +2964,13 @@ button { font-family: inherit; }
   line-height: 16px;
   color: rgba(242, 253, 254, 0.62);
 }
+.fb-upside {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  color: var(--c-good);
+  background: color-mix(in srgb, var(--c-good) 12%, transparent);
+}

@@ -1397,6 +1397,42 @@ export function buildModel(input: ModelInput): Model {
     return { before, after, delta: Math.round((after - before) * 10) / 10, measured: true };
   };
 
+  /** Which of the players a team receives would go straight into its best
+   *  lineup once the trade is done. */
+  const startsAfter = (rid: number, incoming: string[], outgoing: string[]): string[] => {
+    const r = (d.rosters || []).find(x => x.roster_id === rid);
+    if (!r) return [];
+    const out = new Set(outgoing);
+    const list = mapRoster((r.players || []).filter(id => !out.has(id)))
+      .concat(mapRoster(incoming.filter(id => !!players[id])));
+    const inc = new Set(incoming);
+    return fillLineup(list).filter((p): p is NonNullable<typeof p> => !!p && inc.has(p.id)).map(p => p.id);
+  };
+
+  /* ── A rookie's upside, in a league that prices only this season.
+   *
+   * A redraft price is what a player will score this year, and a rookie
+   * drafted high is the one player whose price that undersells: the role grows
+   * through the season, and in a league with keepers he is also next year. The
+   * dynasty market already prices what he could become — it is mostly draft
+   * capital and what the tape says — so the gap between his dynasty price and
+   * his redraft one is his upside, and part of it is added to his value: a
+   * fifth, or two fifths where there are keepers. Only for rookies the dynasty
+   * market ranks among its top 120, which is where the first two rounds of an
+   * NFL draft land. */
+  const keepers = Number(league.settings?.max_keepers) || 0;
+  const UPSIDE_SHARE = keepers > 0 ? 0.4 : 0.2;
+  const rookieUpside = (id: string): number => {
+    if (isDynasty) return 0;
+    const pl = players[id];
+    if (!pl || pl.years_exp !== 0) return 0;
+    const dyn = mk?.dynasty?.[id];
+    if (!dyn || !(dyn.rank && dyn.rank <= 120)) return 0;
+    const red = mk?.players[id]?.value ?? 0;
+    const gap = Math.max(0, dyn.value - red) / 100 * (marketAdj[pl.position as Pos] || 1);
+    return Math.round(gap * UPSIDE_SHARE * 10) / 10;
+  };
+
   // ── Trade engine. Every offer is simulated on both sides: your optimal
   //    lineup and theirs are recomputed with the swap applied, and the deal
   //    only survives if you gain and they would plausibly say yes.
@@ -2315,7 +2351,7 @@ export function buildModel(input: ModelInput): Model {
     marketCount: mk ? Object.keys(mk.players).length : 0,
     snake: !!(d.draft && d.draft.type === 'snake'),
     fills: fillPos,
-    teamInfo, rosterRoom, seasonWith, waiverAt, posRankOf, scoreAny, marketValue, pickWorth, offersFor, runMock, metricKeys,
+    teamInfo, rosterRoom, seasonWith, waiverAt, startsAfter, rookieUpside, posRankOf, scoreAny, marketValue, pickWorth, offersFor, runMock, metricKeys,
     lineupWith,
   };
 }

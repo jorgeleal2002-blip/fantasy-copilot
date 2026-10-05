@@ -504,6 +504,11 @@ export interface Model {
     byes: { week: number; names: string[] }[];
     injured: { name: string; status: string }[];
   } | null;
+  /** The players a team receives who would start for it after the trade. */
+  startsAfter: (rosterId: number, incoming: string[], outgoing: string[]) => string[];
+  /** Value added to a high-drafted rookie for what the season's price leaves
+   *  out; 0 in dynasty and for everybody else. */
+  rookieUpside: (id: string) => number;
   /** The best free agent at a position, and whether he is good enough that a
    *  hole there is a pickup rather than a problem; null when the wire is empty. */
   waiverAt: (pos: Pos) => { name: string; ppg: number; easy: boolean } | null;

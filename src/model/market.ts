@@ -10,6 +10,9 @@ export interface Market {
   exact: Record<string, number>;
   max: number;
   count: number;
+  /** In a redraft league, the same players priced as dynasty — what the
+   *  market thinks they are worth beyond this season. Absent in dynasty. */
+  dynasty?: Market['players'];
 }
 
 const ROUND_WORD: Record<string, number> = { '1st': 1, '2nd': 2, '3rd': 3, '4th': 4 };
@@ -87,4 +90,22 @@ export async function loadMarket(league: SleeperLeague): Promise<Market> {
   const rows = (await res.json()) as FantasyCalcRow[];
   if (!Array.isArray(rows) || !rows.length) throw new Error('empty');
   return parseMarket(rows);
+}
+
+/**
+ * The dynasty prices for a redraft league, for one question only: how much a
+ * rookie's future is worth that this season's price leaves out. Never fatal —
+ * without it rookies are simply priced as this season sees them.
+ */
+export async function loadDynastyPrices(league: SleeperLeague): Promise<Market['players'] | null> {
+  if ((league.settings || {}).type === 2) return null;
+  try {
+    const q = marketQuery(league).replace('isDynasty=false', 'isDynasty=true');
+    const res = await fetch('https://api.fantasycalc.com/values/current?' + q);
+    if (!res.ok) return null;
+    const rows = (await res.json()) as FantasyCalcRow[];
+    return Array.isArray(rows) && rows.length ? parseMarket(rows).players : null;
+  } catch {
+    return null;
+  }
 }

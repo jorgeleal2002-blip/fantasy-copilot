@@ -24,7 +24,7 @@ import {
   exchange, forgetGoogle, googleEnabled, refresh as refreshGoogle, stale, type Session,
 } from '../api/identity';
 import { profileEnabled, readProfile, writeProfile } from '../api/profile';
-import { loadMarket, type Market } from '../model/market';
+import { loadDynastyPrices, loadMarket, type Market } from '../model/market';
 import { buildModel } from '../model/model';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
 import { PHOTO_ASPECT, pickEncoding } from '../model/photo';
@@ -655,7 +655,8 @@ export function useApp() {
     }
     setMarketState('loading');
     try {
-      const m = await loadMarket(league);
+      const [base, dynasty] = await Promise.all([loadMarket(league), loadDynastyPrices(league)]);
+      const m = dynasty ? { ...base, dynasty } : base;
       marketCache.set(key, m);
       setMarket(m);
       setMarketState('ok');

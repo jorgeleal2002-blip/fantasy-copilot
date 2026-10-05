@@ -5675,3 +5675,21 @@ describe('a trade both sides win', () => {
     expect(isWinWin(2.1, null, 0)).toBe(false);
   });
 });
+
+/* A two-for-one discounted the second piece because only one of them could
+   play. For a team thin enough to start both, both play. */
+describe('the two-for-one discount and a team that starts both', () => {
+  const teams = [{ id: 1, name: 'A', isMe: true }, { id: 2, name: 'B', isMe: false }];
+  const deal = (starts: boolean) => [
+    { id: 'star', name: 'Star', value: 59, from: 2, to: 1 },
+    { id: 'p1', name: 'One', value: 31, from: 1, to: 2, starts },
+    { id: 'p2', name: 'Two', value: 9, from: 1, to: 2 },
+  ];
+  it('keeps a starter at full value', () => {
+    const off = evaluateTrade(teams, deal(false));
+    const on = evaluateTrade(teams, deal(true));
+    const net = (v: typeof on) => v.ledgers.find(l => l.id === 2)!.net;
+    expect(net(on)).toBeGreaterThan(net(off));
+    expect(on.ledgers.find(l => l.id === 2)!.got.find(a => a.id === 'p1')!.value).toBe(31);
+  });
+});

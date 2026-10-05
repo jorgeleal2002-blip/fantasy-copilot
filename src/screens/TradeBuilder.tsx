@@ -33,12 +33,23 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
     .filter((r): r is NonNullable<typeof r> => !!r)
     .map(r => ({ id: r.id, name: r.isMe ? 'You' : r.name, isMe: r.isMe }));
 
-  const assets: TradeAsset[] = Object.entries(app.tradeAssets).map(([id, a]) => {
+  const assets: (TradeAsset & { upside: number })[] = Object.entries(app.tradeAssets).map(([id, a]) => {
     const info = m.teamInfo(a.from);
     const found = info?.list.find(p => p.id === id) || info?.picks.find(p => p.id === id);
     const isPick = !!info?.picks.find(p => p.id === id);
-    return { id, name: found?.name || id, value: found?.q || 0, from: a.from, to: a.to, isPick };
+    // A high-drafted rookie carries what this season's price leaves out.
+    const upside = isPick ? 0 : m.rookieUpside(id);
+    return { id, name: found?.name || id, value: (found?.q || 0) + upside, upside, from: a.from, to: a.to, isPick };
   });
+  /* Who walks straight into the receiving team's lineup. Those keep their full
+     value in a two-for-one: the receiver is thin enough to play them both. */
+  for (const t of teams) {
+    const incoming = assets.filter(x => x.to === t.id && !x.isPick).map(x => x.id);
+    if (incoming.length < 2) continue;
+    const outgoing = assets.filter(x => x.from === t.id && !x.isPick).map(x => x.id);
+    const starts = new Set(m.startsAfter(t.id, incoming, outgoing));
+    for (const x of assets) if (x.to === t.id && starts.has(x.id)) x.starts = true;
+  }
 
   /* Each team's season with and without the trade, week by week: byes,
      injuries, matchups and the playoff weeks in. Falls back to the plain
@@ -282,9 +293,15 @@ function Scorecard({ l, c, moved, dynasty, season, avatar, depth, waiver }: {
         /* The bye cost is already inside the Season bar; the chip says how
            much of that bar it is, as points like everything else here. */
         const bye = season && Math.abs(season.thinner) >= 0.3 ? season.thinner : 0;
-        const any = season?.byes.length || season?.injured.length || l.cuts.length || depth.length || bye;
+        const starters = l.got.length > 1 ? l.got.filter(a => a.starts).map(a => a.name) : [];
+        const any = season?.byes.length || season?.injured.length || l.cuts.length || depth.length || bye || starters.length;
         return any ? (
           <div className="fb-sc-tags">
+            {starters.length ? (
+              <span className="fb-tag is-good" title="They would start these, so the two-for-one discount does not apply to them">
+                👕 Starts: {starters.join(', ')}
+              </span>
+            ) : null}
             {depth.map(x => {
               const chip = depthChip(x);
               /* A hole is only as bad as the waiver wire: with a free agent
@@ -372,7 +389,8 @@ function HowJudged() {
           <span>🔥 Contending → this season’s points decide</span>
           <span>🌱 Building → value decides</span>
           <span>⚖️ In the hunt → needs both</span>
-          <span>⭐ One star &gt; two pieces that add up to him</span>
+          <span>⭐ One star &gt; two pieces that add up to him — unless they would start both 👕</span>
+          <span>🌱 High-drafted rookies get part of their upside added</span>
           <span>⚠️ 📚 Depth after the deal → can he spare them, is the return any use</span>
           <span>The line under each card is the roster the deal leaves, and what the weeks nobody plays take out of the rows above it</span>
           <span>✂️ Full roster → a dropped player’s worth counts against, priced at the cheapest spare</span>
@@ -387,7 +405,7 @@ function HowJudged() {
 }
 
 /** One asset in a column: who he is, what he is worth, and the way out. */
-function Card({ app, m, asset }: { app: App; m: Model; asset: TradeAsset }) {
+function Card({ app, m, asset }: { app: App; m: Model; asset: TradeAsset & { upside: number } }) {
   const val = m.marketValue(asset.id);
   const photo = app.photoFor(asset.id);
   const pos = val?.pos;
@@ -406,6 +424,11 @@ function Card({ app, m, asset }: { app: App; m: Model; asset: TradeAsset }) {
           ) : null}
           <span className="fb-val">{Math.round(asset.value).toLocaleString()}</span>
         </span>
+        {asset.upside >= 0.5 ? (
+          <span className="fb-upside" title="High-drafted rookie: part of what he could become is added to this season's price">
+            🌱 Rookie upside +{Math.round(asset.upside)}
+          </span>
+        ) : null}
       </span>
       <button
         type="button"
