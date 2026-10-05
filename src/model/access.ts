@@ -1,5 +1,10 @@
 /**
- * The code that lets somebody into the app.
+ * The shared code, and the owner's setup code.
+ *
+ * With the database configured (see `api/access`) entry is by one-time invite
+ * codes and this hash is only the OWNER's: typed on the gate, it makes that
+ * phone the owner, once. Without a database it is the one code everybody
+ * shares, as before.
  *
  * Only the SHA-256 of each code is in the source, so reading the bundle does
  * not hand the code out. It is a lock on the front door, not a vault: the
@@ -33,15 +38,49 @@ export async function checkCode(code: string, hashes: string[] = ACCESS_HASHES):
   return hashes.includes(h) ? h : null;
 }
 
-export function isUnlocked(hashes: string[] = ACCESS_HASHES): boolean {
+/**
+ * Whether this phone was let in last time. With invites, what is remembered is
+ * the standing the database gave it; without, the hash it opened with — so a
+ * phone that opened with the shared code is asked again once invites start.
+ */
+export function isUnlocked(invites: boolean, hashes: string[] = ACCESS_HASHES): boolean {
   try {
     const held = localStorage.getItem(KEY);
-    return !!held && hashes.includes(held);
+    if (!held) return false;
+    return invites ? held === 'member' || held === 'owner' : hashes.includes(held);
   } catch {
     return false;
   }
 }
 
-export function rememberUnlock(hash: string): void {
-  try { localStorage.setItem(KEY, hash); } catch { /* private mode: asked again next launch */ }
+export function rememberUnlock(value: string): void {
+  try { localStorage.setItem(KEY, value); } catch { /* private mode: asked again next launch */ }
 }
+
+export function forgetUnlock(): void {
+  try { localStorage.removeItem(KEY); } catch { /* nothing to forget */ }
+}
+
+export const isOwnerHere = () => {
+  try { return localStorage.getItem(KEY) === 'owner'; } catch { return false; }
+};
+
+/** No 0/O or 1/I/L: a code read out loud or off a screen survives the trip. */
+const ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const cryptoRand = () => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
+export function makeCode(rand: () => number = cryptoRand, len = 8): string {
+  let s = '';
+  for (let i = 0; i < len; i++) s += ABC[Math.floor(rand() * ABC.length) % ABC.length];
+  return s;
+}
+
+/** Shown and shared in two halves, "ABCD-EFGH", which is easier to read back. */
+export const prettyCode = (c: string) => (c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : c);
+
+export const inviteLink = (code: string, base: string) => {
+  const u = new URL(base);
+  u.search = '';
+  u.hash = '';
+  u.searchParams.set('code', prettyCode(code));
+  return u.toString();
+};

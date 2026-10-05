@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react';
-import { isUnlocked } from './model/access';
+import { useCallback, useEffect, useState } from 'react';
+import { accessEnabled, standing } from './api/access';
+import { forgetUnlock, isUnlocked, rememberUnlock } from './model/access';
 import { AccessGate } from './screens/AccessGate';
 import { AppShell } from './screens/AppShell';
 import { BootScreen, ConnectScreen, LeaguesScreen, LinkScreen } from './screens/Onboarding';
@@ -20,8 +21,18 @@ export default function App() {
    * on how busy the app was behind it. */
   const closeSplash = useCallback(() => setSplash(false), []);
   // Nothing past the front door without the code; see `model/access`.
-  const [open, setOpen] = useState(isUnlocked);
+  const [open, setOpen] = useState(() => isUnlocked(accessEnabled()));
   const unlock = useCallback(() => setOpen(true), []);
+  /* A phone let in before opens straight away, offline too, and is then
+     checked: an invite the owner revoked shuts it out on the next launch. A
+     server that cannot be reached shuts nobody out. */
+  useEffect(() => {
+    if (!open || !accessEnabled()) return;
+    standing().then(s => {
+      if (s === 'none') { forgetUnlock(); setOpen(false); } else rememberUnlock(s);
+    }).catch(() => { /* offline: keep what we had */ });
+    // On launch, and after unlocking.
+  }, [open]);
   // Only the app itself earns the full window on a laptop. Connect and the
   // league picker are one short form each — stretched across 1400px they would
   // read as a broken page, not a spacious one.

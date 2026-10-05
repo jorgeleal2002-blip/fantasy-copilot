@@ -5,6 +5,9 @@ import type { App } from '../state/useApp';
 import { Meter, SERIES, markFor } from '../ui/charts';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { useState } from 'react';
+import { accessEnabled } from '../api/access';
+import { isOwnerHere } from '../model/access';
+import { InvitePanel } from './InvitePanel';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
 
 const STRAT_OPTIONS: SegOption<StratKey>[] =
@@ -70,6 +73,8 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           Sign out
         </button>
       </div>
+
+      {accessEnabled() && isOwnerHere() ? <InvitePanel /> : null}
 
       <div>
         <div style={{

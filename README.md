@@ -506,6 +506,67 @@ Signing out of the app signs out of Google too, and tells Google's script not
 to sign the same person back in on the next tap. On a shared phone that is the
 difference between handing it over and handing over your league.
 
+## Invite codes
+
+The app opens only with a code, and each code lets **one phone in, once**. Only
+the owner can make them, from **You → Invite codes**: make one, tap **Send
+invite** (it shares a link that opens the app with the code filled in), see who
+used theirs, and **Revoke** a phone to shut it out on its next launch.
+
+It runs on the same Realtime Database as the draft rooms, and needs:
+
+1. **`VITE_RTDB_URL` and `VITE_FIREBASE_KEY`** set for the build (see the two
+   sections above). Without both, the app falls back to one shared code.
+2. **Anonymous sign-in turned on**: Firebase console → **Authentication** →
+   **Sign-in method** → **Anonymous** → Enable. Each phone gets an id Firebase
+   makes up — no email, no name.
+3. **These rules**, added inside `"rules": { … }` next to `rooms`, `photos` and
+   `users`, then **Publish**:
+
+   ```json
+   "admins": {
+     "$uid": {
+       ".read": "auth != null && $uid === auth.uid",
+       ".write": "auth != null && $uid === auth.uid && !root.child('admins').exists()",
+       ".validate": "newData.val() === true"
+     }
+   },
+   "invites": {
+     ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+     "$code": {
+       ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+       "usedBy": {
+         ".write": "auth != null && data.parent().exists() && !data.exists() && newData.val() === auth.uid"
+       },
+       "usedAt": {
+         ".write": "auth != null && data.parent().exists() && !data.exists() && newData.parent().child('usedBy').val() === auth.uid"
+       }
+     }
+   },
+   "members": {
+     ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+     "$uid": {
+       ".read": "auth != null && $uid === auth.uid",
+       ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || ($uid === auth.uid && !data.exists() && newData.child('code').isString() && root.child('invites').child(newData.child('code').val()).exists() && !root.child('invites').child(newData.child('code').val()).child('usedBy').exists() && newData.parent().parent().child('invites').child(newData.child('code').val()).child('usedBy').val() === auth.uid))"
+     }
+   }
+   ```
+
+   What they say: a code is spent by writing who used it, which is refused if
+   it does not exist or already has someone; a phone becomes a member only in
+   the same write that spends a code on it; only the owner can make, read or
+   delete codes and members.
+
+4. **Become the owner**: on your phone, type the owner setup code on the code
+   screen. It works exactly once — the rules refuse a second owner — so do it
+   right after publishing the rules. Lost the phone, or cleared its data?
+   Delete `admins` in the console's **Data** tab and type the setup code again.
+   The setup code's hash is `ACCESS_HASHES` in `src/model/access.ts`;
+   `npm run access-code NEW` prints the hash for a new one.
+
+A phone already let in opens straight away, offline too, and is checked
+against the database in the background on each launch.
+
 ## Data sources
 
 | Source | What it provides |

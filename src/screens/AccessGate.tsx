@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BAD } from '../model/constants';
-import { checkCode, rememberUnlock } from '../model/access';
+import { accessEnabled, claimOwner, redeem, standing } from '../api/access';
+import { checkCode, normalizeCode, rememberUnlock } from '../model/access';
 import { Mark } from '../ui/Mark';
 import { dim } from '../ui/styles';
 
@@ -14,15 +15,39 @@ const topPad = (extra: number) => `calc(var(--safe-top) + ${extra}px)`;
 export function AccessGate({ onOpen }: { onOpen: () => void }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const [wrong, setWrong] = useState(false);
+  const [error, setError] = useState('');
+  const wrong = !!error;
+  const setWrong = (on: boolean) => setError(on ? 'That code is not right. Ask whoever shared the app for it.' : '');
 
+  /* With invites on, a code is spent on this phone by the database, and the
+     owner's setup code makes this phone the one that hands them out. Without
+     them, the one shared code is checked here, as before. */
   const tryCode = async (c: string) => {
+    if (!normalizeCode(c)) return false;
     setBusy(true);
-    const h = await checkCode(c).catch(() => null);
-    setBusy(false);
-    if (h) { rememberUnlock(h); onOpen(); return true; }
-    setWrong(true);
-    return false;
+    setError('');
+    try {
+      const ownerKey = await checkCode(c).catch(() => null);
+      if (!accessEnabled()) {
+        if (ownerKey) { rememberUnlock(ownerKey); onOpen(); return true; }
+        setWrong(true);
+        return false;
+      }
+      if (ownerKey) {
+        await claimOwner();
+        if ((await standing()) === 'owner') { rememberUnlock('owner'); onOpen(); return true; }
+        setError('The owner is already set up on another phone. Ask for an invite code.');
+        return false;
+      }
+      if (await redeem(normalizeCode(c))) { rememberUnlock('member'); onOpen(); return true; }
+      setError('That code does not work: it is wrong, or somebody already used it.');
+      return false;
+    } catch {
+      setError('Could not reach the server. Check your connection and try again.');
+      return false;
+    } finally {
+      setBusy(false);
+    }
   };
 
   useEffect(() => {
@@ -52,14 +77,14 @@ export function AccessGate({ onOpen }: { onOpen: () => void }) {
         Doctors
       </h1>
       <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 28px', maxWidth: '32ch' }}>
-        Enter your access code. You only need it once on this phone.
+        Enter your invite code. Each code works once, on one phone.
       </p>
 
       <label
         htmlFor="access-code"
         style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: dim(0.52), marginBottom: 8 }}
       >
-        Access code
+        Invite code
       </label>
       <div
         style={{
@@ -89,7 +114,7 @@ export function AccessGate({ onOpen }: { onOpen: () => void }) {
       </div>
       {wrong ? (
         <div role="alert" style={{ fontSize: 12, lineHeight: '18px', color: BAD, marginTop: 10 }}>
-          That code is not right. Ask whoever shared the app for it.
+          {error}
         </div>
       ) : null}
 
