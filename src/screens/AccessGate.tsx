@@ -36,14 +36,16 @@ export function AccessGate({ onOpen }: { onOpen: () => void }) {
       if (ownerKey) {
         await claimOwner();
         if ((await standing()) === 'owner') { rememberUnlock('owner'); onOpen(); return true; }
-        setError('The owner is already set up on another phone. Ask for an invite code.');
+        setError('Could not make this phone the owner: either it is already set up on another phone, or the invite rules are not published in Firebase yet.');
         return false;
       }
       if (await redeem(normalizeCode(c))) { rememberUnlock('member'); onOpen(); return true; }
       setError('That code does not work: it is wrong, or somebody already used it.');
       return false;
-    } catch {
-      setError('Could not reach the server. Check your connection and try again.');
+    } catch (e) {
+      setError(String((e as Error)?.message) === 'anonymous-off'
+        ? 'Anonymous sign-in is off in Firebase: Authentication → Sign-in method → Anonymous → Enable.'
+        : 'Could not reach the server. Check your connection and try again.');
       return false;
     } finally {
       setBusy(false);

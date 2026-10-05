@@ -21,6 +21,12 @@ const KEY = 'doctors-access-session';
 
 export const accessEnabled = () => liveEnabled() && !!FIREBASE_KEY;
 
+/** What this build is missing for invites, for the owner's setup card. */
+export const accessMissing = (): string[] => [
+  ...(liveEnabled() ? [] : ['VITE_RTDB_URL']),
+  ...(FIREBASE_KEY ? [] : ['VITE_FIREBASE_KEY']),
+];
+
 const load = (): Session | null => {
   try {
     const raw = localStorage.getItem(KEY);
@@ -50,7 +56,12 @@ export async function session(): Promise<Session> {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ returnSecureToken: true }),
   });
-  if (!res.ok) throw new Error('signup ' + res.status);
+  if (!res.ok) {
+    // Firebase says why in the body; the one worth telling apart is
+    // anonymous sign-in being switched off, which only the owner can fix.
+    const why = await res.text().catch(() => '');
+    throw new Error(/ADMIN_ONLY_OPERATION|OPERATION_NOT_ALLOWED/.test(why) ? 'anonymous-off' : 'signup ' + res.status);
+  }
   const s = sessionFrom(await res.json(), Date.now());
   if (!s) throw new Error('signup shape');
   save(s);

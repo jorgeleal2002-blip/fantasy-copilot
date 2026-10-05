@@ -5,7 +5,7 @@ import type { App } from '../state/useApp';
 import { Meter, SERIES, markFor } from '../ui/charts';
 import { Card, Screen, Segmented, type SegOption } from '../ui/primitives';
 import { useState } from 'react';
-import { accessEnabled } from '../api/access';
+import { accessEnabled, accessMissing } from '../api/access';
 import { isOwnerHere } from '../model/access';
 import { InvitePanel } from './InvitePanel';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
@@ -74,7 +74,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
         </button>
       </div>
 
-      {accessEnabled() && isOwnerHere() ? <InvitePanel /> : null}
+      {accessEnabled() ? (isOwnerHere() ? <InvitePanel /> : null) : <InviteSetup />}
 
       <div>
         <div style={{
@@ -177,6 +177,34 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
 
       <div style={{ height: 8 }} />
     </Screen>
+  );
+}
+
+/**
+ * Where the invite panel goes while invites cannot work: the build has no
+ * database or no Firebase key, so the app is still on the one shared code.
+ * Says what is missing, so the owner is not left wondering where it went.
+ */
+function InviteSetup() {
+  return (
+    <Card>
+      <div style={{ ...cardTitle, marginBottom: 2 }}>Invite codes · off</div>
+      <div style={{ ...cardNote, marginBottom: 10 }}>
+        Everyone still gets in with the one shared code. One-time codes need this build to have:
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {accessMissing().map(k => (
+          <div key={k} style={{ display: 'flex', gap: 8, fontSize: 12, lineHeight: '18px' }}>
+            <span style={{ color: BAD }}>✗</span>
+            <span><b>{k}</b> in GitHub → Settings → Secrets and variables → Actions → Variables</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ ...cardNote, marginTop: 10 }}>
+        Then run the deploy again, turn on Anonymous sign-in in Firebase, publish the invite
+        rules (README, “Invite codes”) and type the owner code on the code screen.
+      </div>
+    </Card>
   );
 }
 
