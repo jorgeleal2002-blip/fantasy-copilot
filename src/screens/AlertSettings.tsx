@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BAD } from '../model/constants';
-import { notifyState, readAlerts, writeAlerts, type AlertPrefs } from '../ui/alert-prefs';
+import { installed, isIOS, notifyState, readAlerts, turnOnPhone, writeAlerts, type AlertPrefs } from '../ui/alert-prefs';
 import { Card } from '../ui/primitives';
 import { cardNote, cardTitle, dim } from '../ui/styles';
 
@@ -12,12 +12,9 @@ export function AlertSettings() {
 
   const phone = async () => {
     if (p.phone) { setP({ ...p, phone: false }); return; }
-    if (perm === 'default') {
-      const r = await Notification.requestPermission().catch(() => 'denied' as NotificationPermission);
-      setPerm(r);
-      if (r !== 'granted') return;
-    }
-    if (notifyState() === 'granted') setP({ ...p, phone: true });
+    const ok = await turnOnPhone();
+    setPerm(notifyState());
+    if (ok) setP(readAlerts());
   };
 
   return (
@@ -29,17 +26,25 @@ export function AlertSettings() {
       <Toggle on={p.on} label="Alerts in the app" onClick={() => setP({ ...p, on: !p.on })} />
       <Toggle on={p.on && p.opp} disabled={!p.on} label="Include my opponent's players"
         onClick={() => setP({ ...p, opp: !p.opp })} />
-      <Toggle on={p.on && p.phone} disabled={!p.on || perm === 'unsupported' || perm === 'denied'}
-        label="Phone notifications" onClick={() => void phone()} />
-      {perm === 'unsupported' ? (
-        <div style={{ ...cardNote, marginTop: 6 }}>
-          On iPhone, add the app to your home screen (Share → Add to Home Screen) and open it from there to allow notifications.
-        </div>
+      {perm === 'granted' ? (
+        <Toggle on={p.on && p.phone} disabled={!p.on} label="Phone notifications" onClick={() => void phone()} />
+      ) : perm === 'default' ? (
+        <button type="button" className="btn btn-primary" onClick={() => void phone()}
+          style={{ width: '100%', borderRadius: 8, minHeight: 42, marginTop: 6 }}>
+          🔔 Turn on phone notifications
+        </button>
       ) : perm === 'denied' ? (
         <div style={{ fontSize: 12, lineHeight: '18px', color: BAD, marginTop: 6 }}>
-          Notifications are blocked for this app. Allow them in your phone&apos;s settings.
+          Notifications are blocked for this app. Turn them on in your phone&apos;s Settings → Notifications
+          {isIOS() ? ' → Doctors' : ' (or the site settings in your browser)'}.
         </div>
-      ) : null}
+      ) : (
+        <div style={{ ...cardNote, marginTop: 6 }}>
+          {isIOS() && !installed()
+            ? '🔔 Phone notifications: on iPhone, tap Share → Add to Home Screen, then open Doctors from the icon and come back here.'
+            : 'This browser cannot show notifications.'}
+        </div>
+      )}
       <div style={{ ...cardNote, marginTop: 8 }}>
         They arrive while the app is open. With it fully closed the phone stops it from checking.
       </div>
