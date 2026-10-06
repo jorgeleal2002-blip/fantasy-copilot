@@ -529,10 +529,10 @@ It runs on the same Realtime Database as the draft rooms, and needs:
    - only the owner can make, read or delete codes and members;
    - each member may stamp only its own `seen`, `opens` and `user` (the
      owner's log), and anyone signed in may add a refused code to `attempts`;
-   - a device already in may make a **device code** (`links`) for its own
-     account, good once and for fifteen minutes; a device that uses one joins
-     that account, and a device joining the owner's account may make itself
-     an owner too.
+   - `links` is how an email or Google sign-in joins an account: the device
+     already in makes a one-time code for its own account, good for fifteen
+     minutes, and the new sign-in spends it straight away. Nobody types it.
+     A sign-in joining the owner's account may make itself an owner too.
 
 4. **Become the owner**: on your phone, type the owner setup code on the code
    screen. It works exactly once — the rules refuse a second owner — so do it
@@ -550,14 +550,11 @@ Google account); from then on **Sign in with email or Google** on the code
 screen of any device lets them in, no code needed. Someone new can sign in
 first and then type their invite, which is spent on the account. Needs
 **Authentication → Sign-in method → Email/Password** enabled (and, for the
-Google button, the Google sign-in setup above). It is built on device codes,
-so it needs no rules of its own.
+Google button, the Google sign-in setup above). It uses the `links` rules.
 
-**More devices, one person.** Under **You → Your devices**, **Add another
-device** makes a code that lasts fifteen minutes; typed on the code screen of
-the new device, it joins the same account (and fills in the Sleeper username).
-The owner's panel shows each person's devices together, and **Revoke** shuts
-all of them out.
+**More devices, one person.** Only through the email or Google account above:
+there is no code for moving to a new device. The owner's panel shows each
+person's devices together, and **Revoke** shuts all of them out.
 
 ## Data sources
 
