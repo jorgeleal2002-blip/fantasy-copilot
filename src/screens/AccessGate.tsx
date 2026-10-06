@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BAD } from '../model/constants';
-import { accessEnabled, adopt, claimOwner, logAttempt, redeem, signedInAs, standing, type AccountSession } from '../api/access';
+import {
+  accessEnabled, adopt, claimOwner, logAttempt, redeem, signOutAccount, signedInAs, standing, type AccountSession,
+} from '../api/access';
 import { AccountForm } from './AccountForm';
 import { checkCode, normalizeCode, rememberUnlock } from '../model/access';
 import { Mark } from '../ui/Mark';
@@ -9,13 +11,16 @@ import { dim } from '../ui/styles';
 const topPad = (extra: number) => `calc(var(--safe-top) + ${extra}px)`;
 
 /**
- * The front door: a code before anything else. Asked once per phone. A link
- * carrying `?code=` opens it straight away, so the code can be shared as a
- * link, and is taken out of the address bar once it has been read.
+ * The front door. With invites on, an account first — email or Google — and
+ * then, for an account that is not in yet, the invite code, which is spent on
+ * that account: from then on signing in with it opens the app on any device,
+ * and it stays signed in. A link carrying `?code=` fills the code in, and it
+ * is spent as soon as there is an account to spend it on.
+ *
+ * Without invites, the one shared code, as before.
  */
 export function AccessGate({ onOpen }: { onOpen: (username?: string) => void }) {
   const [code, setCode] = useState('');
-  const [signing, setSigning] = useState(false);
   const [who, setWho] = useState(() => signedInAs());
 
   /* An email or Google account that is already in opens the app on this
@@ -26,7 +31,8 @@ export function AccessGate({ onOpen }: { onOpen: (username?: string) => void }) 
     adopt(s);
     setWho({ email: s.email || '', via: s.via || 'email' });
     if (st !== 'none') { rememberUnlock(st); onOpen(); return null; }
-    setSigning(false);
+    // Came from an invite link: spend it now that there is an account.
+    if (normalizeCode(code)) void tryCode(code);
     return null;
   };
   const [busy, setBusy] = useState(false);
@@ -75,7 +81,8 @@ export function AccessGate({ onOpen }: { onOpen: (username?: string) => void }) 
     url.searchParams.delete('code');
     history.replaceState(null, '', url.pathname + url.search + url.hash);
     setCode(c);
-    void tryCode(c);
+    // Spent straight away only once there is an account to spend it on.
+    if (!accessEnabled() || signedInAs()) void tryCode(c);
     // Once, on arrival.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -94,15 +101,26 @@ export function AccessGate({ onOpen }: { onOpen: (username?: string) => void }) 
       <h1 style={{ fontSize: 31, lineHeight: '34px', fontWeight: 500, letterSpacing: '-0.025em', margin: '26px 0 8px' }}>
         Doctors
       </h1>
+      {accessEnabled() && !who ? (
+        <>
+          <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 22px', maxWidth: '34ch' }}>
+            {normalizeCode(code)
+              ? 'You have an invite. Create your account with your email or Google — you will stay signed in, on any device.'
+              : 'Sign in with your email or Google. New here? Create an account, then enter your invite code.'}
+          </p>
+          <AccountForm onSession={withAccount} start={normalizeCode(code) ? 'create' : 'signin'} />
+        </>
+      ) : (
+        <>
       <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 28px', maxWidth: '32ch' }}>
-        Enter your invite code, or sign in with your email.
+        {who ? 'One last step: your invite code.' : 'Enter your access code.'}
       </p>
 
       <label
         htmlFor="access-code"
         style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: dim(0.52), marginBottom: 8 }}
       >
-        Invite code
+        {accessEnabled() ? 'Invite code' : 'Access code'}
       </label>
       <div
         style={{
@@ -132,31 +150,17 @@ export function AccessGate({ onOpen }: { onOpen: (username?: string) => void }) 
       </div>
       {who ? (
         <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), marginTop: 10 }}>
-          Signed in as <b>{who.email || (who.via === 'google' ? 'Google' : 'email')}</b>. This account has no
-          access yet: enter your invite code to finish.
+          Signed in as <b>{who.email || (who.via === 'google' ? 'Google' : 'email')}</b>.{' '}
+          <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: 0 }}
+            onClick={() => { signOutAccount(); setWho(null); setError(''); }}>
+            Use another account
+          </button>
         </div>
       ) : null}
       {wrong ? (
         <div role="alert" style={{ fontSize: 12, lineHeight: '18px', color: BAD, marginTop: 10 }}>
           {error}
         </div>
-      ) : null}
-
-      {accessEnabled() && !who ? (
-        signing ? (
-          <div style={{ marginTop: 22 }}>
-            <AccountForm onSession={withAccount} />
-            <button type="button" className="btn btn-ghost" onClick={() => setSigning(false)}
-              style={{ fontSize: 12, padding: 0, marginTop: 10 }}>
-              ‹ Back to the code
-            </button>
-          </div>
-        ) : (
-          <button type="button" className="btn btn-ghost" onClick={() => setSigning(true)}
-            style={{ fontSize: 13, padding: 0, marginTop: 22, alignSelf: 'flex-start' }}>
-            Already have an account? Sign in with email or Google ›
-          </button>
-        )
       ) : null}
 
       <div style={{ flex: 1, minHeight: 26 }} />
@@ -173,6 +177,8 @@ export function AccessGate({ onOpen }: { onOpen: (username?: string) => void }) 
       >
         {busy ? 'Checking…' : 'Enter'}
       </button>
+        </>
+      )}
     </div>
   );
 }

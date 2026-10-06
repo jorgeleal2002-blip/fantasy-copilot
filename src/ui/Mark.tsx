@@ -24,7 +24,10 @@ export function Mark({ size = 44, title, alive }: { size?: number; title?: strin
       role={title ? 'img' : 'presentation'}
       aria-label={title}
       aria-hidden={title ? undefined : true}
-      style={{ display: 'block', flex: 'none' }}
+      // A tap on him is a tap on whatever he sits in: iOS otherwise treats a
+      // press on the drawing as one on an image, flashes it and offers to
+      // lift or save it.
+      style={{ display: 'block', flex: 'none', pointerEvents: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
     >
       <g className={face}>
       {detailed ? (

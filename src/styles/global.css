@@ -3061,3 +3061,14 @@ button { font-family: inherit; }
 }
 .np-on { border: 1px solid var(--color-accent); background: color-mix(in srgb, var(--color-accent) 22%, transparent); color: var(--color-accent); }
 .np-later { border: var(--hairline) solid var(--color-divider); background: none; color: var(--color-text); }
+
+/* A press on a photo or the mark is not a request to save, share or lift it
+   out of its background: on iPhone those gestures flashed the image, popped a
+   preview and left the screen half-scrolled when the tap was only a tap. */
+html { -webkit-tap-highlight-color: transparent; }
+img, svg {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}

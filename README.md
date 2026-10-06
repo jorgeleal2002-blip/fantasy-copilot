@@ -544,13 +544,15 @@ It runs on the same Realtime Database as the draft rooms, and needs:
 A phone already let in opens straight away, offline too, and is checked
 against the database in the background on each launch.
 
-**An account that is not a device.** Under **You → Your account**, **Connect
-email or Google** moves a person's access onto an email and password (or their
-Google account); from then on **Sign in with email or Google** on the code
-screen of any device lets them in, no code needed. Someone new can sign in
-first and then type their invite, which is spent on the account. Needs
+**Every person is an email or Google account.** The code screen asks for an
+account first — sign in, or create one with an email and password or Google —
+and then, for an account that is not in yet, the invite code, which is spent on
+that account. From then on the person stays signed in, and signing in with the
+same account on any other device lets it in with no code. An invite link fills
+the code in and spends it as soon as the account exists. Needs
 **Authentication → Sign-in method → Email/Password** enabled (and, for the
-Google button, the Google sign-in setup above). It uses the `links` rules.
+Google button, the Google sign-in setup above). Devices let in before this,
+with no account, keep working and can connect one under **You → Your account**.
 
 **More devices, one person.** Only through the email or Google account above:
 there is no code for moving to a new device. The owner's panel shows each
