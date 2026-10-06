@@ -9,6 +9,7 @@ import { accessEnabled, accessMissing } from '../api/access';
 import { isOwnerHere } from '../model/access';
 import { InvitePanel } from './InvitePanel';
 import { AlertSettings } from './AlertSettings';
+import { DevicesCard } from './DevicesCard';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
 
 const STRAT_OPTIONS: SegOption<StratKey>[] =
@@ -76,6 +77,8 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
       </div>
 
       <AlertSettings />
+
+      {accessEnabled() ? <DevicesCard username={app.username} /> : null}
 
       {accessEnabled() ? (isOwnerHere() ? <InvitePanel /> : null) : <InviteSetup />}
 

@@ -79,7 +79,21 @@ export function InvitePanel() {
   };
 
   const unused = (list || []).filter(i => !i.usedBy).length;
-  const inCount = (list || []).filter(i => i.usedBy && members[i.usedBy]).length;
+  /* A person is an account, and an account can be several devices: the one
+     that spent the code and any added to it with a device code. */
+  const acct = (root: string): (Member & { devices: number }) | undefined => {
+    const ds = Object.values(members).filter(x => x.uid === root || x.account === root);
+    if (!ds.length) return undefined;
+    const last = ds.slice().sort((a, b) => (b.seen || 0) - (a.seen || 0))[0];
+    return {
+      ...last, uid: root, devices: ds.length,
+      seen: last.seen, opens: ds.reduce((n, x) => n + (x.opens || 0), 0),
+      user: last.user || ds.find(x => x.user)?.user,
+      at: Math.min(...ds.map(x => x.at || Infinity)),
+    };
+  };
+  const ownerRoot = members[me]?.account || me;
+  const inCount = (list || []).filter(i => i.usedBy && acct(i.usedBy)).length;
 
   return (
     <Card>
@@ -123,7 +137,7 @@ export function InvitePanel() {
 
       {msg ? <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), marginTop: 10, wordBreak: 'break-all' }}>{msg}</div> : null}
 
-      {list?.length || members[me] ? (
+      {list?.length || acct(ownerRoot) ? (
         <div style={{ marginTop: 14 }}>
           <div style={{
             fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.52), marginBottom: 6,
@@ -131,11 +145,11 @@ export function InvitePanel() {
             Who is in · {inCount} in · {unused} not yet
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {members[me] ? (
-              <PersonRow dot="👑" title="You (owner)" sub={seenLine(members[me])} />
+            {acct(ownerRoot) ? (
+              <PersonRow dot="👑" title="You (owner)" sub={seenLine(acct(ownerRoot)!)} />
             ) : null}
             {(list || []).map(inv => {
-              const mem = inv.usedBy ? members[inv.usedBy] : undefined;
+              const mem = inv.usedBy ? acct(inv.usedBy) : undefined;
               const title = inv.note || (mem?.user ? '@' + mem.user : prettyCode(inv.code));
               const sub = inv.usedBy
                 ? [inv.note && mem?.user ? '@' + mem.user : '', mem ? seenLine(mem) : 'removed', prettyCode(inv.code)]
@@ -196,9 +210,10 @@ function rel(t?: number): string {
 const dotFor = (seen?: number) =>
   !seen ? '⚪' : Date.now() - seen < 7 * 86400000 ? '🟢' : '🟡';
 
-const seenLine = (m: Member) =>
+const seenLine = (m: Member & { devices?: number }) =>
   (m.seen ? 'opened ' + rel(m.seen) : 'joined ' + rel(m.at))
-  + (m.opens ? ' · ' + m.opens + (m.opens === 1 ? ' open' : ' opens') : '');
+  + (m.opens ? ' · ' + m.opens + (m.opens === 1 ? ' open' : ' opens') : '')
+  + (m.devices && m.devices > 1 ? ' · 📱 ' + m.devices + ' devices' : '');
 
 function PersonRow({ dot, title, sub, children }: {
   dot: string; title: string; sub: string; children?: ReactNode;

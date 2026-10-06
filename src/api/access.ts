@@ -153,7 +153,15 @@ export async function createInvite(code: string, note: string): Promise<boolean>
 /** An unused code is withdrawn; a used one also shuts its phone out. */
 export async function revokeInvite(inv: Invite): Promise<boolean> {
   const s = await session();
-  if (inv.usedBy && !(await write('DELETE', 'members/' + inv.usedBy, s))) return false;
+  if (inv.usedBy) {
+    // Every device on that account, not only the one that spent the code.
+    const all = await get<Record<string, { account?: string }>>('members', s).catch(() => null);
+    const devices = Object.entries(all || {})
+      .filter(([uid, m]) => uid === inv.usedBy || m?.account === inv.usedBy).map(([uid]) => uid);
+    for (const uid of devices.length ? devices : [inv.usedBy]) {
+      if (!(await write('DELETE', 'members/' + uid, s))) return false;
+    }
+  }
   return write('DELETE', 'invites/' + inv.code, s);
 }
 
@@ -192,6 +200,8 @@ export async function logAttempt(code: string): Promise<void> {
 export interface Member {
   uid: string;
   code?: string;
+  /** the first device of the account, on a device added with a link code */
+  account?: string;
   /** when the code was spent */
   at?: number;
   seen?: number;
@@ -221,4 +231,57 @@ export async function clearAttempts(): Promise<boolean> {
 /** This phone's own uid, for the owner to tell their own row apart. */
 export async function myUid(): Promise<string> {
   return (await session()).uid;
+}
+
+/* ── One account, several devices.
+ *
+ * An invite lets one device in. The same person on a second phone, a tablet
+ * or a laptop should not need a second invite, so a device already in can
+ * make a short-lived link code: typed on the new device, it adds that device
+ * to the same account. Each code works once and for fifteen minutes; the
+ * database's rules check both. The owner sees the devices under the person,
+ * and revoking the person shuts all of them out. A link code made on the
+ * owner's device makes the new device the owner's too. */
+
+export const LINK_MINUTES = 15;
+
+/** This device's account: its own id, or the first device's if it was linked. */
+async function accountOf(s: Session): Promise<{ account: string; code: string; owner: boolean }> {
+  const owner = !!(await get<boolean>('admins/' + s.uid, s));
+  const me = await get<{ account?: string; code?: string }>('members/' + s.uid, s);
+  return { account: me?.account || s.uid, code: me?.code || (owner ? 'OWNER' : ''), owner };
+}
+
+/** A code another device can use to join this account, or null if refused. */
+export async function createLink(code: string, username: string): Promise<{ code: string; exp: number } | null> {
+  const s = await session();
+  const a = await accountOf(s);
+  if (!a.code) return null;
+  const exp = Date.now() + LINK_MINUTES * 60 * 1000 - 5000;
+  const ok = await write('PUT', 'links/' + code, s, {
+    by: s.uid, account: a.account, code: a.code, owner: a.owner, exp,
+    ...(username ? { user: username.slice(0, 40) } : {}),
+  });
+  return ok ? { code, exp } : null;
+}
+
+/**
+ * Join an account with a link code. Returns the standing it gave and the
+ * Sleeper username the other device was using, or null when the database
+ * refused it — wrong, used, or expired.
+ */
+export async function redeemLink(code: string): Promise<{ owner: boolean; user: string } | null> {
+  if (!/^[A-Z0-9]{4,16}$/.test(code)) return null;
+  const s = await session();
+  const link = await get<{ account: string; code: string; owner?: boolean; user?: string; exp: number }>('links/' + code, s)
+    .catch(() => null);
+  if (!link || !link.account) return null;
+  const ok = await write('PATCH', '', s, {
+    ['links/' + code + '/usedBy']: s.uid,
+    ['members/' + s.uid]: { code: link.code, link: code, account: link.account, at: { '.sv': 'timestamp' } },
+  });
+  if (!ok) return null;
+  // The owner's other devices are the owner too; the rules allow exactly that.
+  const owner = !!link.owner && (await write('PUT', 'admins/' + s.uid, s, true));
+  return { owner, user: link.user || '' };
 }

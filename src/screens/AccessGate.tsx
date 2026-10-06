@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BAD } from '../model/constants';
-import { accessEnabled, claimOwner, logAttempt, redeem, standing } from '../api/access';
+import { accessEnabled, claimOwner, logAttempt, redeem, redeemLink, standing } from '../api/access';
 import { checkCode, normalizeCode, rememberUnlock } from '../model/access';
 import { Mark } from '../ui/Mark';
 import { dim } from '../ui/styles';
@@ -12,7 +12,7 @@ const topPad = (extra: number) => `calc(var(--safe-top) + ${extra}px)`;
  * carrying `?code=` opens it straight away, so the code can be shared as a
  * link, and is taken out of the address bar once it has been read.
  */
-export function AccessGate({ onOpen }: { onOpen: () => void }) {
+export function AccessGate({ onOpen }: { onOpen: (username?: string) => void }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -40,8 +40,11 @@ export function AccessGate({ onOpen }: { onOpen: () => void }) {
         return false;
       }
       if (await redeem(normalizeCode(c))) { rememberUnlock('member'); onOpen(); return true; }
+      // Not an invite: maybe a code from another device on the same account.
+      const linked = await redeemLink(normalizeCode(c));
+      if (linked) { rememberUnlock(linked.owner ? 'owner' : 'member'); onOpen(linked.user); return true; }
       void logAttempt(normalizeCode(c));
-      setError('That code does not work: it is wrong, or somebody already used it.');
+      setError('That code does not work: it is wrong, already used, or a device code that expired.');
       return false;
     } catch (e) {
       setError(String((e as Error)?.message) === 'anonymous-off'
@@ -80,7 +83,7 @@ export function AccessGate({ onOpen }: { onOpen: () => void }) {
         Doctors
       </h1>
       <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 28px', maxWidth: '32ch' }}>
-        Enter your invite code. Each code works once, on one phone.
+        Enter your invite code, or the code from your other device.
       </p>
 
       <label

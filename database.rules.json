@@ -1,0 +1,82 @@
+{
+  "rules": {
+    "rooms": {
+      "$room": {
+        ".read": true,
+        ".write": true,
+        ".validate": "newData.hasChildren(['seed','leagueId'])"
+      }
+    },
+    "photos": {
+      "$league": {
+        ".read": true,
+        "$player": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['data','at','by']) && newData.child('data').isString() && newData.child('data').val().length <= 49152"
+        }
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && $uid === auth.uid && (!root.child('admins').exists() || (root.child('members').child(auth.uid).child('account').exists() && root.child('admins').child(root.child('members').child(auth.uid).child('account').val()).exists()))",
+        ".validate": "newData.val() === true"
+      }
+    },
+    "invites": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$code": {
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+        "usedBy": {
+          ".write": "auth != null && data.parent().exists() && !data.exists() && newData.val() === auth.uid"
+        },
+        "usedAt": {
+          ".write": "auth != null && data.parent().exists() && !data.exists() && newData.parent().child('usedBy').val() === auth.uid"
+        }
+      }
+    },
+    "members": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || ($uid === auth.uid && !data.exists() && !newData.child('account').exists() && !newData.child('link').exists() && newData.child('code').isString() && root.child('invites').child(newData.child('code').val()).exists() && !root.child('invites').child(newData.child('code').val()).child('usedBy').exists() && newData.parent().parent().child('invites').child(newData.child('code').val()).child('usedBy').val() === auth.uid) || ($uid === auth.uid && !data.exists() && newData.child('link').isString() && root.child('links').child(newData.child('link').val()).exists() && !root.child('links').child(newData.child('link').val()).child('usedBy').exists() && root.child('links').child(newData.child('link').val()).child('exp').val() > now && newData.parent().parent().child('links').child(newData.child('link').val()).child('usedBy').val() === auth.uid && newData.child('account').val() === root.child('links').child(newData.child('link').val()).child('account').val() && newData.child('code').val() === root.child('links').child(newData.child('link').val()).child('code').val()))",
+        "seen": {
+          ".write": "auth != null && $uid === auth.uid && data.parent().child('code').exists()",
+          ".validate": "newData.isNumber()"
+        },
+        "opens": {
+          ".write": "auth != null && $uid === auth.uid && data.parent().child('code').exists()",
+          ".validate": "newData.isNumber()"
+        },
+        "user": {
+          ".write": "auth != null && $uid === auth.uid && data.parent().child('code').exists()",
+          ".validate": "newData.isString() && newData.val().length <= 40"
+        }
+      }
+    },
+    "attempts": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$id": {
+        ".write": "auth != null && !data.exists()",
+        ".validate": "newData.hasChildren(['code','uid','at']) && newData.child('code').isString() && newData.child('code').val().length <= 16 && newData.child('uid').val() === auth.uid"
+      }
+    },
+    "links": {
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && !data.exists() && newData.child('by').val() === auth.uid && newData.child('exp').isNumber() && newData.child('exp').val() <= now + 960000 && (root.child('members').child(auth.uid).child('code').exists() || root.child('admins').child(auth.uid).exists()) && (newData.child('account').val() === auth.uid || newData.child('account').val() === root.child('members').child(auth.uid).child('account').val())",
+        "usedBy": {
+          ".write": "auth != null && data.parent().exists() && !data.exists() && newData.val() === auth.uid && data.parent().child('exp').val() > now"
+        }
+      }
+    }
+  }
+}

@@ -520,66 +520,19 @@ It runs on the same Realtime Database as the draft rooms, and needs:
 2. **Anonymous sign-in turned on**: Firebase console → **Authentication** →
    **Sign-in method** → **Anonymous** → Enable. Each phone gets an id Firebase
    makes up — no email, no name.
-3. **These rules**, added inside `"rules": { … }` next to `rooms`, `photos` and
-   `users`, then **Publish**:
-
-   ```json
-   "admins": {
-     "$uid": {
-       ".read": "auth != null && $uid === auth.uid",
-       ".write": "auth != null && $uid === auth.uid && !root.child('admins').exists()",
-       ".validate": "newData.val() === true"
-     }
-   },
-   "invites": {
-     ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-     "$code": {
-       ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
-       "usedBy": {
-         ".write": "auth != null && data.parent().exists() && !data.exists() && newData.val() === auth.uid"
-       },
-       "usedAt": {
-         ".write": "auth != null && data.parent().exists() && !data.exists() && newData.parent().child('usedBy').val() === auth.uid"
-       }
-     }
-   },
-   "members": {
-     ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-     "$uid": {
-       ".read": "auth != null && $uid === auth.uid",
-       ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || ($uid === auth.uid && !data.exists() && newData.child('code').isString() && root.child('invites').child(newData.child('code').val()).exists() && !root.child('invites').child(newData.child('code').val()).child('usedBy').exists() && newData.parent().parent().child('invites').child(newData.child('code').val()).child('usedBy').val() === auth.uid))",
-       "seen": {
-         ".write": "auth != null && $uid === auth.uid && data.parent().child('code').exists()",
-         ".validate": "newData.isNumber()"
-       },
-       "opens": {
-         ".write": "auth != null && $uid === auth.uid && data.parent().child('code').exists()",
-         ".validate": "newData.isNumber()"
-       },
-       "user": {
-         ".write": "auth != null && $uid === auth.uid && data.parent().child('code').exists()",
-         ".validate": "newData.isString() && newData.val().length <= 40"
-       }
-     }
-   },
-   "attempts": {
-     ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
-     ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
-     "$id": {
-       ".write": "auth != null && !data.exists()",
-       ".validate": "newData.hasChildren(['code','uid','at']) && newData.child('code').isString() && newData.child('code').val().length <= 16 && newData.child('uid').val() === auth.uid"
-     }
-   }
-   ```
-
-   `seen`, `opens` and `user` are the owner's log of who opens the app: each
-   member may stamp only its own record. `attempts` holds codes that were
-   refused; anyone signed in may add one, only the owner may read or clear them.
-
-   What they say: a code is spent by writing who used it, which is refused if
-   it does not exist or already has someone; a phone becomes a member only in
-   the same write that spends a code on it; only the owner can make, read or
-   delete codes and members.
+3. **These rules**: the whole of `database.rules.json` in this repository —
+   rooms, photos, profiles and everything below — pasted over the console's
+   **Realtime Database → Rules**, then **Publish**. What they say:
+   - a code is spent by writing who used it, refused if it does not exist or
+     already has someone; a device becomes a member only in the same write
+     that spends a code on it;
+   - only the owner can make, read or delete codes and members;
+   - each member may stamp only its own `seen`, `opens` and `user` (the
+     owner's log), and anyone signed in may add a refused code to `attempts`;
+   - a device already in may make a **device code** (`links`) for its own
+     account, good once and for fifteen minutes; a device that uses one joins
+     that account, and a device joining the owner's account may make itself
+     an owner too.
 
 4. **Become the owner**: on your phone, type the owner setup code on the code
    screen. It works exactly once — the rules refuse a second owner — so do it
@@ -590,6 +543,12 @@ It runs on the same Realtime Database as the draft rooms, and needs:
 
 A phone already let in opens straight away, offline too, and is checked
 against the database in the background on each launch.
+
+**More devices, one person.** Under **You → Your devices**, **Add another
+device** makes a code that lasts fifteen minutes; typed on the code screen of
+the new device, it joins the same account (and fills in the Sleeper username).
+The owner's panel shows each person's devices together, and **Revoke** shuts
+all of them out.
 
 ## Data sources
 

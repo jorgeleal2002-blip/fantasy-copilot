@@ -22,7 +22,12 @@ export default function App() {
   const closeSplash = useCallback(() => setSplash(false), []);
   // Nothing past the front door without the code; see `model/access`.
   const [open, setOpen] = useState(() => isUnlocked(accessEnabled()));
-  const unlock = useCallback(() => setOpen(true), []);
+  // A device joining an account arrives with the Sleeper username the other
+  // device uses, so the next screen is already filled in.
+  const unlock = useCallback((username?: string) => {
+    if (username && !app.username) app.setUsername(username);
+    setOpen(true);
+  }, [app]);
   /* A phone let in before opens straight away, offline too, and is then
      checked: an invite the owner revoked shuts it out on the next launch. A
      server that cannot be reached shuts nobody out. */
