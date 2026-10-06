@@ -13,7 +13,7 @@
  * and the app falls back to the single shared code in `model/access`.
  */
 import { LIVE_URL, liveEnabled } from './live';
-import { refresh, sessionFrom, stale, type Session } from './identity';
+import { exchange, refresh, sessionFrom, stale, type Session } from './identity';
 
 const FIREBASE_KEY: string = import.meta.env?.VITE_FIREBASE_KEY || '';
 const SIGN_UP = 'https://identitytoolkit.googleapis.com/v1/accounts:signUp';
@@ -43,7 +43,9 @@ export async function session(): Promise<Session> {
   if (held && !stale(held, Date.now())) return held;
   if (held) {
     try {
-      const s = await refresh(held.refreshToken);
+      // Whether it is an email or a Google sign-in is not in a refresh reply.
+      const h = held as Session & { email?: string; via?: string };
+      const s = { ...(await refresh(held.refreshToken)), email: h.email, via: h.via };
       save(s);
       return s;
     } catch (e) {
@@ -96,8 +98,8 @@ export type Standing = 'owner' | 'member' | 'none';
 
 /** Whether this phone is let in. Throws when the database cannot be reached,
  *  so the caller can keep a phone that was already in, in. */
-export async function standing(): Promise<Standing> {
-  const s = await session();
+export async function standing(given?: Session): Promise<Standing> {
+  const s = given || await session();
   if (await get<boolean>('admins/' + s.uid, s)) return 'owner';
   if (await get<unknown>('members/' + s.uid, s)) return 'member';
   return 'none';
@@ -253,8 +255,8 @@ async function accountOf(s: Session): Promise<{ account: string; code: string; o
 }
 
 /** A code another device can use to join this account, or null if refused. */
-export async function createLink(code: string, username: string): Promise<{ code: string; exp: number } | null> {
-  const s = await session();
+export async function createLink(code: string, username: string, given?: Session): Promise<{ code: string; exp: number } | null> {
+  const s = given || await session();
   const a = await accountOf(s);
   if (!a.code) return null;
   const exp = Date.now() + LINK_MINUTES * 60 * 1000 - 5000;
@@ -270,9 +272,9 @@ export async function createLink(code: string, username: string): Promise<{ code
  * Sleeper username the other device was using, or null when the database
  * refused it — wrong, used, or expired.
  */
-export async function redeemLink(code: string): Promise<{ owner: boolean; user: string } | null> {
+export async function redeemLink(code: string, given?: Session): Promise<{ owner: boolean; user: string } | null> {
   if (!/^[A-Z0-9]{4,16}$/.test(code)) return null;
-  const s = await session();
+  const s = given || await session();
   const link = await get<{ account: string; code: string; owner?: boolean; user?: string; exp: number }>('links/' + code, s)
     .catch(() => null);
   if (!link || !link.account) return null;
@@ -284,4 +286,107 @@ export async function redeemLink(code: string): Promise<{ owner: boolean; user: 
   // The owner's other devices are the owner too; the rules allow exactly that.
   const owner = !!link.owner && (await write('PUT', 'admins/' + s.uid, s, true));
   return { owner, user: link.user || '' };
+}
+
+/* ── Signing in with an email or Google, so the account is not tied to a device.
+ *
+ * Underneath it is the same thing as a device code: the email or Google
+ * identity is one more "device" on the account. Connecting one on a device
+ * that is in makes a device code and spends it as that identity, then makes
+ * it this device's identity; signing in with it anywhere else finds it is a
+ * member and lets that device in. Someone new can also sign in first and
+ * then type their invite code, which is then spent on the email or Google
+ * account instead of the device. */
+
+export interface AccountSession extends Session { email?: string; via?: 'email' | 'google' }
+
+/** Who this device is signed in as, beyond itself. */
+export function signedInAs(): { email: string; via: 'email' | 'google' } | null {
+  const s = load() as AccountSession | null;
+  return s?.via ? { email: s.email || '', via: s.via } : null;
+}
+
+export const adopt = (s: AccountSession) => save(s);
+
+const AUTH = 'https://identitytoolkit.googleapis.com/v1/accounts:';
+
+/** Firebase's reason, in words a person can act on. */
+function why(code: string): string {
+  if (/EMAIL_EXISTS/.test(code)) return 'That email already has an account. Sign in instead.';
+  if (/INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND/.test(code)) return 'Wrong email or password.';
+  if (/WEAK_PASSWORD/.test(code)) return 'The password needs at least 6 characters.';
+  if (/INVALID_EMAIL/.test(code)) return 'That email does not look right.';
+  if (/TOO_MANY_ATTEMPTS/.test(code)) return 'Too many tries. Wait a few minutes.';
+  if (/OPERATION_NOT_ALLOWED|ADMIN_ONLY/.test(code)) {
+    return 'Email sign-in is off in Firebase: Authentication → Sign-in method → Email/Password → Enable.';
+  }
+  return 'Could not sign in. Try again.';
+}
+
+async function authPost(path: string, body: Record<string, unknown>): Promise<AccountSession> {
+  const res = await fetch(AUTH + path + '?key=' + encodeURIComponent(FIREBASE_KEY), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ...body, returnSecureToken: true }),
+  });
+  const raw = await res.json().catch(() => ({})) as { email?: string; error?: { message?: string } };
+  if (!res.ok) throw new Error(why(raw.error?.message || String(res.status)));
+  const s = sessionFrom(raw, Date.now());
+  if (!s) throw new Error(why(''));
+  return { ...s, email: raw.email, via: 'email' };
+}
+
+export const emailSignIn = (email: string, password: string) =>
+  authPost('signInWithPassword', { email: email.trim(), password });
+export const emailSignUp = (email: string, password: string) =>
+  authPost('signUp', { email: email.trim(), password });
+
+export async function resetPassword(email: string): Promise<void> {
+  const res = await fetch(AUTH + 'sendOobCode?key=' + encodeURIComponent(FIREBASE_KEY), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ requestType: 'PASSWORD_RESET', email: email.trim() }),
+  });
+  if (!res.ok) {
+    const raw = await res.json().catch(() => ({})) as { error?: { message?: string } };
+    throw new Error(why(raw.error?.message || ''));
+  }
+}
+
+export async function googleSignIn(googleIdToken: string): Promise<AccountSession> {
+  const s = await exchange(googleIdToken);
+  let email = '';
+  try {
+    const part = googleIdToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    email = (JSON.parse(atob(part)) as { email?: string }).email || '';
+  } catch { /* the name is only for show */ }
+  return { ...s, email, via: 'google' };
+}
+
+/**
+ * Put an email or Google identity on this device's account. False when the
+ * database refused it (old rules) — this device keeps working either way.
+ */
+export async function connectAccount(next: AccountSession, username: string, code: string): Promise<boolean> {
+  const was = await session();
+  // Already on the account (signed in with it before): nothing to join.
+  const already = await standing(next).catch(() => 'none' as Standing);
+  if (already === 'none') {
+    const link = await createLink(code, username, was);
+    if (!link || !(await redeemLink(link.code, next))) return false;
+  }
+  // The device's own identity is kept, so signing out returns to it.
+  if (!(was as AccountSession).via) {
+    try { localStorage.setItem(KEY + ':device', JSON.stringify(was)); } catch { /* fine */ }
+  }
+  save(next);
+  return true;
+}
+
+/** Sign out of the email or Google account on this device: it goes back to
+ *  being itself, and to the code screen if it was only in through them. */
+export function signOutAccount(): void {
+  let device: Session | null = null;
+  try { device = JSON.parse(localStorage.getItem(KEY + ':device') || 'null') as Session | null; } catch { /* none */ }
+  save(device);
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BAD } from '../model/constants';
-import { accessEnabled, claimOwner, logAttempt, redeem, redeemLink, standing } from '../api/access';
+import { accessEnabled, adopt, claimOwner, logAttempt, redeem, redeemLink, signedInAs, standing, type AccountSession } from '../api/access';
+import { AccountForm } from './AccountForm';
 import { checkCode, normalizeCode, rememberUnlock } from '../model/access';
 import { Mark } from '../ui/Mark';
 import { dim } from '../ui/styles';
@@ -14,6 +15,20 @@ const topPad = (extra: number) => `calc(var(--safe-top) + ${extra}px)`;
  */
 export function AccessGate({ onOpen }: { onOpen: (username?: string) => void }) {
   const [code, setCode] = useState('');
+  const [signing, setSigning] = useState(false);
+  const [who, setWho] = useState(() => signedInAs());
+
+  /* An email or Google account that is already in opens the app on this
+     device too. One that is not keeps the sign-in, so the invite code typed
+     next is spent on the account rather than on the device. */
+  const withAccount = async (s: AccountSession): Promise<string | null> => {
+    const st = await standing(s);
+    adopt(s);
+    setWho({ email: s.email || '', via: s.via || 'email' });
+    if (st !== 'none') { rememberUnlock(st); onOpen(); return null; }
+    setSigning(false);
+    return null;
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const wrong = !!error;
@@ -118,10 +133,33 @@ export function AccessGate({ onOpen }: { onOpen: (username?: string) => void }) 
           }}
         />
       </div>
+      {who ? (
+        <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), marginTop: 10 }}>
+          Signed in as <b>{who.email || (who.via === 'google' ? 'Google' : 'email')}</b>. This account has no
+          access yet: enter your invite code to finish.
+        </div>
+      ) : null}
       {wrong ? (
         <div role="alert" style={{ fontSize: 12, lineHeight: '18px', color: BAD, marginTop: 10 }}>
           {error}
         </div>
+      ) : null}
+
+      {accessEnabled() && !who ? (
+        signing ? (
+          <div style={{ marginTop: 22 }}>
+            <AccountForm onSession={withAccount} />
+            <button type="button" className="btn btn-ghost" onClick={() => setSigning(false)}
+              style={{ fontSize: 12, padding: 0, marginTop: 10 }}>
+              ‹ Back to the code
+            </button>
+          </div>
+        ) : (
+          <button type="button" className="btn btn-ghost" onClick={() => setSigning(true)}
+            style={{ fontSize: 13, padding: 0, marginTop: 22, alignSelf: 'flex-start' }}>
+            Already have an account? Sign in with email or Google ›
+          </button>
+        )
       ) : null}
 
       <div style={{ flex: 1, minHeight: 26 }} />

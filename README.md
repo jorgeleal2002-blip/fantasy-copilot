@@ -544,6 +544,15 @@ It runs on the same Realtime Database as the draft rooms, and needs:
 A phone already let in opens straight away, offline too, and is checked
 against the database in the background on each launch.
 
+**An account that is not a device.** Under **You → Your account**, **Connect
+email or Google** moves a person's access onto an email and password (or their
+Google account); from then on **Sign in with email or Google** on the code
+screen of any device lets them in, no code needed. Someone new can sign in
+first and then type their invite, which is spent on the account. Needs
+**Authentication → Sign-in method → Email/Password** enabled (and, for the
+Google button, the Google sign-in setup above). It is built on device codes,
+so it needs no rules of its own.
+
 **More devices, one person.** Under **You → Your devices**, **Add another
 device** makes a code that lasts fifteen minutes; typed on the code screen of
 the new device, it joins the same account (and fills in the Sleeper username).

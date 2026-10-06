@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { LINK_MINUTES, createLink } from '../api/access';
+import { LINK_MINUTES, connectAccount, createLink, signOutAccount, signedInAs, type AccountSession } from '../api/access';
+import { AccountForm } from './AccountForm';
 import { inviteLink, makeCode, prettyCode } from '../model/access';
 import { Card } from '../ui/primitives';
 import { cardNote, cardTitle, dim } from '../ui/styles';
@@ -13,6 +14,16 @@ export function DevicesCard({ username }: { username: string }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [now, setNow] = useState(Date.now());
+  const [who, setWho] = useState(() => signedInAs());
+  const [connecting, setConnecting] = useState(false);
+
+  const connect = async (x: AccountSession): Promise<string | null> => {
+    const ok = await connectAccount(x, username, makeCode());
+    if (!ok) return 'The database refused it. Are the latest rules published?';
+    setWho({ email: x.email || '', via: x.via || 'email' });
+    setConnecting(false);
+    return null;
+  };
 
   useEffect(() => {
     if (!link) return;
@@ -51,9 +62,46 @@ export function DevicesCard({ username }: { username: string }) {
 
   return (
     <Card>
-      <div style={{ ...cardTitle, marginBottom: 2 }}>Your devices</div>
-      <div style={{ ...cardNote, marginBottom: 12 }}>
-        Use Doctors on another phone, tablet or computer with this same account — no new invite needed.
+      <div style={{ ...cardTitle, marginBottom: 2 }}>Your account</div>
+      {who ? (
+        <>
+          <div style={{ ...cardNote, marginBottom: 10 }}>
+            ✅ Signed in as <b style={{ color: 'var(--color-text)' }}>{who.email || who.via}</b>
+            {who.via === 'google' ? ' (Google)' : ''}. Sign in with it on any phone or computer — no code needed.
+          </div>
+          <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: 0, marginBottom: 14 }}
+            onClick={() => {
+              if (!confirm('Sign out of ' + (who.email || 'this account') + ' on this device?')) return;
+              signOutAccount(); setWho(null); location.reload();
+            }}>
+            Sign out of {who.via === 'google' ? 'Google' : 'email'} on this device
+          </button>
+        </>
+      ) : connecting ? (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ ...cardNote, marginBottom: 10 }}>
+            Your access moves to this email or Google account. Then just sign in on any device.
+          </div>
+          <AccountForm onSession={connect} start="create" />
+          <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: 0, marginTop: 8 }}
+            onClick={() => setConnecting(false)}>
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <>
+          <div style={{ ...cardNote, marginBottom: 10 }}>
+            Right now your access lives on this device. Connect an email or Google to sign in anywhere.
+          </div>
+          <button type="button" className="btn btn-primary" onClick={() => setConnecting(true)}
+            style={{ width: '100%', borderRadius: 8, minHeight: 42, marginBottom: 14 }}>
+            ✉️ Connect email or Google
+          </button>
+        </>
+      )}
+
+      <div style={{ ...cardNote, marginBottom: 10 }}>
+        Or add a device with a one-time code:
       </div>
 
       {link && !expired ? (
