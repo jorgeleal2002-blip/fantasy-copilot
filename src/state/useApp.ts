@@ -25,6 +25,7 @@ import {
 } from '../api/identity';
 import { profileEnabled, readProfile, writeProfile } from '../api/profile';
 import { loadDynastyPrices, loadMarket, type Market } from '../model/market';
+import { readAlerts } from '../ui/alert-prefs';
 import { buildModel } from '../model/model';
 import { blendSeasons, seasonUsage, withCurrentSeason, type UsageMap } from '../model/usage';
 import { PHOTO_ASPECT, pickEncoding } from '../model/photo';
@@ -857,11 +858,22 @@ export function useApp() {
   useEffect(() => {
     if (!leagueId || week == null) return;
     const id = window.setInterval(() => {
-      if (document.visibilityState === 'hidden') return;
+      const hidden = document.visibilityState === 'hidden';
+      // In the background only the stat feed, and only for someone who asked
+      // for phone notifications of touchdowns — where the browser lets a
+      // background page run at all.
+      if (hidden && !readAlerts().phone) return;
       const now = Date.now();
       const season = Number(dataRef.current?.league.season);
       const held = nflGamesRef.current;
       const live = weekLive(week, season, now, held.wk === week ? held.map : null);
+      if (hidden) {
+        if (live && now - statsAtRef.current >= STATS_LIVE_POLL_MS - 1000) {
+          statsAtRef.current = now;
+          void fetchWeekStats(week, true);
+        }
+        return;
+      }
       // The stat feed runs ahead of the scoreboard during a game, so while one
       // is on it is polled too — see `withLiveStats`.
       if (live && now - statsAtRef.current >= STATS_LIVE_POLL_MS - 1000) {

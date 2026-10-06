@@ -6,6 +6,7 @@ import { DraftTab } from './DraftTab';
 import { LeagueTab } from './LeagueTab';
 import { MockRoom } from './MockRoom';
 import { PlayerSheet } from './PlayerSheet';
+import { PlayAlerts } from './PlayAlerts';
 import { SettingsTab } from './SettingsTab';
 import { TeamSheet } from './TeamSheet';
 import { MatchupSheet } from './MatchupSheet';
@@ -58,6 +59,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
 
   return (
     <div className="shell">
+      <PlayAlerts app={app} m={model} />
       <header
         className="shell-head"
         style={{

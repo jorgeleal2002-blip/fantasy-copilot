@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { accessEnabled, accessMissing } from '../api/access';
 import { isOwnerHere } from '../model/access';
 import { InvitePanel } from './InvitePanel';
+import { AlertSettings } from './AlertSettings';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
 
 const STRAT_OPTIONS: SegOption<StratKey>[] =
@@ -73,6 +74,8 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
           Sign out
         </button>
       </div>
+
+      <AlertSettings />
 
       {accessEnabled() ? (isOwnerHere() ? <InvitePanel /> : null) : <InviteSetup />}
 

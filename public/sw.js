@@ -101,3 +101,13 @@ self.addEventListener('fetch', event => {
     })());
   }
 });
+
+/* Tapping a touchdown notification brings the app forward, or opens it. */
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of all) if ('focus' in c) return c.focus();
+    return self.clients.openWindow(self.registration.scope);
+  })());
+});

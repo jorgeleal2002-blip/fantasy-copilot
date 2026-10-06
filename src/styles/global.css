@@ -2974,3 +2974,54 @@ button { font-family: inherit; }
   color: var(--c-good);
   background: color-mix(in srgb, var(--c-good) 12%, transparent);
 }
+
+/* Touchdown and big-play banners: from the top, under the status bar, the way
+   a phone's own notifications arrive. A touchdown is green, a big play the
+   accent, and anything your opponent did is drawn in the loss colour. */
+.pa-stack {
+  position: fixed;
+  z-index: 30;
+  top: calc(var(--safe-top) + 8px);
+  left: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+@media (min-width: 900px) {
+  .pa-stack { left: auto; right: 24px; width: 360px; }
+}
+.pa-banner {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: var(--hairline) solid var(--color-divider);
+  border-left: 4px solid var(--color-accent);
+  background: var(--color-float);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  animation: fadeUp .25s ease backwards;
+}
+.pa-banner.is-td { border-left-color: var(--c-good); }
+.pa-banner.is-opp { border-left-color: var(--c-bad); }
+.pa-face {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 999px;
+  object-fit: cover;
+  background: rgba(242, 253, 254, 0.07);
+}
+.pa-text { display: flex; flex-direction: column; min-width: 0; }
+.pa-title { font-size: 13px; font-weight: 600; line-height: 18px; }
+.pa-banner.is-td .pa-title { color: var(--c-good); }
+.pa-banner.is-opp .pa-title { color: var(--c-bad); }
+.pa-body { font-size: 12px; line-height: 16px; color: rgba(242, 253, 254, 0.75); }
