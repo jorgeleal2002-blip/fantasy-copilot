@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BAD } from '../model/constants';
-import { accessEnabled, claimOwner, redeem, standing } from '../api/access';
+import { accessEnabled, claimOwner, logAttempt, redeem, standing } from '../api/access';
 import { checkCode, normalizeCode, rememberUnlock } from '../model/access';
 import { Mark } from '../ui/Mark';
 import { dim } from '../ui/styles';
@@ -40,6 +40,7 @@ export function AccessGate({ onOpen }: { onOpen: () => void }) {
         return false;
       }
       if (await redeem(normalizeCode(c))) { rememberUnlock('member'); onOpen(); return true; }
+      void logAttempt(normalizeCode(c));
       setError('That code does not work: it is wrong, or somebody already used it.');
       return false;
     } catch (e) {

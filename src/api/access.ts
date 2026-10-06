@@ -156,3 +156,69 @@ export async function revokeInvite(inv: Invite): Promise<boolean> {
   if (inv.usedBy && !(await write('DELETE', 'members/' + inv.usedBy, s))) return false;
   return write('DELETE', 'invites/' + inv.code, s);
 }
+
+/* ── Who comes in, and who tried to.
+ *
+ * Each launch of a phone that is let in stamps its member record with when,
+ * how many times so far, and the Sleeper username it is using — so the owner
+ * sees who actually opens the app and who was invited and never did. A code
+ * that is refused is written down too. Nothing else is: no location, no
+ * device, no name beyond the Sleeper username already public on Sleeper. */
+
+/** Stamp this launch. Never throws: a log that fails costs nobody anything. */
+export async function touch(username: string, count: boolean): Promise<void> {
+  try {
+    const s = await session();
+    await write('PATCH', 'members/' + s.uid, s, {
+      seen: { '.sv': 'timestamp' },
+      ...(count ? { opens: { '.sv': { increment: 1 } } } : {}),
+      ...(username ? { user: username.slice(0, 40) } : {}),
+    });
+  } catch { /* offline, or rules not updated: skip */ }
+}
+
+/** A code somebody typed that did not let them in. Never throws. */
+export async function logAttempt(code: string): Promise<void> {
+  try {
+    const s = await session();
+    await fetch(LIVE_URL + '/attempts.json?auth=' + encodeURIComponent(s.idToken), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code: code.slice(0, 16), uid: s.uid, at: { '.sv': 'timestamp' } }),
+    });
+  } catch { /* nothing to do */ }
+}
+
+export interface Member {
+  uid: string;
+  code?: string;
+  /** when the code was spent */
+  at?: number;
+  seen?: number;
+  opens?: number;
+  user?: string;
+}
+export interface Attempt { id: string; code: string; uid: string; at: number }
+
+export async function listMembers(): Promise<Member[]> {
+  const s = await session();
+  const all = await get<Record<string, Omit<Member, 'uid'>>>('members', s);
+  return Object.entries(all || {}).map(([uid, v]) => ({ uid, ...v }));
+}
+
+export async function listAttempts(): Promise<Attempt[]> {
+  const s = await session();
+  const all = await get<Record<string, Omit<Attempt, 'id'>>>('attempts', s);
+  return Object.entries(all || {}).map(([id, v]) => ({ id, ...v }))
+    .sort((a, b) => (b.at || 0) - (a.at || 0));
+}
+
+export async function clearAttempts(): Promise<boolean> {
+  const s = await session();
+  return write('DELETE', 'attempts', s);
+}
+
+/** This phone's own uid, for the owner to tell their own row apart. */
+export async function myUid(): Promise<string> {
+  return (await session()).uid;
+}

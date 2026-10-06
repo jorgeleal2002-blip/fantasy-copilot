@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { accessEnabled, standing } from './api/access';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { accessEnabled, standing, touch } from './api/access';
 import { forgetUnlock, isUnlocked, rememberUnlock } from './model/access';
 import { AccessGate } from './screens/AccessGate';
 import { AppShell } from './screens/AppShell';
@@ -33,6 +33,15 @@ export default function App() {
     }).catch(() => { /* offline: keep what we had */ });
     // On launch, and after unlocking.
   }, [open]);
+  /* The owner's log of who opens the app: once per launch, and again when
+     the Sleeper account changes, so the record says who this phone is. */
+  const counted = useRef(false);
+  const who = app.stage === 'app' ? app.username : '';
+  useEffect(() => {
+    if (!open || !accessEnabled()) return;
+    void touch(who, !counted.current);
+    counted.current = true;
+  }, [open, who]);
   // Only the app itself earns the full window on a laptop. Connect and the
   // league picker are one short form each — stretched across 1400px they would
   // read as a broken page, not a spacious one.

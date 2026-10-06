@@ -547,10 +547,34 @@ It runs on the same Realtime Database as the draft rooms, and needs:
      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
      "$uid": {
        ".read": "auth != null && $uid === auth.uid",
-       ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || ($uid === auth.uid && !data.exists() && newData.child('code').isString() && root.child('invites').child(newData.child('code').val()).exists() && !root.child('invites').child(newData.child('code').val()).child('usedBy').exists() && newData.parent().parent().child('invites').child(newData.child('code').val()).child('usedBy').val() === auth.uid))"
+       ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || ($uid === auth.uid && !data.exists() && newData.child('code').isString() && root.child('invites').child(newData.child('code').val()).exists() && !root.child('invites').child(newData.child('code').val()).child('usedBy').exists() && newData.parent().parent().child('invites').child(newData.child('code').val()).child('usedBy').val() === auth.uid))",
+       "seen": {
+         ".write": "auth != null && $uid === auth.uid && data.parent().child('code').exists()",
+         ".validate": "newData.isNumber()"
+       },
+       "opens": {
+         ".write": "auth != null && $uid === auth.uid && data.parent().child('code').exists()",
+         ".validate": "newData.isNumber()"
+       },
+       "user": {
+         ".write": "auth != null && $uid === auth.uid && data.parent().child('code').exists()",
+         ".validate": "newData.isString() && newData.val().length <= 40"
+       }
+     }
+   },
+   "attempts": {
+     ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+     ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+     "$id": {
+       ".write": "auth != null && !data.exists()",
+       ".validate": "newData.hasChildren(['code','uid','at']) && newData.child('code').isString() && newData.child('code').val().length <= 16 && newData.child('uid').val() === auth.uid"
      }
    }
    ```
+
+   `seen`, `opens` and `user` are the owner's log of who opens the app: each
+   member may stamp only its own record. `attempts` holds codes that were
+   refused; anyone signed in may add one, only the owner may read or clear them.
 
    What they say: a code is spent by writing who used it, which is refused if
    it does not exist or already has someone; a phone becomes a member only in

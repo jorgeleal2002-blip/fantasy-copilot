@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
-import { createInvite, listInvites, revokeInvite, type Invite } from '../api/access';
-import { BAD, GOOD } from '../model/constants';
+import { useEffect, useState, type ReactNode } from 'react';
+import {
+  clearAttempts, createInvite, listAttempts, listInvites, listMembers, myUid, revokeInvite,
+  type Attempt, type Invite, type Member,
+} from '../api/access';
+import { BAD } from '../model/constants';
 import { inviteLink, makeCode, prettyCode } from '../model/access';
 import { Card } from '../ui/primitives';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
@@ -17,7 +20,17 @@ export function InvitePanel() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
 
-  const reload = () => listInvites().then(setList).catch(() => setMsg('Could not load the codes.'));
+  const [members, setMembers] = useState<Record<string, Member>>({});
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [me, setMe] = useState('');
+  const reload = () => Promise.all([
+    listInvites().then(setList),
+    // The log is extra: rules published before it existed refuse it, and the
+    // codes must still work.
+    listMembers().then(ms => setMembers(Object.fromEntries(ms.map(x => [x.uid, x])))).catch(() => {}),
+    listAttempts().then(setAttempts).catch(() => {}),
+    myUid().then(setMe).catch(() => {}),
+  ]).catch(() => setMsg('Could not load the codes.'));
   useEffect(() => { void reload(); }, []);
 
   const make = async () => {
@@ -65,8 +78,8 @@ export function InvitePanel() {
     }
   };
 
-  const date = (t?: number) => (t ? new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '');
   const unused = (list || []).filter(i => !i.usedBy).length;
+  const inCount = (list || []).filter(i => i.usedBy && members[i.usedBy]).length;
 
   return (
     <Card>
@@ -110,49 +123,97 @@ export function InvitePanel() {
 
       {msg ? <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), marginTop: 10, wordBreak: 'break-all' }}>{msg}</div> : null}
 
-      {list?.length ? (
+      {list?.length || members[me] ? (
         <div style={{ marginTop: 14 }}>
           <div style={{
             fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.52), marginBottom: 6,
           }}>
-            {list.length} codes · {unused} unused
+            Who is in · {inCount} in · {unused} not yet
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {list.map(inv => (
-              <div key={inv.code} style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
-                borderTop: 'var(--hairline) solid var(--color-divider)',
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', fontVariantNumeric: 'tabular-nums' }}>
-                    {prettyCode(inv.code)}
-                  </div>
-                  <div style={{ fontSize: 12, color: dim(0.62), ...ellipsis }}>
-                    {inv.note ? inv.note + ' · ' : ''}{inv.usedBy ? 'used ' + date(inv.usedAt) : 'made ' + date(inv.createdAt)}
-                  </div>
-                </div>
-                <span style={{
-                  flex: 'none', fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
-                  color: inv.usedBy ? GOOD : dim(0.75),
-                  background: inv.usedBy ? 'color-mix(in srgb, var(--c-good) 12%, transparent)' : 'rgba(242, 253, 254, 0.07)',
-                }}>
-                  {inv.usedBy ? '✓ Used' : 'Unused'}
-                </span>
-                {!inv.usedBy ? (
-                  <button type="button" className="btn btn-ghost" onClick={() => void send(inv.code)}
-                    style={{ flex: 'none', fontSize: 12, padding: 0 }}>
-                    Send
+            {members[me] ? (
+              <PersonRow dot="👑" title="You (owner)" sub={seenLine(members[me])} />
+            ) : null}
+            {(list || []).map(inv => {
+              const mem = inv.usedBy ? members[inv.usedBy] : undefined;
+              const title = inv.note || (mem?.user ? '@' + mem.user : prettyCode(inv.code));
+              const sub = inv.usedBy
+                ? [inv.note && mem?.user ? '@' + mem.user : '', mem ? seenLine(mem) : 'removed', prettyCode(inv.code)]
+                  .filter(Boolean).join(' · ')
+                : (inv.note ? 'code ' + prettyCode(inv.code) + ' · ' : '') + 'not in yet · made ' + rel(inv.createdAt);
+              return (
+                <PersonRow key={inv.code} dot={inv.usedBy ? dotFor(mem?.seen) : '⏳'} title={title} sub={sub}>
+                  {!inv.usedBy ? (
+                    <button type="button" className="btn btn-ghost" onClick={() => void send(inv.code)}
+                      style={{ flex: 'none', fontSize: 12, padding: 0 }}>
+                      Send
+                    </button>
+                  ) : null}
+                  <button type="button" className="btn btn-ghost" onClick={() => void revoke(inv)}
+                    style={{ flex: 'none', fontSize: 12, padding: 0, color: BAD }}>
+                    {inv.usedBy ? 'Revoke' : 'Withdraw'}
                   </button>
-                ) : null}
-                <button type="button" className="btn btn-ghost" onClick={() => void revoke(inv)}
-                  style={{ flex: 'none', fontSize: 12, padding: 0, color: BAD }}>
-                  {inv.usedBy ? 'Revoke' : 'Withdraw'}
-                </button>
-              </div>
-            ))}
+                </PersonRow>
+              );
+            })}
           </div>
         </div>
       ) : null}
+
+      {attempts.length ? (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 10, letterSpacing: '.09em', textTransform: 'uppercase', color: dim(0.52) }}>
+              Wrong codes tried · {attempts.length}
+            </span>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: 0 }}
+              onClick={() => void clearAttempts().then(reload)}>
+              Clear
+            </button>
+          </div>
+          {attempts.slice(0, 10).map(t => (
+            <PersonRow key={t.id} dot="❌" title={prettyCode(t.code) || '—'}
+              sub={rel(t.at) + (members[t.uid] ? ' · later got in' : '')} />
+          ))}
+        </div>
+      ) : null}
     </Card>
+  );
+}
+
+/** "today 3:12 pm", "yesterday", "4 days ago", or the date. */
+function rel(t?: number): string {
+  if (!t) return '—';
+  const d = new Date(t);
+  const days = Math.floor((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 86400000);
+  if (days <= 0) return 'today ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  if (days === 1) return 'yesterday';
+  if (days < 7) return days + ' days ago';
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+/** Opened in the last week, longer ago, or never since spending the code. */
+const dotFor = (seen?: number) =>
+  !seen ? '⚪' : Date.now() - seen < 7 * 86400000 ? '🟢' : '🟡';
+
+const seenLine = (m: Member) =>
+  (m.seen ? 'opened ' + rel(m.seen) : 'joined ' + rel(m.at))
+  + (m.opens ? ' · ' + m.opens + (m.opens === 1 ? ' open' : ' opens') : '');
+
+function PersonRow({ dot, title, sub, children }: {
+  dot: string; title: string; sub: string; children?: ReactNode;
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
+      borderTop: 'var(--hairline) solid var(--color-divider)',
+    }}>
+      <span aria-hidden="true" style={{ flex: 'none', fontSize: 13 }}>{dot}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, ...ellipsis }}>{title}</div>
+        <div style={{ fontSize: 12, lineHeight: '16px', color: dim(0.62) }}>{sub}</div>
+      </div>
+      {children}
+    </div>
   );
 }
