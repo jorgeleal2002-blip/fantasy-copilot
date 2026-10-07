@@ -3604,8 +3604,53 @@ img, svg {
   cursor: pointer;
 }
 .ch-propose { width: 100%; margin: 12px 0; border-radius: 12px; padding: 12px; font-size: 15px; font-weight: 600; }
+/* Tags: in a message, and the list that comes up after an @. */
+.ch-at {
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  background: none;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+.ch-row.is-me .ch-at { color: var(--color-text); text-decoration: underline; text-underline-offset: 2px; }
+.ch-bubble.is-tagged { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 52%, transparent); }
+.ch-tags {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 100%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  border: var(--hairline) solid rgba(242, 253, 254, 0.12);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.52);
+}
+.ch-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ch-tag-row:hover, .ch-tag-row:focus-visible { background: rgba(242, 253, 254, 0.07); }
+.ch-tag-row img, .ch-tag-blank { width: 26px; height: 26px; flex: none; border-radius: 999px; object-fit: cover; }
+.ch-tag-blank { display: flex; align-items: center; justify-content: center; background: rgba(242, 253, 254, 0.07); color: var(--color-accent); font-size: 13px; font-weight: 700; }
+.ch-tag-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ch-tag-handle { flex: none; font-size: 12px; color: rgba(242, 253, 254, 0.52); }
 .ch-err { padding: 6px 12px; font-size: 12px; color: var(--c-bad); }
 .ch-input {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 8px;
@@ -3716,6 +3761,7 @@ img, svg {
   font-weight: 700;
   line-height: 18px;
 }
+.chd-badge.is-tag { background: var(--color-accent); }
 .chd-preview {
   flex: 1;
   min-width: 0;

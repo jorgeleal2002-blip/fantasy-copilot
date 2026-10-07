@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { currentUid } from '../api/access';
-import { CHAT_MAX, chatEnabled, deleteChat, sendChat, type ChatMessage, type ChatTrade } from '../api/chat';
+import { CHAT_MAX, chatEnabled, deleteChat, sendChat, tagsMe, type ChatMessage, type ChatTrade } from '../api/chat';
 import { isOwnerHere } from '../model/access';
 import { colorOf } from '../model/constants';
 import type { Pos } from '../api/types';
@@ -24,6 +24,9 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
   const [sendErr, setErr] = useState('');
   const err = sendErr || feedErr;
   const [text, setText] = useState('');
+  const box = useRef<HTMLTextAreaElement>(null);
+  /** The name being typed after an @, while there is one at the caret. */
+  const [tagQ, setTagQ] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const list = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -68,6 +71,40 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
   const send = async () => {
     if (await post(text.trim())) setText('');
   };
+
+  /* Tagging: @ brings up the league, filtered as you type; a pick puts the
+     manager's Sleeper name in. */
+  const readTag = (value: string, caret: number) => {
+    const hit = /(^|\s)@([A-Za-z0-9_.]*)$/.exec(value.slice(0, caret));
+    setTagQ(hit ? hit[2].toLowerCase() : null);
+  };
+  const tagRows = tagQ == null ? [] : [
+    ...m.leagueRows.filter(r => !r.isMe && r.user)
+      .filter(r => !tagQ || r.user.toLowerCase().includes(tagQ) || r.name.toLowerCase().includes(tagQ))
+      .map(r => ({ key: String(r.id), handle: r.user, name: r.name, avatar: r.avatar })),
+    ...('everyone'.startsWith(tagQ) ? [{ key: 'all', handle: 'everyone', name: 'Everyone in the league', avatar: null }] : []),
+  ].slice(0, 6);
+  const putTag = (handle: string) => {
+    const el = box.current;
+    const caret = el ? el.selectionStart : text.length;
+    const before = text.slice(0, caret).replace(/@[A-Za-z0-9_.]*$/, '@' + handle + ' ');
+    const next = before + text.slice(caret);
+    setText(next);
+    setTagQ(null);
+    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(before.length, before.length); });
+  };
+  /** A message's text with its tags drawn as tags: a known manager opens his team. */
+  const withTags = (t: string) => t.split(/(@[A-Za-z0-9_.]+)/).map((part, i) => {
+    if (i % 2 === 0) return part;
+    const h = part.slice(1).replace(/\.+$/, '').toLowerCase();
+    const row = m.leagueRows.find(r => r.user && r.user.toLowerCase() === h);
+    if (h === 'everyone') return <span key={i} className="ch-at">{part}</span>;
+    return row ? (
+      <button key={i} type="button" className={'ch-at' + (row.isMe ? ' is-me' : '')} onClick={() => onProfile(row.id)}>
+        {part}
+      </button>
+    ) : part;
+  });
 
   const teamName = (rid: number) => {
     const r = m.leagueRows.find(x => x.id === rid);
@@ -153,8 +190,9 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
                           time={time(x.at)} onOpen={() => openTrade(x.trade as ChatTrade)}
                           onReply={r => void post(r)} />
                       ) : (
-                      <div className="ch-bubble" title={time(x.at)}>
-                        {x.text}
+                      <div className={'ch-bubble' + (!mine && tagsMe(x.text, m.me.name) ? ' is-tagged' : '')}
+                        title={time(x.at)}>
+                        {withTags(x.text)}
                         <span className="ch-time">{time(x.at)}</span>
                         {owner && !mine ? (
                           <button type="button" className="ch-del" aria-label="Delete message" onClick={() => {
@@ -175,6 +213,18 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
       {err ? <div className="ch-err" role="alert">{err}</div> : null}
 
       <div className="ch-input">
+        {tagRows.length ? (
+          <div className="ch-tags" role="listbox" aria-label="Tag someone">
+            {tagRows.map(r => (
+              <button key={r.key} type="button" role="option" className="ch-tag-row"
+                onMouseDown={e => e.preventDefault()} onClick={() => putTag(r.handle)}>
+                {r.avatar ? <img src={r.avatar} alt="" /> : <span className="ch-tag-blank">@</span>}
+                <span className="ch-tag-name">{r.name}</span>
+                <span className="ch-tag-handle">@{r.handle}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
         <button type="button" className="ch-trade-btn" aria-label="Propose a trade" title="Propose a trade"
           onClick={() => setProposing('pick')}>
           ⇄
@@ -183,9 +233,15 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
           value={text}
           rows={1}
           maxLength={CHAT_MAX}
-          placeholder="Message the league"
-          onChange={e => setText(e.target.value)}
+          ref={box}
+          placeholder="Message · @ to tag"
+          onChange={e => { setText(e.target.value); readTag(e.target.value, e.target.selectionStart); }}
+          onSelect={e => readTag(e.currentTarget.value, e.currentTarget.selectionStart)}
+          onBlur={() => window.setTimeout(() => setTagQ(null), 150)}
           onKeyDown={e => {
+            // With the list up, Enter or Tab takes its first name.
+            if (tagRows.length && (e.key === 'Enter' || e.key === 'Tab')) { e.preventDefault(); putTag(tagRows[0].handle); return; }
+            if (e.key === 'Escape' && tagQ != null) { e.stopPropagation(); setTagQ(null); return; }
             // Enter sends; Shift+Enter is a new line, as in every chat.
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); }
           }}

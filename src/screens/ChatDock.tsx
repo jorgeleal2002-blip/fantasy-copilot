@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { currentUid } from '../api/access';
-import { chatEnabled, watchChat, type ChatMessage } from '../api/chat';
+import { chatEnabled, tagsMe, watchChat, type ChatMessage } from '../api/chat';
 import { leagueAvatar } from '../api/sleeper';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -60,7 +60,10 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
 
   if (!chatEnabled()) return null;
   const me = currentUid();
-  const unread = (msgs || []).filter(x => x.at > seen && x.uid !== me).length;
+  const fresh = (msgs || []).filter(x => x.at > seen && x.uid !== me);
+  const unread = fresh.length;
+  // Tagged in one of them: said apart, because that one is for you.
+  const tagged = fresh.some(x => tagsMe(x.text, m.me.name));
   const who = last ? (last.uid === me ? 'You' : last.name) : '';
 
   // The sheet's full travel: its own height, or most of the window before it
@@ -143,6 +146,7 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
             <span className="chd-row">
               <span className="chd-title">Chat</span>
               <span className="chd-live" aria-hidden="true" />
+              {tagged ? <span className="chd-badge is-tag" title="You were tagged">@</span> : null}
               {unread ? <span className="chd-badge">{unread > 99 ? '99+' : unread}</span> : null}
             </span>
             <span className="chd-preview">

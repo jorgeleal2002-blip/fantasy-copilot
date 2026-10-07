@@ -47,6 +47,18 @@ function readTrade(x: unknown): ChatTrade | undefined {
   return teams.length >= 2 && moves.length ? { teams, moves } : undefined;
 }
 
+/** A tag in a message: @ and a Sleeper username, or @everyone. */
+export const TAG = /@([A-Za-z0-9_.]+)/g;
+/** Whether a message tags this Sleeper user, by name or as everyone. */
+export function tagsMe(text: string, user: string): boolean {
+  const me = user.toLowerCase();
+  for (const [, h] of text.matchAll(TAG)) {
+    const k = h.toLowerCase().replace(/\.+$/, '');
+    if (k === me || k === 'everyone') return true;
+  }
+  return false;
+}
+
 export const chatEnabled = () => accessEnabled();
 export const CHAT_MAX = 500;
 const LAST = 100;
