@@ -5,16 +5,17 @@ const t = (id: number, fit: number, value: number, wins: number, losses: number,
   ({ id, fit, value, wins, losses, ties: 0, pointsFor: pf });
 
 describe('overallRatings', () => {
-  it('blends fit, value and record', () => {
-    const o = overallRatings([t(1, 80, 100, 0, 3, 300), t(2, 70, 90, 3, 0, 400)]);
-    // Team 2 has the worse lineup but a 3-0 record and the most points.
+  it('blends fit, value and points', () => {
+    const o = overallRatings([t(1, 80, 100, 3, 0, 240), t(2, 70, 90, 0, 3, 400)]);
+    // Team 2 has the worse lineup and record but scores far more: points count, wins do not.
     expect(o[2].rank).toBe(1);
     expect(o[1].rank).toBe(2);
-    expect(o[2].record).toBeCloseTo(100);
+    expect(o[2].points).toBeCloseTo(100);
+    expect(o[1].points).toBeCloseTo(60);
   });
-  it('leaves record out before any game', () => {
+  it('leaves points out before any game', () => {
     const o = overallRatings([t(1, 80, 100, 0, 0, 0), t(2, 70, 90, 0, 0, 0)]);
-    expect(o[1].record).toBeNull();
+    expect(o[1].points).toBeNull();
     expect(o[1].rank).toBe(1);
     expect(o[1].score).toBeCloseTo((0.4 * 80 + 0.3 * 100) / 0.7);
   });

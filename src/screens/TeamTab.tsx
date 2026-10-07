@@ -105,7 +105,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
   const games = meRow ? meRow.record.wins + meRow.record.losses + meRow.record.ties : 0;
   const table = m.leagueRows.slice().sort((x, y) =>
     (y.record.wins + y.record.ties / 2) - (x.record.wins + x.record.ties / 2) || y.record.pointsFor - x.record.pointsFor);
-  /* Overall: the lineup's Rating, the roster's market value and the record,
+  /* Overall: the lineup's Rating, the roster's market value and the points scored,
      40 / 30 / 30 — see `overallRatings`. */
   const overall = overallRatings(m.leagueRows.map(r => ({
     id: r.id, fit: r.fit, value: r.now, wins: r.record.wins, losses: r.record.losses, ties: r.record.ties,
@@ -271,7 +271,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
                 {myOverall ? [
                   { k: 'Fit', w: '40%', v: myOverall.fit },
                   { k: 'Value', w: '30%', v: myOverall.value },
-                  { k: 'Record', w: '30%', v: myOverall.record },
+                  { k: 'Points', w: '30%', v: myOverall.points },
                 ].map(x => (
                   <div key={x.k} className="yp-part">
                     <span className="yp-part-k">{x.k}<i>{x.w}</i></span>
