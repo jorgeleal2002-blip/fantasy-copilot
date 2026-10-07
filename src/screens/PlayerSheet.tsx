@@ -508,7 +508,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           <div className="ps-hero-owner">→ {p.ownerLabel}</div>
           {first ? <div className="ps-hero-first">{first}</div> : null}
           <div className="ps-hero-last">{last}</div>
-          {app.nickFor(p.id) ? <div className="ps-hero-nick"><i>aka</i>{app.nickFor(p.id)}</div> : null}
+          {app.nickFor(p.id) ? <div className="ps-hero-nick">{app.nickFor(p.id)}</div> : null}
           <div className="ps-hero-tag">
             {[p.pos, (p.team || 'FA') + (raw?.number != null && raw.number !== '' ? ' #' + raw.number : '')]
               .concat(byeOf(p.team) ? ['bye ' + byeOf(p.team)] : []).join(' · ')}
