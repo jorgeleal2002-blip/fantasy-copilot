@@ -62,12 +62,33 @@ function rng(seed: number) {
  */
 export const WEEKLY_SPREAD = 0.18;
 
+/* The same league and schedule give the same answer (it is seeded), and the
+   Team page asks again every time it is opened: the last few answers are kept
+   so switching tabs does not replay two thousand seasons. */
+const recent = new Map<string, Record<number, TeamOutlook>>();
+
 export function seasonOutlook(
   teams: OutlookTeam[],
   schedule: OutlookWeek[],
   playoffTeams: number,
   sims = 2000,
   seed = 7,
+): Record<number, TeamOutlook> {
+  const key = JSON.stringify([teams, schedule, playoffTeams, sims, seed]);
+  const held = recent.get(key);
+  if (held) return held;
+  const out = playSeason(teams, schedule, playoffTeams, sims, seed);
+  recent.set(key, out);
+  if (recent.size > 8) recent.delete(recent.keys().next().value as string);
+  return out;
+}
+
+function playSeason(
+  teams: OutlookTeam[],
+  schedule: OutlookWeek[],
+  playoffTeams: number,
+  sims: number,
+  seed: number,
 ): Record<number, TeamOutlook> {
   const out: Record<number, TeamOutlook> = {};
   if (!teams.length) return out;

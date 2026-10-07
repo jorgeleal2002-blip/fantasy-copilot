@@ -164,9 +164,15 @@ export function watchChat(lid: string, onMessages: (m: ChatMessage[]) => void, o
   let es: EventSource | null = null;
   let timer: number | undefined;
 
+  // The same hundred messages read again are not news: redrawing the whole
+  // chat for them every few seconds was what made it stutter.
+  let last = '';
   const pull = async () => {
     try {
       const m = await readLast(lid);
+      const sig = JSON.stringify(m);
+      if (sig === last) return;
+      last = sig;
       if (!stopped) onMessages(m);
     } catch (e) {
       if (!stopped) onError(String((e as Error).message));

@@ -3551,6 +3551,19 @@ img, svg {
 }
 .ch-trade .fb-bal { margin: 0 0 8px; padding: 0; background: none; border: 0; }
 .ch-trade-sec { padding: 8px 0; }
+.ch-trade-wait { font-size: 13px; color: rgba(242, 253, 254, 0.52); padding: 4px 0 8px; }
+.cs-more {
+  align-self: center;
+  margin: 4px auto 8px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(242, 253, 254, 0.07);
+  color: rgba(242, 253, 254, 0.75);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
 .ch-trade-sec + .ch-trade-sec { border-top: var(--hairline) solid rgba(242, 253, 254, 0.07); }
 .ch-trade-who { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: color-mix(in srgb, var(--color-accent) 75%, var(--color-text)); margin-bottom: 4px; min-width: 0; }
 .ch-trade-who span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

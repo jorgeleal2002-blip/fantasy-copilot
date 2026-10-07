@@ -120,7 +120,9 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
   const logo = leagueAvatar(m.league.avatar);
   const showing = open || pos != null;
   const offset = pos ?? 0;
-  const fade = Math.max(0, 1 - offset / travel());
+  // Measured only while it is on screen: reading its height forces a layout,
+  // and the dock is drawn again with every change anywhere in the app.
+  const fade = showing ? Math.max(0, 1 - offset / travel()) : 0;
 
   return (
     <>

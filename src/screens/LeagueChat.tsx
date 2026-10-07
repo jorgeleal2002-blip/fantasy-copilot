@@ -197,10 +197,6 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile, onPlayer }: 
     setProposing('build');
   };
 
-  if (!chatEnabled()) {
-    return <div className="ch-empty">The chat needs the app's database set up (see You → Invite codes).</div>;
-  }
-
   const day = (t: number) => new Date(t).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const time = (t: number) => new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   /** "now", "5m", "3h" — and the clock once it is another day. */
@@ -212,25 +208,24 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile, onPlayer }: 
     return time(t);
   };
 
-  return (
-    <div className="ch">
-      <div
-        className="ch-list"
-        ref={list}
-        onClick={e => {
-          if (held.current) { held.current = false; return; }
-          if (reacting && !(e.target as HTMLElement).closest('.ch-react-pick, .ch-react-btn')) setReacting(null);
-        }}
-        onScroll={e => {
-          const el = e.currentTarget;
-          stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-        }}
-      >
-        {msgs == null ? <div className="ch-empty">Loading…</div>
+  /* The feed is drawn once per change to it, not once per letter typed in
+     the box under it: with a few dozen messages and a trade or two, every
+     keystroke redrawing all of it was what made typing lag on a phone. Only
+     the newest messages are drawn; older ones come on request. */
+  const [shown, setShown] = useState(40);
+  const feed = useMemo(() => (
+msgs == null ? <div className="ch-empty">Loading…</div>
           : !msgs.length ? <div className="ch-empty">No messages yet. Say something to the league 👋</div>
-            : msgs.map((x, i) => {
+            : (msgs.length > shown ? [null, ...msgs.slice(-shown)] : msgs).map((x, i, all) => {
+              if (!x) {
+                return (
+                  <button key="more" type="button" className="cs-more" onClick={() => setShown(n => n + 40)}>
+                    Show earlier messages
+                  </button>
+                );
+              }
               const mine = x.uid === me;
-              const prev = msgs[i - 1];
+              const prev = all[i - 1] || undefined;
               const newDay = !prev || day(prev.at) !== day(x.at);
               // Consecutive messages from one person within five minutes
               // are one block: one name, one picture.
@@ -316,7 +311,29 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile, onPlayer }: 
                   </div>
                 </div>
               );
-            })}
+            })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [msgs, shown, reacting, reactAll, mineNow, m, me, owner, busy, myRid]);
+
+  if (!chatEnabled()) {
+    return <div className="ch-empty">The chat needs the app's database set up (see You → Invite codes).</div>;
+  }
+
+  return (
+    <div className="ch">
+      <div
+        className="ch-list"
+        ref={list}
+        onClick={e => {
+          if (held.current) { held.current = false; return; }
+          if (reacting && !(e.target as HTMLElement).closest('.ch-react-pick, .ch-react-btn')) setReacting(null);
+        }}
+        onScroll={e => {
+          const el = e.currentTarget;
+          stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+        }}
+      >
+        {feed}
       </div>
 
       {err ? <div className="ch-err" role="alert">{err}</div> : null}
@@ -447,21 +464,39 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile, onPlayer }: 
  * verdict and the tug-of-war bar. Open it to see the whole analysis, change
  * it and send it back as a counter.
  */
+const verdictCache = new WeakMap<Model, Map<string, ReturnType<typeof assessTrade>>>();
+
 function TradeCard({ app, m, t, from, myRid, onOpen, onReply, onPlayer }: {
   app: App; m: Model; t: ChatTrade; from: number | null; myRid: number | null;
   onOpen: () => void; onReply: (text: string) => void; onPlayer: (id: string) => void;
 }) {
-  const moves = useMemo(() => Object.fromEntries(t.moves.map(x => [x.id, { from: x.from, to: x.to }])), [t]);
-  const a = useMemo(() => assessTrade(app, m, t.teams, moves),
+  /* The verdict plays a season out for each team in the deal, which is the
+     slowest thing in the chat. It is worked out once per trade and model,
+     kept, and not before the card is on screen, so opening the chat does
+     not wait for every trade in it. */
+  const key = JSON.stringify(t);
+  const [a, setA] = useState(() => verdictCache.get(m)?.get(key) ?? null);
+  useEffect(() => {
+    const held = verdictCache.get(m)?.get(key);
+    if (held) { setA(held); return; }
+    const timer = window.setTimeout(() => {
+      const moves = Object.fromEntries(t.moves.map(x => [x.id, { from: x.from, to: x.to }]));
+      const v = assessTrade(app, m, t.teams, moves);
+      let byModel = verdictCache.get(m);
+      if (!byModel) { byModel = new Map(); verdictCache.set(m, byModel); }
+      byModel.set(key, v);
+      setA(v);
+    }, 30);
+    return () => window.clearTimeout(timer);
     // The verdict is the trade's; the app's other state does not change it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [m, moves]);
+  }, [m, key]);
   const pivot = t.teams.includes(myRid ?? -1) ? myRid : from ?? t.teams[0];
   // Put to you, by someone else: you can answer it from here.
   const forMe = myRid != null && t.teams.includes(myRid) && from !== myRid;
   return (
     <div className="ch-trade">
-      <Balance v={a.v} pivot={pivot} head={a.head} />
+      {a ? <Balance v={a.v} pivot={pivot} head={a.head} /> : <div className="ch-trade-wait">Working out who wins…</div>}
       {/* A section per team, as Sleeper lists a trade: the manager, then
           each player he gets with his position and NFL team. */}
       {t.teams.map(rid => {
