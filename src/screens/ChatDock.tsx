@@ -61,15 +61,29 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
     if (!open || !v || isWide()) { setVv(null); return; }
     const fit = () => {
       const kb = window.innerHeight - v.height > 120;
-      setVv({ top: v.offsetTop, height: v.height, kb });
-      // iOS scrolls the document to bring the box up; the sheet is already
-      // where it should be, so the document is put back.
-      if (kb && (window.scrollY || document.documentElement.scrollTop)) window.scrollTo(0, 0);
+      // With the keyboard down the sheet simply fills the screen: following
+      // the viewport there is what left it short, with the tab bar showing
+      // under it, when iOS reported the keyboard's height late.
+      setVv(kb ? { top: v.offsetTop, height: v.height, kb } : null);
+      // iOS scrolls the document to bring a box up, and does not always
+      // scroll it back when the keyboard goes; the sheet is where it should
+      // be, so the document is put back every time.
+      if (window.scrollY || document.documentElement.scrollTop) window.scrollTo(0, 0);
     };
+    // The keyboard closing (a box losing focus) is checked again once it has
+    // finished sliding away, since the viewport's own events can stop early.
+    const settle = () => { window.setTimeout(fit, 120); window.setTimeout(fit, 400); };
     fit();
     v.addEventListener('resize', fit);
     v.addEventListener('scroll', fit);
-    return () => { v.removeEventListener('resize', fit); v.removeEventListener('scroll', fit); };
+    document.addEventListener('focusout', settle);
+    window.addEventListener('scroll', fit);
+    return () => {
+      v.removeEventListener('resize', fit);
+      v.removeEventListener('scroll', fit);
+      document.removeEventListener('focusout', settle);
+      window.removeEventListener('scroll', fit);
+    };
   }, [open]);
 
   useEffect(() => {
