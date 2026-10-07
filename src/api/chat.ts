@@ -24,6 +24,8 @@ export interface ChatMessage {
   trade?: ChatTrade;
   /** a GIF, as Giphy serves it */
   gif?: ChatGif;
+  /** something done to a player, logged for the league: a nickname or a photo */
+  sys?: ChatEvent;
   /** reactions: for each one, who left it */
   r?: Partial<Record<ReactKey, Record<string, boolean>>>;
   text: string;
@@ -31,6 +33,29 @@ export interface ChatMessage {
 }
 
 export interface ChatGif { url: string; w: number; h: number }
+
+export interface ChatEvent {
+  kind: 'nick' | 'unnick' | 'photo' | 'unphoto';
+  /** the player's id */
+  id: string;
+  /** his real name */
+  player: string;
+  /** the new nickname, and the one it replaced */
+  nick?: string;
+  old?: string;
+}
+
+function readEvent(x: unknown): ChatEvent | undefined {
+  if (!x || typeof x !== 'object') return undefined;
+  const e = x as Record<string, unknown>;
+  const kinds = ['nick', 'unnick', 'photo', 'unphoto'];
+  if (!kinds.includes(String(e.kind)) || typeof e.id !== 'string') return undefined;
+  return {
+    kind: e.kind as ChatEvent['kind'], id: e.id, player: String(e.player || e.id).slice(0, 60),
+    ...(typeof e.nick === 'string' ? { nick: e.nick.slice(0, 30) } : {}),
+    ...(typeof e.old === 'string' ? { old: e.old.slice(0, 30) } : {}),
+  };
+}
 
 /** The reactions on offer. Keyed by name: the database will not take most
  *  emoji as a key, and the rules list exactly these. */
@@ -103,7 +128,7 @@ async function readLast(lid: string): Promise<ChatMessage[]> {
   return Object.entries(body || {})
     .filter(([, m]) => m && typeof m.text === 'string')
     .map(([id, m]) => ({
-      id, ...m, trade: readTrade(m.trade), gif: readGif(m.gif),
+      id, ...m, trade: readTrade(m.trade), gif: readGif(m.gif), sys: readEvent(m.sys),
       rid: typeof m.rid === 'number' ? m.rid : undefined,
       r: m.r && typeof m.r === 'object' ? m.r : undefined,
     }))
@@ -125,6 +150,7 @@ export async function sendChat(lid: string, m: Omit<ChatMessage, 'id' | 'uid' | 
       ...(m.avatar ? { avatar: m.avatar.slice(0, 300) } : {}),
       ...(m.rid != null ? { rid: m.rid } : {}),
       ...(m.gif ? { gif: { url: m.gif.url.slice(0, 300), w: m.gif.w, h: m.gif.h } } : {}),
+      ...(m.sys ? { sys: m.sys } : {}),
       ...(m.trade ? {
         trade: {
           teams: m.trade.teams.slice(0, 4),

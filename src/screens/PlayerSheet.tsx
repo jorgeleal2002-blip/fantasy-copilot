@@ -29,6 +29,7 @@ import { ord } from '../ui/format';
 import { WeekBars } from '../ui/charts';
 import { Card, Face, Overlay, TdBalls } from '../ui/primitives';
 import { useCutout } from '../ui/useCutout';
+import { logToChat } from '../ui/chat-log';
 import { OPPONENTS } from '../model/schedule';
 import { byeOf, sosFor } from '../model/sos';
 import { gameLeft, phaseFor } from '../model/game-clock';
@@ -178,6 +179,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   useEffect(() => { if (wk) void app.fetchWeekStats(wk); }, [app.fetchWeekStats, wk]);
   // His photo with a plain background lifted off, for the banner.
   const cut = useCutout(app.photoFor(playerId, 'full'));
+  // Giving him a nickname: the box is open while this is a string.
+  const [nickDraft, setNickDraft] = useState<string | null>(null);
 
   if (!p) {
     return (
@@ -234,6 +237,17 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
   const pctOfProj = got != null && weekProj ? Math.round((got / weekProj) * 100) : null;
   const weekPlace = got != null && app.week ? app.weekRank(p.id, p.pos, app.week)?.rank ?? null : null;
   const photo = app.photoFor(p.id, 'full');
+  const saveNick = async (draft: string) => {
+    const old = app.nickFor(p.id) || undefined;
+    const next = draft.trim();
+    setNickDraft(null);
+    if ((old || '') === next) return;
+    if (await app.setNick(p.id, next)) {
+      logToChat(m, next
+        ? { kind: 'nick', id: p.id, player: p.name, nick: next, ...(old ? { old } : {}) }
+        : { kind: 'unnick', id: p.id, player: p.name, ...(old ? { old } : {}) });
+    }
+  };
   const custom = !!app.photos[p.id];
   const setter = app.photoBy(p.id);
   const shared = app.photoShared(p.id);
@@ -484,7 +498,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
             aria-label="Change photo"
             onChange={e => {
               const f = e.target.files && e.target.files[0];
-              if (f) app.setPhoto(p.id, f);
+              if (f) app.setPhoto(p.id, f, () => logToChat(m, { kind: 'photo', id: p.id, player: p.name }));
               e.target.value = '';
             }}
             style={{ display: 'none' }}
@@ -492,6 +506,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </label>
         <div className="ps-hero-body">
           <div className="ps-hero-owner">→ {p.ownerLabel}</div>
+          {app.nickFor(p.id) ? <div className="ps-hero-nick">“{app.nickFor(p.id)}”</div> : null}
           {first ? <div className="ps-hero-first">{first}</div> : null}
           <div className="ps-hero-last">{last}</div>
           <div className="ps-hero-tag">
@@ -518,7 +533,7 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           <button
             type="button"
             className="btn btn-ghost"
-            onClick={() => app.clearPhoto(p.id)}
+            onClick={() => { if (app.clearPhoto(p.id)) logToChat(m, { kind: 'unphoto', id: p.id, player: p.name }); }}
             style={{ fontSize: 10, padding: 0 }}
           >
             Restore original photo
@@ -532,6 +547,26 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           </span>
         </div>
       ) : null}
+
+      {/* A nickname the whole league sees, set from here; the chat logs it. */}
+      {nickDraft == null ? (
+        <div className="ps-nick-row">
+          <button type="button" className="ps-nick-btn" onClick={() => setNickDraft(app.nickFor(p.id) || '')}>
+            ✎ {app.nickFor(p.id) ? 'Change nickname' : 'Give him a nickname'}
+          </button>
+          {app.nickFor(p.id) && app.nickBy(p.id) ? <span className="ps-nick-by">by {app.nickBy(p.id)}</span> : null}
+        </div>
+      ) : (
+        <form className="ps-nick-edit" onSubmit={e => { e.preventDefault(); void saveNick(nickDraft); }}>
+          <input autoFocus maxLength={30} value={nickDraft} placeholder={'Nickname for ' + p.name}
+            onChange={e => setNickDraft(e.target.value)} />
+          <button type="submit" className="ps-nick-save">Save</button>
+          {app.nickFor(p.id) ? (
+            <button type="button" className="ps-nick-clear" onClick={() => void saveNick('')}>Remove</button>
+          ) : null}
+          <button type="button" className="ps-nick-cancel" aria-label="Cancel" onClick={() => setNickDraft(null)}>✕</button>
+        </form>
+      )}
 
       {/* Under the name rather than beside it. Squeezed into the strip left
           over by a 64px photo, "Jaxon Smith-Njigba" wrapped onto three lines

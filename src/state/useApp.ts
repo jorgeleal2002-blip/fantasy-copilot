@@ -15,7 +15,7 @@ import { DRAFT_POLL_MS, MATCHUP_LIVE_POLL_MS, MATCHUP_POLL_MS, PROJ_TTL_MS, STAT
 import {
   EMPTY_ROOM, PHOTO_MAX_BYTES, claimSeat, createRoom as createRoomAt, dropPhoto, liveEnabled,
   liveReason, newRoomId, pushPick, putPhoto, readPhotos, readRoom, restartRoom, startRoom,
-  watchRoom, type Room, type SharedPhoto,
+  watchRoom, type Room, type SharedPhoto, readNicks, putNick, dropNick, type SharedNick,
 } from '../api/live';
 import {
   ROOM_LEN, cleanRoomCode, clearInvite, isRoomCode, parseInvite, roomCodeProblem, type Invite,
@@ -302,6 +302,7 @@ export function useApp() {
   /** What the league has set, mirrored from the database — replaced wholesale
    *  on every read, so a photo somebody DELETES stops showing here too. */
   const [leaguePhotos, setLeaguePhotos] = useState<Record<string, SharedPhoto>>({});
+  const [leagueNicks, setLeagueNicks] = useState<Record<string, SharedNick>>({});
   const toastTimer = useRef<number | undefined>(undefined);
   const poll = useRef<number | undefined>(undefined);
   const dataRef = useRef<LeagueBundle | null>(null);
@@ -1614,7 +1615,7 @@ export function useApp() {
    */
   const photoShared = useCallback((id: string) => id in leaguePhotos, [leaguePhotos]);
 
-  const setPhoto = useCallback((id: string, file: File) => {
+  const setPhoto = useCallback((id: string, file: File, onShared?: () => void) => {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
@@ -1635,7 +1636,7 @@ export function useApp() {
           // trip to appear feels like it did not take.
           setLeaguePhotos(prev => ({ ...prev, [id]: shared }));
           void putPhoto(lid, id, shared)
-            .then(() => showToast('Photo updated for the league'))
+            .then(() => { showToast('Photo updated for the league'); onShared?.(); })
             .catch(e => {
               setLeaguePhotos(prev => { const n = { ...prev }; delete n[id]; return n; });
               showToast(liveReason(e, 'share that photo'));
@@ -1666,12 +1667,50 @@ export function useApp() {
       return next;
     });
     const lid = leagueId;
-    if (liveEnabled() && lid && leaguePhotos[id]) {
+    const wasShared = !!(liveEnabled() && lid && leaguePhotos[id]);
+    if (wasShared && lid) {
       setLeaguePhotos(prev => { const n = { ...prev }; delete n[id]; return n; });
       void dropPhoto(lid, id).catch(e => showToast(liveReason(e, 'remove that photo')));
     }
     showToast('Original photo restored');
+    return wasShared;
   }, [leagueId, leaguePhotos, showToast]);
+
+  /* Nicknames: the league's, like its photos — set by anyone, seen by all. */
+  const nickFor = useCallback((id: string) => leagueNicks[id]?.name || null, [leagueNicks]);
+  const nickBy = useCallback((id: string) => leagueNicks[id]?.by || '', [leagueNicks]);
+  /** Give a player a nickname, or take it away with an empty one. Resolves
+   *  to whether the league has it. */
+  const setNick = useCallback(async (id: string, name: string): Promise<boolean> => {
+    const lid = leagueId;
+    if (!liveEnabled() || !lid) { showToast('Nicknames need the league database'); return false; }
+    const clean = name.trim().slice(0, 30);
+    const before = leagueNicks[id];
+    try {
+      if (!clean) {
+        setLeagueNicks(prev => { const n = { ...prev }; delete n[id]; return n; });
+        await dropNick(lid, id);
+        showToast('Nickname removed');
+      } else {
+        const who = dataRef.current?.me?.display_name || username || 'someone';
+        const nick = { name: clean, at: Date.now(), by: who };
+        setLeagueNicks(prev => ({ ...prev, [id]: nick }));
+        await putNick(lid, id, nick);
+        showToast('Nickname set for the league');
+      }
+      return true;
+    } catch (e) {
+      setLeagueNicks(prev => { const n = { ...prev }; if (before) n[id] = before; else delete n[id]; return n; });
+      showToast(liveReason(e, 'save that nickname'));
+      return false;
+    }
+  }, [leagueId, leagueNicks, showToast, username]);
+  useEffect(() => {
+    if (!leagueId || !liveEnabled()) { setLeagueNicks({}); return; }
+    let live = true;
+    void readNicks(leagueId).then(n => { if (live) setLeagueNicks(n); }).catch(() => { /* none to show */ });
+    return () => { live = false; };
+  }, [leagueId]);
 
   /**
    * Read the league's photos, and hand over this device's own the first time.
@@ -1850,7 +1889,7 @@ export function useApp() {
     passOffer: (key: string) => setPassed(p => p.concat(key)),
     resetOffers: () => setPassed([]),
 
-    showToast, hideToast, photoFor, photoSet, setPhoto, clearPhoto,
+    showToast, hideToast, photoFor, photoSet, setPhoto, clearPhoto, nickFor, nickBy, setNick,
   };
 }
 

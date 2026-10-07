@@ -4242,3 +4242,90 @@ img, svg {
 .yp-tile-place span { font-size: 17px; font-weight: 600; line-height: 22px; font-variant-numeric: tabular-nums; }
 .yp-tile-place i { font-style: normal; font-size: 12px; color: rgba(242, 253, 254, 0.52); }
 .yp-tile-sub { margin-top: 2px; font-size: 12px; color: rgba(242, 253, 254, 0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* A player renamed or given a new face, logged in the chat. */
+.cs-sys { color: rgba(242, 253, 254, 0.75); }
+.cs-sys b { color: var(--color-text); font-weight: 600; }
+.cs-sys i { font-style: normal; color: rgba(242, 253, 254, 0.52); text-decoration: line-through; }
+.cs-sys .cs-sys-nick { color: var(--color-accent); }
+.cs-sys-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+  font-size: 12px;
+  vertical-align: 1px;
+}
+.cs-sys-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px 10px 16px;
+  border: var(--hairline) solid rgba(242, 253, 254, 0.12);
+  border-radius: 12px;
+  background: rgba(242, 253, 254, 0.04);
+  box-shadow: inset 4px 0 0 var(--c-mark-good);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cs-sys-card.is-photo, .cs-sys-card.is-unphoto { box-shadow: inset 4px 0 0 var(--color-accent); }
+.cs-sys-card.is-unnick { box-shadow: inset 4px 0 0 rgba(242, 253, 254, 0.28); }
+.cs-sys-face { flex: none; width: 44px; height: 44px; border-radius: 999px; overflow: hidden; background: rgba(242, 253, 254, 0.07); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--color-accent); }
+.cs-sys-face.is-big { width: 64px; height: 64px; border-radius: 12px; }
+.cs-sys-face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.cs-sys-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cs-sys-now { font-size: 15px; font-weight: 700; color: var(--color-accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cs-sys-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cs-sys-meta { font-size: 12px; color: rgba(242, 253, 254, 0.62); }
+.cs-sys-go { flex: none; font-size: 17px; color: rgba(242, 253, 254, 0.52); }
+
+/* The nickname on a player's page, and the way to set it. */
+.ps-hero-nick {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 20px;
+  color: #fff;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ps-nick-row { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.ps-nick-btn { border: 0; background: none; padding: 0; font: inherit; font-size: 12px; font-weight: 600; color: var(--color-accent); cursor: pointer; }
+.ps-nick-by { font-size: 12px; color: rgba(242, 253, 254, 0.52); }
+.ps-nick-edit { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.ps-nick-edit input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: var(--hairline) solid var(--color-accent);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: 400 16px 'Inter', system-ui;
+  outline: none;
+}
+.ps-nick-edit button {
+  flex: none;
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(242, 253, 254, 0.07);
+  color: var(--color-text);
+}
+.ps-nick-edit .ps-nick-save { background: var(--color-accent); color: var(--color-bg); }

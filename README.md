@@ -576,6 +576,12 @@ and need a free key from [developers.giphy.com](https://developers.giphy.com/)
 set as `VITE_GIPHY_KEY` (a repository variable or secret) for the build;
 without one the GIF button says so.
 
+Players can be given a **nickname** from their page. Like photos, a
+nickname belongs to the league (`nicknames/{leagueId}/{playerId}` in the
+database, which needs the `nicknames` block of the rules): everybody sees
+it, under the player's name. Every nickname and photo change is posted to the
+league chat, with who did it and the player as he now looks.
+
 The app does not zoom: the viewport says so, and the pinch and double-tap
 gestures are refused, since iPhone ignores the viewport on its own.
 

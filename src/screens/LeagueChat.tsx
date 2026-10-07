@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { currentUid } from '../api/access';
-import { CHAT_MAX, QUICK_REACTS, REACTS, chatEnabled, deleteChat, reactChat, sendChat, tagsMe, type ChatGif, type ChatMessage, type ChatTrade, type ReactKey } from '../api/chat';
+import { CHAT_MAX, QUICK_REACTS, REACTS, chatEnabled, deleteChat, reactChat, sendChat, tagsMe, type ChatEvent, type ChatGif, type ChatMessage, type ChatTrade, type ReactKey } from '../api/chat';
 import { findGifs, gifsEnabled, type GifHit } from '../api/gifs';
 import { isOwnerHere } from '../model/access';
 import { colorOf } from '../model/constants';
@@ -284,7 +284,9 @@ msgs == null ? <div className="ch-empty">Loading…</div>
                         ) : null}
                         <button type="button" className="ch-react-btn" aria-label="React"
                           onClick={() => setReacting(reacting === x.id ? null : x.id)}>☺</button>
-                        {x.trade ? (
+                        {x.sys ? (
+                          <EventCard app={app} m={m} e={x.sys} onPlayer={onPlayer} />
+                        ) : x.trade ? (
                           <>
                             <div className="cs-text">proposed a trade</div>
                             <TradeCard app={app} m={m} t={x.trade} from={row?.id ?? null} myRid={myRid}
@@ -468,6 +470,48 @@ msgs == null ? <div className="ch-empty">Loading…</div>
  * verdict and the tug-of-war bar. Open it to see the whole analysis, change
  * it and send it back as a counter.
  */
+/**
+ * A change to a player, as the league sees it in the chat: what was done in
+ * words, and the player as he now looks — the new face, or the nickname over
+ * his name. Tapping him opens his page.
+ */
+function EventCard({ app, m, e, onPlayer }: {
+  app: App; m: Model; e: ChatEvent; onPlayer: (id: string) => void;
+}) {
+  const photo = /^\d+$/.test(e.id) ? app.photoFor(e.id) : null;
+  const pos = m.marketValue(e.id)?.pos;
+  const nfl = app.data?.players[e.id]?.team;
+  const line = e.kind === 'nick'
+    ? (e.old ? <>renamed <b>{e.player}</b> from <i>“{e.old}”</i> to <b className="cs-sys-nick">“{e.nick}”</b></>
+      : <>nicknamed <b>{e.player}</b> <b className="cs-sys-nick">“{e.nick}”</b></>)
+    : e.kind === 'unnick' ? <>took away <b>{e.player}</b>’s nickname{e.old ? <> <i>“{e.old}”</i></> : null}</>
+      : e.kind === 'photo' ? <>changed <b>{e.player}</b>’s photo</>
+        : <>put <b>{e.player}</b>’s real photo back</>;
+  const icon = e.kind === 'nick' || e.kind === 'unnick' ? '✎' : '📷';
+  return (
+    <>
+      <div className="cs-text cs-sys"><span className="cs-sys-ic" aria-hidden="true">{icon}</span>{line}</div>
+      <button type="button" className={'cs-sys-card is-' + e.kind} onClick={() => onPlayer(e.id)}>
+        <span className={'cs-sys-face' + (e.kind === 'photo' ? ' is-big' : '')}>
+          {photo ? <img src={photo} alt="" /> : <span>{e.player.slice(0, 1)}</span>}
+        </span>
+        <span className="cs-sys-body">
+          {(() => {
+            // The nickname this message gave him; for a photo, whatever he goes by now.
+            const shownNick = e.kind === 'nick' ? e.nick : e.kind === 'unnick' ? null : app.nickFor(e.id);
+            return shownNick ? <span className="cs-sys-now">“{shownNick}”</span> : null;
+          })()}
+          <span className="cs-sys-name">{e.player}</span>
+          <span className="cs-sys-meta">
+            {pos ? <b style={{ color: colorOf(pos as Pos) }}>{pos}</b> : null}{pos && nfl ? ' - ' : ''}{nfl || ''}
+          </span>
+        </span>
+        <span className="cs-sys-go" aria-hidden="true">›</span>
+      </button>
+    </>
+  );
+}
+
 const verdictCache = new WeakMap<Model, Map<string, ReturnType<typeof assessTrade>>>();
 
 function TradeCard({ app, m, t, from, myRid, onOpen, onReply, onPlayer }: {

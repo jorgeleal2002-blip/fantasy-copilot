@@ -16,6 +16,15 @@
         }
       }
     },
+    "nicknames": {
+      "$league": {
+        ".read": true,
+        "$player": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['name','at','by']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 30 && newData.child('by').isString() && newData.child('by').val().length <= 40"
+        }
+      }
+    },
     "users": {
       "$uid": {
         ".read": "$uid === auth.uid",

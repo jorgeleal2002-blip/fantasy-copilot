@@ -127,6 +127,52 @@ export async function dropPhoto(leagueId: string, playerId: string): Promise<voi
   await send(photoPath(leagueId, playerId), 'DELETE');
 }
 
+/* ── Nicknames ──────────────────────────────────────────────────────────
+ * A name the league gives a player, kept beside his photo and on the same
+ * terms: per league, set by anyone in it, shown to everyone.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+export interface SharedNick {
+  name: string;
+  at: number;
+  by: string;
+}
+
+export const NICK_MAX = 30;
+
+const nickPath = (leagueId: string, playerId?: string) =>
+  LIVE_URL + '/nicknames/' + encodeURIComponent(leagueId)
+  + (playerId ? '/' + encodeURIComponent(playerId) : '') + '.json';
+
+/** What of a nicknames payload is fit to print: short plain strings only. */
+export function keepNicks(raw: unknown): Record<string, SharedNick> {
+  const out: Record<string, SharedNick> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [id, v] of Object.entries(raw as Record<string, unknown>)) {
+    const n = v as Partial<SharedNick>;
+    if (!n || typeof n.name !== 'string') continue;
+    const name = n.name.trim();
+    if (!name || name.length > NICK_MAX) continue;
+    out[id] = { name, at: Number(n.at) || 0, by: String(n.by || '') };
+  }
+  return out;
+}
+
+export async function readNicks(leagueId: string): Promise<Record<string, SharedNick>> {
+  if (!LIVE_URL || !leagueId) return {};
+  return keepNicks(await send(nickPath(leagueId), 'GET'));
+}
+
+export async function putNick(leagueId: string, playerId: string, nick: SharedNick): Promise<void> {
+  if (!LIVE_URL || !leagueId) return;
+  await send(nickPath(leagueId, playerId), 'PUT', { ...nick, name: nick.name.trim().slice(0, NICK_MAX) });
+}
+
+export async function dropNick(leagueId: string, playerId: string): Promise<void> {
+  if (!LIVE_URL || !leagueId) return;
+  await send(nickPath(leagueId, playerId), 'DELETE');
+}
+
 /** Six characters a person can read down a phone line. No l/1/O/0. */
 export function newRoomId(): string {
   let out = '';
