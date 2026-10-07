@@ -282,9 +282,9 @@ function Summary({ app, m }: { app: App; m: Model }) {
             </div>
             {/* Where the table has you, and where the season should leave you. */}
             <div className="yp-pair">
-              {[{ h: now, k: 'Standings', icon: '📊' }, { h: proj, k: 'Projected finish', icon: '🔮' }].map(({ h, k, icon }) => (
+              {[{ h: now, k: 'Standings' }, { h: proj, k: 'Projected finish' }].map(({ h, k }) => (
                 <div key={k} className="yp-tile" style={{ '--c': tone(h) } as CSSProperties}>
-                  <div className="yp-tile-k"><span aria-hidden="true">{icon}</span>{k}</div>
+                  <div className="yp-tile-k">{k}</div>
                   <div className="yp-tile-place">
                     <span style={{ color: tone(h) }}>{place(h)}</span>
                     <i>of {m.teamCount}</i>
