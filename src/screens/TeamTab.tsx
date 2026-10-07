@@ -208,7 +208,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
   const empty = !m.myPlayers.length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="stack">
       {usageBadge ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: usageColor }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: usageColor, flex: 'none' }} />
@@ -347,7 +347,7 @@ function Lineup({ app, m }: { app: App; m: Model }) {
     : 0.5;
   const swapNames = m.swaps.map(o => o.player!.name).join(', ');
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="stack">
       <Card>
         <CardHead
           title="Optimal lineup"
@@ -480,7 +480,7 @@ function Roster({ app, m }: { app: App; m: Model }) {
     });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="stack">
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginTop: 2 }}>
         <div style={cardTitle}>Your roster ({m.myPlayers.length})</div>
         <div style={{ fontSize: 10, color: dim(0.52) }}>accent = optimal starter</div>
@@ -556,7 +556,7 @@ function Assets({ app, m }: { app: App; m: Model }) {
   const pickTotal = m.pickAssets.reduce((a, b) => a + b.q, 0);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="stack">
       {m.pickAssets.length ? (
         <Card>
           <CardHead

@@ -3207,3 +3207,120 @@ img, svg {
 .ag-more summary { cursor: pointer; color: var(--color-accent); list-style: none; padding: 6px; }
 .ag-more summary::-webkit-details-marker { display: none; }
 .ag-more p { margin: 6px 0 0; text-align: left; }
+
+/* ── Screens ──────────────────────────────────────────────────────────────
+   One column on a phone. */
+.screen { display: flex; flex-direction: column; gap: 9px; }
+.mt-wrap { display: flex; flex-direction: column; gap: 16px; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.of-grid { display: flex; flex-direction: column; gap: 9px; }
+
+/* The rail's brand and account rows exist only on a laptop. */
+.rail-brand, .rail-me { display: none; }
+
+/* ── Laptop and desktop ──────────────────────────────────────────────────
+   A wide screen is a dashboard, not a stretched phone: the rail carries the
+   app, the league and you; the content runs to a wide column; cards sit two
+   to a row, and lists that come in pairs sit side by side. */
+@media (min-width: 900px) {
+  .shell { grid-template-columns: 248px minmax(0, 1fr); }
+  .shell-nav { padding: 18px 14px; gap: 4px; }
+  .shell-head-me, .shell-head-logo { display: none !important; }
+
+  .rail-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 18px;
+    padding: 8px;
+    border: 0;
+    border-radius: 12px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .rail-brand:hover { background: rgba(242, 253, 254, 0.04); }
+  .rail-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex: none; }
+  .rail-brand-text, .rail-me-text { display: flex; flex-direction: column; min-width: 0; }
+  .rail-app { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .rail-league, .rail-me-sub {
+    font-size: 12px;
+    color: rgba(242, 253, 254, 0.52);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rail-me {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: auto;
+    padding: 10px 8px;
+    border: 0;
+    border-top: var(--hairline) solid var(--color-divider);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .rail-me:hover { background: rgba(242, 253, 254, 0.04); }
+  .rail-me-av {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border-radius: 999px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface);
+    color: var(--color-accent);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .rail-me-av img { width: 100%; height: 100%; object-fit: cover; }
+  .rail-me-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .shell-head { max-width: 1184px; }
+  .shell-main > * { max-width: 1120px; }
+
+  /* Cards two to a row; everything else — tabs, heroes, lists — full width. */
+  .screen {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+  .screen > * { grid-column: 1 / -1; }
+  .screen > .card { grid-column: auto; }
+  .stack { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  .stack > * { grid-column: 1 / -1; }
+  .stack > .card { grid-column: auto; }
+  .of-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+
+  /* Starters and bench side by side, under the score. */
+  .mt-wrap {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 28px;
+    align-items: start;
+  }
+  .mt-wrap > .mt-head { grid-column: 1 / -1; }
+  .mt-wrap > .mt-list:last-child:nth-child(2) { grid-column: 1 / -1; }
+
+  /* A trade's scorecards side by side, with the rules under them. */
+  .fb-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  .fb-cards > .fb-how { grid-column: 1 / -1; }
+}
+
+/* A big monitor: three cards to a row. */
+@media (min-width: 1500px) {
+  .shell-head { max-width: 1504px; }
+  .shell-main > * { max-width: 1440px; }
+  .screen, .stack { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

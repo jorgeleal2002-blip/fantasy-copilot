@@ -183,7 +183,7 @@ function PullNote({ pull, busy }: { pull: Pull | null; busy: boolean }) {
 /** The screen-level scroller: every tab's content sits in one of these. */
 export function Screen({ children, animation = 'fadeUp .3s ease backwards' }: { children: ReactNode; animation?: string }) {
   return (
-    <div style={{ animation, display: 'flex', flexDirection: 'column', gap: 9 }}>
+    <div className="screen" style={{ animation }}>
       {children}
     </div>
   );

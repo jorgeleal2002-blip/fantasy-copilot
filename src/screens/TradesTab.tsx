@@ -79,9 +79,11 @@ export function TradesTab({ app, m }: { app: App; m: Model }) {
             {m.offers.length === 1 ? '1 trade' : m.offers.length + ' trades'}
           </div>
 
-          {visible.map(o => (
-            <OfferCard key={o.partner + o.get.id} app={app} offer={o} dynasty={m.isDynasty} />
-          ))}
+          <div className="of-grid">
+            {visible.map(o => (
+              <OfferCard key={o.partner + o.get.id} app={app} offer={o} dynasty={m.isDynasty} />
+            ))}
+          </div>
 
           {m.offers.length === 0 ? (
             <Empty

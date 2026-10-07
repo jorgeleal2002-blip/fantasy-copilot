@@ -2,6 +2,7 @@ import { leagueAvatar } from '../api/sleeper';
 import type { Model } from '../model/types';
 import type { App, Tab } from '../state/useApp';
 import { dim, ellipsis, tabStyle } from '../ui/styles';
+import { Mark } from '../ui/Mark';
 import { DraftTab } from './DraftTab';
 import { LeagueTab } from './LeagueTab';
 import { MockRoom } from './MockRoom';
@@ -74,6 +75,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
           <img
             src={logo}
             alt="Change league"
+            className="shell-head-logo"
             role="button"
             tabIndex={0}
             onClick={() => void app.switchLeague()}
@@ -95,6 +97,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
         <button
           type="button"
           aria-label="Settings"
+          className="shell-head-me"
           onClick={() => app.setTab('settings')}
           style={{
             width: 34, height: 34, flex: 'none', borderRadius: '50%', overflow: 'hidden', padding: 0,
@@ -118,6 +121,15 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
       </main>
 
       <nav className="shell-nav">
+        {/* A laptop's rail carries who and where: the app, the league, you.
+            On a phone the header already does, so these stay hidden there. */}
+        <button type="button" className="rail-brand" onClick={() => void app.switchLeague()} title="Change league">
+          {logo ? <img src={logo} alt="" className="rail-logo" /> : <Mark size={36} />}
+          <span className="rail-brand-text">
+            <span className="rail-app">Doctors</span>
+            <span className="rail-league">{model.league.name}</span>
+          </span>
+        </button>
         {TABS.map(t => (
           <button
             key={t.key}
@@ -133,6 +145,15 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
             <span>{t.label}</span>
           </button>
         ))}
+        <button type="button" className="rail-me" onClick={() => app.setTab('settings')}>
+          <span className="rail-me-av">
+            {model.me.avatar ? <img src={model.me.avatar} alt="" /> : model.me.initials}
+          </span>
+          <span className="rail-me-text">
+            <span className="rail-me-name">{model.myTeamName || model.me.teamName}</span>
+            <span className="rail-me-sub">{model.me.name}</span>
+          </span>
+        </button>
       </nav>
 
       {app.mockOpen ? <MockRoom app={app} m={model} /> : null}
