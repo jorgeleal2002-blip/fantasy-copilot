@@ -3373,3 +3373,30 @@ img, svg {
     max-height: min(880px, calc((100vh - 80px) / 1.3));
   }
 }
+
+/* ── Sheets as pages on a laptop ────────────────────────────────────────
+   A game, a player or a team opens as the whole page beside the rail, the
+   way a tab does, instead of a floating panel over a dimmed screen: there is
+   room for it, and a panel left most of the window doing nothing. */
+@media (min-width: 900px) {
+  .overlay-host { display: block; }
+  .overlay-scrim { display: none; }
+  .overlay-panel,
+  .app-column-wide .overlay-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 248px;
+    right: 0;
+    width: auto;
+    max-height: none;
+    border: 0;
+    border-left: var(--hairline) solid var(--color-divider);
+    border-radius: 0;
+    box-shadow: none;
+    animation: fadeIn 0.18s ease both;
+  }
+  .overlay-head { width: 100%; max-width: 1064px; margin: 0 auto; padding: 22px 32px 10px; }
+  .overlay-body { padding: 6px 32px 40px; }
+  .overlay-body > * { max-width: 1000px; margin-left: auto; margin-right: auto; }
+}
