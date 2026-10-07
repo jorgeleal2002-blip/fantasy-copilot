@@ -560,8 +560,9 @@ person's devices together, and **Revoke** shuts all of them out.
 
 ## League chat
 
-**League → Chat** is a live chat for everyone let into the app who has the
-league open: your messages on the right, everyone else's under their team
+The **Chat** bar docked above the tabs (bottom right on a laptop) is a live
+chat for everyone let into the app who has the league open. It shows the
+latest message and an unread count, and a tap opens the conversation: your messages on the right, everyone else's under their team
 name and picture, a date line per day. The owner can delete any message. It
 lives under `chat/{leagueId}` in the Realtime Database and needs the `chat`
 block of `database.rules.json` published: only people let into the app can

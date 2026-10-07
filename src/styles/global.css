@@ -3057,7 +3057,8 @@ button { font-family: inherit; }
   z-index: 25;
   left: 12px;
   right: 12px;
-  bottom: calc(var(--safe-bottom) + 84px);
+  /* Above the tabs and the chat dock on top of them. */
+  bottom: calc(var(--safe-bottom) + 160px);
   display: flex;
   gap: 12px;
   padding: 14px;
@@ -3559,3 +3560,106 @@ img, svg {
 @media (min-width: 900px) { .ch { height: calc(100vh - 220px); } }
 @media (min-width: 1280px) { .ch { height: calc(100vh / 1.15 - 220px); } }
 @media (min-width: 1680px) { .ch { height: calc(100vh / 1.3 - 220px); } }
+
+/* ── Chat dock ────────────────────────────────────────────────────────────
+   Docked above the tabs, the way Sleeper keeps its chat: the latest message
+   and an unread count, a tap from anywhere. Open, it rises over the screen. */
+.chd-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 18px 10px;
+  border: 0;
+  border-top: var(--hairline) solid var(--color-divider);
+  border-radius: 16px 16px 0 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.chd-grip {
+  display: block;
+  align-self: center;
+  width: 40px;
+  height: 4px;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background: rgba(242, 253, 254, 0.28);
+}
+.chd-row { display: flex; align-items: center; gap: 8px; }
+.chd-title { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.chd-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--c-mark-bad);
+  color: var(--color-bg);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+.chd-preview {
+  font-size: 13px;
+  color: rgba(242, 253, 254, 0.62);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chd-layer { position: fixed; inset: 0; z-index: 35; }
+.chd-scrim { position: absolute; inset: 0; background: var(--scrim-over); animation: fadeIn 0.18s ease both; }
+.chd-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 8%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px 16px 0 0;
+  background: var(--bg-base);
+  box-shadow: var(--shadow-lg);
+  animation: fadeUp 0.25s ease both;
+  padding-bottom: var(--safe-bottom);
+}
+.chd-head { padding: 0 16px 8px; }
+.chd-grab { display: flex; width: 100%; justify-content: center; padding: 8px 0 4px; border: 0; background: none; cursor: pointer; }
+.chd-head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.chd-x {
+  border: 0;
+  background: rgba(242, 253, 254, 0.07);
+  color: var(--color-text);
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.chd-sheet .ch { flex: 1; height: auto; min-height: 0; border-radius: 0; background: none; }
+
+@media (min-width: 900px) {
+  /* A laptop has the room to keep it beside the page: a floating bar at the
+     bottom right, opening into a panel down the right edge. */
+  .chd-bar {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 30;
+    width: 340px;
+    border: var(--hairline) solid var(--color-divider);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+  }
+  .chd-scrim { background: none; }
+  .chd-sheet {
+    left: auto;
+    top: 0;
+    width: 420px;
+    border-radius: 0;
+    border-left: var(--hairline) solid var(--color-divider);
+    animation: fadeIn 0.18s ease both;
+  }
+}

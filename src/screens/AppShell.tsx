@@ -9,6 +9,7 @@ import { MockRoom } from './MockRoom';
 import { PlayerSheet } from './PlayerSheet';
 import { PlayAlerts } from './PlayAlerts';
 import { NotifyPrompt } from './NotifyPrompt';
+import { ChatDock } from './ChatDock';
 import { SettingsTab } from './SettingsTab';
 import { TeamSheet } from './TeamSheet';
 import { MatchupSheet } from './MatchupSheet';
@@ -119,6 +120,8 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
         {app.tab === 'league' && <LeagueTab app={app} m={model} />}
         {app.tab === 'settings' && <SettingsTab app={app} m={model} />}
       </main>
+
+      <ChatDock m={model} />
 
       <nav className="shell-nav">
         {/* A laptop's rail carries who and where: the app, the league, you.

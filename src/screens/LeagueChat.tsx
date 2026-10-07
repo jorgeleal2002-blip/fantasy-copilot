@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { currentUid } from '../api/access';
-import { CHAT_MAX, chatEnabled, deleteChat, sendChat, watchChat, type ChatMessage } from '../api/chat';
+import { CHAT_MAX, chatEnabled, deleteChat, sendChat, type ChatMessage } from '../api/chat';
 import { isOwnerHere } from '../model/access';
 import type { Model } from '../model/types';
 
@@ -10,26 +10,16 @@ import type { Model } from '../model/types';
  * message carries the date. The newest stays in view as messages arrive,
  * unless you have scrolled up to read.
  */
-export function LeagueChat({ m }: { m: Model }) {
+export function LeagueChat({ m, msgs, err: feedErr }: { m: Model; msgs: ChatMessage[] | null; err: string }) {
   const lid = m.league.league_id;
-  const [msgs, setMsgs] = useState<ChatMessage[] | null>(null);
-  const [err, setErr] = useState('');
+  const [sendErr, setErr] = useState('');
+  const err = sendErr || feedErr;
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const list = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
   const me = currentUid();
   const owner = isOwnerHere();
-
-  useEffect(() => {
-    if (!chatEnabled()) return;
-    setMsgs(null);
-    return watchChat(lid, ms => { setMsgs(ms); setErr(''); }, why => {
-      setErr(/40[13]/.test(why)
-        ? 'The chat is not open yet: the owner has to publish the latest database rules.'
-        : 'Could not reach the chat. Retrying…');
-    });
-  }, [lid]);
 
   // Follow the newest message, unless you scrolled up to read older ones.
   useEffect(() => {
@@ -48,7 +38,7 @@ export function LeagueChat({ m }: { m: Model }) {
         avatar: m.me.avatar || undefined,
         text: t,
       });
-      if (ok) { setText(''); stick.current = true; } else setErr('Your message was not sent. Try again.');
+      if (ok) { setText(''); setErr(''); stick.current = true; } else setErr('Your message was not sent. Try again.');
     } catch {
       setErr('Your message was not sent. Check your connection.');
     } finally {
