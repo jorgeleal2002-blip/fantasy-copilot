@@ -37,6 +37,10 @@ export interface TeamOutlook {
   oppStrength: number | null;
   /** 1 = the easiest schedule left in the league */
   sosRank: number | null;
+  /** where the team finishes on average across the runs, 1 = top */
+  avgPlace: number;
+  /** that average turned into a place in the table: 1 = best expected finish */
+  place: number;
 }
 
 /** Small, fast and seedable — the numbers must not jitter on a re-render. */
@@ -79,7 +83,8 @@ export function seasonOutlook(
   const winSum: Record<number, number> = {};
   const lossSum: Record<number, number> = {};
   const made: Record<number, number> = {};
-  for (const t of teams) { winSum[t.id] = 0; lossSum[t.id] = 0; made[t.id] = 0; }
+  const placeSum: Record<number, number> = {};
+  for (const t of teams) { winSum[t.id] = 0; lossSum[t.id] = 0; made[t.id] = 0; placeSum[t.id] = 0; }
 
   const pairs = schedule.flatMap(w => w.pairs).filter(([a, b]) => byId.has(a) && byId.has(b));
   for (let s = 0; s < sims; s++) {
@@ -96,6 +101,7 @@ export function seasonOutlook(
     }
     const table = teams.map(t => t.id).sort((x, y) => w[y] - w[x] || pf[y] - pf[x]);
     for (let i = 0; i < cut; i++) made[table[i]]++;
+    table.forEach((id, i) => { placeSum[id] += i + 1; });
     for (const t of teams) { winSum[t.id] += w[t.id]; lossSum[t.id] += l[t.id]; }
   }
 
@@ -113,6 +119,7 @@ export function seasonOutlook(
     .filter((x): x is { id: number; v: number } => x.v != null)
     .sort((a, b) => a.v - b.v);
 
+  const byFinish = teams.map(t => t.id).sort((a, b) => placeSum[a] - placeSum[b] || made[b] - made[a]);
   for (const t of teams) {
     const i = ranked.findIndex(x => x.id === t.id);
     out[t.id] = {
@@ -122,6 +129,8 @@ export function seasonOutlook(
       playoffPct: made[t.id] / sims,
       oppStrength: avgOpp(t.id),
       sosRank: i < 0 ? null : i + 1,
+      avgPlace: placeSum[t.id] / sims,
+      place: byFinish.indexOf(t.id) + 1,
     };
   }
   return out;
