@@ -22,8 +22,28 @@ export interface ChatMessage {
   rid?: number;
   /** a trade put to the league: the teams in it and who sends whom where */
   trade?: ChatTrade;
+  /** a GIF, as Giphy serves it */
+  gif?: ChatGif;
+  /** reactions: for each one, who left it */
+  r?: Partial<Record<ReactKey, Record<string, boolean>>>;
   text: string;
   at: number;
+}
+
+export interface ChatGif { url: string; w: number; h: number }
+
+/** The reactions on offer. Keyed by name: the database will not take most
+ *  emoji as a key, and the rules list exactly these. */
+export const REACTS = [
+  ['like', '👍'], ['love', '❤️'], ['haha', '😂'], ['fire', '🔥'], ['wow', '😮'], ['sad', '😢'],
+] as const;
+export type ReactKey = (typeof REACTS)[number][0];
+
+function readGif(x: unknown): ChatGif | undefined {
+  if (!x || typeof x !== 'object') return undefined;
+  const g = x as Record<string, unknown>;
+  return typeof g.url === 'string' && /^https:\/\//.test(g.url)
+    ? { url: g.url, w: Number(g.w) || 200, h: Number(g.h) || 200 } : undefined;
 }
 
 export interface ChatTrade {
@@ -72,13 +92,17 @@ async function readLast(lid: string): Promise<ChatMessage[]> {
   const body = (await res.json()) as Record<string, Omit<ChatMessage, 'id'>> | null;
   return Object.entries(body || {})
     .filter(([, m]) => m && typeof m.text === 'string')
-    .map(([id, m]) => ({ id, ...m, trade: readTrade(m.trade), rid: typeof m.rid === 'number' ? m.rid : undefined }))
+    .map(([id, m]) => ({
+      id, ...m, trade: readTrade(m.trade), gif: readGif(m.gif),
+      rid: typeof m.rid === 'number' ? m.rid : undefined,
+      r: m.r && typeof m.r === 'object' ? m.r : undefined,
+    }))
     .sort((a, b) => (a.at || 0) - (b.at || 0));
 }
 
 /** Post a message. False when the database refused it (not let in, or the
  *  chat rules not published). */
-export async function sendChat(lid: string, m: Omit<ChatMessage, 'id' | 'uid' | 'at'>): Promise<boolean> {
+export async function sendChat(lid: string, m: Omit<ChatMessage, 'id' | 'uid' | 'at' | 'r'>): Promise<boolean> {
   const s = await session();
   const text = m.text.trim().slice(0, CHAT_MAX);
   if (!text) return false;
@@ -90,6 +114,7 @@ export async function sendChat(lid: string, m: Omit<ChatMessage, 'id' | 'uid' | 
       ...(m.user ? { user: m.user.slice(0, 40) } : {}),
       ...(m.avatar ? { avatar: m.avatar.slice(0, 300) } : {}),
       ...(m.rid != null ? { rid: m.rid } : {}),
+      ...(m.gif ? { gif: { url: m.gif.url.slice(0, 300), w: m.gif.w, h: m.gif.h } } : {}),
       ...(m.trade ? {
         trade: {
           teams: m.trade.teams.slice(0, 4),
@@ -99,6 +124,15 @@ export async function sendChat(lid: string, m: Omit<ChatMessage, 'id' | 'uid' | 
       at: { '.sv': 'timestamp' },
     }),
   });
+  return res.ok;
+}
+
+/** Leave a reaction on a message, or take yours back. */
+export async function reactChat(lid: string, id: string, key: ReactKey, on: boolean): Promise<boolean> {
+  const s = await session();
+  const url = LIVE_URL + '/chat/' + encodeURIComponent(lid) + '/' + encodeURIComponent(id) + '/r/' + key + '/'
+    + encodeURIComponent(s.uid) + '.json?auth=' + encodeURIComponent(s.idToken);
+  const res = await fetch(url, on ? { method: 'PUT', body: 'true' } : { method: 'DELETE' });
   return res.ok;
 }
 

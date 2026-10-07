@@ -47,6 +47,7 @@ jobs:
           # database's rules. Read from either tab for the same reason as
           # above. With either one missing the button is simply not drawn.
           VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID || secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_GIPHY_KEY: ${{ vars.VITE_GIPHY_KEY || secrets.VITE_GIPHY_KEY }}
           VITE_FIREBASE_KEY: ${{ vars.VITE_FIREBASE_KEY || secrets.VITE_FIREBASE_KEY }}
       # enablement: true turns Pages on for the repo the first time this runs,
       # instead of failing with "Get Pages site failed / Not Found".

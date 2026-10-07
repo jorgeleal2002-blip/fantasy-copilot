@@ -568,6 +568,17 @@ lives under `chat/{leagueId}` in the Realtime Database and needs the `chat`
 block of `database.rules.json` published: only people let into the app can
 read it or post, only as themselves, up to 500 characters a message.
 
+In the chat you can tag a manager with **@** (or **@everyone**), propose a
+trade from the **⇄** button, react to any message by holding it (hovering it
+on a laptop), and send a **GIF**. Reactions live under each message's `r` and
+need the rules as they are in `database.rules.json` now. GIFs come from Giphy
+and need a free key from [developers.giphy.com](https://developers.giphy.com/)
+set as `VITE_GIPHY_KEY` (a repository variable or secret) for the build;
+without one the GIF button says so.
+
+The app does not zoom: the viewport says so, and the pinch and double-tap
+gestures are refused, since iPhone ignores the viewport on its own.
+
 ## Data sources
 
 | Source | What it provides |

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { currentUid } from '../api/access';
-import { CHAT_MAX, chatEnabled, deleteChat, sendChat, tagsMe, type ChatMessage, type ChatTrade } from '../api/chat';
+import { CHAT_MAX, REACTS, chatEnabled, deleteChat, reactChat, sendChat, tagsMe, type ChatGif, type ChatMessage, type ChatTrade, type ReactKey } from '../api/chat';
+import { findGifs, gifsEnabled, type GifHit } from '../api/gifs';
 import { isOwnerHere } from '../model/access';
 import { colorOf } from '../model/constants';
 import type { Pos } from '../api/types';
@@ -47,7 +48,7 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
     if (el && stick.current) el.scrollTop = el.scrollHeight;
   }, [msgs]);
 
-  const post = async (t: string, trade?: ChatTrade) => {
+  const post = async (t: string, trade?: ChatTrade, gif?: ChatGif) => {
     if (!t || busy) return false;
     setBusy(true);
     try {
@@ -57,6 +58,7 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
         avatar: m.me.avatar || undefined,
         ...(myRid != null ? { rid: myRid } : {}),
         ...(trade ? { trade } : {}),
+        ...(gif ? { gif } : {}),
         text: t,
       });
       if (ok) { setErr(''); stick.current = true; } else setErr('Your message was not sent. Try again.');
@@ -70,6 +72,60 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
   };
   const send = async () => {
     if (await post(text.trim())) setText('');
+  };
+
+  /* Reactions: hold a message (or hover it on a laptop) for the six, tap a
+     reaction under it to add yours or take it back. Shown at once, before the
+     database has answered. */
+  const [reacting, setReacting] = useState<string | null>(null);
+  const [mineNow, setMineNow] = useState<Record<string, boolean>>({});
+  useEffect(() => { setMineNow({}); }, [msgs]);
+  const hold = useRef<number | undefined>(undefined);
+  /** The click that ends a hold is not a tap outside the picker it opened. */
+  const held = useRef(false);
+  const holdStart = (id: string) => {
+    window.clearTimeout(hold.current);
+    held.current = false;
+    hold.current = window.setTimeout(() => { held.current = true; setReacting(id); navigator.vibrate?.(10); }, 420);
+  };
+  const holdEnd = () => window.clearTimeout(hold.current);
+  const reactsOf = (x: ChatMessage) => REACTS.map(([key, emoji]) => {
+    const who = { ...(x.r?.[key] || {}) };
+    const k = x.id + ':' + key;
+    if (me && k in mineNow) { if (mineNow[k]) who[me] = true; else delete who[me]; }
+    const n = Object.values(who).filter(Boolean).length;
+    return { key, emoji, n, mine: !!(me && who[me]) };
+  });
+  const toggleReact = (x: ChatMessage, key: ReactKey) => {
+    const cur = reactsOf(x).find(r => r.key === key);
+    const on = !cur?.mine;
+    setMineNow(s => ({ ...s, [x.id + ':' + key]: on }));
+    setReacting(null);
+    void reactChat(lid, x.id, key, on).then(ok => {
+      if (!ok) setErr('The reaction did not go through: the owner may need to publish the latest database rules.');
+    });
+  };
+
+  /* GIFs: trending when the box is empty, a search as you type. */
+  const [gifOpen, setGifOpen] = useState(false);
+  const [gifQ, setGifQ] = useState('');
+  const [gifs, setGifs] = useState<GifHit[] | null>(null);
+  const [gifErr, setGifErr] = useState('');
+  useEffect(() => {
+    if (!gifOpen || !gifsEnabled()) return;
+    const ac = new AbortController();
+    const t = window.setTimeout(() => {
+      setGifErr('');
+      findGifs(gifQ, ac.signal).then(setGifs).catch(e => {
+        if ((e as Error).name !== 'AbortError') setGifErr('Could not reach Giphy. Try again.');
+      });
+    }, gifQ ? 300 : 0);
+    return () => { ac.abort(); window.clearTimeout(t); };
+  }, [gifOpen, gifQ]);
+  const sendGif = async (g: GifHit) => {
+    setGifOpen(false);
+    setGifQ('');
+    await post('GIF', undefined, { url: g.url, w: g.w, h: g.h });
   };
 
   /* Tagging: @ brings up the league, filtered as you type; a pick puts the
@@ -147,6 +203,10 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
       <div
         className="ch-list"
         ref={list}
+        onClick={e => {
+          if (held.current) { held.current = false; return; }
+          if (reacting && !(e.target as HTMLElement).closest('.ch-react-pick, .ch-react-btn')) setReacting(null);
+        }}
         onScroll={e => {
           const el = e.currentTarget;
           stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
@@ -185,14 +245,30 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
                           </button>
                         );
                       })() : null}
+                      <div className="ch-hold"
+                        onPointerDown={() => holdStart(x.id)} onPointerUp={holdEnd} onPointerLeave={holdEnd}
+                        onPointerCancel={holdEnd} onContextMenu={e => { e.preventDefault(); setReacting(x.id); }}>
+                      {reacting === x.id ? (
+                        <div className="ch-react-pick" role="menu" aria-label="React">
+                          {REACTS.map(([key, emoji]) => (
+                            <button key={key} type="button" role="menuitem" aria-label={key}
+                              className={reactsOf(x).find(r => r.key === key)?.mine ? 'is-mine' : ''}
+                              onClick={() => toggleReact(x, key)}>{emoji}</button>
+                          ))}
+                        </div>
+                      ) : null}
+                      <button type="button" className="ch-react-btn" aria-label="React" onClick={() => setReacting(reacting === x.id ? null : x.id)}>☺</button>
                       {x.trade ? (
                         <TradeCard app={app} m={m} t={x.trade} from={rowOf(x)?.id ?? null} myRid={myRid}
                           time={time(x.at)} onOpen={() => openTrade(x.trade as ChatTrade)}
                           onReply={r => void post(r)} />
                       ) : (
-                      <div className={'ch-bubble' + (!mine && tagsMe(x.text, m.me.name) ? ' is-tagged' : '')}
+                      <div className={'ch-bubble' + (x.gif ? ' is-gif' : '') + (!mine && tagsMe(x.text, m.me.name) ? ' is-tagged' : '')}
                         title={time(x.at)}>
-                        {withTags(x.text)}
+                        {x.gif ? (
+                          <img className="ch-gif" src={x.gif.url} alt="GIF" loading="lazy"
+                            style={{ aspectRatio: x.gif.w + ' / ' + x.gif.h }} />
+                        ) : withTags(x.text)}
                         <span className="ch-time">{time(x.at)}</span>
                         {owner && !mine ? (
                           <button type="button" className="ch-del" aria-label="Delete message" onClick={() => {
@@ -203,6 +279,17 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
                         ) : null}
                       </div>
                       )}
+                      </div>
+                      {reactsOf(x).some(r => r.n) ? (
+                        <div className="ch-reacts">
+                          {reactsOf(x).filter(r => r.n).map(r => (
+                            <button key={r.key} type="button" className={'ch-react' + (r.mine ? ' is-mine' : '')}
+                              onClick={() => toggleReact(x, r.key)}>
+                              {r.emoji}{r.n > 1 ? <span>{r.n}</span> : null}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -225,6 +312,34 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
             ))}
           </div>
         ) : null}
+        {gifOpen ? (
+          <div className="ch-gifs">
+            <div className="ch-gifs-head">
+              <input className="ch-gifs-q" placeholder="Search GIFs" value={gifQ} autoFocus={gifsEnabled()}
+                onChange={e => setGifQ(e.target.value)} />
+              <button type="button" className="chd-x" aria-label="Close GIFs" onClick={() => setGifOpen(false)}>✕</button>
+            </div>
+            {!gifsEnabled() ? (
+              <div className="ch-gifs-note">GIFs need a Giphy key: the owner adds VITE_GIPHY_KEY in GitHub.</div>
+            ) : gifErr ? <div className="ch-gifs-note">{gifErr}</div>
+              : gifs == null ? <div className="ch-gifs-note">Loading…</div>
+                : !gifs.length ? <div className="ch-gifs-note">No GIFs for that.</div> : (
+                  <div className="ch-gifs-grid">
+                    {gifs.map(g => (
+                      <button key={g.id} type="button" className="ch-gifs-item" aria-label={g.title}
+                        disabled={busy} onClick={() => void sendGif(g)}>
+                        <img src={g.preview} alt="" loading="lazy" style={{ aspectRatio: g.w + ' / ' + g.h }} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+            <div className="ch-gifs-by">Powered by GIPHY</div>
+          </div>
+        ) : null}
+        <button type="button" className="ch-gif-btn" aria-label="Send a GIF" aria-expanded={gifOpen}
+          onClick={() => { setGifOpen(o => !o); setTagQ(null); }}>
+          GIF
+        </button>
         <button type="button" className="ch-trade-btn" aria-label="Propose a trade" title="Propose a trade"
           onClick={() => setProposing('pick')}>
           ⇄

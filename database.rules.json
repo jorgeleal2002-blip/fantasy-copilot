@@ -83,7 +83,15 @@
         ".read": "auth != null && (root.child('members').child(auth.uid).exists() || root.child('admins').child(auth.uid).exists())",
         "$msg": {
           ".write": "auth != null && ((!data.exists() && (root.child('members').child(auth.uid).exists() || root.child('admins').child(auth.uid).exists()) && newData.child('uid').val() === auth.uid) || root.child('admins').child(auth.uid).exists())",
-          ".validate": "newData.hasChildren(['uid','name','text','at']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 500 && newData.child('name').isString() && newData.child('name').val().length <= 40 && newData.child('at').isNumber() && newData.child('at').val() <= now"
+          ".validate": "newData.hasChildren(['uid','name','text','at']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 500 && newData.child('name').isString() && newData.child('name').val().length <= 40 && newData.child('at').isNumber() && newData.child('at').val() <= now",
+          "r": {
+            "$react": {
+              "$uid": {
+                ".write": "auth != null && auth.uid === $uid && data.parent().parent().parent().exists() && (root.child('members').child(auth.uid).exists() || root.child('admins').child(auth.uid).exists())",
+                ".validate": "newData.isBoolean() && newData.val() === true && ($react === 'like' || $react === 'love' || $react === 'haha' || $react === 'fire' || $react === 'wow' || $react === 'sad')"
+              }
+            }
+          }
         }
       }
     }

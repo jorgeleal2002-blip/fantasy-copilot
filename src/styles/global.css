@@ -3093,6 +3093,8 @@ button { font-family: inherit; }
    out of its background: on iPhone those gestures flashed the image, popped a
    preview and left the screen half-scrolled when the tap was only a tap. */
 html { -webkit-tap-highlight-color: transparent; }
+/* No double-tap zoom either: panning stays, the zoom gestures go. */
+html, body { touch-action: pan-x pan-y; }
 img, svg {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -3604,6 +3606,136 @@ img, svg {
   cursor: pointer;
 }
 .ch-propose { width: 100%; margin: 12px 0; border-radius: 12px; padding: 12px; font-size: 15px; font-weight: 600; }
+/* Reactions: the six over a held message, and the ones left, under it. */
+.ch-hold {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.ch-row.is-me .ch-hold { align-items: flex-end; }
+.ch-react-pick {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 3;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: var(--hairline) solid rgba(242, 253, 254, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.52);
+  animation: popIn 0.16s ease both;
+}
+.ch-row.is-me .ch-react-pick { left: auto; right: 0; }
+.ch-react-pick button {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font-size: 21px;
+  cursor: pointer;
+}
+.ch-react-pick button:hover { background: rgba(242, 253, 254, 0.07); }
+.ch-react-pick button.is-mine { background: color-mix(in srgb, var(--color-accent) 28%, transparent); }
+/* The way in on a laptop, where nothing is held: shown on hover. */
+.ch-react-btn {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: -32px;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(242, 253, 254, 0.07);
+  color: rgba(242, 253, 254, 0.62);
+  font-size: 15px;
+  cursor: pointer;
+}
+.ch-row.is-me .ch-react-btn { right: auto; left: -32px; }
+@media (hover: hover) { .ch-hold:hover .ch-react-btn { display: block; } }
+.ch-reacts { display: flex; flex-wrap: wrap; gap: 4px; margin: -6px 8px 0; position: relative; z-index: 1; }
+.ch-row.is-me .ch-reacts { justify-content: flex-end; }
+.ch-react {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: var(--hairline) solid var(--bg-base);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ch-react span { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ch-react.is-mine { background: color-mix(in srgb, var(--color-accent) 28%, var(--color-surface)); border-color: color-mix(in srgb, var(--color-accent) 52%, transparent); }
+
+/* GIFs: one in a message, and the picker over the box. */
+.ch-bubble.is-gif,
+.chd-sheet .ch-bubble.is-gif,
+.chd-sheet .ch-row.is-me .ch-bubble.is-gif { padding: 0; background: none; }
+.ch-gif { display: block; width: 220px; max-width: 100%; height: auto; border-radius: 12px; background: rgba(242, 253, 254, 0.07); }
+.ch-bubble.is-gif .ch-time { display: block; margin: 4px 4px 0; text-align: right; }
+.ch-gif-btn {
+  height: 40px;
+  padding: 0 10px;
+  flex: none;
+  border: var(--hairline) solid var(--color-divider);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.ch-gifs {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 100%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(60vh, 440px);
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--color-surface);
+  border: var(--hairline) solid rgba(242, 253, 254, 0.12);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.52);
+}
+.ch-gifs-head { display: flex; gap: 8px; align-items: center; }
+.ch-gifs-q {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: var(--hairline) solid var(--color-divider);
+  background: var(--bg-base);
+  color: var(--color-text);
+  font: 400 16px 'Inter', system-ui;
+  outline: none;
+}
+.ch-gifs-grid { flex: 1; min-height: 0; overflow-y: auto; columns: 2; column-gap: 6px; overscroll-behavior: contain; }
+.ch-gifs-item { display: block; width: 100%; margin: 0 0 6px; padding: 0; border: 0; background: none; cursor: pointer; break-inside: avoid; }
+.ch-gifs-item img { display: block; width: 100%; height: auto; border-radius: 8px; background: rgba(242, 253, 254, 0.07); }
+.ch-gifs-note { padding: 16px 8px; text-align: center; font-size: 13px; color: rgba(242, 253, 254, 0.62); }
+.ch-gifs-by { font-size: 10px; text-align: right; color: rgba(242, 253, 254, 0.52); letter-spacing: 0.04em; text-transform: uppercase; }
+
 /* Tags: in a message, and the list that comes up after an @. */
 .ch-at {
   border: 0;
