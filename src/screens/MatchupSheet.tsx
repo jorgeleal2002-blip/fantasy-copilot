@@ -287,8 +287,12 @@ function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'righ
           Montgo..." — on the screen whose subject is which of two players did
           more. Nothing else in the cell is text that can be read wrong when it
           is cut, and a name is. */}
-      <div className="ms-pl-name">{c.name}</div>
-      <Nick app={app} id={c.id} />
+      {/* The nickname beside the name, on its line: under it, it pushed this
+          side's face and score down out of line with the other side's. */}
+      <div className="ms-name-row">
+        <div className="ms-pl-name">{c.name}</div>
+        <Nick app={app} id={c.id} className="is-inline" />
+      </div>
       <div className="ms-cell-top">
         <Face {...(c.id ? app.photoSet(c.id) : { photo: null })} pos={c.pos || '—'} size={30} />
         <div className="ms-who">

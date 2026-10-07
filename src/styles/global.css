@@ -1669,6 +1669,10 @@ button { font-family: inherit; }
   gap: 6px;
 }
 .ms-cell.is-right { text-align: right; }
+.ms-name-row { display: flex; align-items: center; gap: 6px; min-width: 0; height: var(--name-line); }
+.ms-name-row .ms-pl-name { flex: 0 1 auto; min-width: 0; }
+.ms-cell.is-right .ms-name-row { flex-direction: row-reverse; }
+.pl-nick-line.is-inline { flex: 0 10 auto; min-width: 32px; margin: 0; }
 .ms-cell.is-right .ms-cell-top { flex-direction: row-reverse; }
 .ms-cell.is-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .ms-cell.is-tap:active { background: rgba(242, 253, 254, 0.07); }
