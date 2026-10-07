@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type CSSProperties } from 'react';
 import { ACCENT, BAD, GOOD, MID, PEAK, POS, POS_COLOR } from '../model/constants';
 import { overallRatings } from '../model/overall';
 import { seasonOutlook, teamStrength, type OutlookTeam } from '../model/outlook';
@@ -118,7 +118,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
       value: myOverall ? 'Overall ' + Math.round(myOverall.score) + ' / 100' : '—',
     },
     {
-      label: 'in the league now',
+      label: 'standings',
       rank: meRow && games ? table.findIndex(r => r.id === meRow.id) + 1 : 0,
       value: meRow && games ? meRow.record.label + ' · ' + num(meRow.record.pointsFor) + ' pts' : 'no games yet',
     },
@@ -246,45 +246,61 @@ function Summary({ app, m }: { app: App; m: Model }) {
 
       {/* Three places: the lineup's Rating against the league's, the table
           as it stands, and the table the simulated season ends on. */}
-      {empty ? null : <div className="card is-hero" style={heroCard}>
-        <div style={{ position: 'relative' }}>
-          <div style={kicker}>Your place in the league</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px 12px', marginTop: 10 }}>
-            {heroRanks.map(h => (
-              <div key={h.label}>
-                <div style={{
-                  fontSize: 26, fontWeight: 500, letterSpacing: '-0.035em', lineHeight: '26px',
-                  fontVariantNumeric: 'tabular-nums',
-                  color: m.leagueHasRosters && me ? h.color : dim(0.52),
-                }}>
-                  {m.leagueHasRosters && me && h.rank ? ord(h.rank) : '—'}
-                </div>
-                <div style={{ fontSize: 10, color: dim(0.62), marginTop: 3 }}>{h.label}</div>
-                <div style={{ fontSize: 10, color: dim(0.52), marginTop: 1, overflowWrap: 'anywhere' }}>{h.value}</div>
+      {empty ? null : (() => {
+        const shown = m.leagueHasRosters && !!me;
+        const [ov, now, proj] = heroRanks;
+        const place = (h: typeof ov) => (shown && h.rank ? ord(h.rank) : '—');
+        const tone = (h: typeof ov) => (shown && h.rank ? h.color : dim(0.52));
+        const score = myOverall ? Math.round(myOverall.score) : 0;
+        return (
+          <div className="card is-hero yp" style={heroCard}>
+            <div style={kicker}>Your place in the league</div>
+            {/* The overall: a dial with the score, the place it earns, and
+                the three things it is made of. */}
+            <div className="yp-overall">
+              <div className="yp-ring" style={{ '--p': score, '--c': tone(ov) } as CSSProperties}>
+                <span className="yp-ring-num">{myOverall ? score : '—'}</span>
+                <span className="yp-ring-k">OVR</span>
               </div>
-            ))}
-          </div>
-          {/* What the overall is made of, each out of 100. */}
-          {myOverall && m.leagueHasRosters ? (
-            <div className="ov-parts">
-              {[
-                { k: 'Fit', w: '40%', v: myOverall.fit, sub: 'best lineup' },
-                { k: 'Value', w: '30%', v: myOverall.value, sub: 'roster worth' },
-                { k: 'Record', w: '30%', v: myOverall.record, sub: meRow?.record.label || '' },
-              ].map(x => (
-                <div key={x.k} className="ov-part">
-                  <div className="ov-part-head">
-                    <span>{x.k} <i>{x.w}</i></span>
+              <div className="yp-ov-body">
+                <div className="yp-ov-top">
+                  <span className="yp-place" style={{ color: tone(ov) }}>{place(ov)}</span>
+                  <span className="yp-of">overall · of {m.teamCount}</span>
+                </div>
+                {myOverall ? [
+                  { k: 'Fit', w: '40%', v: myOverall.fit },
+                  { k: 'Value', w: '30%', v: myOverall.value },
+                  { k: 'Record', w: '30%', v: myOverall.record },
+                ].map(x => (
+                  <div key={x.k} className="yp-part">
+                    <span className="yp-part-k">{x.k}<i>{x.w}</i></span>
+                    <span className="yp-bar"><span style={{ width: (x.v ?? 0) + '%' }} /></span>
                     <b>{x.v == null ? '—' : Math.round(x.v)}</b>
                   </div>
-                  <div className="ov-bar"><span style={{ width: (x.v ?? 0) + '%' }} /></div>
-                  <div className="ov-part-sub">{x.v == null ? 'no games yet' : x.sub}</div>
+                )) : null}
+              </div>
+            </div>
+            {/* Where the table has you, and where the season should leave you. */}
+            <div className="yp-pair">
+              {[{ h: now, k: 'Standings', icon: '📊' }, { h: proj, k: 'Projected finish', icon: '🔮' }].map(({ h, k, icon }) => (
+                <div key={k} className="yp-tile" style={{ '--c': tone(h) } as CSSProperties}>
+                  <div className="yp-tile-k"><span aria-hidden="true">{icon}</span>{k}</div>
+                  <div className="yp-tile-place">
+                    <span style={{ color: tone(h) }}>{place(h)}</span>
+                    <i>of {m.teamCount}</i>
+                  </div>
+                  <div className="yp-tile-sub">{h.value}</div>
+                  {h === proj && mine ? (
+                    <span className="yp-bar is-thin" title="Playoff chance">
+                      <span style={{ width: Math.round(mine.playoffPct * 100) + '%' }} />
+                    </span>
+                  ) : null}
                 </div>
               ))}
             </div>
-          ) : null}
-        </div>
-      </div>}
+          </div>
+        );
+      })()}
 
       {/* A ranking of nothing against nine other teams is four empty bars. */}
       {empty ? null : <Card>
