@@ -4085,12 +4085,16 @@ img, svg {
   left: 0;
   right: 0;
   bottom: 0;
-  top: 6%;
+  /* The whole screen: open, the chat is all there is, nothing of the page
+     behind peeking out above it. */
+  top: 0;
+  padding-top: var(--safe-top);
   display: flex;
   flex-direction: column;
-  border-radius: 16px 16px 0 0;
-  background: var(--bg-base);
-  border-top: var(--hairline) solid rgba(242, 253, 254, 0.12);
+  border-radius: 0;
+  background-color: var(--bg-base);
+  background-image: var(--bg-field);
+  background-repeat: no-repeat;
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
   padding-bottom: var(--safe-bottom);
   transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
@@ -4099,7 +4103,7 @@ img, svg {
 .chd-sheet.is-dragging { transition: none; }
 /* Typing: the keyboard has the bottom of the screen, so the sheet takes all
    that is left and drops the home-indicator padding under the box. */
-.chd-layer.is-kb .chd-sheet { top: 0; border-radius: 0; padding-bottom: 0; }
+.chd-layer.is-kb .chd-sheet { padding-bottom: 0; }
 .chd-layer.is-kb .chd-head .chd-grip { display: none; }
 .chd-head {
   padding: 8px 16px 12px;
@@ -4142,6 +4146,8 @@ img, svg {
 .chd-sheet .ch-input { border-top: var(--hairline) solid var(--color-divider); padding: 8px 12px 12px; align-items: flex-end; }
 .chd-sheet .ch-input textarea { border-radius: 999px; padding: 9px 16px; min-height: 40px; background: rgba(242, 253, 254, 0.04); }
 .chd-sheet .ch-list { padding: 8px 12px 8px; gap: 2px; }
+/* A short conversation sits at the bottom, by the box, not at the top. */
+.chd-sheet .ch-list > :first-child { margin-top: auto; }
 
 @media (min-width: 900px) {
   /* A laptop keeps it beside the page: a floating bar at the bottom right,
