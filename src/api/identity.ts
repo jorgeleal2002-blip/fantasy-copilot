@@ -22,8 +22,11 @@
  * the only way in — the feature is off, not broken.
  */
 
-/** Google's OAuth web client, from the Firebase console's Google provider. */
-const CLIENT_ID: string = import.meta.env?.VITE_GOOGLE_CLIENT_ID || '';
+/** Google's OAuth web client, from the Firebase console's Google provider.
+ *  The build variable wins; otherwise this project's own web client, which
+ *  is public by design — it ships to every browser that shows the button. */
+const CLIENT_ID: string = import.meta.env?.VITE_GOOGLE_CLIENT_ID
+  || (import.meta.env?.VITE_FIREBASE_KEY ? '168144228738-9hsv10f9q0fguj696ukqf6tdntpiephl.apps.googleusercontent.com' : '');
 /** The Firebase project's web API key — public by design; it identifies the
  *  project and authorises nothing on its own. */
 const FIREBASE_KEY: string = import.meta.env?.VITE_FIREBASE_KEY || '';
