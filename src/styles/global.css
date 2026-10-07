@@ -3358,3 +3358,18 @@ img, svg {
   .app-column-wide .shell { zoom: 1.3; }
   .app-frame.is-welcome .app-column > * { zoom: 1.3; }
 }
+/* Inside the zoomed shell a viewport unit is counted in zoomed pixels, so a
+   sheet sized off 100vh came out taller than the window and lost its top.
+   Divided back by the zoom, it fits again. */
+@media (min-width: 1280px) {
+  .app-column-wide .overlay-panel {
+    width: min(680px, calc((100vw - 96px) / 1.15));
+    max-height: min(880px, calc((100vh - 80px) / 1.15));
+  }
+}
+@media (min-width: 1680px) {
+  .app-column-wide .overlay-panel {
+    width: min(680px, calc((100vw - 96px) / 1.3));
+    max-height: min(880px, calc((100vh - 80px) / 1.3));
+  }
+}

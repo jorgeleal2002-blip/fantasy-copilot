@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Doctors">
+  <!-- The badge alone on a transparent ground, for places that draw their own
+       tile around an icon — a desktop taskbar, a browser tab. The navy square
+       version left the face small inside two frames there. -->
+  <defs>
+    <clipPath id="h"><ellipse cx="256" cy="296" rx="118" ry="140"/></clipPath>
+    <path id="t" d="M256 318 C284 315, 306 307, 326 295 C340 286, 358 284, 360 296 C362 309, 353 322, 338 331 C318 342, 290 350, 256 351 Z"/>
+  </defs>
+  <circle cx="256" cy="256" r="254" fill="#00205B"/>
+  <circle cx="256" cy="256" r="240" fill="#FFFFFF"/>
+  <circle cx="256" cy="256" r="231" fill="#C8102E"/>
+  <circle cx="368" cy="210" r="19" fill="#E4E4EA"/>
+  <path d="M362 216 C392 230, 404 260, 398 286 C388 270, 372 248, 352 234 Z" fill="#E4E4EA"/>
+  <g clip-path="url(#h)">
+    <ellipse cx="256" cy="296" rx="118" ry="140" fill="#C98A55"/>
+    <path d="M256 276 C264 292, 271 310, 271 320 C271 326, 241 326, 241 320 C241 310, 248 292, 256 276 Z" fill="#B67846"/>
+    <path d="M230 368 Q256 375 282 368" stroke="#8B5A32" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M130 140 H382 V228 Q256 254 130 228 Z" fill="#FFFFFF"/>
+  </g>
+  <path d="M198 260 L240 254 L240 266 L198 270 Z" fill="#4A2C17"/>
+  <path d="M314 260 L272 254 L272 266 L314 270 Z" fill="#4A2C17"/>
+  <ellipse cx="220" cy="284" rx="13" ry="10" fill="#2B2B33"/>
+  <ellipse cx="292" cy="284" rx="13" ry="10" fill="#2B2B33"/>
+  <g fill="#FFFFFF">
+    <use href="#t"/>
+    <use href="#t" transform="translate(512,0) scale(-1,1)"/>
+  </g>
+  <path d="M232 170 H280 V182 L257 228 H236 L259 182 H232 Z" fill="#00205B"/>
+</svg>
