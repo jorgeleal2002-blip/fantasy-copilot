@@ -3400,3 +3400,24 @@ img, svg {
   .overlay-body { padding: 6px 32px 40px; }
   .overlay-body > * { max-width: 1000px; margin-left: auto; margin-right: auto; }
 }
+
+/* Every screen uses the whole width beside the rail: no centred column with
+   empty bands down both sides, at any size. */
+@media (min-width: 900px) {
+  .shell-head,
+  .overlay-head { max-width: none !important; }
+  .shell-main > *,
+  .overlay-body > * { max-width: none !important; }
+}
+
+/* The player banner on a wide screen. Half its width for the photo put his
+   face in the middle of the banner — behind the name — once the banner was
+   900px wide instead of 360. On a laptop the photo keeps a fixed width on the
+   left, sized off the taller banner, and the name starts after it. */
+@media (min-width: 900px) {
+  .ps-hero { min-height: 190px; padding: 18px 22px 16px; }
+  .ps-hero-face img { width: 300px; object-position: center 18%; }
+  .ps-hero-face.is-cut img { width: 170px; }
+  .ps-hero-body { margin-left: 200px; }
+  .ps-hero-logo { width: 220px; height: 220px; margin-top: -110px; right: -20px; }
+}
