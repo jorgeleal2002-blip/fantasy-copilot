@@ -1,4 +1,6 @@
 import { ACCENT, BAD, GOOD, MID, POS } from '../model/constants';
+import { chatEnabled } from '../api/chat';
+import { LeagueChat } from './LeagueChat';
 import { num } from '../model/math';
 import type { LeagueRow, Model, PlayerFit } from '../model/types';
 import type { App, LeagueView } from '../state/useApp';
@@ -75,6 +77,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
     { key: 'weeks', label: 'Weeks' },
     { key: 'rankings', label: 'Rankings' },
     { key: 'players', label: 'Players' },
+    ...(chatEnabled() ? [{ key: 'chat' as LeagueView, label: 'Chat' }] : []),
   ];
 
   return (
@@ -181,6 +184,7 @@ export function LeagueTab({ app, m }: { app: App; m: Model }) {
       ) : null}
 
       {app.leagueView === 'players' ? <TopPlayers app={app} m={m} /> : null}
+      {app.leagueView === 'chat' ? <LeagueChat m={m} /> : null}
     </Screen>
   );
 }

@@ -40,7 +40,7 @@ import { nextDetailStack, topDetail } from './detail-stack';
 export type Stage = 'connect' | 'link' | 'leagues' | 'app';
 export type Tab = 'team' | 'trades' | 'draft' | 'league' | 'settings';
 export type TeamView = 'resumen' | 'lineup' | 'roster' | 'activos';
-export type LeagueView = 'weeks' | 'myteam' | 'rankings' | 'players';
+export type LeagueView = 'weeks' | 'myteam' | 'rankings' | 'players' | 'chat';
 export type FeedState = 'idle' | 'loading' | 'ok' | 'fail';
 
 export const BOOT_STEPS = [
