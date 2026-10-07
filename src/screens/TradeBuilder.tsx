@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Nick } from '../ui/Nick';
 import { colorOf } from '../model/constants';
 import { evaluateTrade, needFactor, type RosterRoom, type TeamLedger, type TradeAsset } from '../model/trade-eval';
 import { fitHeadline, outcomeFor, situationLabel, situationOf, type FitHeadline, type Outcome, type TeamCase } from '../model/team-verdict';
@@ -463,6 +464,7 @@ function Card({ app, m, asset }: { app: App; m: Model; asset: TradeAsset & { ups
         : <span className="fb-face fb-face-blank" />}
       <span className="fb-card-body">
         <span className="fb-card-name">{asset.name}</span>
+        <Nick app={app} id={asset.isPick ? null : asset.id} />
         <span className="fb-card-meta">
           {pos ? (
             <span className="fb-pill" style={{ background: colorOf(pos) }}>

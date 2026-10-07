@@ -1,4 +1,5 @@
 import { Fragment, useEffect } from 'react';
+import { Nick } from '../ui/Nick';
 import { benchRows, leaderOf, lineupRows, pairMatchups, type LineupCell, type MatchupSide } from '../model/matchups';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -287,6 +288,7 @@ function Cell({ app, c, align }: { app: App; c: LineupCell | null; align?: 'righ
           more. Nothing else in the cell is text that can be read wrong when it
           is cut, and a name is. */}
       <div className="ms-pl-name">{c.name}</div>
+      <Nick app={app} id={c.id} />
       <div className="ms-cell-top">
         <Face {...(c.id ? app.photoSet(c.id) : { photo: null })} pos={c.pos || '—'} size={30} />
         <div className="ms-who">

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, type CSSProperties } from 'react';
+import { Nick } from '../ui/Nick';
 import { ACCENT, BAD, GOOD, MID, PEAK, POS, POS_COLOR } from '../model/constants';
 import { overallRatings } from '../model/overall';
 import { seasonOutlook, teamStrength, type OutlookTeam } from '../model/outlook';
@@ -547,6 +548,7 @@ function Roster({ app, m }: { app: App; m: Model }) {
                 }} />
                 <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{p.name}</span>
               </div>
+              <Nick app={app} id={p.id} />
               <div style={{ fontSize: 12, color: dim(0.62), marginTop: 2 }}>{rosterMeta(p)}</div>
               {(() => {
                 const when = gameLine(p.team, app.week, Number(m.league.season), Date.now(), app.nflGames);
@@ -638,6 +640,7 @@ function Assets({ app, m }: { app: App; m: Model }) {
             >
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</div>
+<Nick app={app} id={p.id} />
                 <div style={{ fontSize: 10, color: dim(0.52), marginTop: 2 }}>
                   {p.pos} · {p.age} yrs · past peak ({PEAK[p.pos]})
                 </div>
@@ -657,6 +660,7 @@ function Assets({ app, m }: { app: App; m: Model }) {
           {m.buried.map(p => (
             <DividedRow key={p.id} onClick={() => app.setDetail(p.id)} style={{ padding: '8px 0' }}>
               <div style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</div>
+<Nick app={app} id={p.id} />
               <div style={{ fontSize: 10, color: dim(0.52), marginTop: 2 }}>
                 {p.pos} · {p.age ?? '?'} yrs · does not make your optimal lineup
               </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Nick } from './Nick';
 import type { Pos } from '../api/types';
 import { POS } from '../model/constants';
 import { num } from '../model/math';
@@ -133,6 +134,7 @@ export function PlayerSearch(
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{r.name}</div>
+<Nick app={app} id={r.id} />
                   <div style={{ fontSize: 10, color: dim(0.52), marginTop: 2, ...ellipsis }}>{r.meta}</div>
                 </div>
                 <div style={{ flex: 'none', textAlign: 'right' }}>

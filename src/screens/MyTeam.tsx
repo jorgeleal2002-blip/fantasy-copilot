@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Nick } from '../ui/Nick';
 import { CELL_INK, slotFill } from '../model/constants';
 import { clockFor, gameLine, phaseFor, type GamePhase } from '../model/game-clock';
 import { benchRows, lineupRows, pairMatchups, type LineupCell, type MatchupSide } from '../model/matchups';
@@ -130,6 +131,7 @@ function Row({ app, m, slot, c, phase }: {
       <Face {...(c.id ? app.photoSet(c.id) : { photo: null })} pos={c.pos || '—'} size={36} />
       <div className="mt-who">
         <div className="mt-pl">{c.name}</div>
+        <Nick app={app} id={c.id} />
         <div className={'mt-when' + (phase === 'live' ? ' is-live' : '')}>
           {c.id ? [c.team, when].filter(Boolean).join(' · ') : 'Empty slot'}
         </div>

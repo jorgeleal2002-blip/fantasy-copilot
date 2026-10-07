@@ -1,4 +1,5 @@
 import { ACCENT, BAD, GOOD, MID, POS } from '../model/constants';
+import { Nick } from '../ui/Nick';
 import { num } from '../model/math';
 import type { Model, TeamSheet as Sheet } from '../model/types';
 import type { App } from '../state/useApp';
@@ -112,6 +113,7 @@ export function TeamSheet({ app, m, rosterId }: { app: App; m: Model; rosterId: 
         >
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</div>
+<Nick app={app} id={p.id} />
             <div style={{ fontSize: 10, color: dim(0.52), marginTop: 2 }}>
               {p.pos} · {p.age ?? '?'} yrs · {p.team}
             </div>

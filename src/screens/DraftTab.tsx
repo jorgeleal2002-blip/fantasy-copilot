@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import { Nick } from '../ui/Nick';
 import type { FillPos, Pos, PosFilter } from '../api/types';
 import { ACCENT, BAD, GOOD, POS } from '../model/constants';
 import { num, pickLabel } from '../model/math';
@@ -258,6 +259,7 @@ export function DraftTab({ app, m }: { app: App; m: Model }) {
                   <Face {...app.photoSet(p.id)} pos={p.pos} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{p.name}</div>
+<Nick app={app} id={p.id} />
                     <div style={{ fontSize: 12, color: dim(0.62), marginTop: 2 }}>
                       {/* A team defence has no age, and "? yrs" is not a fact. */}
                       {[p.pos, p.team || 'no team yet']

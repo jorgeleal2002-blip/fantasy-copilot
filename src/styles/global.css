@@ -4329,3 +4329,15 @@ img, svg {
   color: var(--color-text);
 }
 .ps-nick-edit .ps-nick-save { background: var(--color-accent); color: var(--color-bg); }
+
+/* A player's league nickname, under his name wherever he is listed. */
+.pl-nick {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  font-style: italic;
+  color: color-mix(in srgb, var(--color-accent) 75%, var(--color-text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

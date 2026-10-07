@@ -1,4 +1,5 @@
 import { ACCENT, BAD, GOOD, MID, POS } from '../model/constants';
+import { Nick } from '../ui/Nick';
 import { num } from '../model/math';
 import type { LeagueRow, Model, PlayerFit } from '../model/types';
 import type { App, LeagueView } from '../state/useApp';
@@ -261,6 +262,7 @@ function TopPlayers({ app, m }: { app: App; m: Model }) {
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em', ...ellipsis }}>{x.name}</div>
+<Nick app={app} id={x.id} />
                   <div style={{ fontSize: 10, color: dim(0.52), marginTop: 2, ...ellipsis }}>
                     {x.pos} · {x.team || 'FA'} ·{' '}
                     {lens === 'fut'
