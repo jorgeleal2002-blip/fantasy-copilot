@@ -3642,6 +3642,17 @@ img, svg {
   cursor: pointer;
 }
 .ch-react-pick button:hover { background: rgba(242, 253, 254, 0.07); }
+.ch-react-pick.is-below { bottom: auto; top: calc(100% + 4px); }
+.ch-react-pick .ch-react-more { font-size: 17px; color: rgba(242, 253, 254, 0.75); background: rgba(242, 253, 254, 0.07); }
+/* The whole set: a grid over the message, scrolling if a short screen needs it. */
+.ch-react-pick.is-all {
+  display: grid;
+  grid-template-columns: repeat(7, 38px);
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 16px;
+  overscroll-behavior: contain;
+}
 .ch-react-pick button.is-mine { background: color-mix(in srgb, var(--color-accent) 28%, transparent); }
 /* The way in on a laptop, where nothing is held: shown on hover. */
 .ch-react-btn {

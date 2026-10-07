@@ -35,8 +35,18 @@ export interface ChatGif { url: string; w: number; h: number }
 /** The reactions on offer. Keyed by name: the database will not take most
  *  emoji as a key, and the rules list exactly these. */
 export const REACTS = [
+  // The quick six, first in the picker.
   ['like', '👍'], ['love', '❤️'], ['haha', '😂'], ['fire', '🔥'], ['wow', '😮'], ['sad', '😢'],
+  // And the rest, behind the +.
+  ['rofl', '🤣'], ['cry', '😭'], ['skull', '💀'], ['eyes', '👀'], ['think', '🤔'], ['cool', '😎'],
+  ['angry', '😡'], ['dislike', '👎'], ['clap', '👏'], ['pray', '🙏'], ['flex', '💪'], ['handshake', '🤝'],
+  ['party', '🥳'], ['hundred', '💯'], ['goat', '🐐'], ['trophy', '🏆'], ['crown', '👑'], ['football', '🏈'],
+  ['money', '💰'], ['rocket', '🚀'], ['up', '📈'], ['down', '📉'], ['ice', '🧊'], ['clown', '🤡'],
+  ['trash', '🗑️'], ['poop', '💩'], ['vomit', '🤮'], ['ambulance', '🚑'], ['sleep', '😴'], ['shush', '🤫'],
+  ['salute', '🫡'], ['cap', '🧢'], ['check', '✅'], ['nope', '❌'],
 ] as const;
+/** How many show before the +. */
+export const QUICK_REACTS = 6;
 export type ReactKey = (typeof REACTS)[number][0];
 
 function readGif(x: unknown): ChatGif | undefined {

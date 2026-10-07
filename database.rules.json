@@ -88,7 +88,7 @@
             "$react": {
               "$uid": {
                 ".write": "auth != null && auth.uid === $uid && data.parent().parent().parent().exists() && (root.child('members').child(auth.uid).exists() || root.child('admins').child(auth.uid).exists())",
-                ".validate": "newData.isBoolean() && newData.val() === true && ($react === 'like' || $react === 'love' || $react === 'haha' || $react === 'fire' || $react === 'wow' || $react === 'sad')"
+                ".validate": "newData.isBoolean() && newData.val() === true && $react.matches(/^[a-z]{2,12}$/)"
               }
             }
           }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { currentUid } from '../api/access';
-import { CHAT_MAX, REACTS, chatEnabled, deleteChat, reactChat, sendChat, tagsMe, type ChatGif, type ChatMessage, type ChatTrade, type ReactKey } from '../api/chat';
+import { CHAT_MAX, QUICK_REACTS, REACTS, chatEnabled, deleteChat, reactChat, sendChat, tagsMe, type ChatGif, type ChatMessage, type ChatTrade, type ReactKey } from '../api/chat';
 import { findGifs, gifsEnabled, type GifHit } from '../api/gifs';
 import { isOwnerHere } from '../model/access';
 import { colorOf } from '../model/constants';
@@ -77,7 +77,10 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
   /* Reactions: hold a message (or hover it on a laptop) for the six, tap a
      reaction under it to add yours or take it back. Shown at once, before the
      database has answered. */
-  const [reacting, setReacting] = useState<string | null>(null);
+  const [reacting, setReactingState] = useState<string | null>(null);
+  /** The whole set open, rather than the quick six. */
+  const [reactAll, setReactAll] = useState(false);
+  const setReacting = (id: string | null) => { setReactingState(id); setReactAll(false); };
   const [mineNow, setMineNow] = useState<Record<string, boolean>>({});
   useEffect(() => { setMineNow({}); }, [msgs]);
   const hold = useRef<number | undefined>(undefined);
@@ -249,12 +252,25 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
                         onPointerDown={() => holdStart(x.id)} onPointerUp={holdEnd} onPointerLeave={holdEnd}
                         onPointerCancel={holdEnd} onContextMenu={e => { e.preventDefault(); setReacting(x.id); }}>
                       {reacting === x.id ? (
-                        <div className="ch-react-pick" role="menu" aria-label="React">
-                          {REACTS.map(([key, emoji]) => (
+                        <div className={'ch-react-pick' + (reactAll ? ' is-all' : '')} role="menu" aria-label="React"
+                          ref={el => {
+                            // Too near the top of the chat to open above the
+                            // message: it opens under it instead.
+                            const box = list.current;
+                            if (!el || !box) return;
+                            const room = (el.parentElement as HTMLElement).getBoundingClientRect().top - box.getBoundingClientRect().top;
+                            el.classList.toggle('is-below', room < el.offsetHeight + 8);
+                            if (reactAll) el.scrollIntoView({ block: 'nearest' });
+                          }}>
+                          {(reactAll ? REACTS : REACTS.slice(0, QUICK_REACTS)).map(([key, emoji]) => (
                             <button key={key} type="button" role="menuitem" aria-label={key}
                               className={reactsOf(x).find(r => r.key === key)?.mine ? 'is-mine' : ''}
                               onClick={() => toggleReact(x, key)}>{emoji}</button>
                           ))}
+                          {!reactAll ? (
+                            <button type="button" className="ch-react-more" aria-label="More reactions"
+                              onClick={() => setReactAll(true)}>＋</button>
+                          ) : null}
                         </div>
                       ) : null}
                       <button type="button" className="ch-react-btn" aria-label="React" onClick={() => setReacting(reacting === x.id ? null : x.id)}>☺</button>
