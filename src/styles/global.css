@@ -3343,3 +3343,18 @@ img, svg {
   }
   .app-frame.is-welcome .ag { max-width: 420px; }
 }
+
+/* ── Scale on big screens ────────────────────────────────────────────────
+   The type scale is drawn for a phone held a foot away. On a laptop across a
+   desk the same 12px reads as fine print and the whole app looked small and
+   cheap, so the inside of the app is drawn larger there. `zoom` re-lays the
+   page at the new size — text stays sharp, unlike a scale transform — and a
+   percentage height still means the window's, so the shell keeps fitting it. */
+@media (min-width: 1280px) {
+  .app-column-wide .shell { zoom: 1.15; }
+  .app-frame.is-welcome .app-column > * { zoom: 1.15; }
+}
+@media (min-width: 1680px) {
+  .app-column-wide .shell { zoom: 1.3; }
+  .app-frame.is-welcome .app-column > * { zoom: 1.3; }
+}
