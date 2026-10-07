@@ -4166,8 +4166,9 @@ img, svg {
   margin-top: 8px;
   padding: 12px;
   border-radius: 12px;
-  background: rgba(242, 253, 254, 0.04);
-  border: var(--hairline) solid rgba(242, 253, 254, 0.07);
+  /* The app's own card colour, the navy every other tile here is drawn in. */
+  background: var(--color-surface);
+  border: var(--hairline) solid var(--color-divider);
 }
 .yp-ring {
   --p: 0;
@@ -4188,7 +4189,7 @@ img, svg {
   position: absolute;
   inset: 4px;
   border-radius: 999px;
-  background: var(--bg-base);
+  background: var(--color-surface);
 }
 .yp-ring-num, .yp-ring-k { position: relative; }
 .yp-ring-num { font-size: 17px; font-weight: 600; line-height: 18px; font-variant-numeric: tabular-nums; }
@@ -4203,14 +4204,15 @@ img, svg {
 .yp-part b { font-size: 12px; font-weight: 500; text-align: right; color: rgba(242, 253, 254, 0.75); font-variant-numeric: tabular-nums; }
 .yp-bar { display: block; height: 4px; border-radius: 999px; background: rgba(242, 253, 254, 0.07); overflow: hidden; }
 .yp-bar.is-thin { height: 4px; margin-top: 8px; }
-.yp-bar span { display: block; height: 100%; border-radius: 999px; background: rgba(242, 253, 254, 0.52); }
+.yp-bar span { display: block; height: 100%; border-radius: 999px; background: color-mix(in srgb, var(--color-accent) 52%, var(--color-surface)); }
 .yp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .yp-tile {
   min-width: 0;
   padding: 12px;
   border-radius: 12px;
-  background: rgba(242, 253, 254, 0.04);
-  border: var(--hairline) solid rgba(242, 253, 254, 0.07);
+  /* The app's own card colour, the navy every other tile here is drawn in. */
+  background: var(--color-surface);
+  border: var(--hairline) solid var(--color-divider);
 }
 .yp-tile-k { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(242, 253, 254, 0.52); }
 .yp-tile-place { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
