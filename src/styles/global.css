@@ -4016,3 +4016,19 @@ img, svg {
   .chd-head { cursor: default; }
   .chd-head .chd-grip { display: none; }
 }
+
+/* The overall rating, taken apart: fit, value and record, each out of 100. */
+.ov-parts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: var(--hairline) solid var(--color-divider);
+}
+.ov-part-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: rgba(242, 253, 254, 0.75); }
+.ov-part-head i { font-style: normal; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(242, 253, 254, 0.52); }
+.ov-part-head b { font-size: 13px; font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums; }
+.ov-bar { height: 4px; margin-top: 6px; border-radius: 999px; background: rgba(242, 253, 254, 0.07); overflow: hidden; }
+.ov-bar span { display: block; height: 100%; border-radius: 999px; background: var(--color-accent); }
+.ov-part-sub { margin-top: 4px; font-size: 12px; color: rgba(242, 253, 254, 0.52); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

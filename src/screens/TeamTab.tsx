@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { ACCENT, BAD, GOOD, MID, PEAK, POS, POS_COLOR } from '../model/constants';
+import { overallRatings } from '../model/overall';
 import { seasonOutlook, teamStrength, type OutlookTeam } from '../model/outlook';
 import { gameLine } from '../model/game-clock';
 import { ageCurve, grade, num } from '../model/math';
@@ -103,8 +104,19 @@ function Summary({ app, m }: { app: App; m: Model }) {
   const games = meRow ? meRow.record.wins + meRow.record.losses + meRow.record.ties : 0;
   const table = m.leagueRows.slice().sort((x, y) =>
     (y.record.wins + y.record.ties / 2) - (x.record.wins + x.record.ties / 2) || y.record.pointsFor - x.record.pointsFor);
+  /* Overall: the lineup's Rating, the roster's market value and the record,
+     40 / 30 / 30 — see `overallRatings`. */
+  const overall = overallRatings(m.leagueRows.map(r => ({
+    id: r.id, fit: r.fit, value: r.now, wins: r.record.wins, losses: r.record.losses, ties: r.record.ties,
+    pointsFor: r.record.pointsFor,
+  })));
+  const myOverall = meRow ? overall[meRow.id] : null;
   const heroRanks = [
-    { label: 'overall rating', rank: me?.rankFit || 0, value: 'Rating ' + Math.round(me?.fit || 0) },
+    {
+      label: 'overall rating',
+      rank: myOverall?.rank || 0,
+      value: myOverall ? 'Overall ' + Math.round(myOverall.score) + ' / 100' : '—',
+    },
     {
       label: 'in the league now',
       rank: meRow && games ? table.findIndex(r => r.id === meRow.id) + 1 : 0,
@@ -252,6 +264,25 @@ function Summary({ app, m }: { app: App; m: Model }) {
               </div>
             ))}
           </div>
+          {/* What the overall is made of, each out of 100. */}
+          {myOverall && m.leagueHasRosters ? (
+            <div className="ov-parts">
+              {[
+                { k: 'Fit', w: '40%', v: myOverall.fit, sub: 'best lineup' },
+                { k: 'Value', w: '30%', v: myOverall.value, sub: 'roster worth' },
+                { k: 'Record', w: '30%', v: myOverall.record, sub: meRow?.record.label || '' },
+              ].map(x => (
+                <div key={x.k} className="ov-part">
+                  <div className="ov-part-head">
+                    <span>{x.k} <i>{x.w}</i></span>
+                    <b>{x.v == null ? '—' : Math.round(x.v)}</b>
+                  </div>
+                  <div className="ov-bar"><span style={{ width: (x.v ?? 0) + '%' }} /></div>
+                  <div className="ov-part-sub">{x.v == null ? 'no games yet' : x.sub}</div>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>}
 
