@@ -1,22 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { currentUid } from '../api/access';
 import { chatEnabled, watchChat, type ChatMessage } from '../api/chat';
+import { leagueAvatar } from '../api/sleeper';
 import type { Model } from '../model/types';
 import { LeagueChat } from './LeagueChat';
 
 const SEEN = 'fc.chat.seen:';
+/** How far up (as a share of the sheet) a drag has to come to open it. */
+const OPEN_AT = 0.22;
+const isWide = () => typeof matchMedia !== 'undefined' && matchMedia('(min-width: 900px)').matches;
 
 /**
  * The league chat the way Sleeper keeps it: a bar always docked above the
- * tabs, showing the latest message and how many you have not read, that
- * opens the conversation over whatever screen you are on. One feed for both,
- * so the bar is never behind the open chat.
+ * tabs with the latest message and the unread count. Slide it up and the
+ * conversation follows your finger; let go past a quarter and it opens, short
+ * of that it drops back. Slide the open sheet down by its top to close it. A
+ * tap opens it too. On a laptop it is a floating bar and a side panel.
  */
 export function ChatDock({ m }: { m: Model }) {
   const lid = m.league.league_id;
   const [msgs, setMsgs] = useState<ChatMessage[] | null>(null);
   const [err, setErr] = useState('');
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  /** The sheet's distance below fully open, in px; null when it is not shown. */
+  const [pos, setPos] = useState<number | null>(null);
+  /** A finger is holding it: follow, do not animate. */
+  const [dragging, setDragging] = useState(false);
+  const sheet = useRef<HTMLDivElement>(null);
+  const gesture = useRef<{ y0: number; from: 'bar' | 'sheet'; moved: boolean; t0: number } | null>(null);
   const [seen, setSeen] = useState(() => {
     try { return Number(localStorage.getItem(SEEN + lid)) || 0; } catch { return 0; }
   });
@@ -39,7 +50,6 @@ export function ChatDock({ m }: { m: Model }) {
     try { localStorage.setItem(SEEN + lid, String(last.at)); } catch { /* fine */ }
   }, [open, last, lid]);
 
-  // Close on Escape, as any sheet does.
   useEffect(() => {
     if (!open) return;
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
@@ -50,30 +60,121 @@ export function ChatDock({ m }: { m: Model }) {
   if (!chatEnabled()) return null;
   const me = currentUid();
   const unread = (msgs || []).filter(x => x.at > seen && x.uid !== me).length;
-  const preview = last ? (last.uid === me ? 'You' : last.name) + ': ' + last.text : 'Say something to the league';
+  const who = last ? (last.uid === me ? 'You' : last.name) : '';
+
+  // The sheet's full travel: its own height, or most of the window before it
+  // has been drawn.
+  const travel = () => sheet.current?.offsetHeight || window.innerHeight * 0.9;
+
+  /* Opening and closing slide, from a tap as much as from a drag: the sheet
+     is placed at the bottom, then let go to travel. */
+  const setOpen = (on: boolean) => {
+    // A laptop's side panel just appears and goes.
+    if (isWide()) { setOpenState(on); setPos(null); return; }
+    if (on) {
+      setOpenState(true);
+      setPos(p => (p == null ? travel() : p));
+      requestAnimationFrame(() => requestAnimationFrame(() => setPos(0)));
+    } else {
+      setPos(travel());
+      window.setTimeout(() => { setOpenState(false); setPos(null); }, 280);
+    }
+  };
+
+  const down = (from: 'bar' | 'sheet') => (e: RPointerEvent<HTMLElement>) => {
+    if (isWide()) return;
+    gesture.current = { y0: e.clientY, from, moved: false, t0: Date.now() };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const move = (e: RPointerEvent<HTMLElement>) => {
+    const g = gesture.current;
+    if (!g) return;
+    const dy = e.clientY - g.y0;
+    if (!g.moved && Math.abs(dy) < 6) return;
+    if (!g.moved) { g.moved = true; setDragging(true); if (g.from === 'bar') setOpenState(true); }
+    const H = travel();
+    // From the bar the sheet rises from below; from the sheet it falls from open.
+    setPos(g.from === 'bar' ? Math.max(0, Math.min(H, H + dy)) : Math.max(0, dy));
+  };
+  const up = (e: RPointerEvent<HTMLElement>) => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g) return;
+    if (!g.moved) {
+      // A tap: the bar opens, the sheet's grip closes.
+      setOpen(g.from === 'bar');
+      return;
+    }
+    setDragging(false);
+    const H = travel();
+    const dy = e.clientY - g.y0;
+    const fast = Math.abs(dy) / Math.max(1, Date.now() - g.t0) > 0.6;
+    const shown = g.from === 'bar' ? -dy : H - dy;
+    setOpen(fast ? dy < 0 : shown > H * (g.from === 'bar' ? OPEN_AT : 1 - OPEN_AT));
+  };
+
+  const showing = open || pos != null;
+  const offset = pos ?? 0;
+  const fade = Math.max(0, 1 - offset / travel());
+  const logo = leagueAvatar(m.league.avatar);
 
   return (
     <>
-      <button type="button" className="chd-bar" onClick={() => setOpen(true)} aria-label="Open league chat">
+      <div
+        className="chd-bar"
+        role="button"
+        tabIndex={0}
+        aria-label="Open league chat"
+        onPointerDown={down('bar')}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={() => { gesture.current = null; setDragging(false); setOpen(false); }}
+        onClick={() => { if (isWide()) setOpen(true); }}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setOpen(true); }}
+      >
         <span className="chd-grip" aria-hidden="true" />
-        <span className="chd-row">
-          <span className="chd-title"><span aria-hidden="true">💬</span> Chat</span>
-          {unread ? <span className="chd-badge">{unread > 99 ? '99+' : unread}</span> : null}
+        <span className="chd-bar-row">
+          {last?.avatar ? <img className="chd-bar-av" src={last.avatar} alt="" />
+            : <span className="chd-bar-av is-icon" aria-hidden="true">💬</span>}
+          <span className="chd-bar-text">
+            <span className="chd-row">
+              <span className="chd-title">Chat</span>
+              {unread ? <span className="chd-badge">{unread > 99 ? '99+' : unread}</span> : null}
+            </span>
+            <span className="chd-preview">
+              {last ? <><b>{who}:</b> {last.text}</> : 'Say something to the league'}
+            </span>
+          </span>
+          <span className="chd-up" aria-hidden="true">⌃</span>
         </span>
-        <span className="chd-preview">{preview}</span>
-      </button>
+      </div>
 
-      {open ? (
+      {showing ? (
         <div className="chd-layer">
-          <div className="chd-scrim" onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className="chd-sheet" role="dialog" aria-label="League chat">
-            <div className="chd-head">
-              <button type="button" className="chd-grab" aria-label="Close chat" onClick={() => setOpen(false)}>
-                <span className="chd-grip" aria-hidden="true" />
-              </button>
+          <div className="chd-scrim" style={{ opacity: fade }} onClick={() => setOpen(false)} aria-hidden="true" />
+          <div
+            ref={sheet}
+            className={'chd-sheet' + (dragging ? ' is-dragging' : '')}
+            role="dialog"
+            aria-label="League chat"
+            style={{ transform: offset ? `translateY(${offset}px)` : undefined }}
+          >
+            <div
+              className="chd-head"
+              onPointerDown={down('sheet')}
+              onPointerMove={move}
+              onPointerUp={up}
+              onPointerCancel={() => { gesture.current = null; setDragging(false); setOpen(true); }}
+            >
+              <span className="chd-grip" aria-hidden="true" />
               <div className="chd-head-row">
-                <span className="chd-title"><span aria-hidden="true">💬</span> {m.league.name}</span>
-                <button type="button" className="chd-x" aria-label="Close" onClick={() => setOpen(false)}>✕</button>
+                {logo ? <img className="chd-logo" src={logo} alt="" /> : <span className="chd-logo is-icon">💬</span>}
+                <span className="chd-head-text">
+                  <span className="chd-head-name">{m.league.name}</span>
+                  <span className="chd-head-sub">League chat · {m.teamCount} teams</span>
+                </span>
+                <button type="button" className="chd-x" aria-label="Close"
+                  onPointerDown={e => e.stopPropagation()} onClick={() => setOpen(false)}>✕</button>
               </div>
             </div>
             <LeagueChat m={m} msgs={msgs} err={err} />
