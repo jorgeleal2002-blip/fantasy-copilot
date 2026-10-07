@@ -634,6 +634,11 @@ export function useApp() {
   }, []);
 
   const clearTrade = useCallback(() => { setTradeTeams([]); setTradeAssets({}); }, []);
+  /** A whole trade at once — one proposed in the chat, opened in the builder. */
+  const loadTrade = useCallback((teams: number[], assets: Record<string, { from: number; to: number }>) => {
+    setTradeTeams(teams);
+    setTradeAssets(assets);
+  }, []);
 
   const showToast = useCallback((text: string) => {
     window.clearTimeout(toastTimer.current);
@@ -1840,7 +1845,7 @@ export function useApp() {
     clearMockChoices: () => setMockChoices({}), setRosterFilter, setRosterSort,
     setBoardMode, setRankMode, setPickSel, setStrat, setDetail,
     setQuery, setTopPos, setTopLens, setWeek,
-    toggleTradeTeam, toggleTradeAsset, cycleTradeTo, clearTrade,
+    toggleTradeTeam, toggleTradeAsset, cycleTradeTo, clearTrade, loadTrade,
     refreshMatchups: () => { if (leagueId && week != null) void fetchMatchups(leagueId, week, false, true); },
     passOffer: (key: string) => setPassed(p => p.concat(key)),
     resetOffers: () => setPassed([]),

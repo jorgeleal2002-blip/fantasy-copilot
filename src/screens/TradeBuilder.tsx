@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { colorOf } from '../model/constants';
 import { evaluateTrade, needFactor, type RosterRoom, type TeamLedger, type TradeAsset } from '../model/trade-eval';
 import { fitHeadline, outcomeFor, situationLabel, situationOf, type FitHeadline, type Outcome, type TeamCase } from '../model/team-verdict';
@@ -20,20 +20,18 @@ import { BAD, GOOD, dim } from '../ui/styles';
  * them. A third team is one more column, and every asset already carries where
  * it is going, so nothing else has to change.
  */
-export function TradeBuilder({ app, m }: { app: App; m: Model }) {
-  const [addTo, setAddTo] = useState<number | null>(null);
-  const [pickingTeam, setPickingTeam] = useState(false);
-
-  /* Whoever was chosen, in the order they were added — you are not put in
-   * automatically, because a trade you are sizing up between two other teams
-   * is a trade too. */
-  const ids = app.tradeTeams;
+/**
+ * Everything the builder works out about a trade: each team's season with
+ * and without it, the depth it leaves, who would start, and the verdict.
+ * Shared with the chat, where a proposed trade carries the same verdict.
+ */
+export function assessTrade(app: App, m: Model, ids: number[], moves: Record<string, { from: number; to: number }>) {
   const teams = ids
     .map(id => m.leagueRows.find(r => r.id === id))
     .filter((r): r is NonNullable<typeof r> => !!r)
     .map(r => ({ id: r.id, name: r.isMe ? 'You' : r.name, isMe: r.isMe }));
 
-  const assets: (TradeAsset & { upside: number })[] = Object.entries(app.tradeAssets).map(([id, a]) => {
+  const assets: (TradeAsset & { upside: number })[] = Object.entries(moves).map(([id, a]) => {
     const info = m.teamInfo(a.from);
     const found = info?.list.find(p => p.id === id) || info?.picks.find(p => p.id === id);
     const isPick = !!info?.picks.find(p => p.id === id);
@@ -117,6 +115,18 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
       perWeek: l.fitDelta, playoffs: seasons[l.id]?.playoffs ?? null,
     };
   });
+  return { teams, assets, v, cases, seasons, depth, counts, head: fitHeadline(cases, m.isDynasty, v.moved) };
+}
+
+export function TradeBuilder({ app, m, footer }: { app: App; m: Model; footer?: ReactNode }) {
+  const [addTo, setAddTo] = useState<number | null>(null);
+  const [pickingTeam, setPickingTeam] = useState(false);
+
+  /* Whoever was chosen, in the order they were added — you are not put in
+   * automatically, because a trade you are sizing up between two other teams
+   * is a trade too. */
+  const ids = app.tradeTeams;
+  const { teams, assets, v, cases, seasons, depth, counts, head } = assessTrade(app, m, ids, app.tradeAssets);
   /* One card per team, under the players: the verdict for that team and the
      numbers behind it, drawn rather than written out. */
   const cards = v.moved && teams.length > 1 ? (
@@ -136,8 +146,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 
   return (
     <div className="fb">
-      <Balance v={v} pivot={teams.find(t => t.isMe)?.id ?? teams[0]?.id ?? null}
-        head={fitHeadline(cases, m.isDynasty, v.moved)} />
+      <Balance v={v} pivot={teams.find(t => t.isMe)?.id ?? teams[0]?.id ?? null} head={head} />
 
       {teams.length < 2 ? (
         <div className="fb-empty">
@@ -176,6 +185,8 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
         </div>
       )}
 
+      {footer}
+
       {cards}
 
       <div className="fb-actions">
@@ -209,7 +220,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
 }
 
 /** The headline and the one bar that answers the whole screen. */
-function Balance({ v, pivot, head: h }: {
+export function Balance({ v, pivot, head: h }: {
   v: ReturnType<typeof evaluateTrade>; pivot: number | null; head: FitHeadline;
 }) {
   // The bar is read from one team's side: yours when you are in it, else the

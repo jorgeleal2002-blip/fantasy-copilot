@@ -1,8 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { currentUid } from '../api/access';
-import { CHAT_MAX, chatEnabled, deleteChat, sendChat, type ChatMessage } from '../api/chat';
+import { CHAT_MAX, chatEnabled, deleteChat, sendChat, type ChatMessage, type ChatTrade } from '../api/chat';
 import { isOwnerHere } from '../model/access';
+import { colorOf } from '../model/constants';
+import type { Pos } from '../api/types';
 import type { Model } from '../model/types';
+import type { App } from '../state/useApp';
+import { Overlay } from '../ui/primitives';
+import { Balance, TradeBuilder, assessTrade } from './TradeBuilder';
 
 /**
  * The league's live chat. Your messages on the right in the accent, everyone
@@ -10,7 +15,11 @@ import type { Model } from '../model/types';
  * message carries the date. The newest stays in view as messages arrive,
  * unless you have scrolled up to read.
  */
-export function LeagueChat({ m, msgs, err: feedErr }: { m: Model; msgs: ChatMessage[] | null; err: string }) {
+export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
+  app: App; m: Model; msgs: ChatMessage[] | null; err: string;
+  /** open a manager's team, from his picture or name */
+  onProfile: (rid: number) => void;
+}) {
   const lid = m.league.league_id;
   const [sendErr, setErr] = useState('');
   const err = sendErr || feedErr;
@@ -20,6 +29,14 @@ export function LeagueChat({ m, msgs, err: feedErr }: { m: Model; msgs: ChatMess
   const stick = useRef(true);
   const me = currentUid();
   const owner = isOwnerHere();
+  const myRid = m.leagueRows.find(r => r.isMe)?.id ?? null;
+  /* Proposing a trade: first who with, then the builder itself. */
+  const [proposing, setProposing] = useState<null | 'pick' | 'build'>(null);
+  /** The writer's team: the one he wrote from, or for older messages the one
+   *  his Sleeper name runs. */
+  const rowOf = (x: ChatMessage) =>
+    (x.rid != null ? m.leagueRows.find(r => r.id === x.rid) : undefined)
+    || (x.user ? m.leagueRows.find(r => r.user === x.user) : undefined);
 
   // Follow the newest message, unless you scrolled up to read older ones.
   useEffect(() => {
@@ -27,23 +44,58 @@ export function LeagueChat({ m, msgs, err: feedErr }: { m: Model; msgs: ChatMess
     if (el && stick.current) el.scrollTop = el.scrollHeight;
   }, [msgs]);
 
-  const send = async () => {
-    const t = text.trim();
-    if (!t || busy) return;
+  const post = async (t: string, trade?: ChatTrade) => {
+    if (!t || busy) return false;
     setBusy(true);
     try {
       const ok = await sendChat(lid, {
         name: m.myTeamName || m.me.teamName || m.me.name,
         user: m.me.name,
         avatar: m.me.avatar || undefined,
+        ...(myRid != null ? { rid: myRid } : {}),
+        ...(trade ? { trade } : {}),
         text: t,
       });
-      if (ok) { setText(''); setErr(''); stick.current = true; } else setErr('Your message was not sent. Try again.');
+      if (ok) { setErr(''); stick.current = true; } else setErr('Your message was not sent. Try again.');
+      return ok;
     } catch {
       setErr('Your message was not sent. Check your connection.');
+      return false;
     } finally {
       setBusy(false);
     }
+  };
+  const send = async () => {
+    if (await post(text.trim())) setText('');
+  };
+
+  const teamName = (rid: number) => {
+    const r = m.leagueRows.find(x => x.id === rid);
+    return r ? (r.isMe ? 'You' : r.name) : 'A team';
+  };
+  /* The builder's trade as a message: what moves, with names, so it still
+     reads after the players have moved on. */
+  const proposal = (): ChatTrade | null => {
+    const moves = Object.entries(app.tradeAssets).map(([id, a]) => {
+      const info = m.teamInfo(a.from);
+      const p = info?.list.find(x => x.id === id);
+      const pick = info?.picks.find(x => x.id === id);
+      return { id, from: a.from, to: a.to, name: p?.name || pick?.name || id, ...(p?.pos ? { pos: p.pos } : {}) };
+    });
+    return app.tradeTeams.length >= 2 && moves.length ? { teams: app.tradeTeams.slice(), moves } : null;
+  };
+  const sendProposal = async () => {
+    const t = proposal();
+    if (!t) return;
+    const line = t.teams.map(rid => {
+      const got = t.moves.filter(x => x.to === rid).map(x => x.name);
+      return (rid === myRid ? (m.myTeamName || 'Me') : teamName(rid)) + ' gets ' + (got.join(', ') || 'nothing');
+    }).join(' · ');
+    if (await post(('⇄ Trade proposal: ' + line).slice(0, CHAT_MAX), t)) setProposing(null);
+  };
+  const openTrade = (t: ChatTrade) => {
+    app.loadTrade(t.teams, Object.fromEntries(t.moves.map(x => [x.id, { from: x.from, to: x.to }])));
+    setProposing('build');
   };
 
   if (!chatEnabled()) {
@@ -76,15 +128,31 @@ export function LeagueChat({ m, msgs, err: feedErr }: { m: Model; msgs: ChatMess
                 <div key={x.id}>
                   {newDay ? <div className="ch-day">{day(x.at)}</div> : null}
                   <div className={'ch-row' + (mine ? ' is-me' : '') + (grouped ? ' is-grouped' : '')}>
-                    {!mine ? (
-                      grouped ? <span className="ch-av is-blank" /> : x.avatar
-                        ? <img className="ch-av" src={x.avatar} alt="" />
-                        : <span className="ch-av">{x.name.slice(0, 1).toUpperCase()}</span>
-                    ) : null}
-                    <div className="ch-bubble-wrap">
-                      {!mine && !grouped ? (
-                        <div className="ch-name">{x.name}{x.user ? <span> @{x.user}</span> : null}</div>
-                      ) : null}
+                    {(() => {
+                      // Everyone's picture, yours too: whoever wrote it, at a glance.
+                      if (grouped) return <span className="ch-av is-blank" />;
+                      const row = rowOf(x);
+                      const pic = x.avatar || row?.avatar;
+                      const open = row ? () => onProfile(row.id) : undefined;
+                      return pic
+                        ? <img className={'ch-av' + (open ? ' is-tap' : '')} src={pic} alt={x.name} onClick={open} />
+                        : <span className={'ch-av' + (open ? ' is-tap' : '')} onClick={open}>{x.name.slice(0, 1).toUpperCase()}</span>;
+                    })()}
+                    <div className={'ch-bubble-wrap' + (x.trade ? ' is-trade' : '')}>
+                      {!grouped ? (() => {
+                        const row = rowOf(x);
+                        return (
+                          <button type="button" className="ch-name" disabled={!row}
+                            onClick={row ? () => onProfile(row.id) : undefined}>
+                            {mine ? 'You' : x.name}{x.user && !mine ? <span> @{x.user}</span> : null}
+                          </button>
+                        );
+                      })() : null}
+                      {x.trade ? (
+                        <TradeCard app={app} m={m} t={x.trade} from={rowOf(x)?.id ?? null} myRid={myRid}
+                          time={time(x.at)} onOpen={() => openTrade(x.trade as ChatTrade)}
+                          onReply={r => void post(r)} />
+                      ) : (
                       <div className="ch-bubble" title={time(x.at)}>
                         {x.text}
                         <span className="ch-time">{time(x.at)}</span>
@@ -96,6 +164,7 @@ export function LeagueChat({ m, msgs, err: feedErr }: { m: Model; msgs: ChatMess
                           </button>
                         ) : null}
                       </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -106,6 +175,10 @@ export function LeagueChat({ m, msgs, err: feedErr }: { m: Model; msgs: ChatMess
       {err ? <div className="ch-err" role="alert">{err}</div> : null}
 
       <div className="ch-input">
+        <button type="button" className="ch-trade-btn" aria-label="Propose a trade" title="Propose a trade"
+          onClick={() => setProposing('pick')}>
+          ⇄
+        </button>
         <textarea
           value={text}
           rows={1}
@@ -121,6 +194,92 @@ export function LeagueChat({ m, msgs, err: feedErr }: { m: Model; msgs: ChatMess
           aria-label="Send">
           ➤
         </button>
+      </div>
+
+      {proposing === 'pick' ? (
+        <Overlay onClose={() => setProposing(null)} label="Chat" z={40}>
+          <div className="fb-pick-title">Propose a trade to…</div>
+          {m.leagueRows.filter(r => !r.isMe).map(r => (
+            <button key={r.id} type="button" className="fb-pick-row" onClick={() => {
+              app.loadTrade(myRid != null ? [myRid, r.id] : [r.id], {});
+              setProposing('build');
+            }}>
+              {r.avatar ? <img className="fb-face" src={r.avatar} alt="" /> : <span className="fb-face fb-face-blank" />}
+              <span className="fb-card-body">
+                <span className="fb-card-name">{r.name}</span>
+                <span className="fb-card-meta"><span className="fb-val">@{r.user}{r.worst ? ' · weak at ' + r.worst : ''}</span></span>
+              </span>
+            </button>
+          ))}
+        </Overlay>
+      ) : null}
+      {proposing === 'build' ? (
+        <Overlay onClose={() => setProposing(null)} label="Chat" z={40}>
+          <TradeBuilder app={app} m={m} footer={
+            <button type="button" className="btn btn-primary ch-propose" disabled={busy || !proposal()}
+              onClick={() => void sendProposal()}>
+              {busy ? 'Sending…' : proposal() ? 'Send to the chat ⇄' : 'Add players to propose it'}
+            </button>
+          } />
+        </Overlay>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * A trade put to the league, as the calculator sees it: who gets what, the
+ * verdict and the tug-of-war bar. Open it to see the whole analysis, change
+ * it and send it back as a counter.
+ */
+function TradeCard({ app, m, t, from, myRid, time, onOpen, onReply }: {
+  app: App; m: Model; t: ChatTrade; from: number | null; myRid: number | null; time: string;
+  onOpen: () => void; onReply: (text: string) => void;
+}) {
+  const moves = useMemo(() => Object.fromEntries(t.moves.map(x => [x.id, { from: x.from, to: x.to }])), [t]);
+  const a = useMemo(() => assessTrade(app, m, t.teams, moves),
+    // The verdict is the trade's; the app's other state does not change it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [m, moves]);
+  const pivot = t.teams.includes(myRid ?? -1) ? myRid : from ?? t.teams[0];
+  // Put to you, by someone else: you can answer it from here.
+  const forMe = myRid != null && t.teams.includes(myRid) && from !== myRid;
+  return (
+    <div className="ch-trade">
+      <div className="ch-trade-kick">⇄ Trade proposal <span>{time}</span></div>
+      <Balance v={a.v} pivot={pivot} head={a.head} />
+      <div className="ch-trade-cols">
+        {t.teams.map(rid => {
+          const row = m.leagueRows.find(r => r.id === rid);
+          return (
+            <div key={rid} className="ch-trade-col">
+              <div className="ch-trade-who">
+                {row?.avatar ? <img src={row.avatar} alt="" /> : <span className="ch-trade-blank" />}
+                <span>{row ? (row.isMe ? 'You' : row.name) : 'Team'} <i>get</i></span>
+              </div>
+              {t.moves.filter(x => x.to === rid).map(x => {
+                const photo = /^\d+$/.test(x.id) ? app.photoFor(x.id) : null;
+                return (
+                  <div key={x.id} className="ch-trade-p">
+                    {photo ? <img src={photo} alt="" /> : <span className="ch-trade-blank">🎟</span>}
+                    <span className="ch-trade-name">{x.name}</span>
+                    {x.pos ? <b style={{ color: colorOf(x.pos as Pos) }}>{x.pos}</b> : null}
+                  </div>
+                );
+              })}
+              {!t.moves.some(x => x.to === rid) ? <div className="ch-trade-none">Nothing</div> : null}
+            </div>
+          );
+        })}
+      </div>
+      <div className="ch-trade-acts">
+        <button type="button" className="ch-trade-open" onClick={onOpen}>Open in calculator ›</button>
+        {forMe ? (
+          <>
+            <button type="button" className="ch-trade-yes" onClick={() => onReply('✅ I\'m in on that trade')}>👍</button>
+            <button type="button" className="ch-trade-no" onClick={() => onReply('❌ Pass on that trade')}>👎</button>
+          </>
+        ) : null}
       </div>
     </div>
   );

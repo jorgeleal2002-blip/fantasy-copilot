@@ -3,6 +3,7 @@ import { currentUid } from '../api/access';
 import { chatEnabled, watchChat, type ChatMessage } from '../api/chat';
 import { leagueAvatar } from '../api/sleeper';
 import type { Model } from '../model/types';
+import type { App } from '../state/useApp';
 import { LeagueChat } from './LeagueChat';
 
 const SEEN = 'fc.chat.seen:';
@@ -17,7 +18,7 @@ const isWide = () => typeof matchMedia !== 'undefined' && matchMedia('(min-width
  * of that it drops back. Slide the open sheet down by its top to close it. A
  * tap opens it too. On a laptop it is a floating bar and a side panel.
  */
-export function ChatDock({ m }: { m: Model }) {
+export function ChatDock({ app, m }: { app: App; m: Model }) {
   const lid = m.league.league_id;
   const [msgs, setMsgs] = useState<ChatMessage[] | null>(null);
   const [err, setErr] = useState('');
@@ -183,7 +184,8 @@ export function ChatDock({ m }: { m: Model }) {
                   onPointerDown={e => e.stopPropagation()} onClick={() => setOpen(false)}>✕</button>
               </div>
             </div>
-            <LeagueChat m={m} msgs={msgs} err={err} />
+            <LeagueChat app={app} m={m} msgs={msgs} err={err}
+              onProfile={rid => { setOpen(false); app.setDetail('team-' + rid); }} />
           </div>
         </div>
       ) : null}

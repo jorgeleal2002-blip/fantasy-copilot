@@ -3480,7 +3480,7 @@ img, svg {
 }
 .ch-row { display: flex; align-items: flex-end; gap: 8px; margin-top: 6px; }
 .ch-row.is-grouped { margin-top: 0; }
-.ch-row.is-me { justify-content: flex-end; }
+.ch-row.is-me { flex-direction: row-reverse; justify-content: flex-start; }
 .ch-av {
   width: 28px;
   height: 28px;
@@ -3498,7 +3498,21 @@ img, svg {
 .ch-av.is-blank { background: none; }
 .ch-bubble-wrap { display: flex; flex-direction: column; max-width: 78%; min-width: 0; }
 .ch-row.is-me .ch-bubble-wrap { align-items: flex-end; }
-.ch-name { font-size: 12px; font-weight: 600; color: rgba(242, 253, 254, 0.75); margin: 0 0 2px 10px; }
+.ch-name {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(242, 253, 254, 0.75);
+  margin: 0 0 2px 10px;
+  cursor: pointer;
+}
+.ch-name:disabled { cursor: default; }
+.ch-row.is-me .ch-name { align-self: flex-end; margin: 0 10px 2px 0; }
+.ch-av.is-tap { cursor: pointer; }
 .ch-name span { font-weight: 400; color: rgba(242, 253, 254, 0.52); }
 .ch-bubble {
   padding: 8px 12px;
@@ -3522,6 +3536,73 @@ img, svg {
   cursor: pointer;
 }
 .ch-del:hover { opacity: 1; }
+/* A trade in the chat: the calculator's verdict and who gets what. */
+.ch-bubble-wrap.is-trade { max-width: 88%; flex: 1; }
+.ch-trade {
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--color-surface);
+  border: var(--hairline) solid rgba(242, 253, 254, 0.12);
+}
+.ch-row.is-me .ch-trade { border-color: color-mix(in srgb, var(--color-accent) 52%, transparent); }
+.ch-trade-kick {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 8px;
+}
+.ch-trade-kick span { font-weight: 400; letter-spacing: 0; text-transform: none; color: rgba(242, 253, 254, 0.52); }
+.ch-trade .fb-bal { margin: 0 0 12px; padding: 0; background: none; border: 0; }
+.ch-trade-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
+.ch-trade-col { min-width: 0; padding: 8px; border-radius: 12px; background: rgba(242, 253, 254, 0.04); }
+.ch-trade-who { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-bottom: 6px; min-width: 0; }
+.ch-trade-who span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-trade-who i { font-style: normal; font-weight: 400; color: rgba(242, 253, 254, 0.52); }
+.ch-trade-who img, .ch-trade-who .ch-trade-blank { width: 20px; height: 20px; border-radius: 999px; object-fit: cover; flex: none; }
+.ch-trade-p { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 3px 0; min-width: 0; }
+.ch-trade-p img, .ch-trade-p .ch-trade-blank {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  object-fit: cover;
+  object-position: center top;
+  flex: none;
+  background: rgba(242, 253, 254, 0.07);
+}
+.ch-trade-blank { display: flex; align-items: center; justify-content: center; font-size: 12px; background: rgba(242, 253, 254, 0.07); }
+.ch-trade-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-trade-p b { font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.ch-trade-none { font-size: 12px; color: rgba(242, 253, 254, 0.52); }
+.ch-trade-acts { display: flex; gap: 8px; margin-top: 12px; }
+.ch-trade-acts button {
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  background: rgba(242, 253, 254, 0.07);
+  color: var(--color-text);
+}
+.ch-trade-acts .ch-trade-open { flex: 1; background: color-mix(in srgb, var(--color-accent) 12%, transparent); color: var(--color-accent); }
+.ch-trade-btn {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: var(--hairline) solid var(--color-divider);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ch-propose { width: 100%; margin: 12px 0; border-radius: 12px; padding: 12px; font-size: 15px; font-weight: 600; }
 .ch-err { padding: 6px 12px; font-size: 12px; color: var(--c-bad); }
 .ch-input {
   display: flex;
@@ -3708,6 +3789,8 @@ img, svg {
 }
 .chd-sheet .ch-row.is-grouped .ch-bubble { border-top-left-radius: 4px; }
 .chd-sheet .ch-row.is-me.is-grouped .ch-bubble { border-top-left-radius: 16px; border-top-right-radius: 4px; }
+.chd-sheet .ch-trade { border-bottom-left-radius: 4px; }
+.chd-sheet .ch-row.is-me .ch-trade { border-radius: 16px; border-bottom-right-radius: 4px; }
 .chd-sheet .ch-input { border-top: 0; padding: 8px 12px 12px; }
 .chd-sheet .ch-input textarea { border-radius: 999px; padding: 10px 18px; }
 

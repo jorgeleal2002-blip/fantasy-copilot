@@ -18,8 +18,33 @@ export interface ChatMessage {
   /** the Sleeper username, for telling two "Doctor"s apart */
   user?: string;
   avatar?: string;
+  /** the writer's team in the league, for opening his profile */
+  rid?: number;
+  /** a trade put to the league: the teams in it and who sends whom where */
+  trade?: ChatTrade;
   text: string;
   at: number;
+}
+
+export interface ChatTrade {
+  teams: number[];
+  moves: { id: string; from: number; to: number; name: string; pos?: string }[];
+}
+
+/* The database hands a list back as an object keyed 0, 1, 2… when it has
+   gaps, and anything from it is checked before it is drawn. */
+const list = <T,>(x: unknown): T[] => (Array.isArray(x) ? x : x && typeof x === 'object' ? Object.values(x) : []) as T[];
+function readTrade(x: unknown): ChatTrade | undefined {
+  if (!x || typeof x !== 'object') return undefined;
+  const t = x as { teams?: unknown; moves?: unknown };
+  const teams = list<unknown>(t.teams).map(Number).filter(n => Number.isFinite(n));
+  const moves = list<Record<string, unknown>>(t.moves)
+    .filter(mv => mv && typeof mv.id === 'string')
+    .map(mv => ({
+      id: String(mv.id), from: Number(mv.from), to: Number(mv.to),
+      name: String(mv.name || mv.id), ...(typeof mv.pos === 'string' ? { pos: mv.pos } : {}),
+    }));
+  return teams.length >= 2 && moves.length ? { teams, moves } : undefined;
 }
 
 export const chatEnabled = () => accessEnabled();
@@ -35,7 +60,7 @@ async function readLast(lid: string): Promise<ChatMessage[]> {
   const body = (await res.json()) as Record<string, Omit<ChatMessage, 'id'>> | null;
   return Object.entries(body || {})
     .filter(([, m]) => m && typeof m.text === 'string')
-    .map(([id, m]) => ({ id, ...m }))
+    .map(([id, m]) => ({ id, ...m, trade: readTrade(m.trade), rid: typeof m.rid === 'number' ? m.rid : undefined }))
     .sort((a, b) => (a.at || 0) - (b.at || 0));
 }
 
@@ -52,6 +77,13 @@ export async function sendChat(lid: string, m: Omit<ChatMessage, 'id' | 'uid' | 
       uid: s.uid, name: m.name.slice(0, 40), text,
       ...(m.user ? { user: m.user.slice(0, 40) } : {}),
       ...(m.avatar ? { avatar: m.avatar.slice(0, 300) } : {}),
+      ...(m.rid != null ? { rid: m.rid } : {}),
+      ...(m.trade ? {
+        trade: {
+          teams: m.trade.teams.slice(0, 4),
+          moves: m.trade.moves.slice(0, 30).map(x => ({ ...x, name: x.name.slice(0, 60) })),
+        },
+      } : {}),
       at: { '.sv': 'timestamp' },
     }),
   });

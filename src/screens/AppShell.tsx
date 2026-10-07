@@ -121,7 +121,7 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
         {app.tab === 'settings' && <SettingsTab app={app} m={model} />}
       </main>
 
-      <ChatDock m={model} />
+      <ChatDock app={app} m={model} />
 
       <nav className="shell-nav">
         {/* A laptop's rail carries who and where: the app, the league, you.
