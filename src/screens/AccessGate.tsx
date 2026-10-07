@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react';
-import { BAD } from '../model/constants';
 import {
   accessEnabled, adopt, claimOwner, logAttempt, redeem, signOutAccount, signedInAs, standing, type AccountSession,
 } from '../api/access';
 import { AccountForm } from './AccountForm';
 import { checkCode, normalizeCode, rememberUnlock } from '../model/access';
 import { Mark } from '../ui/Mark';
-import { dim } from '../ui/styles';
 
-const topPad = (extra: number) => `calc(var(--safe-top) + ${extra}px)`;
 
 /**
  * The front door. With invites on, an account first — email or Google — and
@@ -87,105 +84,61 @@ export function AccessGate({ onOpen }: { onOpen: (username?: string) => void }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const invited = !!normalizeCode(code);
   return (
-    <div
-      style={{
-        flex: 1, display: 'flex', flexDirection: 'column',
-        padding: `${topPad(34)} 24px calc(var(--safe-bottom) + 26px)`,
-        animation: 'fadeUp .4s ease backwards',
-      }}
-    >
-      <div style={{ width: 72, height: 72, borderRadius: '50%' }}>
-        <Mark size={72} title="Doctors" />
+    <div className="ag">
+      <div className="ag-head">
+        <Mark size={64} title="Doctors" />
+        <h1 className="ag-title">Doctors</h1>
+        <p className="ag-sub">
+          {accessEnabled() && !who
+            ? (invited ? 'You have an invite. Create your account.' : 'Fantasy football, figured out.')
+            : who ? 'One last step' : 'Enter your access code'}
+        </p>
       </div>
-      <h1 style={{ fontSize: 31, lineHeight: '34px', fontWeight: 500, letterSpacing: '-0.025em', margin: '26px 0 8px' }}>
-        Doctors
-      </h1>
+
       {accessEnabled() && !who ? (
-        <>
-          <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 22px', maxWidth: '34ch' }}>
-            {normalizeCode(code)
-              ? 'You have an invite. Create your account with your email or Google — you will stay signed in, on any device.'
-              : 'Sign in with your email or Google. New here? Create an account, then enter your invite code.'}
-          </p>
-          <AccountForm onSession={withAccount} start={normalizeCode(code) ? 'create' : 'signin'} />
-        </>
+        <AccountForm onSession={withAccount} start={invited ? 'create' : 'signin'}
+          hint={invited ? 'Your invite is applied right after.' : 'You will need your invite code next.'} />
       ) : (
-        <>
-      <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 28px', maxWidth: '32ch' }}>
-        {who ? 'One last step: your invite code.' : 'Enter your access code.'}
-      </p>
-
-      <label
-        htmlFor="access-code"
-        style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: dim(0.52), marginBottom: 8 }}
-      >
-        {accessEnabled() ? 'Invite code' : 'Access code'}
-      </label>
-      <div
-        style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          background: 'var(--color-surface)',
-          border: 'var(--hairline) solid ' + (wrong ? BAD : 'var(--color-divider)'),
-          borderRadius: 12, padding: '13px 14px',
-        }}
-      >
-        <span aria-hidden="true" style={{ fontSize: 15 }}>🔒</span>
-        <input
-          id="access-code"
-          value={code}
-          onChange={e => { setCode(e.target.value); setWrong(false); }}
-          onKeyDown={e => { if (e.key === 'Enter') void tryCode(code); }}
-          placeholder="Code"
-          autoCapitalize="characters"
-          autoComplete="one-time-code"
-          autoCorrect="off"
-          spellCheck={false}
-          enterKeyHint="go"
-          style={{
-            flex: 1, background: 'transparent', border: 0, outline: 'none', letterSpacing: '.12em',
-            color: 'var(--color-text)', font: "500 16px 'Inter', system-ui", minWidth: 0,
-          }}
-        />
-      </div>
-      {who ? (
-        <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.75), marginTop: 10 }}>
-          Signed in as <b>{who.email || (who.via === 'google' ? 'Google' : 'email')}</b>.{' '}
-          <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: 0 }}
-            onClick={() => { signOutAccount(); setWho(null); setError(''); }}>
-            Use another account
+        <div className="af">
+          {who ? (
+            <div className="ag-who">
+              <span>Signed in as <b>{who.email || (who.via === 'google' ? 'Google' : 'email')}</b></span>
+              <button type="button" className="af-link" style={{ padding: 0 }}
+                onClick={() => { signOutAccount(); setWho(null); setError(''); }}>
+                Switch
+              </button>
+            </div>
+          ) : null}
+          <input
+            id="access-code"
+            className={'af-field ag-code' + (wrong ? ' is-bad' : '')}
+            value={code}
+            onChange={e => { setCode(e.target.value); setWrong(false); }}
+            onKeyDown={e => { if (e.key === 'Enter') void tryCode(code); }}
+            placeholder={accessEnabled() ? 'Invite code' : 'Access code'}
+            aria-label={accessEnabled() ? 'Invite code' : 'Access code'}
+            autoCapitalize="characters"
+            autoComplete="one-time-code"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="go"
+          />
+          {wrong ? <div role="alert" className="af-err">{error}</div> : null}
+          <button type="button" className="af-go" onClick={() => void tryCode(code)} disabled={busy || !code.trim()}>
+            {busy ? 'Checking…' : 'Enter'}
           </button>
-          <div style={{
-            marginTop: 12, padding: 12, borderRadius: 12, fontSize: 12, lineHeight: '18px',
-            background: 'rgba(242, 253, 254, 0.07)', color: dim(0.75),
-          }}>
-            <b style={{ color: 'var(--color-text)' }}>Already using Doctors on another phone?</b> You do not need a
-            new code. On that phone open <b>You → Your account → Connect email or Google</b> with this same
-            email, then come back here and tap “Use another account” to sign in again.
-          </div>
+          {who ? (
+            <details className="ag-more">
+              <summary>Already use Doctors on another phone?</summary>
+              <p>
+                No new code needed. On that phone go to <b>You → Your account → Connect email or Google</b> with
+                this same email, then tap Switch here and sign in.
+              </p>
+            </details>
+          ) : null}
         </div>
-      ) : null}
-      {wrong ? (
-        <div role="alert" style={{ fontSize: 12, lineHeight: '18px', color: BAD, marginTop: 10 }}>
-          {error}
-        </div>
-      ) : null}
-
-      <div style={{ flex: 1, minHeight: 26 }} />
-      <button
-        type="button"
-        onClick={() => void tryCode(code)}
-        disabled={busy || !code.trim()}
-        style={{
-          width: '100%', minHeight: 50, borderRadius: 12,
-          border: '1px solid var(--color-accent)', background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)',
-          color: 'var(--color-accent)', font: "500 15px 'Inter', system-ui", cursor: 'pointer',
-          opacity: busy || !code.trim() ? 0.52 : 1,
-        }}
-      >
-        {busy ? 'Checking…' : 'Enter'}
-      </button>
-        </>
       )}
     </div>
   );
