@@ -143,14 +143,14 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
             <span className="chd-row">
               <span className="chd-title">Chat</span>
               <span className="chd-live" aria-hidden="true" />
-              {unread ? <span className="chd-badge">{unread > 99 ? '99+' : unread} new</span> : null}
+              {unread ? <span className="chd-badge">{unread > 99 ? '99+' : unread}</span> : null}
             </span>
             <span className="chd-preview">
               {last ? <><b>{who}</b> {last.text}</> : 'Start the conversation with your league'}
             </span>
           </span>
           <span className="chd-open" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"
               strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6" /></svg>
           </span>
         </span>

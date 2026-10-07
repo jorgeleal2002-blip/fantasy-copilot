@@ -3650,7 +3650,7 @@ img, svg {
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 4px 14px 10px;
+  padding: 2px 12px 6px;
   border-radius: 16px 16px 0 0;
   /* Of a piece with the tab bar under it, a step lighter: a shelf, not a slab. */
   background:
@@ -3666,37 +3666,39 @@ img, svg {
 .chd-grip {
   display: block;
   align-self: center;
-  width: 36px;
+  width: 32px;
   height: 4px;
-  margin: 2px auto 8px;
+  margin: 2px auto 4px;
   border-radius: 999px;
   background: rgba(242, 253, 254, 0.28);
 }
-.chd-bar-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.chd-bar-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/* One line, the way a docked bar should be: picture, title, the latest
+   message and the way up, about the height of a tab. */
 .chd-bar-av {
-  width: 40px;
-  height: 40px;
+  width: 26px;
+  height: 26px;
   flex: none;
   border-radius: 999px;
   object-fit: cover;
-  box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px color-mix(in srgb, var(--color-accent) 52%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 52%, transparent);
 }
-.chd-bar-av.is-league { border-radius: 12px; box-shadow: none; }
+.chd-bar-av.is-league { border-radius: 8px; box-shadow: none; }
 .chd-bar-av.is-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(242, 253, 254, 0.07);
-  font-size: 17px;
+  font-size: 13px;
   box-shadow: none;
 }
-.chd-bar-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.chd-row { display: flex; align-items: center; gap: 8px; }
+.chd-bar-text { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.chd-row { display: flex; align-items: center; gap: 6px; flex: none; }
 .chd-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
 /* A breathing dot: it is live. */
 .chd-live {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
   background: var(--c-mark-good);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-mark-good) 28%, transparent);
@@ -3704,16 +3706,18 @@ img, svg {
 }
 @keyframes chdPulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--c-mark-good) 0%, transparent); } }
 .chd-badge {
-  height: 20px;
-  padding: 0 8px;
+  height: 18px;
+  padding: 0 6px;
   border-radius: 999px;
   background: var(--c-mark-bad);
   color: var(--color-bg);
   font-size: 12px;
   font-weight: 700;
-  line-height: 20px;
+  line-height: 18px;
 }
 .chd-preview {
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
   line-height: 18px;
   color: rgba(242, 253, 254, 0.62);
@@ -3723,8 +3727,8 @@ img, svg {
 }
 .chd-preview b { color: rgba(242, 253, 254, 0.9); font-weight: 600; margin-right: 4px; }
 .chd-open {
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   flex: none;
   display: flex;
   align-items: center;
