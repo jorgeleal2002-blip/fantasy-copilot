@@ -3828,8 +3828,8 @@ img, svg {
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 2px 12px 6px;
-  border-radius: 16px 16px 0 0;
+  padding: 0 12px 4px;
+  border-radius: 12px 12px 0 0;
   /* Of a piece with the tab bar under it, a step lighter: a shelf, not a slab. */
   background:
     radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--color-accent) 7%, transparent), transparent 60%),
@@ -3844,9 +3844,9 @@ img, svg {
 .chd-grip {
   display: block;
   align-self: center;
-  width: 32px;
+  width: 28px;
   height: 4px;
-  margin: 2px auto 4px;
+  margin: 4px auto 2px;
   border-radius: 999px;
   background: rgba(242, 253, 254, 0.28);
 }
@@ -3854,8 +3854,8 @@ img, svg {
 /* One line, the way a docked bar should be: picture, title, the latest
    message and the way up, about the height of a tab. */
 .chd-bar-av {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   flex: none;
   border-radius: 999px;
   object-fit: cover;
@@ -3872,7 +3872,7 @@ img, svg {
 }
 .chd-bar-text { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
 .chd-row { display: flex; align-items: center; gap: 6px; flex: none; }
-.chd-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.chd-title { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
 /* A breathing dot: it is live. */
 .chd-live {
   width: 6px;
@@ -3906,8 +3906,8 @@ img, svg {
 }
 .chd-preview b { color: rgba(242, 253, 254, 0.9); font-weight: 600; margin-right: 4px; }
 .chd-open {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   flex: none;
   display: flex;
   align-items: center;
