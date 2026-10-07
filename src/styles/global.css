@@ -3569,12 +3569,13 @@ img, svg {
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 6px 16px 10px;
-  border-top: var(--hairline) solid rgba(242, 253, 254, 0.12);
+  padding: 4px 14px 10px;
   border-radius: 16px 16px 0 0;
+  /* Of a piece with the tab bar under it, a step lighter: a shelf, not a slab. */
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 7%, var(--color-surface)), var(--color-surface));
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.28);
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--color-accent) 7%, transparent), transparent 60%),
+    color-mix(in srgb, var(--color-surface) 72%, var(--bg-base));
+  box-shadow: inset 0 1px 0 rgba(242, 253, 254, 0.12), 0 -10px 30px rgba(0, 0, 0, 0.35);
   color: var(--color-text);
   cursor: grab;
   touch-action: none;
@@ -3584,43 +3585,52 @@ img, svg {
 .chd-grip {
   display: block;
   align-self: center;
-  width: 40px;
+  width: 36px;
   height: 4px;
-  margin: 0 auto 6px;
+  margin: 2px auto 8px;
   border-radius: 999px;
   background: rgba(242, 253, 254, 0.28);
 }
 .chd-bar-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .chd-bar-av {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   flex: none;
   border-radius: 999px;
   object-fit: cover;
-  border: 2px solid color-mix(in srgb, var(--color-accent) 52%, transparent);
+  box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px color-mix(in srgb, var(--color-accent) 52%, transparent);
 }
+.chd-bar-av.is-league { border-radius: 12px; box-shadow: none; }
 .chd-bar-av.is-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(242, 253, 254, 0.07);
   font-size: 17px;
-  border-color: transparent;
+  box-shadow: none;
 }
-.chd-bar-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.chd-bar-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .chd-row { display: flex; align-items: center; gap: 8px; }
-.chd-title { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.chd-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+/* A breathing dot: it is live. */
+.chd-live {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--c-mark-good);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-mark-good) 28%, transparent);
+  animation: chdPulse 2.4s ease-in-out infinite;
+}
+@keyframes chdPulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--c-mark-good) 0%, transparent); } }
 .chd-badge {
-  min-width: 20px;
   height: 20px;
-  padding: 0 6px;
+  padding: 0 8px;
   border-radius: 999px;
   background: var(--c-mark-bad);
   color: var(--color-bg);
   font-size: 12px;
   font-weight: 700;
   line-height: 20px;
-  text-align: center;
 }
 .chd-preview {
   font-size: 13px;
@@ -3630,8 +3640,18 @@ img, svg {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.chd-preview b { color: rgba(242, 253, 254, 0.9); font-weight: 600; }
-.chd-up { flex: none; font-size: 17px; color: rgba(242, 253, 254, 0.52); transform: translateY(3px); }
+.chd-preview b { color: rgba(242, 253, 254, 0.9); font-weight: 600; margin-right: 4px; }
+.chd-open {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+}
 
 .chd-layer { position: fixed; inset: 0; z-index: 35; }
 .chd-scrim { position: absolute; inset: 0; background: var(--scrim-over); transition: opacity 0.28s ease; }

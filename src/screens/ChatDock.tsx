@@ -113,10 +113,10 @@ export function ChatDock({ m }: { m: Model }) {
     setOpen(fast ? dy < 0 : shown > H * (g.from === 'bar' ? OPEN_AT : 1 - OPEN_AT));
   };
 
+  const logo = leagueAvatar(m.league.avatar);
   const showing = open || pos != null;
   const offset = pos ?? 0;
   const fade = Math.max(0, 1 - offset / travel());
-  const logo = leagueAvatar(m.league.avatar);
 
   return (
     <>
@@ -134,18 +134,24 @@ export function ChatDock({ m }: { m: Model }) {
       >
         <span className="chd-grip" aria-hidden="true" />
         <span className="chd-bar-row">
+          {/* Who spoke last, or the league itself before anybody has. */}
           {last?.avatar ? <img className="chd-bar-av" src={last.avatar} alt="" />
-            : <span className="chd-bar-av is-icon" aria-hidden="true">💬</span>}
+            : logo ? <img className="chd-bar-av is-league" src={logo} alt="" />
+              : <span className="chd-bar-av is-icon" aria-hidden="true">💬</span>}
           <span className="chd-bar-text">
             <span className="chd-row">
               <span className="chd-title">Chat</span>
-              {unread ? <span className="chd-badge">{unread > 99 ? '99+' : unread}</span> : null}
+              <span className="chd-live" aria-hidden="true" />
+              {unread ? <span className="chd-badge">{unread > 99 ? '99+' : unread} new</span> : null}
             </span>
             <span className="chd-preview">
-              {last ? <><b>{who}:</b> {last.text}</> : 'Say something to the league'}
+              {last ? <><b>{who}</b> {last.text}</> : 'Start the conversation with your league'}
             </span>
           </span>
-          <span className="chd-up" aria-hidden="true">⌃</span>
+          <span className="chd-open" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"
+              strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6" /></svg>
+          </span>
         </span>
       </div>
 
