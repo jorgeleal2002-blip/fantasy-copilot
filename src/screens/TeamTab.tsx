@@ -106,7 +106,8 @@ function Summary({ app, m }: { app: App; m: Model }) {
   const table = m.leagueRows.slice().sort((x, y) =>
     (y.record.wins + y.record.ties / 2) - (x.record.wins + x.record.ties / 2) || y.record.pointsFor - x.record.pointsFor);
   /* Overall: the lineup's Rating, the roster's market value, the points
-     scored and the record, 35 / 25 / 20 / 20 — see `overallRatings`. */
+     scored and the record, each as a percentile of the league, 35 / 25 / 20 /
+     20 — see `overallRatings`. */
   const overall = overallRatings(m.leagueRows.map(r => ({
     id: r.id, fit: r.fit, value: r.now, wins: r.record.wins, losses: r.record.losses, ties: r.record.ties,
     pointsFor: r.record.pointsFor,
@@ -280,6 +281,7 @@ function Summary({ app, m }: { app: App; m: Model }) {
                     <b>{x.v == null ? '—' : Math.round(x.v)}</b>
                   </div>
                 )) : null}
+                {myOverall ? <div className="yp-note">vs the rest of the league</div> : null}
               </div>
             </div>
             {/* Where the table has you, and where the season should leave you. */}

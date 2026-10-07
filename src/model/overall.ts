@@ -1,16 +1,17 @@
 /**
- * One number for how good a team is, from three readings of it:
+ * One number for how good a team is, from four readings of it, each taken
+ * against everybody else in the league rather than on its own scale:
  *
- *  - fit: the Rating of its best lineup, already 0..100;
- *  - value: what its roster is worth on the market, against the league's
- *    richest roster;
- *  - points: what it scores a game, against the league's top scorer;
- *  - record: its share of wins — what the table actually pays for, though a
- *    win depends on the opponent too, which is why it weighs no more than
- *    the points.
+ *  - fit: the Rating of its best lineup;
+ *  - value: what its roster is worth on the market;
+ *  - points: what it scores a game;
+ *  - record: its share of wins (a tie is half).
  *
- * Weighted 35 / 25 / 20 / 20. Before anybody has played, points and record
- * say nothing and the other two share their weight.
+ * Each becomes a percentile — the share of the other teams it is ahead of,
+ * 100 for the best in the league and 0 for the worst — so a 75 means the same
+ * thing in every row, and the four can be added up. Weighted 35 / 25 / 20 /
+ * 20. Before anybody has played, points and record say nothing and the other
+ * two share their weight.
  */
 export interface OverallInput {
   id: number;
@@ -29,42 +30,58 @@ export interface Overall {
   score: number;
   /** 1 = best in the league */
   rank: number;
+  /** each 0..100: the share of the league this team is ahead of */
   fit: number;
-  /** 0..100, against the league's most valuable roster */
   value: number;
-  /** 0..100 against the league's top scorer, or null before any game */
+  /** null before any game */
   points: number | null;
-  /** 0..100: share of games won (a tie is half), or null before any game */
   record: number | null;
 }
 
 export const OVERALL_WEIGHTS = { fit: 0.35, value: 0.25, points: 0.2, record: 0.2 };
 
+/** Where x sits among all the values, 0..100: teams below it count whole,
+ *  teams level with it count half. */
+export function percentile(x: number, all: number[]): number {
+  if (all.length < 2) return 100;
+  let below = 0, level = 0;
+  for (const v of all) {
+    if (v < x) below++;
+    else if (v === x) level++;
+  }
+  // Itself is one of the "level" ones and does not count.
+  return ((below + (level - 1) / 2) / (all.length - 1)) * 100;
+}
+
 export function overallRatings(teams: OverallInput[]): Record<number, Overall> {
-  const maxValue = Math.max(1e-9, ...teams.map(t => t.value));
-  const ppgOf = (t: OverallInput) => {
-    const g = t.wins + t.losses + t.ties;
-    return g ? t.pointsFor / g : 0;
-  };
-  const maxPpg = Math.max(1e-9, ...teams.map(ppgOf));
+  const games = (t: OverallInput) => t.wins + t.losses + t.ties;
+  const played = teams.some(t => games(t) > 0);
+  const ppg = (t: OverallInput) => (games(t) ? t.pointsFor / games(t) : 0);
+  const winShare = (t: OverallInput) => (games(t) ? (t.wins + t.ties / 2) / games(t) : 0);
+
+  const fits = teams.map(t => t.fit);
+  const values = teams.map(t => t.value);
+  const ppgs = teams.map(ppg);
+  const wins = teams.map(winShare);
+
+  const w = OVERALL_WEIGHTS;
   const scored = teams.map(t => {
-    const games = t.wins + t.losses + t.ties;
-    const fit = Math.max(0, Math.min(100, t.fit));
-    const value = (t.value / maxValue) * 100;
-    // Per game, so a team with a game more is not ahead for that alone.
-    const ppg = games ? t.pointsFor / games : 0;
-    const points = games ? (ppg / maxPpg) * 100 : null;
-    const record = games ? ((t.wins + t.ties / 2) / games) * 100 : null;
-    const w = OVERALL_WEIGHTS;
+    const fit = percentile(t.fit, fits);
+    const value = percentile(t.value, values);
+    const points = played ? percentile(ppg(t), ppgs) : null;
+    const record = played ? percentile(winShare(t), wins) : null;
     const score = points == null || record == null
       ? (w.fit * fit + w.value * value) / (w.fit + w.value)
       : w.fit * fit + w.value * value + w.points * points + w.record * record;
-    return { id: t.id, score, fit, value, points, record };
+    return { id: t.id, score, fit, value, points, record, rawFit: t.fit };
   });
-  const order = scored.slice().sort((a, b) => b.score - a.score || b.fit - a.fit);
+  const order = scored.slice().sort((a, b) => b.score - a.score || b.rawFit - a.rawFit);
   const out: Record<number, Overall> = {};
   for (const s of scored) {
-    out[s.id] = { score: s.score, rank: order.findIndex(o => o.id === s.id) + 1, fit: s.fit, value: s.value, points: s.points, record: s.record };
+    out[s.id] = {
+      score: s.score, rank: order.findIndex(o => o.id === s.id) + 1,
+      fit: s.fit, value: s.value, points: s.points, record: s.record,
+    };
   }
   return out;
 }

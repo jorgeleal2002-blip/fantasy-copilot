@@ -4228,6 +4228,7 @@ img, svg {
 .yp-bar { display: block; height: 4px; border-radius: 999px; background: rgba(242, 253, 254, 0.07); overflow: hidden; }
 .yp-bar.is-thin { height: 4px; margin-top: 8px; }
 .yp-bar span { display: block; height: 100%; border-radius: 999px; background: color-mix(in srgb, var(--color-accent) 52%, var(--color-surface)); }
+.yp-note { margin-top: 2px; font-size: 12px; color: rgba(242, 253, 254, 0.52); }
 .yp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .yp-tile {
   min-width: 0;
