@@ -49,7 +49,10 @@ const image = (url: string) => new Promise<HTMLImageElement>((ok, fail) => {
  * plainer.
  */
 export async function segmentPerson(url: string): Promise<string | null> {
-  const [seg, img] = await Promise.all([load(), image(url)]);
+  const img = await image(url);
+  const own = alreadyCut(img);
+  if (own) return own;
+  const seg = await load();
   const k = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
   const W = Math.max(1, Math.round(img.naturalWidth * k));
   const H = Math.max(1, Math.round(img.naturalHeight * k));
@@ -70,6 +73,11 @@ export async function segmentPerson(url: string): Promise<string | null> {
   result.close();
 
   const px = ctx.getImageData(0, 0, W, H);
+  /* What the photo already had cleared stays cleared. Read on its own, the
+     mask spills a few pixels past the hair, and a transparent pixel there is
+     black underneath: set opaque it drew a jagged black outline round him. */
+  const was = new Uint8ClampedArray(W * H);
+  for (let p = 0; p < W * H; p++) was[p] = px.data[p * 4 + 3];
   // The backdrop's colour: the average of what the model is sure is not him.
   let br = 0, bgc = 0, bb = 0, bn = 0;
   const confAt = (x: number, y: number) =>
@@ -78,6 +86,7 @@ export async function segmentPerson(url: string): Promise<string | null> {
     for (let x = 0; x < W; x += 2) {
       if (confAt(x, y) > 0.05) continue;
       const i = (y * W + x) * 4;
+      if (px.data[i + 3] < 128) continue;
       br += px.data[i]; bgc += px.data[i + 1]; bb += px.data[i + 2]; bn++;
     }
   }
@@ -98,7 +107,7 @@ export async function segmentPerson(url: string): Promise<string | null> {
       // beard on a dark ground stays solid — the colour that low keep drags in
       // from the backdrop is taken back out by `defringe` below.
       const t = Math.max(0, Math.min(1, (p - 0.15) / 0.35));
-      const a = Math.round(t * t * (3 - 2 * t) * 255);
+      const a = Math.min(was[y * W + x], Math.round(t * t * (3 - 2 * t) * 255));
       px.data[(y * W + x) * 4 + 3] = a;
       if (a > 24) {
         kept++;
@@ -113,6 +122,43 @@ export async function segmentPerson(url: string): Promise<string | null> {
   defringe(px, bg);
   ctx.putImageData(px, 0, 0);
 
+  return crop(c, x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+}
+
+/**
+ * A photo that comes already cut out — Sleeper's portraits are, on a clear
+ * ground — needs no model: it is cropped to what it kept, edges as they were.
+ * Null when its border is not clear.
+ */
+function alreadyCut(img: HTMLImageElement): string | null {
+  const k = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+  const W = Math.max(1, Math.round(img.naturalWidth * k));
+  const H = Math.max(1, Math.round(img.naturalHeight * k));
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext('2d');
+  if (!ctx) return null;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, W, H);
+  const d = ctx.getImageData(0, 0, W, H).data;
+  let clear = 0, n = 0;
+  const at = (x: number, y: number) => { n++; if (d[(y * W + x) * 4 + 3] < 16) clear++; };
+  for (let x = 0; x < W; x++) { at(x, 0); at(x, H - 1); }
+  for (let y = 1; y < H - 1; y++) { at(0, y); at(W - 1, y); }
+  // The shirt runs off the bottom, so most of the border, not all of it.
+  if (clear / n < 0.6) return null;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (d[(y * W + x) * 4 + 3] <= 24) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < 0) return null;
   return crop(c, x0, y0, x1 - x0 + 1, y1 - y0 + 1);
 }
 

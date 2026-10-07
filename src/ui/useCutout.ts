@@ -40,7 +40,7 @@ function flat(url: string): Promise<string | null> {
 
 /* Kept on the phone, so each photo is worked out once and not on every open.
    Keyed by a hash of the photo itself: a new photo is a new key. */
-const KEY = 'doctors-cutout:v4:';
+const KEY = 'doctors-cutout:v5:';
 const hash = (s: string) => {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
@@ -50,7 +50,13 @@ const remembered = (url: string): string | null => {
   try { return localStorage.getItem(KEY + hash(url)); } catch { return null; }
 };
 const remember = (url: string, cut: string) => {
-  try { localStorage.setItem(KEY + hash(url), cut); } catch { /* full, or private mode: it is only a cache */ }
+  try {
+    // The last version's, made with the black outline, only take up room.
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('doctors-cutout:') && !k.startsWith(KEY)) localStorage.removeItem(k);
+    }
+    localStorage.setItem(KEY + hash(url), cut); } catch { /* full, or private mode: it is only a cache */ }
 };
 
 /* The model first, which handles any background; the plain-ground method
