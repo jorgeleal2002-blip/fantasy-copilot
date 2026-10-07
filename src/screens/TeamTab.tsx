@@ -105,8 +105,8 @@ function Summary({ app, m }: { app: App; m: Model }) {
   const games = meRow ? meRow.record.wins + meRow.record.losses + meRow.record.ties : 0;
   const table = m.leagueRows.slice().sort((x, y) =>
     (y.record.wins + y.record.ties / 2) - (x.record.wins + x.record.ties / 2) || y.record.pointsFor - x.record.pointsFor);
-  /* Overall: the lineup's Rating, the roster's market value and the points scored,
-     40 / 30 / 30 — see `overallRatings`. */
+  /* Overall: the lineup's Rating, the roster's market value, the points
+     scored and the record, 35 / 25 / 20 / 20 — see `overallRatings`. */
   const overall = overallRatings(m.leagueRows.map(r => ({
     id: r.id, fit: r.fit, value: r.now, wins: r.record.wins, losses: r.record.losses, ties: r.record.ties,
     pointsFor: r.record.pointsFor,
@@ -269,9 +269,10 @@ function Summary({ app, m }: { app: App; m: Model }) {
                   <span className="yp-of">overall · of {m.teamCount}</span>
                 </div>
                 {myOverall ? [
-                  { k: 'Fit', w: '40%', v: myOverall.fit },
-                  { k: 'Value', w: '30%', v: myOverall.value },
-                  { k: 'Points', w: '30%', v: myOverall.points },
+                  { k: 'Fit', w: '35%', v: myOverall.fit },
+                  { k: 'Value', w: '25%', v: myOverall.value },
+                  { k: 'Points', w: '20%', v: myOverall.points },
+                  { k: 'Record', w: '20%', v: myOverall.record },
                 ].map(x => (
                   <div key={x.k} className="yp-part">
                     <span className="yp-part-k">{x.k}<i>{x.w}</i></span>

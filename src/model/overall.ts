@@ -4,12 +4,13 @@
  *  - fit: the Rating of its best lineup, already 0..100;
  *  - value: what its roster is worth on the market, against the league's
  *    richest roster;
- *  - points: what it has actually scored, against the league's top scorer —
- *    points rather than the record, because a win depends on the opponent
- *    and points scored do not.
+ *  - points: what it scores a game, against the league's top scorer;
+ *  - record: its share of wins — what the table actually pays for, though a
+ *    win depends on the opponent too, which is why it weighs no more than
+ *    the points.
  *
- * Weighted 40 / 30 / 30. Before anybody has played, points say nothing and
- * the other two share their weight.
+ * Weighted 35 / 25 / 20 / 20. Before anybody has played, points and record
+ * say nothing and the other two share their weight.
  */
 export interface OverallInput {
   id: number;
@@ -33,9 +34,11 @@ export interface Overall {
   value: number;
   /** 0..100 against the league's top scorer, or null before any game */
   points: number | null;
+  /** 0..100: share of games won (a tie is half), or null before any game */
+  record: number | null;
 }
 
-export const OVERALL_WEIGHTS = { fit: 0.4, value: 0.3, points: 0.3 };
+export const OVERALL_WEIGHTS = { fit: 0.35, value: 0.25, points: 0.2, record: 0.2 };
 
 export function overallRatings(teams: OverallInput[]): Record<number, Overall> {
   const maxValue = Math.max(1e-9, ...teams.map(t => t.value));
@@ -51,16 +54,17 @@ export function overallRatings(teams: OverallInput[]): Record<number, Overall> {
     // Per game, so a team with a game more is not ahead for that alone.
     const ppg = games ? t.pointsFor / games : 0;
     const points = games ? (ppg / maxPpg) * 100 : null;
+    const record = games ? ((t.wins + t.ties / 2) / games) * 100 : null;
     const w = OVERALL_WEIGHTS;
-    const score = points == null
+    const score = points == null || record == null
       ? (w.fit * fit + w.value * value) / (w.fit + w.value)
-      : w.fit * fit + w.value * value + w.points * points;
-    return { id: t.id, score, fit, value, points };
+      : w.fit * fit + w.value * value + w.points * points + w.record * record;
+    return { id: t.id, score, fit, value, points, record };
   });
   const order = scored.slice().sort((a, b) => b.score - a.score || b.fit - a.fit);
   const out: Record<number, Overall> = {};
   for (const s of scored) {
-    out[s.id] = { score: s.score, rank: order.findIndex(o => o.id === s.id) + 1, fit: s.fit, value: s.value, points: s.points };
+    out[s.id] = { score: s.score, rank: order.findIndex(o => o.id === s.id) + 1, fit: s.fit, value: s.value, points: s.points, record: s.record };
   }
   return out;
 }
