@@ -468,9 +468,12 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
           }} /> : null}
         {/* Cut out, he stands on the banner's floor, whole, the way Sleeper's
             portraits do. A photo that cannot be cut keeps the faded crop. */}
+        {/* Nothing until the cut-out is known — the plain photo first and
+            the cut-out a second later read as the picture jumping. */}
         <div className={'ps-hero-face' + (cut ? ' is-cut' : '')}>
-          {cut ? <img src={cut} alt="" />
-            : photo ? <img src={photo} alt="" />
+          {cut ? <img className="ps-hero-in" src={cut} alt="" />
+            : cut === undefined && photo ? null
+            : photo ? <img className="ps-hero-in" src={photo} alt="" />
               : <span>{p.pos}</span>}
         </div>
         <label className="ps-hero-edit">

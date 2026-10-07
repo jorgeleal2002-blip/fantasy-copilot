@@ -5,6 +5,8 @@ import { crop, segmentPerson } from './segment';
 /** Big enough for a banner on a 3x screen, small enough to clear in a frame. */
 const MAX_SIDE = 1024;
 const done = new Map<string, Promise<string | null>>();
+/** What each photo came to, once known, so a second open draws it at once. */
+const known = new Map<string, string | null>();
 
 function flat(url: string): Promise<string | null> {
   return new Promise(resolve => {
@@ -63,29 +65,42 @@ const remember = (url: string, cut: string) => {
    when the model cannot load or finds nobody, so a flat studio photo still
    comes out even offline. */
 async function make(url: string): Promise<string | null> {
-  const held = remembered(url);
-  if (held) return held;
   let cut: string | null = null;
   try { cut = await segmentPerson(url); } catch { cut = null; }
   if (!cut) cut = await flat(url);
   if (cut) remember(url, cut);
+  known.set(url, cut);
   return cut;
 }
 
+/** The answer without waiting, when there is one: this visit's, or the
+ *  phone's from an earlier one. Undefined while it is still being worked out. */
+function now(url: string | null): string | null | undefined {
+  if (!url) return null;
+  if (known.has(url)) return known.get(url);
+  const held = remembered(url);
+  if (held) { known.set(url, held); return held; }
+  return undefined;
+}
+
 /**
- * The photo with its background taken off, cropped to the person — or null
- * while it is being worked out and whenever it cannot be.
+ * The photo with its background taken off, cropped to the person; null when
+ * it cannot be, and undefined while it is being worked out — so the banner
+ * can wait for it instead of drawing the plain photo and then jumping.
  */
-export function useCutout(url: string | null): string | null {
-  const [src, setSrc] = useState<string | null>(null);
+export function useCutout(url: string | null): string | null | undefined {
+  const [state, setState] = useState(() => ({ url, src: now(url) }));
   useEffect(() => {
-    setSrc(null);
-    if (!url) return;
+    const ready = now(url);
+    setState(s => (s.url === url && s.src === ready ? s : { url, src: ready }));
+    if (ready !== undefined || !url) return;
     let live = true;
     let job = done.get(url);
     if (!job) { job = make(url); done.set(url, job); }
-    void job.then(s => { if (live) setSrc(s); });
+    void job.then(src => { if (live) setState({ url, src }); });
     return () => { live = false; };
   }, [url]);
-  return src;
+  // A new photo is not the old one's cut-out, even for the one frame before
+  // the effect catches up.
+  return state.url === url ? state.src : now(url);
 }

@@ -2473,6 +2473,7 @@ button { font-family: inherit; }
 /* A studio light behind his head in his team's colour: the portrait seems lit
    from behind, the way a broadcast graphic is, instead of floating on a flat
    fill. Under the photo, above the banner. */
+.ps-hero-in { animation: fadeIn 0.2s ease both; }
 .ps-hero-face.is-cut::before {
   content: '';
   position: absolute;
