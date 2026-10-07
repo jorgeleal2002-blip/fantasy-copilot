@@ -499,7 +499,7 @@ function EventCard({ app, m, e, onPlayer }: {
           {(() => {
             // The nickname this message gave him; for a photo, whatever he goes by now.
             const shownNick = e.kind === 'nick' ? e.nick : e.kind === 'unnick' ? null : app.nickFor(e.id);
-            return shownNick ? <span className="cs-sys-now">“{shownNick}”</span> : null;
+            return shownNick ? <span className="cs-sys-now"><span className="pl-nick"><i>aka</i>{shownNick}</span></span> : null;
           })()}
           <span className="cs-sys-name">{e.player}</span>
           <span className="cs-sys-meta">

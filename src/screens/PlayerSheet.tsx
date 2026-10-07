@@ -506,9 +506,9 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
         </label>
         <div className="ps-hero-body">
           <div className="ps-hero-owner">→ {p.ownerLabel}</div>
-          {app.nickFor(p.id) ? <div className="ps-hero-nick">“{app.nickFor(p.id)}”</div> : null}
           {first ? <div className="ps-hero-first">{first}</div> : null}
           <div className="ps-hero-last">{last}</div>
+          {app.nickFor(p.id) ? <div className="ps-hero-nick"><i>aka</i>{app.nickFor(p.id)}</div> : null}
           <div className="ps-hero-tag">
             {[p.pos, (p.team || 'FA') + (raw?.number != null && raw.number !== '' ? ' #' + raw.number : '')]
               .concat(byeOf(p.team) ? ['bye ' + byeOf(p.team)] : []).join(' · ')}
@@ -552,7 +552,8 @@ export function PlayerSheet({ app, m, playerId }: { app: App; m: Model; playerId
       {nickDraft == null ? (
         <div className="ps-nick-row">
           <button type="button" className="ps-nick-btn" onClick={() => setNickDraft(app.nickFor(p.id) || '')}>
-            ✎ {app.nickFor(p.id) ? 'Change nickname' : 'Give him a nickname'}
+            <span className="ps-nick-ic" aria-hidden="true">✎</span>
+            {app.nickFor(p.id) ? 'Change nickname' : 'Add a nickname'}
           </button>
           {app.nickFor(p.id) && app.nickBy(p.id) ? <span className="ps-nick-by">by {app.nickBy(p.id)}</span> : null}
         </div>
