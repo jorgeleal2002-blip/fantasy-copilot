@@ -16,10 +16,12 @@ import { Balance, TradeBuilder, assessTrade } from './TradeBuilder';
  * message carries the date. The newest stays in view as messages arrive,
  * unless you have scrolled up to read.
  */
-export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
+export function LeagueChat({ app, m, msgs, err: feedErr, onProfile, onPlayer }: {
   app: App; m: Model; msgs: ChatMessage[] | null; err: string;
   /** open a manager's team, from his picture or name */
   onProfile: (rid: number) => void;
+  /** open a player, from a trade */
+  onPlayer: (id: string) => void;
 }) {
   const lid = m.league.league_id;
   const [sendErr, setErr] = useState('');
@@ -111,6 +113,7 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
 
   /* GIFs: trending when the box is empty, a search as you type. */
   const [gifOpen, setGifOpen] = useState(false);
+  const [plusOpen, setPlusOpen] = useState(false);
   const [gifQ, setGifQ] = useState('');
   const [gifs, setGifs] = useState<GifHit[] | null>(null);
   const [gifErr, setGifErr] = useState('');
@@ -200,6 +203,14 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
 
   const day = (t: number) => new Date(t).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const time = (t: number) => new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  /** "now", "5m", "3h" — and the clock once it is another day. */
+  const ago = (t: number) => {
+    const s = (Date.now() - t) / 1000;
+    if (s < 60) return 'now';
+    if (s < 3600) return Math.floor(s / 60) + 'm';
+    if (s < 6 * 3600 && day(t) === day(Date.now())) return Math.floor(s / 3600) + 'h';
+    return time(t);
+  };
 
   return (
     <div className="ch">
@@ -223,78 +234,73 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
               const newDay = !prev || day(prev.at) !== day(x.at);
               // Consecutive messages from one person within five minutes
               // are one block: one name, one picture.
-              const grouped = !!prev && !newDay && prev.uid === x.uid && x.at - prev.at < 5 * 60 * 1000;
+              const grouped = !!prev && !newDay && prev.uid === x.uid && x.at - prev.at < 5 * 60 * 1000 && !x.trade && !prev.trade;
+              const row = rowOf(x);
+              const open = row ? () => onProfile(row.id) : undefined;
+              const pic = x.avatar || row?.avatar;
+              const tagged = !mine && tagsMe(x.text, m.me.name);
               return (
                 <div key={x.id}>
                   {newDay ? <div className="ch-day">{day(x.at)}</div> : null}
-                  <div className={'ch-row' + (mine ? ' is-me' : '') + (grouped ? ' is-grouped' : '')}>
-                    {(() => {
-                      // Everyone's picture, yours too: whoever wrote it, at a glance.
-                      if (grouped) return <span className="ch-av is-blank" />;
-                      const row = rowOf(x);
-                      const pic = x.avatar || row?.avatar;
-                      const open = row ? () => onProfile(row.id) : undefined;
-                      return pic
-                        ? <img className={'ch-av' + (open ? ' is-tap' : '')} src={pic} alt={x.name} onClick={open} />
-                        : <span className={'ch-av' + (open ? ' is-tap' : '')} onClick={open}>{x.name.slice(0, 1).toUpperCase()}</span>;
-                    })()}
-                    <div className={'ch-bubble-wrap' + (x.trade ? ' is-trade' : '')}>
-                      {!grouped ? (() => {
-                        const row = rowOf(x);
-                        return (
-                          <button type="button" className="ch-name" disabled={!row}
-                            onClick={row ? () => onProfile(row.id) : undefined}>
-                            {mine ? 'You' : x.name}{x.user && !mine ? <span> @{x.user}</span> : null}
-                          </button>
-                        );
-                      })() : null}
-                      <div className="ch-hold"
-                        onPointerDown={() => holdStart(x.id)} onPointerUp={holdEnd} onPointerLeave={holdEnd}
-                        onPointerCancel={holdEnd} onContextMenu={e => { e.preventDefault(); setReacting(x.id); }}>
-                      {reacting === x.id ? (
-                        <div className={'ch-react-pick' + (reactAll ? ' is-all' : '')} role="menu" aria-label="React"
-                          ref={el => {
-                            // Too near the top of the chat to open above the
-                            // message: it opens under it instead.
-                            const box = list.current;
-                            if (!el || !box) return;
-                            const room = (el.parentElement as HTMLElement).getBoundingClientRect().top - box.getBoundingClientRect().top;
-                            el.classList.toggle('is-below', room < el.offsetHeight + 8);
-                            if (reactAll) el.scrollIntoView({ block: 'nearest' });
-                          }}>
-                          {(reactAll ? REACTS : REACTS.slice(0, QUICK_REACTS)).map(([key, emoji]) => (
-                            <button key={key} type="button" role="menuitem" aria-label={key}
-                              className={reactsOf(x).find(r => r.key === key)?.mine ? 'is-mine' : ''}
-                              onClick={() => toggleReact(x, key)}>{emoji}</button>
-                          ))}
-                          {!reactAll ? (
-                            <button type="button" className="ch-react-more" aria-label="More reactions"
-                              onClick={() => setReactAll(true)}>＋</button>
+                  {/* Laid out the way Sleeper's league chat is: everyone on
+                      the left, a picture and a name over plain text, no
+                      bubbles — a league chat reads as a feed, not a DM. */}
+                  <div className={'cs-msg' + (grouped ? ' is-grouped' : '') + (mine ? ' is-me' : '') + (tagged ? ' is-tagged' : '')}>
+                    {grouped ? <span className="cs-av is-blank" /> : pic
+                      ? <img className="cs-av" src={pic} alt={x.name} onClick={open} />
+                      : <span className="cs-av" onClick={open}>{x.name.slice(0, 1).toUpperCase()}</span>}
+                    <div className="cs-body">
+                      {!grouped ? (
+                        <div className="cs-head">
+                          <button type="button" className="cs-name" disabled={!row} onClick={open}>{x.name}</button>
+                          {x.user ? <span className="cs-handle">@{x.user}</span> : null}
+                          <span className="cs-when" title={day(x.at) + ' ' + time(x.at)}>{ago(x.at)}</span>
+                          {owner && !mine ? (
+                            <button type="button" className="cs-del" aria-label="Delete message" onClick={() => {
+                              if (confirm('Delete this message for everyone?')) void deleteChat(lid, x.id);
+                            }}>🗑</button>
                           ) : null}
                         </div>
                       ) : null}
-                      <button type="button" className="ch-react-btn" aria-label="React" onClick={() => setReacting(reacting === x.id ? null : x.id)}>☺</button>
-                      {x.trade ? (
-                        <TradeCard app={app} m={m} t={x.trade} from={rowOf(x)?.id ?? null} myRid={myRid}
-                          time={time(x.at)} onOpen={() => openTrade(x.trade as ChatTrade)}
-                          onReply={r => void post(r)} />
-                      ) : (
-                      <div className={'ch-bubble' + (x.gif ? ' is-gif' : '') + (!mine && tagsMe(x.text, m.me.name) ? ' is-tagged' : '')}
-                        title={time(x.at)}>
-                        {x.gif ? (
-                          <img className="ch-gif" src={x.gif.url} alt="GIF" loading="lazy"
-                            style={{ aspectRatio: x.gif.w + ' / ' + x.gif.h }} />
-                        ) : withTags(x.text)}
-                        <span className="ch-time">{time(x.at)}</span>
-                        {owner && !mine ? (
-                          <button type="button" className="ch-del" aria-label="Delete message" onClick={() => {
-                            if (confirm('Delete this message for everyone?')) void deleteChat(lid, x.id);
-                          }}>
-                            🗑
-                          </button>
+                      <div className="ch-hold"
+                        onPointerDown={() => holdStart(x.id)} onPointerUp={holdEnd} onPointerLeave={holdEnd}
+                        onPointerCancel={holdEnd} onContextMenu={e => { e.preventDefault(); setReacting(x.id); }}>
+                        {reacting === x.id ? (
+                          <div className={'ch-react-pick' + (reactAll ? ' is-all' : '')} role="menu" aria-label="React"
+                            ref={el => {
+                              // Too near the top of the chat to open above the
+                              // message: it opens under it instead.
+                              const box = list.current;
+                              if (!el || !box) return;
+                              const room = (el.parentElement as HTMLElement).getBoundingClientRect().top - box.getBoundingClientRect().top;
+                              el.classList.toggle('is-below', room < el.offsetHeight + 8);
+                              if (reactAll) el.scrollIntoView({ block: 'nearest' });
+                            }}>
+                            {(reactAll ? REACTS : REACTS.slice(0, QUICK_REACTS)).map(([key, emoji]) => (
+                              <button key={key} type="button" role="menuitem" aria-label={key}
+                                className={reactsOf(x).find(r => r.key === key)?.mine ? 'is-mine' : ''}
+                                onClick={() => toggleReact(x, key)}>{emoji}</button>
+                            ))}
+                            {!reactAll ? (
+                              <button type="button" className="ch-react-more" aria-label="More reactions"
+                                onClick={() => setReactAll(true)}>＋</button>
+                            ) : null}
+                          </div>
                         ) : null}
-                      </div>
-                      )}
+                        <button type="button" className="ch-react-btn" aria-label="React"
+                          onClick={() => setReacting(reacting === x.id ? null : x.id)}>☺</button>
+                        {x.trade ? (
+                          <>
+                            <div className="cs-text">proposed a trade</div>
+                            <TradeCard app={app} m={m} t={x.trade} from={row?.id ?? null} myRid={myRid}
+                              onOpen={() => openTrade(x.trade as ChatTrade)} onReply={r => void post(r)} onPlayer={onPlayer} />
+                          </>
+                        ) : x.gif ? (
+                          <img className="cs-gif" src={x.gif.url} alt="GIF" loading="lazy"
+                            style={{ aspectRatio: x.gif.w + ' / ' + x.gif.h }} />
+                        ) : (
+                          <div className="cs-text">{withTags(x.text)}</div>
+                        )}
                       </div>
                       {reactsOf(x).some(r => r.n) ? (
                         <div className="ch-reacts">
@@ -352,20 +358,42 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
             <div className="ch-gifs-by">Powered by GIPHY</div>
           </div>
         ) : null}
-        <button type="button" className="ch-gif-btn" aria-label="Send a GIF" aria-expanded={gifOpen}
-          onClick={() => { setGifOpen(o => !o); setTagQ(null); }}>
-          GIF
+        {plusOpen ? (
+          <div className="cs-plus-menu" role="menu">
+            <button type="button" role="menuitem" onClick={() => { setPlusOpen(false); setProposing('pick'); }}>
+              <span className="cs-plus-ic">⇄</span> Propose a trade
+            </button>
+            <button type="button" role="menuitem" onClick={() => {
+              setPlusOpen(false);
+              setText(t => (t && !t.endsWith(' ') ? t + ' @' : t + '@'));
+              setTagQ('');
+              requestAnimationFrame(() => box.current?.focus());
+            }}>
+              <span className="cs-plus-ic">@</span> Tag someone
+            </button>
+            <button type="button" role="menuitem" onClick={() => {
+              setPlusOpen(false);
+              void post('@everyone 📣 ' + (text.trim() || 'Heads up, league'));
+              setText('');
+            }}>
+              <span className="cs-plus-ic">📣</span> Announce to everyone
+            </button>
+          </div>
+        ) : null}
+        <button type="button" className={'cs-round' + (plusOpen ? ' is-on' : '')} aria-label="More" aria-expanded={plusOpen}
+          onClick={() => { setPlusOpen(o => !o); setGifOpen(false); setTagQ(null); }}>
+          ＋
         </button>
-        <button type="button" className="ch-trade-btn" aria-label="Propose a trade" title="Propose a trade"
-          onClick={() => setProposing('pick')}>
-          ⇄
+        <button type="button" className={'cs-gif-btn' + (gifOpen ? ' is-on' : '')} aria-label="Send a GIF" aria-expanded={gifOpen}
+          onClick={() => { setGifOpen(o => !o); setPlusOpen(false); setTagQ(null); }}>
+          GIF
         </button>
         <textarea
           value={text}
           rows={1}
           maxLength={CHAT_MAX}
           ref={box}
-          placeholder="Message · @ to tag"
+          placeholder="Start chatting"
           onChange={e => { setText(e.target.value); readTag(e.target.value, e.target.selectionStart); }}
           onSelect={e => readTag(e.currentTarget.value, e.currentTarget.selectionStart)}
           onBlur={() => window.setTimeout(() => setTagQ(null), 150)}
@@ -419,9 +447,9 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile }: {
  * verdict and the tug-of-war bar. Open it to see the whole analysis, change
  * it and send it back as a counter.
  */
-function TradeCard({ app, m, t, from, myRid, time, onOpen, onReply }: {
-  app: App; m: Model; t: ChatTrade; from: number | null; myRid: number | null; time: string;
-  onOpen: () => void; onReply: (text: string) => void;
+function TradeCard({ app, m, t, from, myRid, onOpen, onReply, onPlayer }: {
+  app: App; m: Model; t: ChatTrade; from: number | null; myRid: number | null;
+  onOpen: () => void; onReply: (text: string) => void; onPlayer: (id: string) => void;
 }) {
   const moves = useMemo(() => Object.fromEntries(t.moves.map(x => [x.id, { from: x.from, to: x.to }])), [t]);
   const a = useMemo(() => assessTrade(app, m, t.teams, moves),
@@ -433,34 +461,44 @@ function TradeCard({ app, m, t, from, myRid, time, onOpen, onReply }: {
   const forMe = myRid != null && t.teams.includes(myRid) && from !== myRid;
   return (
     <div className="ch-trade">
-      <div className="ch-trade-kick">⇄ Trade proposal <span>{time}</span></div>
       <Balance v={a.v} pivot={pivot} head={a.head} />
-      <div className="ch-trade-cols">
-        {t.teams.map(rid => {
-          const row = m.leagueRows.find(r => r.id === rid);
-          return (
-            <div key={rid} className="ch-trade-col">
-              <div className="ch-trade-who">
-                {row?.avatar ? <img src={row.avatar} alt="" /> : <span className="ch-trade-blank" />}
-                <span>{row ? (row.isMe ? 'You' : row.name) : 'Team'} <i>get</i></span>
-              </div>
-              {t.moves.filter(x => x.to === rid).map(x => {
-                const photo = /^\d+$/.test(x.id) ? app.photoFor(x.id) : null;
-                return (
-                  <div key={x.id} className="ch-trade-p">
-                    {photo ? <img src={photo} alt="" /> : <span className="ch-trade-blank">🎟</span>}
-                    <span className="ch-trade-name">{x.name}</span>
-                    {x.pos ? <b style={{ color: colorOf(x.pos as Pos) }}>{x.pos}</b> : null}
-                  </div>
-                );
-              })}
-              {!t.moves.some(x => x.to === rid) ? <div className="ch-trade-none">Nothing</div> : null}
+      {/* A section per team, as Sleeper lists a trade: the manager, then
+          each player he gets with his position and NFL team. */}
+      {t.teams.map(rid => {
+        const row = m.leagueRows.find(r => r.id === rid);
+        const got = t.moves.filter(x => x.to === rid);
+        return (
+          <div key={rid} className="ch-trade-sec">
+            <div className="ch-trade-who">
+              {row?.avatar ? <img src={row.avatar} alt="" /> : <span className="ch-trade-blank" />}
+              <span>{row ? (row.isMe ? 'You' : '@' + (row.user || row.name)) : 'Team'}</span>
+              <i>{row?.isMe ? 'get' : 'gets'}</i>
             </div>
-          );
-        })}
-      </div>
+            {got.map(x => {
+              const photo = /^\d+$/.test(x.id) ? app.photoFor(x.id) : null;
+              const nfl = app.data?.players[x.id]?.team;
+              return (
+                <button key={x.id} type="button" className="ch-trade-p"
+                  onClick={/^\d+$/.test(x.id) ? () => onPlayer(x.id) : undefined}>
+                  <span className="ch-trade-face">
+                    {photo ? <img src={photo} alt="" /> : <span className="ch-trade-blank">🎟</span>}
+                    <span className="ch-trade-plus">+</span>
+                  </span>
+                  <span className="ch-trade-pbody">
+                    <span className="ch-trade-name">{x.name}</span>
+                    <span className="ch-trade-meta">
+                      {x.pos ? <b style={{ color: colorOf(x.pos as Pos) }}>{x.pos}</b> : 'Pick'}{nfl ? ' - ' + nfl : ''}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+            {!got.length ? <div className="ch-trade-none">Nothing</div> : null}
+          </div>
+        );
+      })}
       <div className="ch-trade-acts">
-        <button type="button" className="ch-trade-open" onClick={onOpen}>Open in calculator ›</button>
+        <button type="button" className="ch-trade-open" onClick={onOpen}>⇄ Open in calculator</button>
         {forMe ? (
           <>
             <button type="button" className="ch-trade-yes" onClick={() => onReply('✅ I\'m in on that trade')}>👍</button>

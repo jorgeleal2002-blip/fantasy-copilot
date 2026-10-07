@@ -181,15 +181,16 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
               <div className="chd-head-row">
                 {logo ? <img className="chd-logo" src={logo} alt="" /> : <span className="chd-logo is-icon">💬</span>}
                 <span className="chd-head-text">
-                  <span className="chd-head-name">{m.league.name}</span>
-                  <span className="chd-head-sub">League chat · {m.teamCount} teams</span>
+                  <span className="chd-head-name">Chat</span>
+                  <span className="chd-head-sub">{m.league.name} · {m.teamCount} teams</span>
                 </span>
                 <button type="button" className="chd-x" aria-label="Close"
                   onPointerDown={e => e.stopPropagation()} onClick={() => setOpen(false)}>✕</button>
               </div>
             </div>
             <LeagueChat app={app} m={m} msgs={msgs} err={err}
-              onProfile={rid => { setOpen(false); app.setDetail('team-' + rid); }} />
+              onProfile={rid => { setOpen(false); app.setDetail('team-' + rid); }}
+              onPlayer={id => { setOpen(false); app.setDetail(id); }} />
           </div>
         </div>
       ) : null}
