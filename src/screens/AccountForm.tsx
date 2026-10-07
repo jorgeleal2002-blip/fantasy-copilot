@@ -52,7 +52,13 @@ export function AccountForm({ onSession, start = 'signin' }: {
           <div ref={gHost} style={{ minHeight: 44, display: 'flex', justifyContent: 'center' }} />
           <div style={{ textAlign: 'center', fontSize: 12, color: dim(0.52) }}>or with email</div>
         </>
-      ) : null}
+      ) : (
+        /* Said rather than silently left out: a missing button reads as a
+           broken app, and the fix is one setting the owner can make. */
+        <div style={{ fontSize: 12, lineHeight: '18px', color: dim(0.52) }}>
+          Google sign-in is not set up in this version of the app (VITE_GOOGLE_CLIENT_ID{import.meta.env?.VITE_FIREBASE_KEY ? '' : ', VITE_FIREBASE_KEY'}).
+        </div>
+      )}
       <input type="email" autoComplete="email" placeholder="Email" value={email}
         onChange={e => setEmail(e.target.value)} style={field} />
       <input type="password" autoComplete={mode === 'create' ? 'new-password' : 'current-password'}
