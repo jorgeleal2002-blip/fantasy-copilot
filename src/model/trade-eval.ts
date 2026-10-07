@@ -23,6 +23,8 @@ export interface TradeAsset {
   isPick?: boolean;
   /** goes straight into the receiver's best lineup — see `evaluateTrade` */
   starts?: boolean;
+  /** what share of his value the receiver can use — see `needFactor` */
+  need?: number;
 }
 
 /**
@@ -108,6 +110,30 @@ export function effectiveValue(v: number, top: number): number {
   return v * Math.pow(Math.min(1, v / top), CONSOLIDATION);
 }
 
+/**
+ * How much of a player's price the team receiving him can actually use.
+ *
+ * A price is what the market would pay for him, and the market is every team
+ * at once. To one team in particular, a back who walks into its lineup is
+ * worth all of it; a back who lands fifth on a depth chart that starts two is
+ * a bye-week fill-in this season and a trade chip after. The market value
+ * counted him the same either way, so a swap that sends your surplus at one
+ * position for more surplus at another read as a win. In dynasty the price
+ * is mostly future, where today's depth chart matters less, so the cut is
+ * milder there.
+ */
+export const NEED = {
+  /** on the bench, at a position where the team still has room for him */
+  bench: { redraft: 0.85, dynasty: 0.95 },
+  /** on the bench, at a position where the team already has more than it starts */
+  stacked: { redraft: 0.6, dynasty: 0.8 },
+};
+export function needFactor(starts: boolean, stacked: boolean, dynasty: boolean): number {
+  if (starts) return 1;
+  const k = dynasty ? 'dynasty' : 'redraft';
+  return stacked ? NEED.stacked[k] : NEED.bench[k];
+}
+
 export function evaluateTrade(
   teams: TradeTeam[],
   assets: TradeAsset[],
@@ -126,7 +152,8 @@ export function evaluateTrade(
   /* Except a piece the receiving team would start. The premium is about the
      second player who cannot play and takes a spot; for a team thin at the
      position, the second player IS a starter, and he is worth what he costs. */
-  const live = raw.map(a => ({ ...a, value: a.starts ? a.value : effectiveValue(a.value, best) }));
+  const base = raw.map(a => (a.starts ? a.value : effectiveValue(a.value, best)));
+  const live = raw.map((a, i) => ({ ...a, value: base[i] * (a.need ?? 1) }));
 
   const ledgers: TeamLedger[] = teams.map(t => {
     const gave = live.filter(a => a.from === t.id);
@@ -151,7 +178,11 @@ export function evaluateTrade(
     };
   });
 
-  const moved = live.reduce((s, a) => s + a.value, 0);
+  /* Measured before what each team can use: a deal where both sides take on
+     players they will bench has shrunk for both, and its edge has to read
+     smaller against the size of the deal — scaling both sides down together
+     and measuring against the shrunk total kept the percentage the same. */
+  const moved = base.reduce((s, v) => s + v, 0);
   const band = fairnessBand(moved);
 
   for (const l of ledgers) {

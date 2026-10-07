@@ -42,7 +42,7 @@ import { seasonOutlook, teamStrength } from '../model/outlook';
 import { returnLine, whyMe, whyThem } from '../model/offer-copy';
 import { tradeHeadline, type LeagueTrade } from '../model/league-trades';
 import type { Offer } from '../model/types';
-import { effectiveValue, evaluateTrade, fitLine, tradeHeadline as builderHeadline, verdictLine } from '../model/trade-eval';
+import { effectiveValue, evaluateTrade, fitLine, needFactor, tradeHeadline as builderHeadline, verdictLine } from '../model/trade-eval';
 import { depthOf, readPick, startsAt } from '../model/trade-picks';
 import { hasPlayed, readRecord } from '../model/record';
 import {
@@ -5691,5 +5691,38 @@ describe('the two-for-one discount and a team that starts both', () => {
     const net = (v: typeof on) => v.ledgers.find(l => l.id === 2)!.net;
     expect(net(on)).toBeGreaterThan(net(off));
     expect(on.ledgers.find(l => l.id === 2)!.got.find(a => a.id === 'p1')!.value).toBe(31);
+  });
+});
+
+/* Tuten for Waddle read as a 31% win for the side with five backs already:
+   the market price counted a fifth back the same as a starter. */
+describe('a player is worth what the team receiving him can use', () => {
+  it('counts a starter in full, a bench piece less, a pile-up least', () => {
+    expect(needFactor(true, true, false)).toBe(1);
+    expect(needFactor(false, false, false)).toBe(0.85);
+    expect(needFactor(false, true, false)).toBe(0.6);
+    expect(needFactor(false, true, true)).toBeGreaterThan(needFactor(false, true, false));
+  });
+  it('turns a surplus-for-surplus swap from a win into much less of one', () => {
+    const teams = [{ id: 1, name: 'A', isMe: true }, { id: 2, name: 'B', isMe: false }];
+    const deal = (need: number) => [
+      { id: 'rb', name: 'RB', value: 32, from: 2, to: 1, need },
+      { id: 'wr', name: 'WR', value: 21, from: 1, to: 2, need },
+    ];
+    const plain = evaluateTrade(teams, deal(1)).ledgers.find(l => l.isMe)!.net;
+    const stacked = evaluateTrade(teams, deal(0.6)).ledgers.find(l => l.isMe)!.net;
+    expect(stacked).toBeLessThan(plain);
+  });
+});
+
+describe('both sides benching what they get', () => {
+  it('reads as a smaller edge, not the same percentage scaled down', () => {
+    const teams = [{ id: 1, name: 'A', isMe: true }, { id: 2, name: 'B', isMe: false }];
+    const deal = (need: number) => [
+      { id: 'rb', name: 'RB', value: 32, from: 2, to: 1, need },
+      { id: 'wr', name: 'WR', value: 21, from: 1, to: 2, need },
+    ];
+    const pct = (v: ReturnType<typeof evaluateTrade>) => v.ledgers.find(l => l.isMe)!.net / v.moved;
+    expect(pct(evaluateTrade(teams, deal(0.6)))).toBeLessThan(pct(evaluateTrade(teams, deal(1))) * 0.7);
   });
 });
