@@ -53,7 +53,7 @@ export default function App() {
   const inApp = open && app.stage === 'app' && !!app.model;
 
   return (
-    <div className="app-frame">
+    <div className={'app-frame' + (inApp ? '' : ' is-welcome')}>
       <div className={inApp ? 'app-column app-column-wide' : 'app-column'}>
         {!open ? <AccessGate onOpen={unlock} /> : (
           <>

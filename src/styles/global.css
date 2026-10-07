@@ -3318,9 +3318,28 @@ img, svg {
   .fb-cards > .fb-how { grid-column: 1 / -1; }
 }
 
-/* A big monitor: three cards to a row. */
+/* A big monitor: the same two columns, centred, rather than a third column
+   that left the summary's two cards with an empty space beside them. */
 @media (min-width: 1500px) {
-  .shell-head { max-width: 1504px; }
-  .shell-main > * { max-width: 1440px; }
-  .screen, .stack { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .shell-head { max-width: 1264px; }
+  .shell-main > * { max-width: 1200px; }
+}
+
+/* ── The front door on a laptop ──────────────────────────────────────────
+   The same centred screens as on a phone, on the whole window: no phone-width
+   column with rules down its sides, the form in the middle of the screen. */
+@media (min-width: 900px) {
+  .app-frame.is-welcome .app-column {
+    max-width: none;
+    border-left: 0;
+    border-right: 0;
+    background: radial-gradient(60% 50% at 50% 30%, color-mix(in srgb, var(--color-accent) 7%, transparent), transparent 70%);
+  }
+  .app-frame.is-welcome .app-column > * {
+    width: 100%;
+    max-width: 460px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .app-frame.is-welcome .ag { max-width: 420px; }
 }

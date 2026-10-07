@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { BAD } from '../model/constants';
+import { accessEnabled } from '../api/access';
 import { mountGoogleButton } from '../api/identity';
 import { leagueAvatar } from '../api/sleeper';
 import type { SleeperLeague } from '../api/types';
@@ -83,17 +84,22 @@ export function ConnectScreen({ app }: { app: App }) {
         Doctors
       </h1>
       <p style={{ fontSize: 13, lineHeight: '20px', color: dim(0.62), margin: '0 0 28px', maxWidth: '32ch' }}>
-        {app.googleOn
-          ? 'Sign in and your leagues are here. Read-only — nothing is ever changed in Sleeper.'
-          : 'Connect your Sleeper account. Read-only.'}
+        Connect your Sleeper account. Read-only — nothing is ever changed in Sleeper.
       </p>
 
-      <GoogleBlock app={app} />
+      {/* With invites on, the email or Google account from the code screen
+          already carries the person across devices; a second Google button
+          here would be the same promise twice. */}
+      {accessEnabled() ? null : <GoogleBlock app={app} />}
 
       {/* The way in when there is no Google client configured. It is NOT a
           second door beside the Google button: where Google is on, this is
           reached once, from `LinkScreen`, and never again on any device. */}
-      {app.googleOn ? null : <SleeperForm app={app} />}
+      {/* Always: by the time anybody is here they have already signed in to
+          get past the code screen, and a second sign-in standing between them
+          and their username box read as the app asking twice. Google stays
+          above it for whoever wants their setup to follow them. */}
+      <SleeperForm app={app} />
     </div>
   );
 }
