@@ -414,6 +414,10 @@ msgs == null ? <div className="ch-empty">Loading…</div>
           onChange={e => { setText(e.target.value); readTag(e.target.value, e.target.selectionStart); }}
           onSelect={e => readTag(e.currentTarget.value, e.currentTarget.selectionStart)}
           onBlur={() => window.setTimeout(() => setTagQ(null), 150)}
+          onFocus={() => {
+            // The keyboard takes half the screen: keep the newest message in sight.
+            window.setTimeout(() => { const el = list.current; if (el && stick.current) el.scrollTop = el.scrollHeight; }, 350);
+          }}
           onKeyDown={e => {
             // With the list up, Enter or Tab takes its first name.
             if (tagRows.length && (e.key === 'Enter' || e.key === 'Tab')) { e.preventDefault(); putTag(tagRows[0].handle); return; }

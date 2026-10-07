@@ -4097,6 +4097,10 @@ img, svg {
   will-change: transform;
 }
 .chd-sheet.is-dragging { transition: none; }
+/* Typing: the keyboard has the bottom of the screen, so the sheet takes all
+   that is left and drops the home-indicator padding under the box. */
+.chd-layer.is-kb .chd-sheet { top: 0; border-radius: 0; padding-bottom: 0; }
+.chd-layer.is-kb .chd-head .chd-grip { display: none; }
 .chd-head {
   padding: 8px 16px 12px;
   border-bottom: var(--hairline) solid var(--color-divider);

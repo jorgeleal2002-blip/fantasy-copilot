@@ -51,6 +51,27 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
     try { localStorage.setItem(SEEN + lid, String(last.at)); } catch { /* fine */ }
   }, [open, last, lid]);
 
+  /* The iPhone keyboard does not shrink the page: it slides over it, and the
+     box you are typing in ended up under the keyboard while iOS scrolled the
+     page around to find it. While the chat is open it is fitted to the part
+     of the screen the keyboard leaves — the visual viewport — and follows it. */
+  const [vv, setVv] = useState<{ top: number; height: number; kb: boolean } | null>(null);
+  useEffect(() => {
+    const v = window.visualViewport;
+    if (!open || !v || isWide()) { setVv(null); return; }
+    const fit = () => {
+      const kb = window.innerHeight - v.height > 120;
+      setVv({ top: v.offsetTop, height: v.height, kb });
+      // iOS scrolls the document to bring the box up; the sheet is already
+      // where it should be, so the document is put back.
+      if (kb && (window.scrollY || document.documentElement.scrollTop)) window.scrollTo(0, 0);
+    };
+    fit();
+    v.addEventListener('resize', fit);
+    v.addEventListener('scroll', fit);
+    return () => { v.removeEventListener('resize', fit); v.removeEventListener('scroll', fit); };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
@@ -163,7 +184,8 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
       </div>
 
       {showing ? (
-        <div className="chd-layer">
+        <div className={'chd-layer' + (vv?.kb ? ' is-kb' : '')}
+          style={vv ? { top: vv.top, height: vv.height, bottom: 'auto' } : undefined}>
           <div className="chd-scrim" style={{ opacity: fade }} onClick={() => setOpen(false)} aria-hidden="true" />
           <div
             ref={sheet}
