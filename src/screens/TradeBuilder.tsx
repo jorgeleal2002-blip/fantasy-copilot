@@ -69,6 +69,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
      because the points go quiet in both cases and nothing said why. */
   const posOf = (id: string) => m.marketValue(id)?.pos as Pos | undefined;
   const depth: Record<number, ReturnType<typeof depthAfter>> = {};
+  const counts: Record<number, PosCount[]> = {};
   for (const t of teams) {
     const r = room[t.id];
     if (!r) continue;
@@ -76,6 +77,11 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
     const gave = assets.filter(x => x.from === t.id && !x.isPick).map(x => posOf(x.id)).filter(Boolean) as Pos[];
     if (!got.length && !gave.length) continue;
     depth[t.id] = depthAfter(r.pos, got, gave, m.slots);
+    // The counts behind it, so the card shows what the app sees.
+    const n = (list: Pos[], pos: Pos) => list.filter(x => x === pos).length;
+    counts[t.id] = (['QB', 'RB', 'WR', 'TE'] as Pos[]).map(pos => ({
+      pos, before: n(r.pos, pos), after: n(r.pos, pos) + n(got, pos) - n(gave, pos), starts: m.slots[pos] || 0,
+    }));
   }
 
   /* Who walks straight into the receiving team's lineup, and who lands on a
@@ -120,7 +126,7 @@ export function TradeBuilder({ app, m }: { app: App; m: Model }) {
         const c = cases.find(x => x.id === t.id);
         return l && c ? (
           <Scorecard key={t.id} l={l} c={c} moved={v.moved} dynasty={m.isDynasty}
-            season={seasons[t.id] || null} depth={depth[t.id] || []} waiver={m.waiverAt}
+            season={seasons[t.id] || null} depth={depth[t.id] || []} counts={counts[t.id] || []} waiver={m.waiverAt}
             avatar={m.leagueRows.find(r => r.id === t.id)?.avatar || null} />
         ) : null;
       })}
@@ -257,10 +263,12 @@ const sign = (x: number, d = 1) => (x > 0 ? '+' : x < 0 ? '−' : '±')
  * One team's side of the deal, drawn: what it is playing for, whether this
  * suits that, and each number behind the call as a bar rather than a sentence.
  */
-function Scorecard({ l, c, moved, dynasty, season, avatar, depth, waiver }: {
+interface PosCount { pos: Pos; before: number; after: number; starts: number }
+
+function Scorecard({ l, c, moved, dynasty, season, avatar, depth, counts, waiver }: {
   l: TeamLedger; c: TeamCase; moved: number; dynasty: boolean;
   season: ReturnType<Model['seasonWith']>; avatar: string | null;
-  depth: PosDepth[]; waiver: Model['waiverAt'];
+  depth: PosDepth[]; counts: PosCount[]; waiver: Model['waiverAt'];
 }) {
   const o = outcomeFor(c, dynasty);
   const vd = VERDICT[o];
@@ -277,6 +285,20 @@ function Scorecard({ l, c, moved, dynasty, season, avatar, depth, waiver }: {
         </span>
         <span className={'fb-sc-verdict is-' + o}>{vd.mark} {l.isMe ? vd.you : vd.them}</span>
       </div>
+
+      {/* How many they hold at each position, before → after, against how
+          many the lineup starts there: the facts every depth call rests on. */}
+      {counts.length ? (
+        <div className="fb-sc-counts" title="Players on the roster (not IR or taxi), before → after the trade, and how many start">
+          {counts.map(x => (
+            <span key={x.pos} className={'fb-count' + (x.after !== x.before ? ' is-moved' : '')}>
+              <b style={{ color: colorOf(x.pos) }}>{x.pos}</b>{' '}
+              {x.after !== x.before ? x.before + '→' + x.after : x.after}
+              <span className="fb-count-of">/{x.starts}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {/* The share of what the deal moves, and nothing else. It used to read
           "+5 · +3%": two numbers glued together, the first in a currency with

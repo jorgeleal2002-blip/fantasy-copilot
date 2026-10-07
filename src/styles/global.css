@@ -3072,3 +3072,18 @@ img, svg {
   user-select: none;
   -webkit-user-drag: none;
 }
+
+/* A team's roster by position on its trade scorecard: before → after, over
+   how many start there. */
+.fb-sc-counts { display: flex; flex-wrap: wrap; gap: 6px; margin: -2px 0 8px; }
+.fb-count {
+  font-size: 12px;
+  line-height: 16px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(242, 253, 254, 0.04);
+  color: rgba(242, 253, 254, 0.75);
+  font-variant-numeric: tabular-nums;
+}
+.fb-count.is-moved { background: rgba(242, 253, 254, 0.12); color: rgba(242, 253, 254, 0.9); }
+.fb-count-of { color: rgba(242, 253, 254, 0.52); }
