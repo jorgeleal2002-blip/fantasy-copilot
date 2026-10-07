@@ -3416,8 +3416,15 @@ img, svg {
    left, sized off the taller banner, and the name starts after it. */
 @media (min-width: 900px) {
   .ps-hero { min-height: 190px; padding: 18px 22px 16px; }
-  .ps-hero-face img { width: 300px; object-position: center 18%; }
+  .ps-hero-face img { width: 260px; object-position: center 18%; }
   .ps-hero-face.is-cut img { width: 170px; }
-  .ps-hero-body { margin-left: 200px; }
+  .ps-hero-body { margin-left: 236px; }
   .ps-hero-logo { width: 220px; height: 220px; margin-top: -110px; right: -20px; }
+}
+
+/* A screen with a single card — the league's player list, a picker — gives
+   it the whole width; two to a row is for screens that have several. */
+@media (min-width: 900px) {
+  .screen:not(:has(> .card ~ .card)) > .card,
+  .stack:not(:has(> .card ~ .card)) > .card { grid-column: 1 / -1; }
 }
