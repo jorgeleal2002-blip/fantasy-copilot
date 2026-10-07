@@ -155,6 +155,14 @@ export function AccessGate({ onOpen }: { onOpen: (username?: string) => void }) 
             onClick={() => { signOutAccount(); setWho(null); setError(''); }}>
             Use another account
           </button>
+          <div style={{
+            marginTop: 12, padding: 12, borderRadius: 12, fontSize: 12, lineHeight: '18px',
+            background: 'rgba(242, 253, 254, 0.07)', color: dim(0.75),
+          }}>
+            <b style={{ color: 'var(--color-text)' }}>Already using Doctors on another phone?</b> You do not need a
+            new code. On that phone open <b>You → Your account → Connect email or Google</b> with this same
+            email, then come back here and tap “Use another account” to sign in again.
+          </div>
         </div>
       ) : null}
       {wrong ? (

@@ -338,8 +338,21 @@ async function authPost(path: string, body: Record<string, unknown>): Promise<Ac
 
 export const emailSignIn = (email: string, password: string) =>
   authPost('signInWithPassword', { email: email.trim(), password });
-export const emailSignUp = (email: string, password: string) =>
-  authPost('signUp', { email: email.trim(), password });
+/** Create the account — or, when it already exists (a first try that got
+ *  half-way, a second phone), sign in to it with the same password, so
+ *  "Create account" never leaves somebody stuck on "already has an account". */
+export async function emailSignUp(email: string, password: string): Promise<AccountSession> {
+  try {
+    return await authPost('signUp', { email: email.trim(), password });
+  } catch (e) {
+    if (!/already has an account/.test((e as Error).message)) throw e;
+    try {
+      return await emailSignIn(email, password);
+    } catch {
+      throw new Error('That email already has an account with a different password. Tap "I already have an account", or "Forgot password?".');
+    }
+  }
+}
 
 export async function resetPassword(email: string): Promise<void> {
   const res = await fetch(AUTH + 'sendOobCode?key=' + encodeURIComponent(FIREBASE_KEY), {
