@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { currentUid } from '../api/access';
-import { chatEnabled, tagsMe, watchChat, type ChatMessage } from '../api/chat';
+import { chatEnabled, markSeen, tagsMe, watchChat, type ChatMessage, type ChatReader } from '../api/chat';
 import { leagueAvatar } from '../api/sleeper';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
@@ -22,12 +22,14 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
   const lid = m.league.league_id;
   const [msgs, setMsgs] = useState<ChatMessage[] | null>(null);
   const [err, setErr] = useState('');
+  const [readers, setReaders] = useState<ChatReader[]>([]);
   const [open, setOpenState] = useState(false);
   /** The sheet's distance below fully open, in px; null when it is not shown. */
   const [pos, setPos] = useState<number | null>(null);
   /** A finger is holding it: follow, do not animate. */
   const [dragging, setDragging] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
+  const sentSeen = useRef(0);
   const gesture = useRef<{ y0: number; from: 'bar' | 'sheet'; moved: boolean; t0: number } | null>(null);
   const [seen, setSeen] = useState(() => {
     try { return Number(localStorage.getItem(SEEN + lid)) || 0; } catch { return 0; }
@@ -36,7 +38,7 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
   useEffect(() => {
     if (!chatEnabled()) return;
     setMsgs(null);
-    return watchChat(lid, ms => { setMsgs(ms); setErr(''); }, why => {
+    return watchChat(lid, (ms, rs) => { setMsgs(ms); setReaders(rs); setErr(''); }, why => {
       setErr(/40[13]/.test(why)
         ? 'The chat is not open yet: the owner has to publish the latest database rules.'
         : 'Could not reach the chat. Retrying…');
@@ -49,6 +51,17 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
     if (!open || !last) return;
     setSeen(last.at);
     try { localStorage.setItem(SEEN + lid, String(last.at)); } catch { /* fine */ }
+    // And tell the league, for the "seen by" under each message — once per
+    // newest message, not on every redraw.
+    if (sentSeen.current >= last.at) return;
+    sentSeen.current = last.at;
+    const rid = m.leagueRows.find(r => r.isMe)?.id;
+    void markSeen(lid, last.at, {
+      name: m.myTeamName || m.me.teamName || m.me.name,
+      ...(m.me.avatar ? { avatar: m.me.avatar } : {}),
+      ...(rid != null ? { rid } : {}),
+    }).catch(() => { /* a read receipt is a courtesy */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, last, lid]);
 
   /* The iPhone keyboard does not shrink the page: it slides over it, and the
@@ -226,7 +239,7 @@ export function ChatDock({ app, m }: { app: App; m: Model }) {
                   onPointerDown={e => e.stopPropagation()} onClick={() => setOpen(false)}>✕</button>
               </div>
             </div>
-            <LeagueChat app={app} m={m} msgs={msgs} err={err}
+            <LeagueChat app={app} m={m} msgs={msgs} err={err} readers={readers}
               onProfile={rid => { setOpen(false); app.setDetail('team-' + rid); }}
               onPlayer={id => { setOpen(false); app.setDetail(id); }} />
           </div>

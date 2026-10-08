@@ -576,6 +576,11 @@ and need a free key from [developers.giphy.com](https://developers.giphy.com/)
 set as `VITE_GIPHY_KEY` (a repository variable or secret) for the build;
 without one the GIF button says so.
 
+Under each message the chat shows who has read it, the way Sleeper does:
+each person's picture sits under the newest message they have read (tap the
+row for their names). How far each person has read is kept under
+`chatSeen/{leagueId}/{uid}`, which needs the `chatSeen` block of the rules.
+
 Players can be given a **nickname** from their page. Like photos, a
 nickname belongs to the league (`nicknames/{leagueId}/{playerId}` in the
 database, which needs the `nicknames` block of the rules): everybody sees

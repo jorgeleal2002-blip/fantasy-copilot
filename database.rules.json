@@ -87,6 +87,15 @@
         }
       }
     },
+    "chatSeen": {
+      "$league": {
+        ".read": "auth != null && (root.child('members').child(auth.uid).exists() || root.child('admins').child(auth.uid).exists())",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && (root.child('members').child(auth.uid).exists() || root.child('admins').child(auth.uid).exists())",
+          ".validate": "newData.hasChildren(['at','name']) && newData.child('at').isNumber() && newData.child('name').isString() && newData.child('name').val().length <= 40"
+        }
+      }
+    },
     "chat": {
       "$league": {
         ".read": "auth != null && (root.child('members').child(auth.uid).exists() || root.child('admins').child(auth.uid).exists())",

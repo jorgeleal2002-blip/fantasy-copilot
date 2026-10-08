@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { currentUid } from '../api/access';
-import { CHAT_MAX, QUICK_REACTS, REACTS, chatEnabled, deleteChat, reactChat, sendChat, tagsMe, type ChatEvent, type ChatGif, type ChatMessage, type ChatTrade, type ReactKey } from '../api/chat';
+import { CHAT_MAX, QUICK_REACTS, REACTS, chatEnabled, deleteChat, reactChat, sendChat, tagsMe, type ChatEvent, type ChatGif, type ChatMessage, type ChatReader, type ChatTrade, type ReactKey } from '../api/chat';
 import { findGifs, gifsEnabled, type GifHit } from '../api/gifs';
 import { isOwnerHere } from '../model/access';
 import { colorOf } from '../model/constants';
@@ -16,8 +16,10 @@ import { Balance, TradeBuilder, assessTrade } from './TradeBuilder';
  * message carries the date. The newest stays in view as messages arrive,
  * unless you have scrolled up to read.
  */
-export function LeagueChat({ app, m, msgs, err: feedErr, onProfile, onPlayer }: {
+export function LeagueChat({ app, m, msgs, err: feedErr, onProfile, onPlayer, readers = [] }: {
   app: App; m: Model; msgs: ChatMessage[] | null; err: string;
+  /** how far each person has read */
+  readers?: ChatReader[];
   /** open a manager's team, from his picture or name */
   onProfile: (rid: number) => void;
   /** open a player, from a trade */
@@ -213,6 +215,21 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile, onPlayer }: 
      keystroke redrawing all of it was what made typing lag on a phone. Only
      the newest messages are drawn; older ones come on request. */
   const [shown, setShown] = useState(40);
+  /* Read receipts, the way Sleeper shows them: each person's picture under
+     the newest message they have read, which moves down as they catch up.
+     Tapping the row says who they are. */
+  const [seenOpen, setSeenOpen] = useState<string | null>(null);
+  const seenAt = useMemo(() => {
+    const at: Record<string, ChatReader[]> = {};
+    if (!msgs?.length) return at;
+    for (const r of readers) {
+      if (r.uid === me) continue;
+      let hit: ChatMessage | null = null;
+      for (const x of msgs) if (x.at <= r.at) hit = x;
+      if (hit) (at[hit.id] = at[hit.id] || []).push(r);
+    }
+    return at;
+  }, [msgs, readers, me]);
   const feed = useMemo(() => (
 msgs == null ? <div className="ch-empty">Loading…</div>
           : !msgs.length ? <div className="ch-empty">No messages yet. Say something to the league 👋</div>
@@ -309,13 +326,33 @@ msgs == null ? <div className="ch-empty">Loading…</div>
                           ))}
                         </div>
                       ) : null}
+                      {seenAt[x.id]?.length ? (() => {
+                        const who = seenAt[x.id];
+                        const faceOf = (r: ChatReader) => r.avatar
+                          || (r.rid != null ? m.leagueRows.find(t => t.id === r.rid)?.avatar : null) || null;
+                        return (
+                          <button type="button" className={'cs-seen' + (seenOpen === x.id ? ' is-open' : '')}
+                            aria-label={'Seen by ' + who.map(r => r.name).join(', ')}
+                            onClick={() => setSeenOpen(seenOpen === x.id ? null : x.id)}>
+                            {seenOpen === x.id ? <span className="cs-seen-names">Seen by {who.map(r => r.name).join(', ')}</span> : null}
+                            <span className="cs-seen-faces">
+                              {who.slice(0, 6).map(r => {
+                                const f = faceOf(r);
+                                return f ? <img key={r.uid} src={f} alt="" />
+                                  : <span key={r.uid} className="cs-seen-blank">{r.name.slice(0, 1).toUpperCase()}</span>;
+                              })}
+                              {who.length > 6 ? <span className="cs-seen-more">+{who.length - 6}</span> : null}
+                            </span>
+                          </button>
+                        );
+                      })() : null}
                     </div>
                   </div>
                 </div>
               );
             })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [msgs, shown, reacting, reactAll, mineNow, m, me, owner, busy, myRid]);
+  ), [msgs, shown, reacting, reactAll, mineNow, m, me, owner, busy, myRid, seenAt, seenOpen]);
 
   if (!chatEnabled()) {
     return <div className="ch-empty">The chat needs the app's database set up (see You → Invite codes).</div>;

@@ -172,6 +172,51 @@ export async function reactChat(lid: string, id: string, key: ReactKey, on: bool
   return res.ok;
 }
 
+/* ── Read receipts ──────────────────────────────────────────────────────
+ * Each person's latest message read, kept apart from the messages under
+ * chatSeen/{league}/{uid}: whoever opens the chat writes how far they have
+ * read, and the chat shows each reader under that message.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+export interface ChatReader {
+  uid: string;
+  /** the time of the newest message they have read */
+  at: number;
+  name: string;
+  avatar?: string;
+  rid?: number;
+}
+
+const seenBase = (lid: string) => LIVE_URL + '/chatSeen/' + encodeURIComponent(lid);
+
+async function readSeen(lid: string): Promise<ChatReader[]> {
+  const s = await session();
+  const res = await fetch(seenBase(lid) + '.json?auth=' + encodeURIComponent(s.idToken));
+  if (!res.ok) return [];
+  const body = (await res.json()) as Record<string, Partial<ChatReader>> | null;
+  return Object.entries(body || {})
+    .filter(([, r]) => r && typeof r.at === 'number')
+    .map(([uid, r]) => ({
+      uid, at: r.at as number, name: String(r.name || '').slice(0, 40),
+      ...(typeof r.avatar === 'string' && /^https:\/\//.test(r.avatar) ? { avatar: r.avatar } : {}),
+      ...(typeof r.rid === 'number' ? { rid: r.rid } : {}),
+    }));
+}
+
+/** Say how far you have read. */
+export async function markSeen(lid: string, at: number, who: { name: string; avatar?: string; rid?: number }): Promise<void> {
+  const s = await session();
+  await fetch(seenBase(lid) + '/' + encodeURIComponent(s.uid) + '.json?auth=' + encodeURIComponent(s.idToken), {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      at, name: who.name.slice(0, 40),
+      ...(who.avatar ? { avatar: who.avatar.slice(0, 300) } : {}),
+      ...(who.rid != null ? { rid: who.rid } : {}),
+    }),
+  });
+}
+
 /** The owner taking a message down. */
 export async function deleteChat(lid: string, id: string): Promise<boolean> {
   const s = await session();
@@ -185,9 +230,15 @@ export async function deleteChat(lid: string, id: string): Promise<boolean> {
  * on every change, and with an error when it cannot read them at all. Closes
  * while the app is in the background and catches up on return.
  */
-export function watchChat(lid: string, onMessages: (m: ChatMessage[]) => void, onError: (why: string) => void): () => void {
+export function watchChat(
+  lid: string,
+  onMessages: (m: ChatMessage[], readers: ChatReader[]) => void,
+  onError: (why: string) => void,
+): () => void {
   let stopped = false;
   let es: EventSource | null = null;
+  // Who has read what streams on its own path, so a read shows as it happens.
+  let es2: EventSource | null = null;
   let timer: number | undefined;
 
   // The same hundred messages read again are not news: redrawing the whole
@@ -195,11 +246,11 @@ export function watchChat(lid: string, onMessages: (m: ChatMessage[]) => void, o
   let last = '';
   const pull = async () => {
     try {
-      const m = await readLast(lid);
-      const sig = JSON.stringify(m);
+      const [m, readers] = await Promise.all([readLast(lid), readSeen(lid).catch(() => [] as ChatReader[])]);
+      const sig = JSON.stringify([m, readers]);
       if (sig === last) return;
       last = sig;
-      if (!stopped) onMessages(m);
+      if (!stopped) onMessages(m, readers);
     } catch (e) {
       if (!stopped) onError(String((e as Error).message));
     }
@@ -222,16 +273,20 @@ export function watchChat(lid: string, onMessages: (m: ChatMessage[]) => void, o
       es.addEventListener('patch', bump);
       es.addEventListener('auth_revoked', () => { close(); void open(); });
       es.onopen = () => poll(false);
+      es2 = new EventSource(seenBase(lid) + '.json?auth=' + encodeURIComponent(s.idToken));
+      es2.addEventListener('put', bump);
+      es2.addEventListener('patch', bump);
+      es2.onerror = () => { es2?.close(); es2 = null; };
       es.onerror = () => {
         poll(true);
-        es?.close(); es = null;
+        es?.close(); es = null; es2?.close(); es2 = null;
         window.setTimeout(() => { if (!stopped) void open(); }, 8000);
       };
     } catch {
       poll(true);
     }
   };
-  const close = () => { es?.close(); es = null; poll(false); };
+  const close = () => { es?.close(); es = null; es2?.close(); es2 = null; poll(false); };
   const onVisible = () => {
     if (document.visibilityState === 'hidden') close();
     else { void open(); void pull(); }
