@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { leagueAvatar } from '../api/sleeper';
 import type { Model } from '../model/types';
 import type { App, Tab } from '../state/useApp';
@@ -9,6 +10,8 @@ import { MockRoom } from './MockRoom';
 import { PlayerSheet } from './PlayerSheet';
 import { PlayAlerts } from './PlayAlerts';
 import { NotifyPrompt } from './NotifyPrompt';
+import { pushWho } from '../ui/push-who';
+import { syncPush } from '../ui/alert-prefs';
 import { ChatDock } from './ChatDock';
 import { SettingsTab } from './SettingsTab';
 import { TeamSheet } from './TeamSheet';
@@ -60,10 +63,24 @@ export function AppShell({ app, model }: { app: App; model: Model }) {
   const isMatchupDetail = typeof detail === 'string' && detail.startsWith('matchup-');
   const isCompare = typeof detail === 'string' && detail.startsWith('compare-');
 
+  /* Leave today's roster with the touchdown watcher, and put the stored
+   * "subscribed" flag back in step with what the browser actually holds.
+   *
+   * The watcher reads the LINEUP from Sleeper itself every minute, so a
+   * start/sit made on the phone counts with the app shut. Names it cannot
+   * read — the player file is megabytes — so they come from here. Keyed on
+   * the roster's ids because a trade is the only thing that changes the
+   * answer. Does nothing at all in a build with no watcher behind it. */
+  const rosterIds = model.myPlayers.map(p => p.id).join(',');
+  useEffect(() => {
+    void syncPush(pushWho(model));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rosterIds, model.league.league_id, model.me.id]);
+
   return (
     <div className="shell">
       <PlayAlerts app={app} m={model} />
-      <NotifyPrompt />
+      <NotifyPrompt who={pushWho(model)} />
       <header
         className="shell-head"
         style={{

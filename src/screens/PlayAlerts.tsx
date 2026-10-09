@@ -4,7 +4,7 @@ import { playText, playsBetween, type Play } from '../model/plays';
 import { scoreProjection, scoringKind } from '../model/projections';
 import type { Model } from '../model/types';
 import type { App } from '../state/useApp';
-import { notify, readAlerts, type AlertPrefs } from '../ui/alert-prefs';
+import { notify, readAlerts, watcherHandles, type AlertPrefs } from '../ui/alert-prefs';
 
 interface Shown { key: string; pid: string; title: string; body: string; td: boolean; mine: boolean }
 
@@ -60,7 +60,13 @@ export function PlayAlerts({ app, m }: { app: App; m: Model }) {
     setShown(s => [...fresh, ...s].slice(0, 3));
     for (const f of fresh) {
       window.setTimeout(() => setShown(s => s.filter(x => x.key !== f.key)), SHOW_MS);
-      if (prefs.phone) void notify(f.title, f.body, f.key, app.photoFor(f.pid) || undefined);
+      /* Not when the watcher has this phone: it pushes every touchdown by a
+         starter already, and a local notification for the same play would
+         arrive beside it as a second bubble. The banner above still shows —
+         that is instant, off the live feed, and is why the app is open. Big
+         plays and the opponent's players are nobody else's job, so those
+         still go to the phone from here. */
+      if (prefs.phone && !watcherHandles(prefs, f.td, f.mine)) void notify(f.title, f.body, f.key, app.photoFor(f.pid) || undefined);
     }
     // Only a new read of the feed is news.
     // eslint-disable-next-line react-hooks/exhaustive-deps

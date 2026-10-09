@@ -427,6 +427,103 @@ that connection drops. The mock is a pure function of the seed and that map, so
 every phone in the room derives the identical draft, bots included, without any
 of it being sent.
 
+## Touchdown alerts with the app closed
+
+The in-app alerts — banners for touchdowns and big plays, yours and your
+opponent's — come from the live stat feed the app polls while it is open. That
+is the whole of their reach, and on an iPhone it is a short reach: iOS suspends
+a backgrounded web app and its timers with it, so a touchdown scored while the
+phone is in a pocket is noticed by nobody and the lock screen stays empty.
+
+A real push is the only thing that crosses that gap, and a push needs something
+awake. That something is a Cloudflare Worker in `worker/` — about four hundred
+lines, no dependencies — which reads the same box score the app reads, once a
+minute, and pushes touchdowns by your starters. **With nothing configured it is
+simply absent and the alerts behave exactly as they did.**
+
+Turning it on, free and with no card:
+
+1. Create an account at [dash.cloudflare.com](https://dash.cloudflare.com). The
+   Workers free plan is enough and asks for nothing.
+2. From this repository, make the store it remembers between minutes:
+
+   ```
+   cd worker && npx wrangler kv namespace create COPILOT
+   ```
+
+   It prints an `id`. Paste it over `PASTE_THE_ID_...` in `worker/wrangler.toml`.
+3. Deploy it:
+
+   ```
+   npx wrangler deploy
+   ```
+
+   It prints a URL like `https://copilot-td.<your-name>.workers.dev`.
+4. Add that URL to GitHub as a repository **variable** (Settings → Secrets and
+   variables → Actions → Variables) named `VITE_PUSH_URL`. A variable, not a
+   secret: it ships to every browser that loads the app.
+5. **Run the deploy again** — Actions → Deploy to GitHub Pages → Run workflow.
+   A variable is read when the site is COMPILED, so adding one rebuilds nothing
+   by itself.
+6. On the phone, from the home-screen icon: Settings → Play alerts → **Phone
+   notifications**. The same switch as before; it now also subscribes.
+
+**There are no keys to generate or paste.** The worker mints its own VAPID
+keypair on first use and keeps it in that namespace, so the private half never
+touches a terminal, a clipboard or a repository.
+
+### Which half sends what
+
+| | app open | app closed |
+|---|---|---|
+| Touchdown, your starter | banner, pushed by the worker | **pushed by the worker** |
+| Big play (40+ yd catch, 30+ yd run) | banner + notification from the app | nothing |
+| Your opponent's players | banner + notification from the app | nothing |
+
+The worker sends touchdowns by your starters and nothing else, so only that row
+is ever at risk of arriving twice — and there the app stands down and lets the
+push through, because the push is the one that also works when the app is shut.
+Everything else is still the app's own job.
+
+### On an iPhone it must be on the home screen
+
+Safari gives a browser tab none of this — `PushManager` exists only for an
+installed web app. Share → Add to Home Screen, open it from there, and the
+switch works. iOS 16.4 or newer.
+
+### What it knows, and what it does not
+
+It reads your **lineup** from Sleeper every minute, so a start/sit changed five
+minutes before kickoff counts even if the app has not been opened in a week. It
+cannot read **names** — the whole player file is megabytes and this runs sixty
+times an hour — so the app leaves a small map of its own roster behind whenever
+it is opened. A player acquired and started without the app ever being opened
+arrives as "One of your starters".
+
+No points figure is ever in the push. Scoring is per league and the only number
+it could carry is the stat feed's own half-PPR guess, which will not be the
+number on the card ten seconds later. A wrong number is worse than none — the
+in-app banner, which knows your league's scoring, has the right one.
+
+The first minute after a deploy, a new week or a cleared store announces
+nothing: a job waking to a receiver on two touchdowns has not witnessed two
+touchdowns, it has witnessed a Sunday already in progress. It records what it
+sees and reports from the next minute on.
+
+### What it costs, and the one thing that might not fit
+
+Nothing, on the figures. The cron fires 1,440 times a day against a free
+allowance of 100,000 requests, and only four days of the week in season get
+past the first line of the handler.
+
+The one genuine uncertainty — and it has **not** been measured, because
+Sleeper's API is unreachable from the machine this was written on — is CPU. The
+free plan allows 10ms per invocation, and parsing a week of stats for every
+player in the league is the bulk of a tick. If Cloudflare starts logging
+`Exceeded CPU` (visible in `npx wrangler tail`), the two fixes are the $5/month
+Workers plan or narrowing what gets parsed. Everything else here is under test;
+this is the part to watch on the first Sunday.
+
 ## Carrying your setup between phones
 
 Sign in with Google once and a new phone, a reinstall or a second browser

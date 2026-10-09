@@ -111,3 +111,32 @@ self.addEventListener('notificationclick', event => {
     return self.clients.openWindow(self.registration.scope);
   })());
 });
+
+/* A touchdown pushed from outside.
+ *
+ * The in-app banners come from the live feed the app polls while it is open —
+ * see screens/PlayAlerts. This is the other half: a message from the watcher
+ * in /worker, which arrives whether or not the app is running and whether or
+ * not the phone is awake. On an iPhone it is the ONLY half that works with the
+ * app closed, because iOS suspends a backgrounded web app and its timers with
+ * it.
+ *
+ * Every push must put something on screen. A browser handed a push that shows
+ * no notification revokes the subscription after a few of them, so even a
+ * payload that will not parse gets a bubble. */
+self.addEventListener('push', event => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    /* not ours, or truncated — it still has to be shown */
+  }
+  event.waitUntil(self.registration.showNotification(data.title || 'Touchdown', {
+    body: data.body || '',
+    // Set by the sender per EVENT, so a retried push replaces its own bubble
+    // while his next touchdown arrives as a new one.
+    tag: data.tag || undefined,
+    icon: './icon-6c77bfb3-180.png',
+    badge: './icon-6c77bfb3-180.png',
+  }));
+});

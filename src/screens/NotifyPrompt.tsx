@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  dismissPrompt, installed, isIOS, notifyState, promptDismissed, readAlerts, turnOnPhone,
+  dismissPrompt, installed, isIOS, notifyState, promptDismissed, readAlerts, turnOnPhone, type PushWho,
 } from '../ui/alert-prefs';
 
 /**
@@ -9,7 +9,7 @@ import {
  * an automatic prompt. On an iPhone in a browser tab notifications cannot be
  * had at all, so it says the one thing that makes them possible instead.
  */
-export function NotifyPrompt() {
+export function NotifyPrompt({ who }: { who: PushWho }) {
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -37,7 +37,7 @@ export function NotifyPrompt() {
         <div className="np-actions">
           {iosTab ? null : (
             <button type="button" className="np-on" disabled={busy}
-              onClick={async () => { setBusy(true); await turnOnPhone(); setBusy(false); close(); }}>
+              onClick={async () => { setBusy(true); await turnOnPhone(who); setBusy(false); close(); }}>
               Turn on
             </button>
           )}

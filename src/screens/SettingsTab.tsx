@@ -9,6 +9,7 @@ import { accessEnabled, accessMissing } from '../api/access';
 import { isOwnerHere } from '../model/access';
 import { InvitePanel } from './InvitePanel';
 import { AlertSettings } from './AlertSettings';
+import { pushWho } from '../ui/push-who';
 import { DevicesCard } from './DevicesCard';
 import { cardNote, cardTitle, dim, ellipsis } from '../ui/styles';
 
@@ -76,7 +77,7 @@ export function SettingsTab({ app, m }: { app: App; m: Model }) {
         </button>
       </div>
 
-      <AlertSettings />
+      <AlertSettings who={pushWho(m)} />
 
       {accessEnabled() ? <DevicesCard username={app.username} /> : null}
 

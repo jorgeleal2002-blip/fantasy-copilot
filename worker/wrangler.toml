@@ -1,0 +1,27 @@
+# The touchdown watcher.
+#
+#   npx wrangler kv namespace create COPILOT    → paste the id below
+#   npx wrangler deploy
+#
+# Nothing secret lives here. The VAPID keypair is minted by the worker on its
+# first request and kept in the namespace below, so there is no key to paste
+# and none to leak — see src/vapid.ts.
+name = "copilot-td"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Every minute. The handler returns immediately unless a game could be on —
+# see src/window.ts — so this is four days a week for five months, not always.
+[triggers]
+crons = ["* * * * *"]
+
+[[kv_namespaces]]
+binding = "COPILOT"
+id = "PASTE_THE_ID_FROM_WRANGLER_KV_NAMESPACE_CREATE"
+
+[vars]
+# Where a push service should complain. Any mailto: or https: you control.
+VAPID_SUBJECT = "https://github.com/jorgeleal2002-blip/fantasy-copilot"
+# The app's origin, so no other site can register phones against this worker.
+# Delete the line to allow any origin.
+ALLOW_ORIGIN = "https://jorgeleal2002-blip.github.io"

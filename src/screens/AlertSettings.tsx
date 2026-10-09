@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import { BAD } from '../model/constants';
-import { installed, isIOS, notifyState, readAlerts, turnOnPhone, writeAlerts, type AlertPrefs } from '../ui/alert-prefs';
+import {
+  installed, isIOS, notifyState, pushConfigured, readAlerts, turnOffPhone, turnOnPhone, writeAlerts,
+  type AlertPrefs, type PushWho,
+} from '../ui/alert-prefs';
 import { Card } from '../ui/primitives';
 import { cardNote, cardTitle, dim } from '../ui/styles';
 
 /** The switches for touchdown and big-play alerts. */
-export function AlertSettings() {
+export function AlertSettings({ who }: { who: PushWho }) {
   const [p, setP] = useState<AlertPrefs>(readAlerts);
   const [perm, setPerm] = useState(notifyState);
   useEffect(() => { writeAlerts(p); }, [p]);
 
   const phone = async () => {
-    if (p.phone) { setP({ ...p, phone: false }); return; }
-    const ok = await turnOnPhone();
+    if (p.phone) { await turnOffPhone(); setP(readAlerts()); return; }
+    const ok = await turnOnPhone(who);
     setPerm(notifyState());
     if (ok) setP(readAlerts());
   };
@@ -45,8 +48,16 @@ export function AlertSettings() {
             : 'This browser cannot show notifications.'}
         </div>
       )}
+      {/* The honest reach, which is not the same sentence in both builds.
+          Without a watcher the app has to be on screen to notice anything —
+          iOS suspends a backgrounded web app and its timers with it, which is
+          why a touchdown scored over lunch never arrived. */}
       <div style={{ ...cardNote, marginTop: 8 }}>
-        They arrive while the app is open. With it fully closed the phone stops it from checking.
+        {p.push
+          ? 'Touchdowns by your starters reach you with the app closed. Big plays and your opponent\u2019s players only while it is open.'
+          : pushConfigured() && p.phone
+            ? 'Only while the app is open — this phone is not subscribed to the watcher. Turn phone notifications off and on again to retry.'
+            : 'They arrive while the app is open. With it fully closed the phone stops it from checking.'}
       </div>
     </Card>
   );

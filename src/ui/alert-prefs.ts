@@ -1,3 +1,11 @@
+import { PUSH_URL, disablePush, enablePush, pushSupported, refreshPush, type PushNames } from '../api/push';
+
+/** Who the alerts are for, which the watcher in /worker needs to know. */
+export interface PushWho { leagueId: string; userId: string; names: PushNames }
+
+/** Whether a build has a touchdown watcher behind it at all. */
+export const pushConfigured = () => !!PUSH_URL && pushSupported();
+
 /** What the touchdown and big-play alerts are set to, kept on this phone. */
 export interface AlertPrefs {
   /** in-app banners at all */
@@ -6,10 +14,21 @@ export interface AlertPrefs {
   opp: boolean;
   /** also as a phone notification, where the browser allows it */
   phone: boolean;
+  /**
+   * Subscribed to the watcher, so alerts arrive with the app CLOSED.
+   *
+   * Separate from `phone` because the two are different mechanisms with
+   * different reach: `phone` shows a notification from the app's own polling,
+   * which iOS suspends the moment the app leaves the screen; this one is a
+   * real push, delivered by the phone's push service whether or not anything
+   * of ours is running. Kept here so `PlayAlerts` can tell, without an await,
+   * that the phone is already being taken care of from outside.
+   */
+  push: boolean;
 }
 
 const KEY = 'fc.alerts';
-export const DEFAULT_ALERTS: AlertPrefs = { on: true, opp: true, phone: false };
+export const DEFAULT_ALERTS: AlertPrefs = { on: true, opp: true, phone: false, push: false };
 
 export function readAlerts(): AlertPrefs {
   try {
@@ -52,16 +71,73 @@ export const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent)
 /**
  * Ask for permission and switch phone notifications on. Must run inside a tap:
  * a browser refuses a permission prompt nobody asked for. True when they are on.
+ *
+ * `who` is what the watcher needs to push to this phone with the app shut. It
+ * is optional because the prompt can be answered from a screen that has no
+ * model yet; without it the alerts still work the way they always did, which
+ * is to say while the app is open.
  */
-export async function turnOnPhone(): Promise<boolean> {
+export async function turnOnPhone(who?: PushWho): Promise<boolean> {
   if (notifyState() === 'unsupported') return false;
   let perm = Notification.permission;
   if (perm === 'default') perm = await Notification.requestPermission().catch(() => 'denied' as NotificationPermission);
   if (perm !== 'granted') return false;
-  writeAlerts({ ...readAlerts(), on: true, phone: true });
-  void notify('🔔 Alerts are on', 'Touchdowns and big plays will show up here during games.', 'alerts-on');
+
+  /* The subscription is attempted after permission and before anything is
+     written, so the switch reports what is actually true: a watcher that is
+     down leaves `push` false and the older, app-open alerts in place, rather
+     than promising a lock screen that will stay empty. */
+  let push = false;
+  if (who && pushConfigured()) {
+    push = (await enablePush(who.leagueId, who.userId, who.names)) === 'on';
+  }
+  writeAlerts({ ...readAlerts(), on: true, phone: true, push });
+  void notify(
+    '🔔 Alerts are on',
+    push
+      ? 'Touchdowns reach you even with the app closed.'
+      : 'Touchdowns and big plays will show up here during games.',
+    'alerts-on',
+  );
   return true;
 }
+
+/** Off, and off at the watcher too — otherwise it keeps pushing at a phone
+ *  that has stopped asking. */
+export async function turnOffPhone(): Promise<void> {
+  if (readAlerts().push) await disablePush();
+  writeAlerts({ ...readAlerts(), phone: false, push: false });
+}
+
+/**
+ * Put the stored flag back in step with the browser, and leave today's names.
+ *
+ * A subscription can be dropped from outside the app — the permission
+ * revoked, the push service expiring it, the home-screen copy reinstalled —
+ * and a `push` flag left true after that silences the in-app notification in
+ * favour of one nobody is sending. Called when the app opens.
+ */
+export async function syncPush(who: PushWho): Promise<void> {
+  if (!pushConfigured()) {
+    if (readAlerts().push) writeAlerts({ ...readAlerts(), push: false });
+    return;
+  }
+  const live = await refreshPush(who.leagueId, who.userId, who.names);
+  if (readAlerts().push !== live) writeAlerts({ ...readAlerts(), push: live });
+}
+
+/**
+ * Whether this play's phone notification belongs to the watcher rather than
+ * to the app.
+ *
+ * The watcher pushes every touchdown by one of YOUR STARTERS and nothing
+ * else. So those three conditions are exactly the overlap, and only there
+ * would the app's own notification land beside a pushed one as a second
+ * bubble for the same play. A big play, or an opponent's man, is nobody
+ * else's job and still goes out from here.
+ */
+export const watcherHandles = (p: AlertPrefs, td: boolean, mine: boolean): boolean =>
+  p.push && td && mine;
 
 const ASKED = 'fc.alerts.asked';
 export const promptDismissed = () => { try { return localStorage.getItem(ASKED) === '1'; } catch { return true; } };

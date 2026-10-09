@@ -49,6 +49,10 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID || secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_GIPHY_KEY: ${{ vars.VITE_GIPHY_KEY || secrets.VITE_GIPHY_KEY }}
           VITE_FIREBASE_KEY: ${{ vars.VITE_FIREBASE_KEY || secrets.VITE_FIREBASE_KEY }}
+          # The touchdown watcher's address — a workers.dev URL, public by
+          # design. Without it the alerts stay as they were: in-app only, and
+          # silent once the phone suspends the app. See worker/ and the README.
+          VITE_PUSH_URL: ${{ vars.VITE_PUSH_URL || secrets.VITE_PUSH_URL }}
       # enablement: true turns Pages on for the repo the first time this runs,
       # instead of failing with "Get Pages site failed / Not Found".
       - uses: actions/configure-pages@v5
