@@ -13,8 +13,9 @@ import { inGameWindow } from './window';
 import { mine, newScores, tdAlert, tdCounts, type StatLine } from './watch';
 import { vapidKeys, vapidPublic } from './vapid';
 import { isGone, sendPush } from './webpush';
+import { chatAlert, wantsMessage, type ChatSaid } from './chat';
 import {
-  MAX_WATCHERS, listWatchers, subKey, tallyKey, validWatcher, type Env, type Watcher,
+  MAX_WATCHERS, chatPrefsOf, listWatchers, subKey, tallyKey, validWatcher, type Env, type Watcher,
 } from './store';
 
 const SLEEPER = 'https://api.sleeper.app/v1';
@@ -104,6 +105,77 @@ export async function tick(env: Env, now: Date = new Date()): Promise<TickReport
   return { looked: true, scored: scored.length, sent, dropped };
 }
 
+/* ── A message in the league chat ───────────────────────────────────────── */
+
+/**
+ * How late a message may be and still be worth pushing.
+ *
+ * The verification below proves a message EXISTS; it does not prove it is
+ * new. Without this, anybody holding a member's token could replay last
+ * month's message ids and push the whole chat history at the league one
+ * bubble at a time.
+ */
+const SAID_FRESH_MS = 5 * 60 * 1000;
+
+interface SaidBody { leagueId?: string; id?: string; token?: string; leagueName?: string }
+
+/**
+ * Push a chat message to the rest of the league.
+ *
+ * The worker holds no database credentials, so it cannot read the chat on its
+ * own and cannot take the caller's word for what was said. It reads the
+ * message back using the SENDER'S OWN token: if the database hands it over,
+ * the message is real, it is in that league, and whoever asked was a member
+ * entitled to read it. The token is used for that one request and never
+ * stored.
+ *
+ * Forgery then reduces to the chat's own threat model — faking a notification
+ * requires being a member who could have posted the message for real, in
+ * which case the notification is honest.
+ */
+export async function said(env: Env, body: SaidBody | null): Promise<{ ok: boolean; sent?: number; why?: string }> {
+  const lid = body?.leagueId;
+  const id = body?.id;
+  const token = body?.token;
+  if (!env.RTDB_URL) return { ok: false, why: 'no database configured' };
+  if (!lid || !/^[0-9]{5,25}$/.test(lid)) return { ok: false, why: 'bad league' };
+  if (!id || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) return { ok: false, why: 'bad id' };
+  if (!token || token.length > 4096) return { ok: false, why: 'bad token' };
+
+  const base = env.RTDB_URL.replace(/\/+$/, '');
+  let msg: (ChatSaid & { at?: number }) | null = null;
+  try {
+    const res = await fetch(
+      base + '/chat/' + encodeURIComponent(lid) + '/' + encodeURIComponent(id)
+      + '.json?auth=' + encodeURIComponent(token),
+    );
+    if (!res.ok) return { ok: false, why: 'database said ' + res.status };
+    msg = await res.json() as ChatSaid & { at?: number };
+  } catch {
+    return { ok: false, why: 'database unreachable' };
+  }
+  if (!msg || typeof msg.text !== 'string' || typeof msg.uid !== 'string') {
+    return { ok: false, why: 'no such message' };
+  }
+  if (!(typeof msg.at === 'number' && Date.now() - msg.at < SAID_FRESH_MS)) {
+    return { ok: false, why: 'not fresh' };
+  }
+
+  const watchers = (await listWatchers(env.COPILOT)).filter(x => x.w.leagueId === lid);
+  if (!watchers.length) return { ok: true, sent: 0 };
+
+  const alert = chatAlert(msg, lid, body?.leagueName);
+  const vapid = await vapidKeys(env.COPILOT, env.VAPID_SUBJECT || DEFAULT_SUBJECT);
+  let sent = 0;
+  for (const { key, w } of watchers) {
+    if (!wantsMessage(msg, w)) continue;
+    const res = await sendPush(w.sub, JSON.stringify(alert), vapid);
+    if (res.ok) sent++;
+    else if (res.gone) await env.COPILOT.delete(key);
+  }
+  return { ok: true, sent };
+}
+
 /* ── The endpoints the app talks to ─────────────────────────────────────── */
 
 const cors = (env: Env) => ({
@@ -138,7 +210,9 @@ export default {
         const held = await listWatchers(env.COPILOT);
         if (held.length >= MAX_WATCHERS) return json(env, { error: 'full' }, 507);
       }
-      const watcher: Watcher = { ...body, names: body.names || {}, at: Date.now() };
+      const watcher: Watcher = {
+        ...body, ...chatPrefsOf(body), names: body.names || {}, at: Date.now(),
+      };
       await env.COPILOT.put(k, JSON.stringify(watcher));
       return json(env, { ok: true });
     }
@@ -148,6 +222,10 @@ export default {
       if (!body?.endpoint) return json(env, { error: 'no endpoint' }, 400);
       await env.COPILOT.delete(await subKey(body.endpoint));
       return json(env, { ok: true });
+    }
+
+    if (url.pathname === '/said' && request.method === 'POST') {
+      return json(env, await said(env, await request.json().catch(() => null)));
     }
 
     // Somewhere to look when nothing is arriving, that reveals nothing.

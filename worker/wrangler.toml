@@ -25,3 +25,9 @@ VAPID_SUBJECT = "https://github.com/jorgeleal2002-blip/fantasy-copilot"
 # The app's origin, so no other site can register phones against this worker.
 # Delete the line to allow any origin.
 ALLOW_ORIGIN = "https://jorgeleal2002-blip.github.io"
+# The Realtime Database the league chat lives in — the same URL the app uses
+# as VITE_RTDB_URL. Not a secret: it ships to every browser, and the database
+# rules are what protect it. The worker only ever reads through it with the
+# token of whoever is asking, so without this line chat notifications are
+# simply off and touchdowns are unaffected.
+RTDB_URL = "https://your-project-default-rtdb.firebaseio.com"

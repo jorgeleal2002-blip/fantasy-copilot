@@ -56,7 +56,7 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile, onPlayer, re
     if (!t || busy) return false;
     setBusy(true);
     try {
-      const ok = await sendChat(lid, {
+      const id = await sendChat(lid, {
         name: m.myTeamName || m.me.teamName || m.me.name,
         user: m.me.name,
         avatar: m.me.avatar || undefined,
@@ -64,9 +64,9 @@ export function LeagueChat({ app, m, msgs, err: feedErr, onProfile, onPlayer, re
         ...(trade ? { trade } : {}),
         ...(gif ? { gif } : {}),
         text: t,
-      });
-      if (ok) { setErr(''); stick.current = true; } else setErr('Your message was not sent. Try again.');
-      return ok;
+      }, m.league.name);
+      if (id) { setErr(''); stick.current = true; } else setErr('Your message was not sent. Try again.');
+      return !!id;
     } catch {
       setErr('Your message was not sent. Check your connection.');
       return false;

@@ -22,6 +22,8 @@ export interface KV {
 
 export interface Env {
   COPILOT: KV;
+  /** the Realtime Database the league chat lives in, for verifying a message */
+  RTDB_URL?: string;
   /** mailto: or https: a push service can use to reach a human */
   VAPID_SUBJECT?: string;
   /** the app's origin, for CORS. Absent allows any, which is the default */
@@ -30,6 +32,15 @@ export interface Env {
 
 /** One phone, and the league it is watching. */
 export interface Watcher {
+  /** the account id in the chat's database, so a message never notifies the
+   *  person who wrote it */
+  uid?: string;
+  /** the Sleeper username, which is what an @tag spells */
+  user?: string;
+  /** wants chat messages at all */
+  chat?: boolean;
+  /** wants only the messages that name them */
+  tagsOnly?: boolean;
   sub: { endpoint: string; keys: { p256dh: string; auth: string } };
   leagueId: string;
   /** Sleeper user id, which is how a roster is found in the league */
@@ -101,4 +112,21 @@ export function validWatcher(body: unknown): body is Omit<Watcher, 'at'> {
   if (typeof b.userId !== 'string' || !/^[0-9]{5,25}$/.test(b.userId)) return false;
   if (b.names && typeof b.names !== 'object') return false;
   return true;
+}
+
+/**
+ * The fields a phone may change after it has subscribed, cleaned.
+ *
+ * Taken from the body rather than merged wholesale: a subscribe is a public
+ * endpoint, and letting it write arbitrary keys into a stored record is how a
+ * store full of carefully bounded values acquires one that is not.
+ */
+export function chatPrefsOf(body: unknown): Pick<Watcher, 'uid' | 'user' | 'chat' | 'tagsOnly'> {
+  const b = (body || {}) as Record<string, unknown>;
+  return {
+    ...(typeof b.uid === 'string' && b.uid.length <= 128 ? { uid: b.uid } : {}),
+    ...(typeof b.user === 'string' && b.user.length <= 40 ? { user: b.user } : {}),
+    chat: b.chat === true,
+    tagsOnly: b.tagsOnly === true,
+  };
 }

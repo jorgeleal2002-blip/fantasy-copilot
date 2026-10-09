@@ -1,7 +1,6 @@
-import { PUSH_URL, disablePush, enablePush, pushSupported, refreshPush, type PushNames } from '../api/push';
+import { PUSH_URL, disablePush, enablePush, pushSupported, refreshPush, type PushWho } from '../api/push';
 
-/** Who the alerts are for, which the watcher in /worker needs to know. */
-export interface PushWho { leagueId: string; userId: string; names: PushNames }
+export type { PushWho };
 
 /** Whether a build has a touchdown watcher behind it at all. */
 export const pushConfigured = () => !!PUSH_URL && pushSupported();
@@ -25,10 +24,20 @@ export interface AlertPrefs {
    * that the phone is already being taken care of from outside.
    */
   push: boolean;
+  /** messages in the league chat, pushed by the watcher */
+  chat: boolean;
+  /** only the ones that name you */
+  chatTags: boolean;
 }
 
+/** The slice of the settings the watcher is told about. */
+const wantsOf = (p: AlertPrefs) => ({ chat: p.chat, tagsOnly: p.chatTags });
+
 const KEY = 'fc.alerts';
-export const DEFAULT_ALERTS: AlertPrefs = { on: true, opp: true, phone: false, push: false };
+/* Chat on by default, but only ever reaching a phone that went and
+   subscribed — `push` is the gate, and it is off until somebody asks. */
+export const DEFAULT_ALERTS: AlertPrefs =
+  { on: true, opp: true, phone: false, push: false, chat: true, chatTags: false };
 
 export function readAlerts(): AlertPrefs {
   try {
@@ -89,7 +98,7 @@ export async function turnOnPhone(who?: PushWho): Promise<boolean> {
      than promising a lock screen that will stay empty. */
   let push = false;
   if (who && pushConfigured()) {
-    push = (await enablePush(who.leagueId, who.userId, who.names)) === 'on';
+    push = (await enablePush(who, wantsOf(readAlerts()))) === 'on';
   }
   writeAlerts({ ...readAlerts(), on: true, phone: true, push });
   void notify(
@@ -110,6 +119,21 @@ export async function turnOffPhone(): Promise<void> {
 }
 
 /**
+ * Change what the watcher is told to send, and tell it.
+ *
+ * The filtering happens at the watcher, not on the phone — a push that
+ * arrives and is thrown away has already lit the screen — so a setting
+ * changed here is useless until it has been sent. Written locally either
+ * way, so the switch moves even with no signal and the next app open
+ * carries it.
+ */
+export async function setChatPrefs(who: PushWho, over: Partial<AlertPrefs>): Promise<void> {
+  const next = { ...readAlerts(), ...over };
+  writeAlerts(next);
+  if (next.push) await refreshPush(who, wantsOf(next));
+}
+
+/**
  * Put the stored flag back in step with the browser, and leave today's names.
  *
  * A subscription can be dropped from outside the app — the permission
@@ -122,7 +146,7 @@ export async function syncPush(who: PushWho): Promise<void> {
     if (readAlerts().push) writeAlerts({ ...readAlerts(), push: false });
     return;
   }
-  const live = await refreshPush(who.leagueId, who.userId, who.names);
+  const live = await refreshPush(who, wantsOf(readAlerts()));
   if (readAlerts().push !== live) writeAlerts({ ...readAlerts(), push: live });
 }
 

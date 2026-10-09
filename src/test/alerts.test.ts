@@ -41,6 +41,17 @@ describe('who sends the phone notification', () => {
     expect(watcherHandles(DEFAULT_ALERTS, true, true)).toBe(false);
   });
 
+  /* Chat messages have no in-app banner at all — the app shows them in the
+     chat itself — so they are the watcher's alone and never reach this
+     decision. Pinned so that adding a banner later cannot quietly start
+     double-notifying. */
+  it('is on by default for chat, which only ever travels by push', () => {
+    expect(DEFAULT_ALERTS.chat).toBe(true);
+    expect(DEFAULT_ALERTS.chatTags).toBe(false);
+    // and still nothing is sent, because the subscription is what gates it
+    expect(DEFAULT_ALERTS.push).toBe(false);
+  });
+
   /* `push` is not `phone`. One is a real subscription delivered by the phone's
      push service; the other is the app showing a notification from its own
      polling, which iOS suspends the moment the app leaves the screen. A build

@@ -427,7 +427,7 @@ that connection drops. The mock is a pure function of the seed and that map, so
 every phone in the room derives the identical draft, bots included, without any
 of it being sent.
 
-## Touchdown alerts with the app closed
+## Touchdown and chat alerts with the app closed
 
 The in-app alerts — banners for touchdowns and big plays, yours and your
 opponent's — come from the live stat feed the app polls while it is open. That
@@ -438,8 +438,10 @@ phone is in a pocket is noticed by nobody and the lock screen stays empty.
 A real push is the only thing that crosses that gap, and a push needs something
 awake. That something is a Cloudflare Worker in `worker/` — about four hundred
 lines, no dependencies — which reads the same box score the app reads, once a
-minute, and pushes touchdowns by your starters. **With nothing configured it is
-simply absent and the alerts behave exactly as they did.**
+minute, and pushes touchdowns by your starters. It also pushes **messages in
+the league chat**, which the app could never notify you about at all. **With
+nothing configured it is simply absent and the alerts behave exactly as they
+did.**
 
 Turning it on, free and with no card:
 
@@ -479,11 +481,39 @@ touches a terminal, a clipboard or a repository.
 | Touchdown, your starter | banner, pushed by the worker | **pushed by the worker** |
 | Big play (40+ yd catch, 30+ yd run) | banner + notification from the app | nothing |
 | Your opponent's players | banner + notification from the app | nothing |
+| League chat message | in the chat, pushed by the worker | **pushed by the worker** |
 
-The worker sends touchdowns by your starters and nothing else, so only that row
-is ever at risk of arriving twice — and there the app stands down and lets the
-push through, because the push is the one that also works when the app is shut.
-Everything else is still the app's own job.
+Only the first row is ever at risk of arriving twice, and there the app stands
+down and lets the push through — the push is the one that also works when the
+app is shut. Chat messages are the worker's alone: the app shows them in the
+chat and has never had a notification for them.
+
+### Chat notifications, and how they are trusted
+
+The chat's rules let only a signed-in member read it, and the worker holds no
+credentials — on purpose, because the property worth keeping is that losing
+the worker loses nothing but the pushing. So it cannot go looking for
+messages. Instead the sender's own app tells it, and it **reads the message
+back using the sender's own token**: if the database hands it over, the
+message is real, it is in that league, and whoever asked was entitled to read
+it. The token is used for that one request and never stored.
+
+Forgery then reduces to the chat's own threat model — faking a notification
+means being a member who could have posted the message for real, in which case
+the notification is honest. A five-minute freshness window stops the other
+trick, which is replaying old message ids to push the whole history at the
+league one bubble at a time.
+
+A league's messages collapse onto a single bubble holding the latest, rather
+than twenty of them; each new one still announces itself. Your own messages
+never come back to you, and the automated log entries — "set a nickname for
+Javonte Williams" — notify nobody. In Settings there is a switch for messages
+and a second one for **only when someone tags me**, which is evaluated at the
+worker: a push that arrives and is thrown away has already lit the screen.
+
+For this half, `RTDB_URL` in `worker/wrangler.toml` has to be the same database
+URL the app uses as `VITE_RTDB_URL`. Without it, chat notifications are simply
+off and touchdowns are unaffected.
 
 ### On an iPhone it must be on the home screen
 

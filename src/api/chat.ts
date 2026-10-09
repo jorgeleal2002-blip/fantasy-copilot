@@ -9,6 +9,7 @@
  */
 import { LIVE_URL } from './live';
 import { accessEnabled, session } from './access';
+import { announceChat } from './push';
 
 export interface ChatMessage {
   id: string;
@@ -135,12 +136,20 @@ async function readLast(lid: string): Promise<ChatMessage[]> {
     .sort((a, b) => (a.at || 0) - (b.at || 0));
 }
 
-/** Post a message. False when the database refused it (not let in, or the
- *  chat rules not published). */
-export async function sendChat(lid: string, m: Omit<ChatMessage, 'id' | 'uid' | 'at' | 'r'>): Promise<boolean> {
+/**
+ * Post a message. Null when the database refused it (not let in, or the chat
+ * rules not published); otherwise the id it was given, which is also what
+ * proves to the touchdown watcher that the message is real — see
+ * `announceChat`.
+ */
+export async function sendChat(
+  lid: string,
+  m: Omit<ChatMessage, 'id' | 'uid' | 'at' | 'r'>,
+  leagueName?: string,
+): Promise<string | null> {
   const s = await session();
   const text = m.text.trim().slice(0, CHAT_MAX);
-  if (!text) return false;
+  if (!text) return null;
   const res = await fetch(base(lid) + '?auth=' + encodeURIComponent(s.idToken), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -160,7 +169,15 @@ export async function sendChat(lid: string, m: Omit<ChatMessage, 'id' | 'uid' | 
       at: { '.sv': 'timestamp' },
     }),
   });
-  return res.ok;
+  if (!res.ok) return null;
+  const id = ((await res.json().catch(() => null)) as { name?: string } | null)?.name || null;
+  /* Tell the watcher, so the rest of the league hears about it with their
+     apps shut. The sender's own token goes with it: that is how the worker
+     verifies the message without holding any credentials of its own. An
+     automated log entry is not announced — the watcher drops those anyway,
+     and there is no point in the request. */
+  if (id && !m.sys) void announceChat(lid, id, s.idToken, leagueName);
+  return id;
 }
 
 /** Leave a reaction on a message, or take yours back. */

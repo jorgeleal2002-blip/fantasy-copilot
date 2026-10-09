@@ -134,8 +134,12 @@ self.addEventListener('push', event => {
   event.waitUntil(self.registration.showNotification(data.title || 'Touchdown', {
     body: data.body || '',
     // Set by the sender per EVENT, so a retried push replaces its own bubble
-    // while his next touchdown arrives as a new one.
+    // while his next touchdown arrives as a new one. A chat message instead
+    // tags itself by LEAGUE, so twenty messages are one bubble holding the
+    // latest — and `renotify` is what still makes each of them announce
+    // itself rather than silently replacing the last.
     tag: data.tag || undefined,
+    renotify: data.renotify === true && !!data.tag,
     icon: './icon-6c77bfb3-180.png',
     badge: './icon-6c77bfb3-180.png',
   }));

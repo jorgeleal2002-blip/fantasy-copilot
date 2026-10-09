@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BAD } from '../model/constants';
 import {
-  installed, isIOS, notifyState, pushConfigured, readAlerts, turnOffPhone, turnOnPhone, writeAlerts,
-  type AlertPrefs, type PushWho,
+  installed, isIOS, notifyState, pushConfigured, readAlerts, setChatPrefs, turnOffPhone, turnOnPhone,
+  writeAlerts, type AlertPrefs, type PushWho,
 } from '../ui/alert-prefs';
 import { Card } from '../ui/primitives';
 import { cardNote, cardTitle, dim } from '../ui/styles';
@@ -18,6 +18,14 @@ export function AlertSettings({ who }: { who: PushWho }) {
     const ok = await turnOnPhone(who);
     setPerm(notifyState());
     if (ok) setP(readAlerts());
+  };
+
+  /* Goes to the watcher as well as to this phone: the filtering happens
+     there, because a push that arrives and is discarded has already lit the
+     screen. */
+  const chat = async (over: Partial<AlertPrefs>) => {
+    await setChatPrefs(who, over);
+    setP(readAlerts());
   };
 
   return (
@@ -48,13 +56,25 @@ export function AlertSettings({ who }: { who: PushWho }) {
             : 'This browser cannot show notifications.'}
         </div>
       )}
+      {/* Messages are the watcher's alone — the app has no banner for them,
+          and without a subscription there is nothing to switch. */}
+      {p.push ? (
+        <>
+          <div style={{ ...cardNote, marginTop: 12, marginBottom: 2 }}>💬 League chat</div>
+          <Toggle on={p.chat} label="Messages in the league chat"
+            onClick={() => void chat({ chat: !p.chat })} />
+          <Toggle on={p.chat && p.chatTags} disabled={!p.chat} label="Only when someone tags me"
+            onClick={() => void chat({ chatTags: !p.chatTags })} />
+        </>
+      ) : null}
+
       {/* The honest reach, which is not the same sentence in both builds.
           Without a watcher the app has to be on screen to notice anything —
           iOS suspends a backgrounded web app and its timers with it, which is
           why a touchdown scored over lunch never arrived. */}
       <div style={{ ...cardNote, marginTop: 8 }}>
         {p.push
-          ? 'Touchdowns by your starters reach you with the app closed. Big plays and your opponent\u2019s players only while it is open.'
+          ? 'Touchdowns by your starters and league messages reach you with the app closed. Big plays and your opponent\u2019s players only while it is open.'
           : pushConfigured() && p.phone
             ? 'Only while the app is open — this phone is not subscribed to the watcher. Turn phone notifications off and on again to retry.'
             : 'They arrive while the app is open. With it fully closed the phone stops it from checking.'}

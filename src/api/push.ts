@@ -73,6 +73,21 @@ export async function pushState(): Promise<PushState> {
 /** Who to name on a lock screen, for the players this person holds. */
 export type PushNames = Record<string, { n: string; p?: string; t?: string }>;
 
+/** Everything the watcher needs to know about one person. */
+export interface PushWho {
+  leagueId: string;
+  userId: string;
+  names: PushNames;
+  /** the account id in the chat's database, so a message never comes back to
+   *  the person who wrote it */
+  uid?: string;
+  /** the Sleeper username, which is what an @tag spells */
+  user?: string;
+}
+
+/** What this person wants told to them. */
+export interface PushWants { chat: boolean; tagsOnly: boolean }
+
 async function tell(path: string, body: unknown): Promise<boolean> {
   try {
     const res = await fetch(PUSH_URL + path, {
@@ -93,9 +108,7 @@ async function tell(path: string, body: unknown): Promise<boolean> {
  * raised from a real tap — a browser ignores one that is not — so this is
  * only ever called from the switch itself.
  */
-export async function enablePush(
-  leagueId: string, userId: string, names: PushNames,
-): Promise<PushState> {
+export async function enablePush(who: PushWho, wants: PushWants): Promise<PushState> {
   if (!pushSupported()) return 'unsupported';
   const ok = await Notification.requestPermission();
   if (ok !== 'granted') return ok === 'denied' ? 'denied' : 'off';
@@ -128,7 +141,7 @@ export async function enablePush(
     return 'off';
   }
 
-  const sent = await tell('/subscribe', { sub: sub.toJSON(), leagueId, userId, names });
+  const sent = await tell('/subscribe', { sub: sub.toJSON(), ...who, ...wants });
   if (!sent) {
     // Leaving a subscription the watcher never heard of would read as "on"
     // for ever while nothing was ever sent to it.
@@ -163,9 +176,7 @@ export async function disablePush(): Promise<PushState> {
  * Returns whether this phone still holds a subscription at all, which is the
  * one thing the app cannot know without asking.
  */
-export async function refreshPush(
-  leagueId: string, userId: string, names: PushNames,
-): Promise<boolean> {
+export async function refreshPush(who: PushWho, wants: PushWants): Promise<boolean> {
   if (!pushSupported()) return false;
   const reg = await registration();
   const sub = await reg?.pushManager.getSubscription().catch(() => null);
@@ -174,6 +185,37 @@ export async function refreshPush(
      phone's push service is what holds the subscription, not us, and
      reporting it gone over one failed request would turn the setting off
      under somebody on a bad signal. */
-  await tell('/subscribe', { sub: sub.toJSON(), leagueId, userId, names });
+  await tell('/subscribe', { sub: sub.toJSON(), ...who, ...wants });
   return true;
+}
+
+/**
+ * Tell the watcher a message was posted, so the rest of the league hears it
+ * with their apps shut.
+ *
+ * The token travels with the request and is used once, to read the message
+ * back out of the database — that is the whole of how the worker knows the
+ * message is real without holding any credentials of its own. It is never
+ * stored there.
+ *
+ * `keepalive` because this fires at the moment somebody sends and puts their
+ * phone away: without it the request is cancelled along with the page and
+ * nobody is told. It is fire-and-forget by design — a message that posted is
+ * posted, and a notification that did not go out is not worth an error in
+ * front of the person who wrote it.
+ */
+export async function announceChat(
+  leagueId: string, id: string, token: string, leagueName?: string,
+): Promise<void> {
+  if (!PUSH_URL) return;
+  try {
+    await fetch(PUSH_URL + '/said', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ leagueId, id, token, leagueName }),
+      keepalive: true,
+    });
+  } catch {
+    /* the message is sent; the telling is a courtesy */
+  }
 }
